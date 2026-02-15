@@ -98,7 +98,7 @@ export default function ProjectsPage() {
             <div className="absolute inset-0 bg-black/20 backdrop-blur-2xl" />
             <AdminBar />
 
-            <div className="relative z-10 max-w-[1600px] mx-auto px-4 py-28 md:pl-24">
+            <div className="relative z-10 max-w-[1600px] mx-auto px-4 pt-24 pb-32 md:py-28 md:pl-24">
                 <div className="flex items-center justify-between mb-8">
                     <motion.h1 className="text-4xl md:text-5xl font-bold text-white" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                         Projects

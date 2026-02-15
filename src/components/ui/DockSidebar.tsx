@@ -31,58 +31,83 @@ export const DockSidebar = () => {
     };
 
     return (
-        <motion.div
-            className="fixed left-4 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-4"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-        >
-            <div className={cn(
-                "flex flex-col gap-2 p-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl transition-all duration-300 ease-in-out",
-                expanded ? "w-48" : "w-14 items-center"
-            )}>
+        <>
+            {/* Desktop Sidebar */}
+            <motion.div
+                className="fixed left-4 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-4"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+            >
+                <div className={cn(
+                    "flex flex-col gap-2 p-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl transition-all duration-300 ease-in-out",
+                    expanded ? "w-48" : "w-14 items-center"
+                )}>
 
+                    {items.map((item) => (
+                        <Link
+                            key={item.title}
+                            href={item.href}
+                            className={cn(
+                                "flex items-center gap-3 p-2 rounded-xl transition-colors group relative",
+                                expanded ? "w-full" : "w-10 h-10 justify-center",
+                                isActive(item.href)
+                                    ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/20"
+                                    : "text-white/60 hover:text-white hover:bg-white/10 border border-transparent"
+                            )}
+                        >
+                            <span className="shrink-0">{item.icon}</span>
+
+                            {expanded && (
+                                <motion.span
+                                    initial={{ opacity: 0, width: 0 }}
+                                    animate={{ opacity: 1, width: "auto" }}
+                                    exit={{ opacity: 0, width: 0 }}
+                                    className="whitespace-nowrap overflow-hidden text-sm font-medium"
+                                >
+                                    {item.title}
+                                </motion.span>
+                            )}
+
+                            {!expanded && (
+                                <div className="absolute left-full ml-4 px-2 py-1 bg-black/80 border border-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                    {item.title}
+                                </div>
+                            )}
+                        </Link>
+                    ))}
+
+                    <button
+                        onClick={() => setExpanded(!expanded)}
+                        className="mt-2 w-full flex items-center justify-center p-2 text-white/40 hover:text-white transition-colors"
+                    >
+                        {expanded ? <IconLayoutSidebarRightCollapse className="w-4 h-4" /> : <IconLayoutSidebarRightExpand className="w-4 h-4" />}
+                    </button>
+
+                </div>
+            </motion.div>
+
+            {/* Mobile Bottom Bar */}
+            <div className="fixed bottom-6 left-6 right-6 h-16 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-around px-2 z-50 md:hidden shadow-2xl">
                 {items.map((item) => (
                     <Link
                         key={item.title}
                         href={item.href}
                         className={cn(
-                            "flex items-center gap-3 p-2 rounded-xl transition-colors group relative",
-                            expanded ? "w-full" : "w-10 h-10 justify-center",
+                            "flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl transition-all",
                             isActive(item.href)
-                                ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/20"
-                                : "text-white/60 hover:text-white hover:bg-white/10 border border-transparent"
+                                ? "text-emerald-400 bg-emerald-500/10"
+                                : "text-white/40 hover:text-white"
                         )}
                     >
                         <span className="shrink-0">{item.icon}</span>
-
-                        {expanded && (
-                            <motion.span
-                                initial={{ opacity: 0, width: 0 }}
-                                animate={{ opacity: 1, width: "auto" }}
-                                exit={{ opacity: 0, width: 0 }}
-                                className="whitespace-nowrap overflow-hidden text-sm font-medium"
-                            >
-                                {item.title}
-                            </motion.span>
-                        )}
-
-                        {!expanded && (
-                            <div className="absolute left-full ml-4 px-2 py-1 bg-black/80 border border-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                {item.title}
-                            </div>
+                        {/* Dot for active state */}
+                        {isActive(item.href) && (
+                            <motion.div layoutId="mobile-nav-dot" className="w-1 h-1 rounded-full bg-emerald-500" />
                         )}
                     </Link>
                 ))}
-
-                <button
-                    onClick={() => setExpanded(!expanded)}
-                    className="mt-2 w-full flex items-center justify-center p-2 text-white/40 hover:text-white transition-colors"
-                >
-                    {expanded ? <IconLayoutSidebarRightCollapse className="w-4 h-4" /> : <IconLayoutSidebarRightExpand className="w-4 h-4" />}
-                </button>
-
             </div>
-        </motion.div>
+        </>
     );
 };

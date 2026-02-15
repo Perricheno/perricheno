@@ -49,7 +49,7 @@ export default function DashboardPage() {
             <div className="absolute inset-0 bg-black/20 backdrop-blur-2xl" />
             <AdminBar />
 
-            <div className="relative z-10 max-w-[1600px] mx-auto px-4 py-28 md:pl-24">
+            <div className="relative z-10 max-w-[1600px] mx-auto px-4 pt-24 pb-32 md:py-28 md:pl-24">
                 <motion.h1 className="text-4xl md:text-5xl font-bold text-white mb-8"
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                     Analytics Dashboard
@@ -81,7 +81,7 @@ export default function DashboardPage() {
 
                     {/* Content */}
                     {currentDash?.iframeUrl ? (
-                        <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
+                        <div className="relative w-full h-[60vh] md:h-auto md:aspect-video">
                             <iframe src={currentDash.iframeUrl} className="absolute inset-0 w-full h-full border-0" allowFullScreen title={currentDash.title} />
                         </div>
                     ) : (

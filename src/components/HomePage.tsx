@@ -17,7 +17,7 @@ export default function HomePage() {
             <div className="absolute inset-0 bg-black/20 backdrop-blur-2xl" />
             <AdminBar />
 
-            <div className="relative z-10 max-w-[1200px] mx-auto px-4 py-28 md:pl-24">
+            <div className="relative z-10 max-w-[1200px] mx-auto px-6 pt-24 pb-32 md:py-28 md:pl-24">
 
                 {/* HERO */}
                 <motion.div className="mb-20" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>

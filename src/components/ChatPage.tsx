@@ -87,10 +87,10 @@ export default function ChatPage() {
         const saved = localStorage.getItem("chat_account");
         if (saved) {
             const parsed = JSON.parse(saved);
-            // Ensure legacy accounts get an id
             if (!parsed.id) parsed.id = genId();
             setAccount(parsed);
         }
+        if (window.innerWidth < 768) setSidebarOpen(false);
     }, []);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -280,11 +280,20 @@ export default function ChatPage() {
                 {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
             </AnimatePresence>
 
+            {/* Mobile Backdrop */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm md:hidden"
+                        onClick={() => setSidebarOpen(false)} />
+                )}
+            </AnimatePresence>
+
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
 
             {/* ══ SIDEBAR ══ */}
-            <aside className={`relative z-20 h-screen flex flex-col bg-[#080808] border-r border-white/[0.06] transition-all duration-200 shrink-0
-                ${sidebarOpen ? "w-[260px]" : "w-0 overflow-hidden"}`}>
+            <aside className={`fixed inset-y-0 left-0 z-30 h-full flex flex-col bg-[#080808] border-r border-white/[0.06] transition-all duration-300 md:relative
+                ${sidebarOpen ? "translate-x-0 w-[280px]" : "-translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden md:border-none"}`}>
 
                 {/* New chat button */}
                 <div className="p-3 border-b border-white/[0.06]">
