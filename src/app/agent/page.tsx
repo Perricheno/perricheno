@@ -1,3 +1,5 @@
+"use client";
+
 import { DockSidebar } from "@/components/ui/DockSidebar";
 import { motion } from "framer-motion";
 import { IconBrain, IconFileText, IconPresentation, IconCalendarStats, IconRobot, IconMath } from "@tabler/icons-react";
