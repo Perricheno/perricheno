@@ -86,7 +86,7 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
     const [authError, setAuthError] = useState("");
 
     // Admin
-    const { isEditing, setIsEditing, showLogin, setShowLogin } = useAdmin();
+    const { user, isEditing, setIsEditing, showLogin, setShowLogin } = useAdmin();
     const { theme, setTheme } = useTheme();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -214,9 +214,9 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
             formData.append("chatId", activeThreadId);
             formData.append("timestamp", new Date().toISOString());
             formData.append("message", msgText);
-            formData.append("userId", account?.id || "guest");
-            formData.append("userName", account?.name || "Guest");
-            formData.append("userEmail", account?.email || "");
+            formData.append("userId", user?.telegram_id || "guest");
+            formData.append("userName", user?.first_name || "Guest");
+            formData.append("userEmail", user?.username || "");
             formData.append("model", settings.selectedModel);
             formData.append("temperature", String(settings.temperature));
             formData.append("maxTokens", String(settings.maxTokens));
@@ -251,7 +251,7 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
         } finally {
             setIsLoading(false);
         }
-    }, [input, files, isLoading, settings, messages, activeThreadId, account]);
+    }, [input, files, isLoading, settings, messages, activeThreadId, user]);
 
     /* ── File / Audio ── */
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -340,16 +340,23 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
 
                 {/* Account section */}
                 <div className="p-3 border-t border-white/[0.06]">
-                    <button onClick={() => setAccountModalOpen(true)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0">
-                            <IconUser className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0 text-left">
-                            <p className="text-xs text-white font-medium truncate">{account?.name || "Guest"}</p>
-                            <p className="text-[10px] text-white/30 truncate">{account?.email || "Sign in to save chats"}</p>
-                        </div>
-                    </button>
+                    {user ? (
+                        <button onClick={() => { setIsEditing(true); }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0 overflow-hidden">
+                                {user.photo_url ? <img src={user.photo_url} alt={user.first_name || "User"} className="w-full h-full object-cover" /> : <IconUser className="w-4 h-4 text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0 text-left">
+                                <p className="text-xs text-white font-medium truncate">{user.first_name}</p>
+                                <p className="text-[10px] text-white/30 truncate">Online</p>
+                            </div>
+                        </button>
+                    ) : (
+                        <button onClick={() => setShowLogin(true)}
+                            className="w-full flex items-center gap-2 justify-center px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 transition-all text-white text-sm font-medium">
+                            <IconLogin className="w-4 h-4" /> Sign In
+                        </button>
+                    )}
                 </div>
             </aside>
 
@@ -525,102 +532,6 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
                     </div>
                 </div>
             </div>
-
-            {/* ══ ACCOUNT MODAL ══ */}
-            <AnimatePresence>
-                {accountModalOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                        onClick={() => setAccountModalOpen(false)}>
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-sm bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 shadow-2xl">
-
-                            {account ? (
-                                /* ── Logged in ── */
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-                                            <IconUser className="w-6 h-6 text-white" />
-                                        </div>
-                                        <div>
-                                            <p className="text-white font-semibold">{account.name}</p>
-                                            <p className="text-white/40 text-sm">{account.email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="pt-2 border-t border-white/[0.06] space-y-2">
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-white/40">Plan</span>
-                                            <span className="text-white/70">Free</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-white/40">Chats</span>
-                                            <span className="text-white/70">{threads.length}</span>
-                                        </div>
-                                    </div>
-                                    <button onClick={handleLogout}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-all">
-                                        <IconLogout className="w-4 h-4" /> Sign Out
-                                    </button>
-                                </div>
-                            ) : (
-                                /* ── Login / Register ── */
-                                <div className="space-y-4">
-                                    <h2 className="text-lg font-bold text-white text-center">
-                                        {authMode === "login" ? "Welcome back" : "Create account"}
-                                    </h2>
-
-                                    <div className="space-y-3">
-                                        {authMode === "register" && (
-                                            <div>
-                                                <label className="block text-xs text-white/40 mb-1">Name</label>
-                                                <input value={authForm.name}
-                                                    onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
-                                                    placeholder="Your name" />
-                                            </div>
-                                        )}
-                                        <div>
-                                            <label className="block text-xs text-white/40 mb-1">Email</label>
-                                            <input type="email" value={authForm.email}
-                                                onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
-                                                placeholder="you@email.com" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs text-white/40 mb-1">Password</label>
-                                            <input type="password" value={authForm.password}
-                                                onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                                                onKeyDown={(e) => e.key === "Enter" && handleAuth()}
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
-                                                placeholder="••••••••" />
-                                        </div>
-                                    </div>
-
-                                    {authError && <p className="text-red-400 text-xs text-center">{authError}</p>}
-
-                                    <button onClick={handleAuth}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-all">
-                                        <IconLogin className="w-4 h-4" />
-                                        {authMode === "login" ? "Sign In" : "Create Account"}
-                                    </button>
-
-                                    <p className="text-center text-xs text-white/30">
-                                        {authMode === "login" ? "Don't have an account? " : "Already have an account? "}
-                                        <button onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthError(""); }}
-                                            className="text-emerald-400 hover:underline">
-                                            {authMode === "login" ? "Register" : "Sign in"}
-                                        </button>
-                                    </p>
-                                </div>
-                            )}
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

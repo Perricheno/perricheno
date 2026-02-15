@@ -1,12 +1,10 @@
-"use client";
-
 import { DockSidebar } from "@/components/ui/DockSidebar";
 import { motion } from "framer-motion";
-import { IconBrain, IconFileText, IconPresentation, IconCalendarStats, IconRobot, IconBrandOverleaf } from "@tabler/icons-react";
+import { IconBrain, IconFileText, IconPresentation, IconCalendarStats, IconRobot, IconMath } from "@tabler/icons-react";
 
 export default function AgentPage() {
     const features = [
-        { title: "Overleaf Integration", icon: IconBrandOverleaf, desc: "Seamless LaTeX editing & sync" },
+        { title: "Overleaf Integration", icon: IconMath, desc: "Seamless LaTeX editing & sync" },
         { title: "AI Reports", icon: IconFileText, desc: "Generate academic reports in seconds" },
         { title: "Presentations", icon: IconPresentation, desc: "Turn data into slides automatically" },
         { title: "Task Scheduling", icon: IconCalendarStats, desc: "Smart agent-managed calendar" },
