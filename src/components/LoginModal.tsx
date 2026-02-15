@@ -9,6 +9,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
     const [pass, setPass] = useState("");
     const [error, setError] = useState("");
 
+    // Verify Telegram Auth
     useEffect(() => {
         // Define callback for Telegram widget
         (window as any).onTelegramAuth = (user: any) => {
