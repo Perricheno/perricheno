@@ -1,32 +1,34 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-    AnimatePresence,
-    motion,
-} from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
     IconHome,
     IconTerminal2,
-    IconBrandGithub,
-    IconBrandX,
-    IconMail,
+    IconChartBar,
+    IconMessageCircle,
     IconLayoutSidebarRightCollapse,
     IconLayoutSidebarRightExpand
 } from "@tabler/icons-react";
 
 export const DockSidebar = () => {
     const [expanded, setExpanded] = useState(false);
+    const pathname = usePathname();
 
     const items = [
-        { title: "Home", icon: <IconHome className="w-5 h-5" />, href: "#" },
-        { title: "Projects", icon: <IconTerminal2 className="w-5 h-5" />, href: "#" },
-        { title: "GitHub", icon: <IconBrandGithub className="w-5 h-5" />, href: "#" },
-        { title: "Twitter", icon: <IconBrandX className="w-5 h-5" />, href: "#" },
-        { title: "Contact", icon: <IconMail className="w-5 h-5" />, href: "#" },
+        { title: "Home", icon: <IconHome className="w-5 h-5" />, href: "/" },
+        { title: "Projects", icon: <IconTerminal2 className="w-5 h-5" />, href: "/projects" },
+        { title: "Dashboard", icon: <IconChartBar className="w-5 h-5" />, href: "/dashboard" },
+        { title: "Chat", icon: <IconMessageCircle className="w-5 h-5" />, href: "/chat" },
     ];
+
+    const isActive = (href: string) => {
+        if (href === "/") return pathname === "/";
+        return pathname.startsWith(href);
+    };
 
     return (
         <motion.div
@@ -45,8 +47,11 @@ export const DockSidebar = () => {
                         key={item.title}
                         href={item.href}
                         className={cn(
-                            "flex items-center gap-3 p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors group relative",
-                            expanded ? "w-full" : "w-10 h-10 justify-center"
+                            "flex items-center gap-3 p-2 rounded-xl transition-colors group relative",
+                            expanded ? "w-full" : "w-10 h-10 justify-center",
+                            isActive(item.href)
+                                ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/20"
+                                : "text-white/60 hover:text-white hover:bg-white/10 border border-transparent"
                         )}
                     >
                         <span className="shrink-0">{item.icon}</span>

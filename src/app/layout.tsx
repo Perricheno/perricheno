@@ -4,6 +4,7 @@ import "./globals.css";
 import Background from "@/components/ui/Background";
 import { CRTOverlay } from "@/components/ui/CRTOverlay";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AdminProvider } from "@/components/AdminContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,9 +27,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Background />
-          <CRTOverlay />
-          {children}
+          <AdminProvider>
+            <Background />
+            <CRTOverlay />
+            {children}
+          </AdminProvider>
         </ThemeProvider>
       </body>
     </html>

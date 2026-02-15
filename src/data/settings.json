@@ -1,0 +1,12 @@
+{
+    "webhookTest": "https://n8n.perricheno.ru/webhook-test/519031b9-1222-44f2-803e-06e0d142c8b1",
+    "webhookProd": "https://n8n.perricheno.ru/webhook/519031b9-1222-44f2-803e-06e0d142c8b1",
+    "useTestWebhook": true,
+    "models": [
+        "gemini-2.0-flash"
+    ],
+    "selectedModel": "gemini-2.0-flash",
+    "systemPrompt": "You are a helpful assistant.",
+    "temperature": 1,
+    "maxTokens": 200000
+}
