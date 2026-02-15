@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
     IconBrandGithub, IconBrandLinkedin, IconBrandTwitter, IconArrowRight,
-    IconTerminal2, IconChartBar, IconMessageCircle, IconFileTypePdf
+    IconTerminal2, IconChartBar, IconMessageCircle, IconFileTypePdf, IconRobot
 } from "@tabler/icons-react";
 import { AdminBar } from "@/components/AdminBar";
 

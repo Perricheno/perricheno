@@ -188,6 +188,11 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
         const hasContent = input.trim() || files.length > 0 || audioBlob;
         if (!hasContent || isLoading || !settings) return;
 
+        if (!user) {
+            setShowLogin(true);
+            return;
+        }
+
         const userMsg: ChatMessage = {
             id: String(Date.now()),
             role: "user",
@@ -214,9 +219,9 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
             formData.append("chatId", activeThreadId);
             formData.append("timestamp", new Date().toISOString());
             formData.append("message", msgText);
-            formData.append("userId", user?.telegram_id || "guest");
-            formData.append("userName", user?.first_name || "Guest");
-            formData.append("userEmail", user?.username || "");
+            formData.append("userId", user.telegram_id);
+            formData.append("userName", user.first_name || "User");
+            formData.append("userEmail", user.username || "");
             formData.append("model", settings.selectedModel);
             formData.append("temperature", String(settings.temperature));
             formData.append("maxTokens", String(settings.maxTokens));
@@ -508,8 +513,8 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
 
                         <input value={input} onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                            placeholder={isRecording ? "Recording..." : "Message..."}
-                            disabled={isRecording}
+                            placeholder={!user ? "Sign in to chat..." : isRecording ? "Recording..." : "Message..."}
+                            disabled={isRecording || !user}
                             className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/20 disabled:opacity-50 min-w-0" />
 
                         {isRecording && (
@@ -520,6 +525,7 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
                         )}
 
                         <button onClick={isRecording ? stopRecording : startRecording}
+                            disabled={!user}
                             className={`p-2 rounded-xl transition-all shrink-0 ${isRecording ? "text-red-400 bg-red-500/20 border border-red-500/30" : "text-white/40 hover:text-white hover:bg-white/10"}`}>
                             {isRecording ? <IconPlayerStop className="w-5 h-5" /> : <IconMicrophone className="w-5 h-5" />}
                         </button>
