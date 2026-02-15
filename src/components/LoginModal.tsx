@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { IconX } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 
