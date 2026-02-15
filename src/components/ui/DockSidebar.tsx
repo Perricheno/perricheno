@@ -11,7 +11,8 @@ import {
     IconChartBar,
     IconMessageCircle,
     IconLayoutSidebarRightCollapse,
-    IconLayoutSidebarRightExpand
+    IconLayoutSidebarRightExpand,
+    IconFileTypePdf
 } from "@tabler/icons-react";
 
 export const DockSidebar = () => {
@@ -23,6 +24,7 @@ export const DockSidebar = () => {
         { title: "Projects", icon: <IconTerminal2 className="w-5 h-5" />, href: "/projects" },
         { title: "Dashboard", icon: <IconChartBar className="w-5 h-5" />, href: "/dashboard" },
         { title: "Chat", icon: <IconMessageCircle className="w-5 h-5" />, href: "/chat" },
+        { title: "PDF", icon: <IconFileTypePdf className="w-5 h-5" />, href: "/pdf" },
     ];
 
     const isActive = (href: string) => {
@@ -87,23 +89,23 @@ export const DockSidebar = () => {
                 </div>
             </motion.div>
 
-            {/* Mobile Bottom Bar */}
-            <div className="fixed bottom-4 left-4 right-4 h-16 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-around px-2 z-50 md:hidden shadow-2xl">
+            {/* Mobile Top Pill Nav */}
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 h-14 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full flex items-center gap-4 px-6 z-50 md:hidden shadow-2xl">
                 {items.map((item) => (
                     <Link
                         key={item.title}
                         href={item.href}
                         className={cn(
-                            "flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl transition-all",
+                            "flex flex-col items-center justify-center gap-0.5 w-10 h-10 rounded-full transition-all relative",
                             isActive(item.href)
-                                ? "text-emerald-400 bg-emerald-500/10"
+                                ? "text-emerald-400"
                                 : "text-white/40 hover:text-white"
                         )}
                     >
                         <span className="shrink-0">{item.icon}</span>
                         {/* Dot for active state */}
                         {isActive(item.href) && (
-                            <motion.div layoutId="mobile-nav-dot" className="w-1 h-1 rounded-full bg-emerald-500" />
+                            <motion.div layoutId="mobile-nav-dot" className="absolute -bottom-1 w-1 h-1 rounded-full bg-emerald-500" />
                         )}
                     </Link>
                 ))}

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { IconBrandGithub, IconBrandLinkedin, IconBrandTwitter, IconArrowRight } from "@tabler/icons-react";
+import {
+    IconBrandGithub, IconBrandLinkedin, IconBrandTwitter, IconArrowRight,
+    IconTerminal2, IconChartBar, IconMessageCircle, IconFileTypePdf
+} from "@tabler/icons-react";
 import { AdminBar } from "@/components/AdminBar";
 
 const pageLinks = [
@@ -35,25 +38,24 @@ export default function HomePage() {
                 </motion.div>
 
                 {/* PAGE LINKS */}
-                <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-24"
+                <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-24"
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-                    {pageLinks.map((link, i) => (
-                        <Link key={link.href} href={link.href}>
-                            <motion.div
-                                className="group rounded-2xl p-6 border bg-white/[0.03] border-white/[0.08] backdrop-blur-xl hover:bg-white/[0.06] hover:border-emerald-500/20 transition-all cursor-pointer"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.9 + i * 0.1 }}
-                                whileHover={{ y: -4, scale: 1.01 }}
-                                whileTap={{ scale: 0.98 }}
-                            >
-                                <div className="text-3xl mb-3">{link.emoji}</div>
-                                <h3 className="text-white font-bold text-lg flex items-center gap-2">
-                                    {link.title}
-                                    <IconArrowRight className="w-4 h-4 text-white/30 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
-                                </h3>
-                                <p className="text-white/40 text-sm mt-1">{link.desc}</p>
-                            </motion.div>
+                    {[
+                        { title: "Project Gallery", href: "/projects", icon: <IconTerminal2 className="w-6 h-6" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+                        { title: "Analytics Hub", href: "/dashboard", icon: <IconChartBar className="w-6 h-6" />, color: "text-purple-400", bg: "bg-purple-500/10" },
+                        { title: "AI Assistant", href: "/chat", icon: <IconMessageCircle className="w-6 h-6" />, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                        { title: "PDF Converter", href: "/pdf", icon: <IconFileTypePdf className="w-6 h-6" />, color: "text-red-400", bg: "bg-red-500/10" }
+                    ].map((item, i) => (
+                        <Link key={i} href={item.href}
+                            className="group relative p-6 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl hover:bg-white/[0.06] transition-all overflow-hidden">
+                            <div className={`absolute top-0 right-0 p-3 rounded-bl-2xl ${item.bg} ${item.color} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                                <IconArrowRight className="w-4 h-4" />
+                            </div>
+                            <div className={`mb-4 w-12 h-12 rounded-2xl ${item.bg} flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
+                                {item.icon}
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-1">{item.title}</h3>
+                            <p className="text-white/40 text-sm">Interactive demo & tools</p>
                         </Link>
                     ))}
                 </motion.div>
