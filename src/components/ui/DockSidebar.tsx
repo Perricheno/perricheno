@@ -12,7 +12,8 @@ import {
     IconMessageCircle,
     IconLayoutSidebarRightCollapse,
     IconLayoutSidebarRightExpand,
-    IconFileTypePdf
+    IconFileTypePdf,
+    IconRobot
 } from "@tabler/icons-react";
 
 export const DockSidebar = () => {
@@ -23,6 +24,7 @@ export const DockSidebar = () => {
         { title: "Home", icon: <IconHome className="w-5 h-5" />, href: "/" },
         { title: "Projects", icon: <IconTerminal2 className="w-5 h-5" />, href: "/projects" },
         { title: "Dashboard", icon: <IconChartBar className="w-5 h-5" />, href: "/dashboard" },
+        { title: "Agent", icon: <IconRobot className="w-5 h-5" />, href: "/agent" },
         { title: "Chat", icon: <IconMessageCircle className="w-5 h-5" />, href: "/chat" },
         { title: "PDF", icon: <IconFileTypePdf className="w-5 h-5" />, href: "/pdf" },
     ];

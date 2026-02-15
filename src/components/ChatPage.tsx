@@ -5,7 +5,7 @@ import {
     IconSend, IconPaperclip, IconMicrophone, IconPlayerStop,
     IconPhoto, IconFile, IconX, IconLoader2, IconChevronDown,
     IconSettings, IconPlus, IconMessage, IconTrash, IconUser,
-    IconLogin, IconLogout, IconMoon, IconSun
+    IconLogin, IconLogout, IconMoon, IconSun, IconLayoutSidebarRightCollapse
 } from "@tabler/icons-react";
 import ChatSettingsModal from "@/components/ChatSettingsModal";
 import { useAdmin } from "@/components/AdminContext";
@@ -46,9 +46,26 @@ function genId(): string {
     });
 }
 
-export default function ChatPage() {
+export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => void }) {
     /* ── State ── */
     const [initialChatId] = useState(() => genId());
+    // ... (rest of simple state)
+
+    // ... inside render ...
+    {/* Settings */ }
+    <button onClick={() => setSettingsOpen(true)}
+        className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
+        <IconSettings className="w-4 h-4" />
+    </button>
+
+    {/* Toggle Navbar */ }
+    <button onClick={onToggleNavbar}
+        className="p-1.5 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all" title="Toggle Navigation">
+        <IconLayoutSidebarRightCollapse className="w-4 h-4" />
+    </button>
+
+    {/* Theme toggle */ }
+    // ...
     const [threads, setThreads] = useState<ChatThread[]>([
         { id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() },
     ]);
@@ -388,6 +405,11 @@ export default function ChatPage() {
                         <button onClick={() => setSettingsOpen(true)}
                             className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
                             <IconSettings className="w-4 h-4" />
+                        </button>
+
+                        <button onClick={onToggleNavbar}
+                            className="p-1.5 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all" title="Toggle Navigation">
+                            <IconLayoutSidebarRightCollapse className="w-4 h-4" />
                         </button>
 
                         {/* Theme toggle */}

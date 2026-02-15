@@ -44,6 +44,7 @@ export default function HomePage() {
                         { title: "Project Gallery", href: "/projects", icon: <IconTerminal2 className="w-6 h-6" />, color: "text-blue-400", bg: "bg-blue-500/10" },
                         { title: "Analytics Hub", href: "/dashboard", icon: <IconChartBar className="w-6 h-6" />, color: "text-purple-400", bg: "bg-purple-500/10" },
                         { title: "AI Assistant", href: "/chat", icon: <IconMessageCircle className="w-6 h-6" />, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                        { title: "Perricheno Agent", href: "/agent", icon: <IconRobot className="w-6 h-6" />, color: "text-cyan-400", bg: "bg-cyan-500/10" },
                         { title: "PDF Converter", href: "/pdf", icon: <IconFileTypePdf className="w-6 h-6" />, color: "text-red-400", bg: "bg-red-500/10" }
                     ].map((item, i) => (
                         <Link key={i} href={item.href}
