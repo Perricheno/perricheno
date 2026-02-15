@@ -1,0 +1,11 @@
+services:
+  perricheno-site:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: perricheno-site
+    restart: always
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
