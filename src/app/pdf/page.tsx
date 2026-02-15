@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { DockSidebar } from "@/components/ui/DockSidebar";
 import { AdminBar } from "@/components/AdminBar";
+import { useAdmin } from "@/components/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import {
@@ -33,6 +34,7 @@ const TOOLS: ToolDef[] = [
 ];
 
 export default function PDFPage() {
+    const { user } = useAdmin();
     const [activeTool, setActiveTool] = useState<ToolType | null>(null);
     const [files, setFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<"idle" | "processing" | "zipping" | "done" | "error">("idle");
@@ -40,16 +42,9 @@ export default function PDFPage() {
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [downloadUrl, setDownloadUrl] = useState<string>("");
     const [downloadName, setDownloadName] = useState<string>("");
-    const [tgUser, setTgUser] = useState<any>(null); // Telegram User
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const tool = TOOLS.find(t => t.id === activeTool);
-
-    useEffect(() => {
-        // Check for telegram user
-        const stored = localStorage.getItem("tg_user");
-        if (stored) setTgUser(JSON.parse(stored));
-    }, []);
 
     const handleFiles = (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
@@ -69,11 +64,11 @@ export default function PDFPage() {
     };
 
     const sendToTelegram = async (blob: Blob) => {
-        if (!tgUser) return;
+        if (!user) return;
         try {
             const fd = new FormData();
             fd.append("document", blob, downloadName || "converted-file");
-            fd.append("chat_id", tgUser.id);
+            fd.append("chat_id", user.telegram_id);
             await fetch("/api/telegram/send", { method: "POST", body: fd });
         } catch (e) {
             console.error("BG Telegram Send Failed", e);
@@ -134,7 +129,7 @@ export default function PDFPage() {
             setDownloadUrl(url);
 
             // Auto-send to Telegram
-            if (tgUser) sendToTelegram(finalBlob);
+            if (user) sendToTelegram(finalBlob);
 
             setStatus("done");
         } catch (e: any) {
@@ -158,8 +153,8 @@ export default function PDFPage() {
 
             <div className="relative z-10 max-w-[1200px] mx-auto px-4 pt-24 pb-32 md:py-28 md:pl-24 min-h-[80vh]">
 
-                {activeTool && tgUser && <div className="absolute top-24 right-4 z-40 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs flex items-center gap-2">
-                    <IconBrandTelegram className="w-3 h-3" /> Auto-send to {tgUser.first_name}
+                {activeTool && user && <div className="absolute top-24 right-4 z-40 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs flex items-center gap-2">
+                    <IconBrandTelegram className="w-3 h-3" /> Auto-send to {user.first_name}
                 </div>}
 
                 <AnimatePresence mode="wait">
@@ -266,7 +261,7 @@ export default function PDFPage() {
                                                     <IconFileCheck className="w-8 h-8" />
                                                 </div>
                                                 <p className="text-emerald-400 font-medium text-lg">Conversion Complete!</p>
-                                                {tgUser && <p className="text-blue-400 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
+                                                {user && <p className="text-blue-400 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
                                                 <a href={downloadUrl} download={downloadName}
                                                     className="px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
                                                     <IconDownload className="w-5 h-5" /> Download {files.length > 1 ? "ZIP Archive" : "File"}
