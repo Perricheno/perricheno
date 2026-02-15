@@ -9,8 +9,6 @@ const ENDPOINTS: Record<string, string> = {
     "pdf-to-word": `${API_BASE}/convert/pdf/word`,
     "pdf-to-ppt": `${API_BASE}/convert/pdf/presentation`,
     "pdf-to-text": `${API_BASE}/convert/pdf/text`,
-    "pdf-to-html": `${API_BASE}/convert/pdf/html`,
-    "pdf-to-xml": `${API_BASE}/convert/pdf/xml`,
     "pdf-to-img": `${API_BASE}/convert/pdf/img`,
     "merge-pdfs": `${API_BASE}/general/merge-pdfs`,
 };
@@ -26,18 +24,31 @@ export async function POST(req: NextRequest) {
 
         const formData = await req.formData();
 
+        // Log for debugging
+        console.log(`[Proxy] Forwarding to ${targetUrl}`);
+        // Ensure fileInput exists
+        if (!formData.has("fileInput")) {
+            console.error("[Proxy] No fileInput in request");
+            return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+        }
+
         // Forward to external API
         const response = await fetch(targetUrl, {
             method: "POST",
             headers: {
                 "X-API-KEY": API_KEY,
+                // Do NOT set Content-Type, let browser set boundary
             },
             body: formData,
         });
 
         if (!response.ok) {
             const errText = await response.text();
-            return NextResponse.json({ error: `API Error: ${response.status} - ${errText}` }, { status: response.status });
+            console.error(`[Proxy] API Error ${response.status}: ${errText}`);
+            return NextResponse.json({
+                error: `API Error: ${response.status}`,
+                details: errText.substring(0, 500)
+            }, { status: response.status });
         }
 
         // Get file data
@@ -55,7 +66,7 @@ export async function POST(req: NextRequest) {
             },
         });
     } catch (e) {
-        console.error("Proxy Error:", e);
+        console.error("[Proxy] Internal Error:", e);
         return NextResponse.json({ error: String(e) }, { status: 500 });
     }
 }

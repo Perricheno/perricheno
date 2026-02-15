@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DockSidebar } from "@/components/ui/DockSidebar";
 import { AdminBar } from "@/components/AdminBar";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import {
     IconCloudUpload, IconFileTypePdf, IconLoader2, IconDownload, IconArrowLeft,
-    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX, IconFileCheck
+    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX, IconFileCheck, IconBrandTelegram
 } from "@tabler/icons-react";
 
 type ToolType = "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img";
@@ -36,17 +36,26 @@ export default function PDFPage() {
     const [activeTool, setActiveTool] = useState<ToolType | null>(null);
     const [files, setFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<"idle" | "processing" | "zipping" | "done" | "error">("idle");
+    const [errorMsg, setErrorMsg] = useState("");
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [downloadUrl, setDownloadUrl] = useState<string>("");
     const [downloadName, setDownloadName] = useState<string>("");
+    const [tgUser, setTgUser] = useState<any>(null); // Telegram User
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const tool = TOOLS.find(t => t.id === activeTool);
+
+    useEffect(() => {
+        // Check for telegram user
+        const stored = localStorage.getItem("tg_user");
+        if (stored) setTgUser(JSON.parse(stored));
+    }, []);
 
     const handleFiles = (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
         setFiles(prev => [...prev, ...Array.from(fileList)]);
         setStatus("idle");
+        setErrorMsg("");
         setDownloadUrl("");
     };
 
@@ -59,11 +68,24 @@ export default function PDFPage() {
         return `${base}${tool.outputExt}`;
     };
 
+    const sendToTelegram = async (blob: Blob) => {
+        if (!tgUser) return;
+        try {
+            const fd = new FormData();
+            fd.append("document", blob, downloadName || "converted-file");
+            fd.append("chat_id", tgUser.id);
+            await fetch("/api/telegram/send", { method: "POST", body: fd });
+        } catch (e) {
+            console.error("BG Telegram Send Failed", e);
+        }
+    };
+
     const convert = async () => {
         if (files.length === 0 || !activeTool || !tool) return;
         setStatus("processing");
         setProgress({ current: 0, total: files.length });
         setDownloadUrl("");
+        setErrorMsg("");
 
         try {
             const zip = new JSZip();
@@ -84,7 +106,10 @@ export default function PDFPage() {
                     body: formData,
                 });
 
-                if (!res.ok) throw new Error(`Failed to convert ${file.name}`);
+                if (!res.ok) {
+                    const errJson = await res.json();
+                    throw new Error(errJson.details || errJson.error || `Failed to convert ${file.name}`);
+                }
 
                 const blob = await res.blob();
                 const newName = getOutputFilename(file.name, tool);
@@ -95,22 +120,27 @@ export default function PDFPage() {
 
             setStatus("zipping");
 
+            let finalBlob: Blob;
             if (results.length === 1) {
-                const url = URL.createObjectURL(results[0].blob);
-                setDownloadUrl(url);
+                finalBlob = results[0].blob;
                 setDownloadName(`converted-${results[0].name}`);
             } else {
                 results.forEach(r => zip.file(r.name, r.blob));
-                const content = await zip.generateAsync({ type: "blob" });
-                const url = URL.createObjectURL(content);
-                setDownloadUrl(url);
+                finalBlob = await zip.generateAsync({ type: "blob" });
                 setDownloadName("converted-files.zip");
             }
 
+            const url = URL.createObjectURL(finalBlob);
+            setDownloadUrl(url);
+
+            // Auto-send to Telegram
+            if (tgUser) sendToTelegram(finalBlob);
+
             setStatus("done");
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
             setStatus("error");
+            setErrorMsg(e.message || "Unknown error occurred");
         }
     };
 
@@ -127,6 +157,10 @@ export default function PDFPage() {
             <AdminBar />
 
             <div className="relative z-10 max-w-[1200px] mx-auto px-4 pt-24 pb-32 md:py-28 md:pl-24 min-h-[80vh]">
+
+                {activeTool && tgUser && <div className="absolute top-24 right-4 z-40 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs flex items-center gap-2">
+                    <IconBrandTelegram className="w-3 h-3" /> Auto-send to {tgUser.first_name}
+                </div>}
 
                 <AnimatePresence mode="wait">
                     {!activeTool ? (
@@ -232,6 +266,7 @@ export default function PDFPage() {
                                                     <IconFileCheck className="w-8 h-8" />
                                                 </div>
                                                 <p className="text-emerald-400 font-medium text-lg">Conversion Complete!</p>
+                                                {tgUser && <p className="text-blue-400 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
                                                 <a href={downloadUrl} download={downloadName}
                                                     className="px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
                                                     <IconDownload className="w-5 h-5" /> Download {files.length > 1 ? "ZIP Archive" : "File"}
@@ -247,7 +282,10 @@ export default function PDFPage() {
                                         )}
 
                                         {status === "error" && (
-                                            <p className="text-red-400 text-center text-sm">One or more conversions failed. Please check your network.</p>
+                                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
+                                                <p className="text-red-400 font-bold text-sm mb-1">Conversion Failed</p>
+                                                <p className="text-red-400/80 text-xs">{errorMsg}</p>
+                                            </div>
                                         )}
                                     </div>
                                 )}
