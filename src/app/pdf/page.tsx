@@ -4,9 +4,10 @@ import { useState, useRef } from "react";
 import { DockSidebar } from "@/components/ui/DockSidebar";
 import { AdminBar } from "@/components/AdminBar";
 import { motion, AnimatePresence } from "framer-motion";
+import JSZip from "jszip";
 import {
     IconCloudUpload, IconFileTypePdf, IconLoader2, IconDownload, IconArrowLeft,
-    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode
+    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX, IconFileCheck
 } from "@tabler/icons-react";
 
 type ToolType = "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img";
@@ -19,57 +20,93 @@ interface ToolDef {
     accept: string;
     color: string;
     bg: string;
+    outputExt: string;
 }
 
 const TOOLS: ToolDef[] = [
-    { id: "file-to-pdf", title: "File to PDF", desc: "Convert Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", color: "text-blue-400", bg: "bg-blue-500/10" },
-    { id: "img-to-pdf", title: "Image to PDF", desc: "Convert JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", color: "text-purple-400", bg: "bg-purple-500/10" },
-    { id: "pdf-to-word", title: "PDF to Word", desc: "Convert PDF to Editable Word", icon: IconFileText, accept: ".pdf", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "Convert PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", color: "text-orange-400", bg: "bg-orange-500/10" },
-    { id: "pdf-to-img", title: "PDF to Images", desc: "Extract pages as images", icon: IconPhoto, accept: ".pdf", color: "text-pink-400", bg: "bg-pink-500/10" },
-    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract text from PDF", icon: IconCode, accept: ".pdf", color: "text-cyan-400", bg: "bg-cyan-500/10" },
+    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", color: "text-blue-400", bg: "bg-blue-500/10", outputExt: ".pdf" },
+    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", color: "text-purple-400", bg: "bg-purple-500/10", outputExt: ".pdf" },
+    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: IconFileText, accept: ".pdf", color: "text-emerald-400", bg: "bg-emerald-500/10", outputExt: ".docx" },
+    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", color: "text-orange-400", bg: "bg-orange-500/10", outputExt: ".pptx" },
+    { id: "pdf-to-img", title: "PDF to Images", desc: "Extract pages as ZIP", icon: IconPhoto, accept: ".pdf", color: "text-pink-400", bg: "bg-pink-500/10", outputExt: ".zip" },
+    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconCode, accept: ".pdf", color: "text-cyan-400", bg: "bg-cyan-500/10", outputExt: ".txt" },
 ];
 
 export default function PDFPage() {
     const [activeTool, setActiveTool] = useState<ToolType | null>(null);
-    const [file, setFile] = useState<File | null>(null);
-    const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
+    const [files, setFiles] = useState<File[]>([]);
+    const [status, setStatus] = useState<"idle" | "processing" | "zipping" | "done" | "error">("idle");
+    const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [downloadUrl, setDownloadUrl] = useState<string>("");
+    const [downloadName, setDownloadName] = useState<string>("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const tool = TOOLS.find(t => t.id === activeTool);
 
-    const handleFile = (files: FileList | null) => {
-        if (!files || files.length === 0) return;
-        setFile(files[0]);
+    const handleFiles = (fileList: FileList | null) => {
+        if (!fileList || fileList.length === 0) return;
+        setFiles(prev => [...prev, ...Array.from(fileList)]);
         setStatus("idle");
         setDownloadUrl("");
     };
 
+    const removeFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const getOutputFilename = (originalName: string, tool: ToolDef) => {
+        const base = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+        return `${base}${tool.outputExt}`;
+    };
+
     const convert = async () => {
-        if (!file || !activeTool) return;
-        setStatus("uploading");
+        if (files.length === 0 || !activeTool || !tool) return;
+        setStatus("processing");
+        setProgress({ current: 0, total: files.length });
+        setDownloadUrl("");
 
         try {
-            const formData = new FormData();
-            formData.append("fileInput", file);
+            const zip = new JSZip();
+            const results: { name: string; blob: Blob }[] = [];
 
-            // Add options if needed (e.g. for img-to-pdf)
-            if (activeTool === "img-to-pdf") {
-                formData.append("fitOption", "fillPage");
-                formData.append("colorType", "color");
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append("fileInput", file);
+
+                if (activeTool === "img-to-pdf") {
+                    formData.append("fitOption", "fillPage");
+                    formData.append("colorType", "color");
+                }
+
+                const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!res.ok) throw new Error(`Failed to convert ${file.name}`);
+
+                const blob = await res.blob();
+                const newName = getOutputFilename(file.name, tool);
+
+                results.push({ name: newName, blob });
+                setProgress(prev => ({ ...prev, current: i + 1 }));
             }
 
-            const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
-                method: "POST",
-                body: formData,
-            });
+            setStatus("zipping");
 
-            if (!res.ok) throw new Error("Conversion failed");
+            if (results.length === 1) {
+                const url = URL.createObjectURL(results[0].blob);
+                setDownloadUrl(url);
+                setDownloadName(`converted-${results[0].name}`);
+            } else {
+                results.forEach(r => zip.file(r.name, r.blob));
+                const content = await zip.generateAsync({ type: "blob" });
+                const url = URL.createObjectURL(content);
+                setDownloadUrl(url);
+                setDownloadName("converted-files.zip");
+            }
 
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
             setStatus("done");
         } catch (e) {
             console.error(e);
@@ -78,9 +115,10 @@ export default function PDFPage() {
     };
 
     const reset = () => {
-        setFile(null);
+        setFiles([]);
         setStatus("idle");
         setDownloadUrl("");
+        setProgress({ current: 0, total: 0 });
     };
 
     return (
@@ -118,7 +156,7 @@ export default function PDFPage() {
                         </motion.div>
                     ) : (
                         <motion.div key="tool" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                            className="flex flex-col items-center max-w-[800px] mx-auto">
+                            className="flex flex-col items-center max-w-[800px] mx-auto w-full">
 
                             <div className="w-full flex items-center justify-between mb-8">
                                 <button onClick={() => { setActiveTool(null); reset(); }}
@@ -130,64 +168,86 @@ export default function PDFPage() {
                                 </div>
                             </div>
 
-                            <div className="w-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 md:p-12 flex flex-col items-center relative overflow-hidden">
-                                {status === "uploading" && (
-                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
+                            <div className="w-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 md:p-12 flex flex-col items-center relative overflow-hidden min-h-[400px]">
+                                {status === "processing" && (
+                                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-20 flex flex-col items-center justify-center">
                                         <IconLoader2 className="w-12 h-12 text-emerald-400 animate-spin mb-4" />
-                                        <p className="text-white font-medium">Processing...</p>
+                                        <p className="text-white font-medium text-lg mb-2">Processing Files...</p>
+                                        <p className="text-white/50 text-sm">Converted {progress.current} of {progress.total}</p>
+                                        <div className="w-64 h-2 bg-white/10 rounded-full mt-4 overflow-hidden">
+                                            <motion.div
+                                                className="h-full bg-emerald-500"
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                            />
+                                        </div>
                                     </div>
                                 )}
 
-                                {!file ? (
+                                {files.length === 0 ? (
                                     <div
                                         className="w-full border-2 border-dashed border-white/10 rounded-2xl h-64 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-emerald-500/50 hover:bg-white/[0.02] transition-all group"
                                         onClick={() => fileInputRef.current?.click()}
                                         onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files); }}
+                                        onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
                                     >
-                                        <input ref={fileInputRef} type="file" className="hidden" accept={tool?.accept} onChange={(e) => handleFile(e.target.files)} />
+                                        <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                         <div className={`p-4 rounded-full bg-white/5 group-hover:bg-emerald-500/10 group-hover:text-emerald-400 transition-colors`}>
                                             <IconCloudUpload className="w-8 h-8 text-white/40 group-hover:text-emerald-400" />
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-white font-medium">Click to upload or drag and drop</p>
-                                            <p className="text-white/30 text-sm mt-1">Supported: {tool?.accept.replace(/\./g, " ").toUpperCase()}</p>
+                                            <p className="text-white font-medium">Click or Drag files here</p>
+                                            <p className="text-white/30 text-sm mt-1">Upload up to 100 files</p>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="w-full flex flex-col gap-6">
-                                        <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                                            <div className={`p-3 rounded-lg ${tool?.bg} ${tool?.color}`}>
-                                                {tool && <tool.icon className="w-6 h-6" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-white font-medium truncate">{file.name}</p>
-                                                <p className="text-white/30 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                            </div>
-                                            <button onClick={reset} className="text-white/30 hover:text-red-400 text-sm">Remove</button>
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-white font-medium">Files ({files.length})</h3>
+                                            <button onClick={() => fileInputRef.current?.click()} className="text-emerald-400 text-sm hover:underline">+ Add more</button>
+                                            <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
+                                        </div>
+
+                                        <div className="max-h-60 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                                            {files.map((f, i) => (
+                                                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                                                    className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                                                    <div className={`p-2 rounded-lg ${tool?.bg} ${tool?.color}`}>
+                                                        {tool && <tool.icon className="w-5 h-5" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white text-sm font-medium truncate">{f.name}</p>
+                                                        <p className="text-white/30 text-xs">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                    </div>
+                                                    <button onClick={() => removeFile(i)} className="text-white/30 hover:text-red-400 p-1">
+                                                        <IconX className="w-4 h-4" />
+                                                    </button>
+                                                </motion.div>
+                                            ))}
                                         </div>
 
                                         {status === "done" ? (
-                                            <div className="flex flex-col gap-4 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                            <div className="flex flex-col gap-4 items-center animate-in fade-in slide-in-from-bottom-4 duration-500 pt-4 border-t border-white/10">
                                                 <div className="p-2 rounded-full bg-emerald-500/20 text-emerald-400">
-                                                    <IconDownload className="w-6 h-6" />
+                                                    <IconFileCheck className="w-8 h-8" />
                                                 </div>
-                                                <p className="text-emerald-400 font-medium">Success!</p>
-                                                <a href={downloadUrl} download={`converted-${file.name}`}
-                                                    className="px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">
-                                                    Download Result
+                                                <p className="text-emerald-400 font-medium text-lg">Conversion Complete!</p>
+                                                <a href={downloadUrl} download={downloadName}
+                                                    className="px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                                                    <IconDownload className="w-5 h-5" /> Download {files.length > 1 ? "ZIP Archive" : "File"}
                                                 </a>
-                                                <button onClick={reset} className="text-white/40 text-sm hover:text-white mt-2">Convert another file</button>
+                                                <button onClick={reset} className="text-white/40 text-sm hover:text-white mt-2">Start Over</button>
                                             </div>
                                         ) : (
                                             <button onClick={convert}
-                                                className="w-full py-3.5 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-all shadow-lg text-sm uppercase tracking-wide">
-                                                Convert Now
+                                                disabled={status !== "idle"}
+                                                className="w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-all shadow-lg text-sm uppercase tracking-wide mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                Convert {files.length} File{files.length > 1 ? "s" : ""}
                                             </button>
                                         )}
 
                                         {status === "error" && (
-                                            <p className="text-red-400 text-center text-sm">Conversion failed. Please try again.</p>
+                                            <p className="text-red-400 text-center text-sm">One or more conversions failed. Please check your network.</p>
                                         )}
                                     </div>
                                 )}
