@@ -88,7 +88,7 @@ export const DockSidebar = () => {
             </motion.div>
 
             {/* Mobile Bottom Bar */}
-            <div className="fixed bottom-6 left-6 right-6 h-16 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-around px-2 z-50 md:hidden shadow-2xl">
+            <div className="fixed bottom-4 left-4 right-4 h-16 bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-around px-2 z-50 md:hidden shadow-2xl">
                 {items.map((item) => (
                     <Link
                         key={item.title}

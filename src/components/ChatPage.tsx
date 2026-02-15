@@ -469,7 +469,7 @@ export default function ChatPage() {
                 </AnimatePresence>
 
                 {/* Input bar */}
-                <div className="shrink-0 px-4 pb-4 pt-1">
+                <div className="shrink-0 px-4 pt-1 pb-28 md:pb-4">
                     <div className="flex items-center gap-2 rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl px-3 py-2">
                         <input ref={fileInputRef} type="file" multiple className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.xlsx,.csv" onChange={handleFileSelect} />
                         <button onClick={() => fileInputRef.current?.click()}
