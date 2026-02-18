@@ -3,16 +3,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
     IconSend, IconPaperclip, IconMicrophone, IconPlayerStop,
-    IconPhoto, IconFile, IconX, IconLoader2, IconChevronDown,
+    IconPhoto, IconFile, IconX, IconChevronDown,
     IconSettings, IconPlus, IconMessage, IconTrash, IconUser,
-    IconLogin, IconLogout, IconMoon, IconSun, IconLayoutSidebarRightCollapse
+    IconLogin, IconSun, IconMoon
 } from "@tabler/icons-react";
 import ChatSettingsModal from "@/components/ChatSettingsModal";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import { getSettings, saveSettings, type ChatSettings } from "@/app/actions";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
+import MinimalSidebar from "@/components/MinimalSidebar";
 
 /* ── Types ── */
 interface ChatMessage {
@@ -46,26 +46,9 @@ function genId(): string {
     });
 }
 
-export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => void }) {
+export default function ChatPage() {
     /* ── State ── */
     const [initialChatId] = useState(() => genId());
-    // ... (rest of simple state)
-
-    // ... inside render ...
-    {/* Settings */ }
-    <button onClick={() => setSettingsOpen(true)}
-        className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
-        <IconSettings className="w-4 h-4" />
-    </button>
-
-    {/* Toggle Navbar */ }
-    <button onClick={onToggleNavbar}
-        className="p-1.5 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all" title="Toggle Navigation">
-        <IconLayoutSidebarRightCollapse className="w-4 h-4" />
-    </button>
-
-    {/* Theme toggle */ }
-    // ...
     const [threads, setThreads] = useState<ChatThread[]>([
         { id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() },
     ]);
@@ -78,12 +61,7 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
     const [settings, setSettings] = useState<ChatSettings | null>(null);
     const [modelOpen, setModelOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [accountModalOpen, setAccountModalOpen] = useState(false);
     const [account, setAccount] = useState<UserAccount | null>(null);
-    const [authMode, setAuthMode] = useState<"login" | "register">("login");
-    const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
-    const [authError, setAuthError] = useState("");
 
     // Admin
     const { user, isEditing, setIsEditing, showLogin, setShowLogin } = useAdmin();
@@ -107,41 +85,13 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
             if (!parsed.id) parsed.id = genId();
             setAccount(parsed);
         }
-        if (window.innerWidth < 768) setSidebarOpen(false);
     }, []);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-    /* ── Auth ── */
-    const handleAuth = () => {
-        setAuthError("");
-        if (authMode === "register") {
-            if (!authForm.name.trim() || !authForm.email.trim() || !authForm.password.trim()) {
-                setAuthError("All fields are required");
-                return;
-            }
-            const acc: UserAccount = { id: genId(), name: authForm.name.trim(), email: authForm.email.trim() };
-            setAccount(acc);
-            localStorage.setItem("chat_account", JSON.stringify(acc));
-            setAccountModalOpen(false);
-            setAuthForm({ name: "", email: "", password: "" });
-        } else {
-            if (!authForm.email.trim() || !authForm.password.trim()) {
-                setAuthError("Email and password required");
-                return;
-            }
-            const acc: UserAccount = { id: genId(), name: authForm.email.split("@")[0], email: authForm.email.trim() };
-            setAccount(acc);
-            localStorage.setItem("chat_account", JSON.stringify(acc));
-            setAccountModalOpen(false);
-            setAuthForm({ name: "", email: "", password: "" });
-        }
-    };
-
     const handleLogout = () => {
         setAccount(null);
         localStorage.removeItem("chat_account");
-        setAccountModalOpen(false);
     };
 
     /* ── Thread management ── */
@@ -211,11 +161,8 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
 
         try {
             const webhookUrl = settings.useTestWebhook ? settings.webhookTest : settings.webhookProd;
-
             const formData = new FormData();
-            // webhookUrl tells the proxy where to forward
             formData.append("webhookUrl", webhookUrl);
-            // Each field is separate so n8n can drag-and-drop them individually
             formData.append("chatId", activeThreadId);
             formData.append("timestamp", new Date().toISOString());
             formData.append("message", msgText);
@@ -230,25 +177,15 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
             files.forEach((file, i) => formData.append(`file_${i}`, file, file.name));
             if (audioBlob) formData.append("audio", audioBlob, "voice_message.webm");
 
-            // Go through our server-side proxy to avoid CORS
             const response = await fetch("/api/webhook-proxy", { method: "POST", body: formData });
-
-            let responseText = "";
-            // Read body as text first (can only read once), then try JSON parse
             const raw = await response.text();
-
-            if (!response.ok) {
-                try { const errData = JSON.parse(raw); responseText = `⚠️ Error ${response.status}: ${errData.error || response.statusText}`; }
-                catch { responseText = `⚠️ Error ${response.status}: ${raw || response.statusText}`; }
-            } else {
-                try {
-                    const data = JSON.parse(raw);
-                    responseText = typeof data === "string" ? data : (data.message || data.text || data.response || data.output || JSON.stringify(data));
-                } catch {
-                    responseText = raw || "Response received";
-                }
+            let responseText = "";
+            try {
+                const data = JSON.parse(raw);
+                responseText = typeof data === "string" ? data : (data.message || data.text || data.response || data.output || JSON.stringify(data));
+            } catch {
+                responseText = raw || "Response received";
             }
-
             updateThreadMessages(activeThreadId, [...updatedMessages, { id: String(Date.now()), role: "assistant", text: responseText, timestamp: new Date() }]);
         } catch (err: unknown) {
             const detail = err instanceof Error ? err.message : "Unknown error";
@@ -263,7 +200,6 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
         if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
     };
     const removeFile = (i: number) => setFiles(prev => prev.filter((_, idx) => idx !== i));
-
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -282,83 +218,61 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
             timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
         } catch { alert("Microphone access denied"); }
     };
-
     const stopRecording = () => {
         mediaRecorderRef.current?.stop();
         setIsRecording(false);
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
-
     const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const fileIcon = (t: string) => t.startsWith('image/') ? <IconPhoto className="w-3.5 h-3.5" /> : <IconFile className="w-3.5 h-3.5" />;
 
-    /* ═══════════════════════════════ RENDER ═══════════════════════════════ */
     return (
-        <div className="relative z-10 w-full h-screen flex overflow-hidden">
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-2xl -z-10" />
-
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 flex overflow-hidden">
             {/* Admin login modal */}
-            <AnimatePresence>
-                {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
-            </AnimatePresence>
-
-            {/* Mobile Backdrop */}
-            <AnimatePresence>
-                {sidebarOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm md:hidden"
-                        onClick={() => setSidebarOpen(false)} />
-                )}
-            </AnimatePresence>
-
+            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
 
-            {/* ══ SIDEBAR ══ */}
-            <aside className={`fixed inset-y-0 left-0 z-30 h-full flex flex-col bg-[#080808] border-r border-white/[0.06] transition-all duration-300 md:relative
-                ${sidebarOpen ? "translate-x-0 w-[280px]" : "-translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden md:border-none"}`}>
+            <MinimalSidebar />
 
-                {/* New chat button */}
-                <div className="p-3 border-b border-white/[0.06]">
-                    <button onClick={createThread}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/70 text-sm hover:bg-white/[0.08] transition-all">
-                        <IconPlus className="w-4 h-4" /> New Chat
+            {/* ══ CHAT SIDEBAR (History) ══ */}
+            <aside className="w-64 border-r border-[var(--border)] bg-[var(--background)] flex flex-col hidden md:flex">
+                <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+                    <h2 className="font-bold text-sm">Chats</h2>
+                    <button onClick={createThread} className="text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
+                        <IconPlus className="w-5 h-5" />
                     </button>
                 </div>
-
-                {/* Chat list */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {threads.map(t => (
                         <div key={t.id}
-                            className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${t.id === activeThreadId ? "bg-emerald-500/10 text-white" : "text-white/50 hover:bg-white/[0.04] hover:text-white/80"}`}
+                            className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${t.id === activeThreadId ? "bg-[var(--foreground)] text-[var(--background)]" : "text-[var(--foreground)] hover:bg-[var(--muted)]"}`}
                             onClick={() => setActiveThreadId(t.id)}>
                             <IconMessage className="w-4 h-4 shrink-0 opacity-50" />
-                            <span className="flex-1 text-xs truncate">{t.title}</span>
+                            <span className="flex-1 truncate">{t.title}</span>
                             {threads.length > 1 && (
-                                <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }}
-                                    className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all p-0.5">
+                                <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-500">
                                     <IconTrash className="w-3 h-3" />
                                 </button>
                             )}
                         </div>
                     ))}
                 </div>
-
-                {/* Account section */}
-                <div className="p-3 border-t border-white/[0.06]">
+                {/* Account / User Area */}
+                <div className="p-4 border-t border-[var(--border)]">
                     {user ? (
-                        <button onClick={() => { setIsEditing(true); }}
-                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0 overflow-hidden">
-                                {user.photo_url ? <img src={user.photo_url} alt={user.first_name || "User"} className="w-full h-full object-cover" /> : <IconUser className="w-4 h-4 text-white" />}
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[var(--border)] overflow-hidden">
+                                {user.photo_url ? <img src={user.photo_url} alt="User" /> : <IconUser className="p-1" />}
                             </div>
-                            <div className="flex-1 min-w-0 text-left">
-                                <p className="text-xs text-white font-medium truncate">{user.first_name}</p>
-                                <p className="text-[10px] text-white/30 truncate">Online</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold truncate">{user.first_name}</p>
                             </div>
-                        </button>
+                            <button onClick={() => { if (isEditing) setIsEditing(false); else setShowLogin(true); }}>
+                                <IconSettings className="w-4 h-4 opacity-50 hover:opacity-100" />
+                            </button>
+                        </div>
                     ) : (
-                        <button onClick={() => setShowLogin(true)}
-                            className="w-full flex items-center gap-2 justify-center px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 transition-all text-white text-sm font-medium">
+                        <button onClick={() => setShowLogin(true)} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-[var(--foreground)] text-[var(--background)] font-medium text-sm">
                             <IconLogin className="w-4 h-4" /> Sign In
                         </button>
                     )}
@@ -366,173 +280,101 @@ export default function ChatPage({ onToggleNavbar }: { onToggleNavbar?: () => vo
             </aside>
 
             {/* ══ MAIN CHAT AREA ══ */}
-            <div className="relative z-10 flex-1 flex flex-col h-screen min-w-0">
-
-                {/* Toolbar */}
-                <div className="shrink-0 h-12 flex items-center justify-between px-4 border-b border-white/[0.06] bg-black/20 backdrop-blur-sm">
-                    {/* Left */}
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
-                            <IconMessage className="w-4 h-4" />
-                        </button>
-
+            <div className="flex-1 flex flex-col h-screen min-w-0 bg-[var(--background)] relative">
+                {/* Header */}
+                <header className="h-16 border-b border-[var(--border)] flex items-center justify-between px-6 bg-[var(--background)] z-10">
+                    <div className="flex items-center gap-4">
+                        <span className="font-bold text-lg">{activeThread.title}</span>
                         {settings && (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium select-none ${settings.useTestWebhook ? "bg-amber-500/15 text-amber-400 border border-amber-500/20" : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"}`}>
-                                {settings.useTestWebhook ? "🧪 Test" : "🚀 Prod"}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${settings.useTestWebhook ? "border-amber-500 text-amber-500" : "border-green-500 text-green-500"}`}>
+                                {settings.useTestWebhook ? "TEST" : "PROD"}
                             </span>
                         )}
                     </div>
-
-                    {/* Right — model + settings + theme + admin */}
-                    <div className="flex items-center gap-1">
-                        {/* Model selector */}
+                    <div className="flex items-center gap-2">
                         {settings && (
                             <div className="relative">
-                                <button onClick={() => setModelOpen(!modelOpen)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/60 text-[11px] font-mono hover:bg-white/[0.08] transition-all">
-                                    {settings.selectedModel}
-                                    <IconChevronDown className={`w-3 h-3 transition-transform ${modelOpen ? "rotate-180" : ""}`} />
+                                <button onClick={() => setModelOpen(!modelOpen)} className="flex items-center gap-1 text-xs font-mono border border-[var(--border)] px-2 py-1 rounded hover:bg-[var(--muted)]">
+                                    {settings.selectedModel} <IconChevronDown className="w-3 h-3" />
                                 </button>
-                                <AnimatePresence>
-                                    {modelOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-40" onClick={() => setModelOpen(false)} />
-                                            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                                                className="absolute right-0 top-full mt-1 w-48 max-h-52 overflow-y-auto rounded-xl bg-[#0a0a0a] border border-white/10 shadow-2xl z-50">
-                                                {settings.models.map(m => (
-                                                    <button key={m} onClick={() => changeModel(m)}
-                                                        className={`w-full text-left px-3 py-2 text-xs font-mono transition-all ${m === settings.selectedModel ? "bg-emerald-500/15 text-emerald-400" : "text-white/60 hover:bg-white/[0.06] hover:text-white"}`}>
-                                                        {m}
-                                                    </button>
-                                                ))}
-                                            </motion.div>
-                                        </>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        )}
-
-                        {/* Settings */}
-                        <button onClick={() => setSettingsOpen(true)}
-                            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
-                            <IconSettings className="w-4 h-4" />
-                        </button>
-
-                        <button onClick={onToggleNavbar}
-                            className="p-1.5 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-white/10 transition-all" title="Toggle Navigation">
-                            <IconLayoutSidebarRightCollapse className="w-4 h-4" />
-                        </button>
-
-                        {/* Theme toggle */}
-                        <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
-                            {theme === "dark" ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
-                        </button>
-
-                        {/* Admin */}
-                        <button onClick={() => { if (isEditing) setIsEditing(false); else setShowLogin(true); }}
-                            className={`p-1.5 rounded-lg transition-all ${isEditing ? "text-emerald-400 bg-emerald-500/15" : "text-white/40 hover:text-white hover:bg-white/10"}`}>
-                            <IconUser className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {messages.length === 0 && (
-                        <div className="flex items-center justify-center h-full">
-                            <motion.div className="text-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                                <div className="text-5xl mb-3">💬</div>
-                                <p className="text-white/25 text-sm">Start a conversation</p>
-                            </motion.div>
-                        </div>
-                    )}
-
-                    <AnimatePresence>
-                        {messages.map((msg) => (
-                            <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === "user"
-                                    ? "bg-emerald-500/20 border border-emerald-500/20 text-white"
-                                    : "bg-white/[0.05] border border-white/[0.08] text-white/90"}`}>
-                                    {msg.text && <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>}
-                                    {msg.files && msg.files.length > 0 && (
-                                        <div className="mt-2 space-y-1.5">
-                                            {msg.files.map((f, i) => (
-                                                <div key={i}>
-                                                    {f.type.startsWith('image/') ? <img src={f.url} alt={f.name} className="rounded-lg max-h-48 object-cover" />
-                                                        : f.type.startsWith('video/') ? <video src={f.url} controls className="rounded-lg max-h-48" />
-                                                            : <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">{fileIcon(f.type)}<span className="text-xs text-white/60 truncate">{f.name}</span></div>}
-                                                </div>
+                                {modelOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setModelOpen(false)} />
+                                        <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--background)] border border-[var(--border)] rounded shadow-xl z-50">
+                                            {settings.models.map(m => (
+                                                <button key={m} onClick={() => changeModel(m)} className="w-full text-left px-4 py-2 text-xs hover:bg-[var(--muted)] border-b border-[var(--border)] last:border-0">
+                                                    {m}
+                                                </button>
                                             ))}
                                         </div>
-                                    )}
-                                    {msg.audioUrl && <div className="mt-2"><audio src={msg.audioUrl} controls className="w-full h-8" style={{ filter: "invert(1) hue-rotate(180deg)" }} /></div>}
-                                    <p className="text-[10px] text-white/20 mt-1.5">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-
-                    {isLoading && (
-                        <motion.div className="flex justify-start" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <div className="bg-white/[0.05] border border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-2">
-                                <IconLoader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-                                <span className="text-white/40 text-sm">Thinking...</span>
+                                    </>
+                                )}
                             </div>
-                        </motion.div>
+                        )}
+                        <button onClick={() => setSettingsOpen(true)} className="p-2 hover:bg-[var(--muted)] rounded"><IconSettings className="w-5 h-5" /></button>
+                        <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-2 hover:bg-[var(--muted)] rounded">
+                            {theme === "dark" ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
+                        </button>
+                    </div>
+                </header>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {messages.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center opacity-30">
+                            <IconMessage className="w-16 h-16 mb-4" />
+                            <p>Start a conversation...</p>
+                        </div>
                     )}
+                    {messages.map((msg) => (
+                        <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                            <div className={`max-w-[80%] rounded-lg px-5 py-3 border ${msg.role === "user" 
+                                ? "bg-[var(--foreground)] text-[var(--background)] border-transparent" 
+                                : "bg-[var(--background)] text-[var(--foreground)] border-[var(--border)]"}`}>
+                                <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                {msg.files && msg.files.length > 0 && ( 
+                                    <div className="mt-2 space-y-1">{msg.files.map((f, i) => <div key={i} className="text-xs opacity-70 flex gap-2">📄 {f.name}</div>)}</div>
+                                )}
+                                <div className="mt-1 text-[10px] opacity-40 text-right">
+                                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {isLoading && <div className="text-sm opacity-50 animate-pulse">Thinking...</div>}
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* File preview */}
-                <AnimatePresence>
+                {/* Input Area */}
+                <div className="p-6 border-t border-[var(--border)] bg-[var(--background)]">
+                     {/* File Previews */}
                     {files.length > 0 && (
-                        <motion.div className="flex gap-2 px-4 pb-2 flex-wrap" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                        <div className="flex gap-2 mb-2 flex-wrap">
                             {files.map((file, i) => (
-                                <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-xs">
+                                <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded border border-[var(--border)] text-xs">
                                     {fileIcon(file.type)}
-                                    <span className="max-w-[100px] truncate">{file.name}</span>
-                                    <button onClick={() => removeFile(i)} className="text-white/30 hover:text-red-400"><IconX className="w-3 h-3" /></button>
-                                </motion.div>
+                                    <span className="max-w-[150px] truncate">{file.name}</span>
+                                    <button onClick={() => removeFile(i)} className="hover:text-red-500"><IconX className="w-3 h-3" /></button>
+                                </div>
                             ))}
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
 
-                {/* Input bar */}
-                <div className="shrink-0 px-4 pt-1 pb-28 md:pb-4">
-                    <div className="flex items-center gap-2 rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl px-3 py-2">
-                        <input ref={fileInputRef} type="file" multiple className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.xlsx,.csv" onChange={handleFileSelect} />
-                        <button onClick={() => fileInputRef.current?.click()}
-                            className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0">
+                    <div className="flex items-center gap-3 max-w-4xl mx-auto">
+                        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+                        <button onClick={() => fileInputRef.current?.click()} className="p-2 border border-[var(--border)] rounded-full hover:bg-[var(--muted)]">
                             <IconPaperclip className="w-5 h-5" />
                         </button>
-
                         <input value={input} onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                            placeholder={!user ? "Sign in to chat..." : isRecording ? "Recording..." : "Message..."}
+                            placeholder={!user ? "Sign in to chat..." : "Type a message..."}
                             disabled={isRecording || !user}
-                            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/20 disabled:opacity-50 min-w-0" />
-
-                        {isRecording && (
-                            <div className="flex items-center gap-2 text-red-400 text-xs shrink-0">
-                                <motion.div className="w-2 h-2 rounded-full bg-red-500" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} />
-                                {fmt(recordingTime)}
-                            </div>
-                        )}
-
-                        <button onClick={isRecording ? stopRecording : startRecording}
-                            disabled={!user}
-                            className={`p-2 rounded-xl transition-all shrink-0 ${isRecording ? "text-red-400 bg-red-500/20 border border-red-500/30" : "text-white/40 hover:text-white hover:bg-white/10"}`}>
+                            className="flex-1 bg-transparent border-b border-[var(--border)] focus:border-[var(--foreground)] outline-none py-2 px-1 transition-colors" />
+                         <button onClick={isRecording ? stopRecording : startRecording} disabled={!user}
+                            className={`p-2 rounded-full border ${isRecording ? "border-red-500 text-red-500" : "border-[var(--border)] hover:bg-[var(--muted)]"}`}>
                             {isRecording ? <IconPlayerStop className="w-5 h-5" /> : <IconMicrophone className="w-5 h-5" />}
                         </button>
-
-                        <button onClick={() => sendMessage()}
-                            disabled={isLoading || (!input.trim() && files.length === 0)}
-                            className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0">
+                        <button onClick={() => sendMessage()} disabled={isLoading || !user} className="p-2 bg-[var(--foreground)] text-[var(--background)] rounded-full hover:opacity-80 disabled:opacity-30">
                             <IconSend className="w-5 h-5" />
                         </button>
                     </div>
