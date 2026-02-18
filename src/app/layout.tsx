@@ -1,16 +1,28 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "next-themes";
 import { AdminProvider } from "@/components/AdminContext";
 import { ToastProvider } from "@/components/ToastContext";
-import MobileNav from "@/components/MobileNav";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Perricheno",
-  description: "Personal site of Perricheno - Student, Analyst, DevOps",
+  description: "Student. Analyst. DevOps Engineer.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Perricheno",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -25,7 +37,6 @@ export default function RootLayout({
             <AdminProvider>
                 <ToastProvider>
                     {children}
-                    <MobileNav />
                 </ToastProvider>
             </AdminProvider>
         </ThemeProvider>

@@ -26,7 +26,7 @@ export default function MinimalSidebar() {
     ];
 
     return (
-        <nav className="hidden md:flex fixed left-0 top-0 bottom-0 w-16 md:w-64 border-r border-[var(--border)] bg-[var(--background)] flex-col z-50">
+        <nav className="fixed left-0 top-0 bottom-0 w-16 md:w-64 border-r border-[var(--border)] bg-[var(--background)] flex flex-col z-50">
             {/* Login Modal Global Trigger */}
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
 

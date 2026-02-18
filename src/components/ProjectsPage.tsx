@@ -36,7 +36,7 @@ export default function ProjectsPage() {
     const removeProject = (id: string) => setProjects(prev => prev.filter(p => p.id !== id));
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-64 pb-20 md:pb-0 transition-all">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 transition-all">
             <MinimalSidebar />
             
             <div className="max-w-[1600px] mx-auto px-6 py-20 md:py-28">
