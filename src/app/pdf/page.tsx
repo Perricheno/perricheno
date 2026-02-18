@@ -88,10 +88,17 @@ export default function PDFPage() {
                 const formData = new FormData();
                 formData.append("fileInput", file);
 
+                // Specific params for Tools
                 if (activeTool === "img-to-pdf") {
                     formData.append("fitOption", "fillPage");
                     formData.append("colorType", "color");
                     formData.append("autoRotate", "true");
+                } else if (activeTool === "pdf-to-img") {
+                    formData.append("imageFormat", "png");
+                    formData.append("singlePage", "false");
+                    formData.append("dpi", "300");
+                } else if (activeTool === "pdf-to-word") {
+                    formData.append("ocrType", "skip"); 
                 }
 
                 const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
