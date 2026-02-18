@@ -340,56 +340,28 @@ export default function ChatPage() {
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                             <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-4 text-sm md:text-base leading-relaxed relative group
-                                ${msg.role === "user" 
-                                ? "bg-[var(--foreground)] text-[var(--background)] rounded-br-sm" 
-                                : "bg-[var(--muted)] text-[var(--foreground)] rounded-bl-sm border border-[var(--border)]"}`}>
-                                
-                                {msg.role === "assistant" ? (
-                                    <div className="prose dark:prose-invert max-w-none prose-p:my-1 prose-pre:bg-black/10 prose-pre:p-2 prose-pre:rounded">
-                                        <ReactMarkdown>{msg.text}</ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    <p className="whitespace-pre-wrap">{msg.text}</p>
-                                )}
-
-                                {msg.files && msg.files.length > 0 && ( 
-                                    <div className="mt-3 space-y-2 pt-2 border-t border-white/10">
-                                        {msg.files.map((f, i) => (
-                                            <div key={i} className="flex items-center gap-2 text-xs opacity-80 bg-black/10 p-2 rounded">
-                                                <IconFile className="w-4 h-4" /> 
-                                                <span className="truncate">{f.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                
-                                <span className={`absolute bottom-1 ${msg.role === "user" ? "left-2 text-black/30" : "right-2 text-black/30"} text-[9px] opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
+            {/* Mobile: Chat List (Sidebar) - show if no chat selected or explicit back */}
+            <div className={`w-full md:w-64 border-r border-[var(--border)] flex flex-col bg-[var(--background)] ${activeThreadId ? 'hidden md:flex' : 'flex'}`}>
+                <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+                    <h2 className="font-bold text-sm tracking-wide">CHATS</h2>
+                    <button onClick={createThread} className="text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
+                        <IconPlus className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {threads.map(t => (
+                        <div key={t.id}
+                            className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${t.id === activeThreadId ? "bg-[var(--foreground)] text-[var(--background)]" : "text-[var(--foreground)] hover:bg-[var(--muted)]"}`}
+                            onClick={() => { setActiveThreadId(t.id); setMobileMenuOpen(false); }}>
+                            <IconMessage className="w-4 h-4 shrink-0 opacity-50" />
+                            <span className="flex-1 truncate">{t.title}</span>
+                            {threads.length > 1 && (
+                                <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-500">
+                                    <IconTrash className="w-3 h-3" />
+                                </button>
+                            )}
                         </div>
                     ))}
-                    
-                    {isLoading && (
-                        <div className="flex justify-start">
-                             <div className="bg-[var(--muted)] px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1 items-center">
-                                <span className="w-2 h-2 bg-[var(--foreground)] rounded-full animate-bounce [animation-delay:-0.3s] opacity-50"></span>
-                                <span className="w-2 h-2 bg-[var(--foreground)] rounded-full animate-bounce [animation-delay:-0.15s] opacity-50"></span>
-                                <span className="w-2 h-2 bg-[var(--foreground)] rounded-full animate-bounce opacity-50"></span>
-                            </div>
-                        </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input Area */}
-                <div className="p-4 md:p-6 bg-[var(--background)] relative z-20 pb-safe">
-                    <div 
-                        className={`max-w-4xl mx-auto border border-[var(--border)] rounded-2xl bg-[var(--background)] shadow-sm transition-all focus-within:shadow-md focus-within:border-[var(--foreground)] ${!user ? "opacity-70" : ""}`}
-                        onClick={() => { if (!user) { setShowLogin(true); } }}
-                    >
-                        
-                        {files.length > 0 && (
                             <div className="flex gap-2 p-3 border-b border-[var(--border)] overflow-x-auto">
                                 {files.map((file, i) => (
                                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--muted)] text-xs whitespace-nowrap">
