@@ -4,13 +4,42 @@ const API_BASE = "https://pdf.perricheno.ru/api/v1";
 const API_KEY = "19529837-c5f6-4d7e-9452-37e1d8ef3905";
 
 const ENDPOINTS: Record<string, string> = {
+    // Convert
     "file-to-pdf": `${API_BASE}/convert/file/pdf`,
     "img-to-pdf": `${API_BASE}/convert/img/pdf`,
     "pdf-to-word": `${API_BASE}/convert/pdf/word`,
     "pdf-to-ppt": `${API_BASE}/convert/pdf/presentation`,
     "pdf-to-text": `${API_BASE}/convert/pdf/text`,
     "pdf-to-img": `${API_BASE}/convert/pdf/img`,
+    "pdf-to-html": `${API_BASE}/convert/pdf/html`,
+    "pdf-to-xml": `${API_BASE}/convert/pdf/xml`,
+    "pdf-to-pdfa": `${API_BASE}/convert/pdf/pdfa`,
+    "html-to-pdf": `${API_BASE}/convert/html/pdf`,
+    "markdown-to-pdf": `${API_BASE}/convert/markdown/pdf`,
+    "url-to-pdf": `${API_BASE}/convert/url/pdf`,
+
+    // Edit / General
     "merge-pdfs": `${API_BASE}/general/merge-pdfs`,
+    "split-pages": `${API_BASE}/general/split-pages`,
+    "remove-pages": `${API_BASE}/general/remove-pages`,
+    "rotate-pdf": `${API_BASE}/general/rotate-pdf`,
+    "organize-pdf": `${API_BASE}/general/rearrange-pages`,
+    "scale-pages": `${API_BASE}/general/scale-pages`,
+    "crop-pdf": `${API_BASE}/general/crop`,
+
+    // Security
+    "add-password": `${API_BASE}/security/add-password`,
+    "remove-password": `${API_BASE}/security/remove-password`,
+    "add-watermark": `${API_BASE}/security/add-watermark`,
+    "sanitize-pdf": `${API_BASE}/security/sanitize-pdf`,
+
+    // Misc
+    "compress-pdf": `${API_BASE}/misc/compress-pdf`,
+    "ocr-pdf": `${API_BASE}/misc/ocr-pdf`,
+    "repair-pdf": `${API_BASE}/misc/repair`,
+    "flatten-pdf": `${API_BASE}/misc/flatten`,
+    "remove-blanks": `${API_BASE}/misc/remove-blanks`,
+    "extract-images": `${API_BASE}/misc/extract-images`,
 };
 
 export async function POST(req: NextRequest) {

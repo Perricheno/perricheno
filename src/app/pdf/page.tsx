@@ -1,17 +1,22 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import { useAdmin } from "@/components/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import {
     IconCloudUpload, IconFileTypePdf, IconLoader2, IconDownload, IconArrowLeft,
-    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX, IconFileCheck, IconBrandTelegram
+    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX,
+    IconFileCheck, IconBrandTelegram, IconLock, IconLockOpen, IconScissors, IconArrowsShuffle,
+    IconRotate, IconLayersIntersect, IconEraser, IconWand, IconMaximize, IconMinimize, IconTxt,
+    IconBrowser, IconFileZip, IconShield
 } from "@tabler/icons-react";
 import MinimalSidebar from "@/components/MinimalSidebar";
 import { useToast } from "@/components/ToastContext";
 
-type ToolType = "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img";
+type ToolType = 
+    | "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img" | "pdf-to-html" | "pdf-to-xml" | "pdf-to-pdfa"
+    | "merge-pdfs" | "split-pages" | "remove-pages" | "rotate-pdf" | "organize-pdf" | "scale-pages" | "crop-pdf"
+    | "add-password" | "remove-password" | "add-watermark" | "sanitize-pdf"
+    | "compress-pdf" | "ocr-pdf" | "repair-pdf" | "flatten-pdf" | "remove-blanks" | "extract-images";
 
 interface ToolDef {
     id: ToolType;
@@ -20,16 +25,41 @@ interface ToolDef {
     icon: any;
     accept: string;
     outputExt: string;
+    category: "Convert" | "Edit" | "Security" | "Misc";
 }
 
 const TOOLS: ToolDef[] = [
-    { id: "file-to-pdf", title: "File to PDF", desc: "Convert Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf" },
-    { id: "img-to-pdf", title: "Image to PDF", desc: "Convert JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", outputExt: ".pdf" },
-    { id: "pdf-to-word", title: "PDF to Word", desc: "Convert PDF to Editable Word", icon: IconFileText, accept: ".pdf", outputExt: ".docx" },
-    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "Convert PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", outputExt: ".pptx" },
-    { id: "pdf-to-img", title: "PDF to Images", desc: "Extract pages as ZIP", icon: IconPhoto, accept: ".pdf", outputExt: ".zip" },
-    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconCode, accept: ".pdf", outputExt: ".txt" },
+    // Convert
+    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf", category: "Convert" },
+    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", outputExt: ".pdf", category: "Convert" },
+    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: IconFileText, accept: ".pdf", outputExt: ".docx", category: "Convert" },
+    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", outputExt: ".pptx", category: "Convert" },
+    { id: "pdf-to-img", title: "PDF to Images", desc: "Save pages as Images", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Convert" },
+    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconTxt, accept: ".pdf", outputExt: ".txt", category: "Convert" },
+    { id: "pdf-to-html", title: "PDF to HTML", desc: "Convert to Web Page", icon: IconBrowser, accept: ".pdf", outputExt: ".html", category: "Convert" },
+    { id: "pdf-to-pdfa", title: "PDF to PDF/A", desc: "Archival Format", icon: IconFileCheck, accept: ".pdf", outputExt: ".pdf", category: "Convert" },
+
+    // Edit
+    { id: "merge-pdfs", title: "Merge PDFs", desc: "Combine multiple files", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "split-pages", title: "Split PDF", desc: "Separate pages", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "remove-pages", title: "Remove Pages", desc: "Delete unwanted pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "rotate-pdf", title: "Rotate", desc: "Rotate pages 90°/180°", icon: IconRotate, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "organize-pdf", title: "Organize", desc: "Rearrange page order", icon: IconArrowsShuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+
+    // Security
+    { id: "add-password", title: "Protect", desc: "Add Password", icon: IconLock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "remove-password", title: "Unlock", desc: "Remove Password", icon: IconLockOpen, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "sanitize-pdf", title: "Sanitize", desc: "Remove metadata/scripts", icon: IconShield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+
+    // Misc
+    { id: "compress-pdf", title: "Compress", desc: "Reduce file size", icon: IconMinimize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "ocr-pdf", title: "OCR", desc: "Make text searchable", icon: IconCode, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "repair-pdf", title: "Repair", desc: "Fix broken PDFs", icon: IconWand, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "flatten-pdf", title: "Flatten", desc: "Flatten forms/layers", icon: IconMaximize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "extract-images", title: "Extract Images", desc: "Get all images", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Misc" },
 ];
+
+const CATEGORIES = ["All", "Convert", "Edit", "Security", "Misc"];
 
 export default function PDFPage() {
     const { user } = useAdmin();
@@ -43,9 +73,16 @@ export default function PDFPage() {
     const [downloadUrl, setDownloadUrl] = useState<string>("");
     const [downloadName, setDownloadName] = useState<string>("");
     const [isSendingToTg, setIsSendingToTg] = useState(false);
+    const [activeCategory, setActiveCategory] = useState("All");
+    
+    // Tool params (simple version for now)
+    const [password, setPassword] = useState(""); 
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const tool = TOOLS.find(t => t.id === activeTool);
+
+    const filteredTools = activeCategory === "All" ? TOOLS : TOOLS.filter(t => t.category === activeCategory);
 
     const handleFiles = (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
@@ -127,8 +164,10 @@ export default function PDFPage() {
                     formData.append("imageFormat", "png");
                     formData.append("singlePage", "false");
                     formData.append("dpi", "300");
-                } else if (activeTool === "pdf-to-word") {
-                    formData.append("ocrType", "skip"); 
+                } else if (activeTool === "add-password") {
+                    formData.append("password", password || "123456"); 
+                } else if (activeTool === "ocr-pdf") {
+                    formData.append("ocrType", "skip-text");
                 }
 
                 const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
@@ -180,6 +219,7 @@ export default function PDFPage() {
         setStatus("idle");
         setDownloadUrl("");
         setProgress({ current: 0, total: 0 });
+        setPassword("");
     };
 
     return (
@@ -195,24 +235,38 @@ export default function PDFPage() {
                     {!activeTool ? (
                         <motion.div key="grid" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
                             className="flex flex-col">
-                            <h1 className="text-[8vw] md:text-8xl font-bold tracking-tighter mb-8 leading-none">
+                            <h1 className="text-[8vw] md:text-8xl font-bold tracking-tighter mb-4 leading-none">
                                 PDF Tools<span className="text-[var(--border)]">.</span>
                             </h1>
-                            <p className="text-xl opacity-60 mb-16 max-w-lg">Secure, private, and powerful PDF operations.</p>
+                            <p className="text-xl opacity-60 mb-8 max-w-lg">Advanced tools for all your document needs.</p>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border)] border border-[var(--border)]">
-                                {TOOLS.map((t) => (
+                            {/* Categories */}
+                            <div className="flex flex-wrap gap-2 mb-8">
+                                {CATEGORIES.map(cat => (
+                                    <button key={cat} onClick={() => setActiveCategory(cat)}
+                                        className={`px-4 py-2 rounded-full border text-sm transition-colors ${
+                                            activeCategory === cat 
+                                            ? "bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]" 
+                                            : "border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)]"
+                                        }`}>
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--border)] border border-[var(--border)]">
+                                {filteredTools.map((t) => (
                                     <button key={t.id} onClick={() => setActiveTool(t.id)}
-                                        className="group relative bg-[var(--background)] p-8 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors duration-200 text-left h-56 flex flex-col justify-between">
+                                        className="group relative bg-[var(--background)] p-6 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors duration-200 text-left h-48 flex flex-col justify-between">
                                         
                                         <div className="flex justify-between items-start">
-                                            <t.icon className="w-8 h-8 stroke-1" />
-                                            <IconArrowLeft className="w-5 h-5 opacity-0 group-hover:opacity-100 rotate-180 transition-opacity" />
+                                            <t.icon className="w-7 h-7 stroke-1" />
+                                            <IconArrowLeft className="w-4 h-4 opacity-0 group-hover:opacity-100 rotate-180 transition-opacity" />
                                         </div>
                                         
                                         <div>
-                                            <h3 className="text-xl font-bold tracking-tight mb-2">{t.title}</h3>
-                                            <p className="text-sm opacity-50 group-hover:opacity-80">{t.desc}</p>
+                                            <h3 className="text-lg font-bold tracking-tight mb-1">{t.title}</h3>
+                                            <p className="text-xs opacity-50 group-hover:opacity-80 leading-relaxed">{t.desc}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -222,13 +276,13 @@ export default function PDFPage() {
                         <motion.div key="tool" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                             className="flex flex-col max-w-3xl mx-auto w-full">
 
-                            <div className="w-full flex items-center justify-between mb-12">
+                            <div className="w-full flex items-center justify-between mb-8">
                                 <button onClick={() => { setActiveTool(null); reset(); }}
                                     className="flex items-center gap-2 font-mono text-sm opacity-50 hover:opacity-100 transition-opacity">
                                     <IconArrowLeft className="w-4 h-4" /> BACK
                                 </button>
                                 <div className="px-3 py-1 rounded-full border border-[var(--border)] text-xs font-mono uppercase">
-                                    {tool?.title}
+                                    {tool?.category} / {tool?.title}
                                 </div>
                             </div>
 
@@ -286,6 +340,14 @@ export default function PDFPage() {
                                             ))}
                                         </div>
 
+                                        {activeTool === "add-password" && (
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-xs font-mono uppercase opacity-50">Set Password</label>
+                                                <input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="Type password..."
+                                                    className="w-full p-3 bg-transparent border border-[var(--border)] outline-none focus:border-[var(--foreground)] text-sm" />
+                                            </div>
+                                        )}
+
                                         {status === "done" ? (
                                             <div className="flex flex-col gap-4 items-center pt-8 border-t border-[var(--border)] animate-in fade-in slide-in-from-bottom-4">
                                                 <div className="w-16 h-16 rounded-full bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center mb-2">
@@ -308,7 +370,7 @@ export default function PDFPage() {
                                             <button onClick={convert}
                                                 disabled={status !== "idle" && status !== "error"}
                                                 className="w-full py-5 bg-[var(--foreground)] text-[var(--background)] font-bold tracking-widest hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 text-lg">
-                                                START CONVERSION
+                                                START {activeTool === "compress-pdf" ? "COMPRESSION" : "CONVERSION"}
                                             </button>
                                         )}
 

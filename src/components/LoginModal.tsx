@@ -14,25 +14,30 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
 
     // Verify Telegram Auth
     useEffect(() => {
-        if (user) return; // Don't inject if logged in
-
+        // Define callback globally
         (window as any).onTelegramAuth = async (tgUser: any) => {
-            alert("Telegram callback fired! Check console."); 
-            console.log("Telegram Auth:", tgUser);
+            console.log("Telegram Auth Callback Received:", tgUser);
+            // alert("Telegram response received! Processing..."); // Keep for debug if needed
+            
+            if (!tgUser) {
+                setError("No user data received from Telegram");
+                return;
+            }
+
             setLoading(true);
             try {
                 await login(tgUser);
                 if (onGuestSuccess) onGuestSuccess(tgUser.first_name);
-                // Don't close immediately if we want to show profile?
-                // Actually, typically we close modal on success.
-                // But if user opened it to see profile, we keep it?
-                // Let's keep it open to show "Welcome" or profile.
+                onClose(); // Close modal on success
             } catch (e) {
-                setError("Login failed on server");
+                console.error("Login processing error:", e);
+                setError("Login failed on server. Please try again.");
             } finally {
                 setLoading(false);
             }
         };
+
+        if (user) return; 
 
         const script = document.createElement("script");
         script.src = "https://telegram.org/js/telegram-widget.js?22";
@@ -48,7 +53,12 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
             container.innerHTML = "";
             container.appendChild(script);
         }
-    }, [user, login, onGuestSuccess]);
+
+        // Cleanup
+        return () => {
+            // (window as any).onTelegramAuth = undefined; // Optional: clean up if unmounting
+        };
+    }, [user, login, onGuestSuccess, onClose]);
 
     const handleAdminLogin = () => {
         if (pass) {
