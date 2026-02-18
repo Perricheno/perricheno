@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { IconPlus } from "@tabler/icons-react";
+import Link from "next/link";
+import { IconPlus, IconArrowLeft } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
-import MinimalSidebar from "@/components/MinimalSidebar";
 
 interface Dashboard {
     id: string;
@@ -44,10 +44,12 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 transition-all">
-            <MinimalSidebar />
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all">
 
             <div className="max-w-[1600px] mx-auto px-6 py-20 md:py-28">
+                <Link href="/" className="inline-flex items-center gap-2 text-sm opacity-50 hover:opacity-100 mb-6 transition-opacity">
+                    <IconArrowLeft className="w-4 h-4" /> Back to Home
+                </Link>
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-8">
                     Analytics.
                 </h1>

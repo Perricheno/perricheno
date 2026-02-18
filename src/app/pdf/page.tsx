@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAdmin } from "@/components/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
@@ -9,6 +9,7 @@ import {
     IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX, IconFileCheck, IconBrandTelegram
 } from "@tabler/icons-react";
 import MinimalSidebar from "@/components/MinimalSidebar";
+import { useToast } from "@/components/ToastContext";
 
 type ToolType = "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img";
 
@@ -32,13 +33,16 @@ const TOOLS: ToolDef[] = [
 
 export default function PDFPage() {
     const { user } = useAdmin();
+    const { showToast } = useToast();
     const [activeTool, setActiveTool] = useState<ToolType | null>(null);
     const [files, setFiles] = useState<File[]>([]);
-    const [status, setStatus] = useState<"idle" | "processing" | "zipping" | "done" | "error">("idle");
+    const [status, setStatus] = useState<"idle" | "uploading" | "processing" | "zipping" | "done" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
     const [progress, setProgress] = useState({ current: 0, total: 0 });
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [downloadUrl, setDownloadUrl] = useState<string>("");
     const [downloadName, setDownloadName] = useState<string>("");
+    const [isSendingToTg, setIsSendingToTg] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const tool = TOOLS.find(t => t.id === activeTool);
@@ -62,19 +66,43 @@ export default function PDFPage() {
 
     const sendToTelegram = async (blob: Blob) => {
         if (!user) return;
+        setIsSendingToTg(true);
         try {
             const fd = new FormData();
             fd.append("document", blob, downloadName || "converted-file");
             fd.append("chat_id", user.telegram_id);
-            await fetch("/api/telegram/send", { method: "POST", body: fd });
+            const res = await fetch("/api/telegram/send", { method: "POST", body: fd });
+            if (res.ok) {
+                 showToast("Files sent to Telegram", "success");
+            } else {
+                 showToast("Failed to send to Telegram", "error");
+            }
         } catch (e) {
             console.error("BG Telegram Send Failed", e);
+        } finally {
+            setIsSendingToTg(false);
         }
     };
 
+    // Fake upload progress effect
+    useEffect(() => {
+        if (status === "uploading") {
+            setUploadProgress(0);
+            const interval = setInterval(() => {
+                setUploadProgress(prev => {
+                    const next = prev + Math.random() * 20;
+                    return next > 90 ? 90 : next;
+                });
+            }, 500);
+            return () => clearInterval(interval);
+        } else {
+            setUploadProgress(0);
+        }
+    }, [status]);
+
     const convert = async () => {
         if (files.length === 0 || !activeTool || !tool) return;
-        setStatus("processing");
+        setStatus("uploading");
         setProgress({ current: 0, total: files.length });
         setDownloadUrl("");
         setErrorMsg("");
@@ -84,6 +112,8 @@ export default function PDFPage() {
             const results: { name: string; blob: Blob }[] = [];
 
             for (let i = 0; i < files.length; i++) {
+                // Simulate "processing" state for each file
+                setStatus("processing");
                 const file = files[i];
                 const formData = new FormData();
                 formData.append("fileInput", file);
@@ -133,10 +163,11 @@ export default function PDFPage() {
             const url = URL.createObjectURL(finalBlob);
             setDownloadUrl(url);
 
+            setStatus("done");
+            
             // Auto-send to Telegram
             if (user) sendToTelegram(finalBlob);
 
-            setStatus("done");
         } catch (e: any) {
             console.error(e);
             setStatus("error");
@@ -157,7 +188,7 @@ export default function PDFPage() {
 
             <div className="max-w-[1400px] mx-auto px-6 py-20 md:py-32">
                 {activeTool && user && <div className="absolute top-6 right-6 z-40 px-3 py-1 rounded-full border border-[var(--border)] text-[var(--foreground)] opacity-50 text-xs flex items-center gap-2">
-                    <IconBrandTelegram className="w-3 h-3" /> Auto-send to {user.first_name}
+                    <IconBrandTelegram className="w-3 h-3" /> Auto-send enabled
                 </div>}
 
                 <AnimatePresence mode="wait">
@@ -202,16 +233,17 @@ export default function PDFPage() {
                             </div>
 
                             <div className="w-full border border-[var(--border)] bg-[var(--background)] p-8 md:p-16 relative min-h-[500px] flex flex-col">
-                                {status === "processing" && (
+                                {(status === "processing" || status === "uploading") && (
                                     <div className="absolute inset-0 bg-[var(--background)] z-20 flex flex-col items-center justify-center">
                                         <IconLoader2 className="w-12 h-12 animate-spin mb-4" stroke={1} />
-                                        <p className="font-medium text-lg mb-2">Processing...</p>
-                                        <p className="opacity-50 text-sm font-mono">Completed {progress.current} / {progress.total}</p>
-                                        <div className="w-64 h-1 bg-[var(--border)] mt-6 overflow-hidden">
+                                        <p className="font-medium text-lg mb-2">
+                                            {status === "uploading" ? "Uploading..." : `Processing ${progress.current + 1} / ${progress.total}`}
+                                        </p>
+                                        <div className="w-64 h-1 bg-[var(--border)] mt-6 overflow-hidden relative">
                                             <motion.div
                                                 className="h-full bg-[var(--foreground)]"
                                                 initial={{ width: 0 }}
-                                                animate={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                                animate={{ width: status === "uploading" ? `${uploadProgress}%` : `${(progress.current / progress.total) * 100}%` }}
                                             />
                                         </div>
                                     </div>
@@ -260,7 +292,12 @@ export default function PDFPage() {
                                                     <IconFileCheck className="w-8 h-8" stroke={1.5} />
                                                 </div>
                                                 <p className="font-bold text-2xl">Ready!</p>
-                                                {user && <p className="opacity-50 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
+                                                {user && (
+                                                    <p className={`text-xs flex items-center gap-1 ${isSendingToTg ? "animate-pulse opacity-100" : "opacity-50"}`}>
+                                                        <IconBrandTelegram className="w-3 h-3" /> 
+                                                        {isSendingToTg ? "Sending to Telegram..." : "Sent to Telegram"}
+                                                    </p>
+                                                )}
                                                 <a href={downloadUrl} download={downloadName}
                                                     className="w-full py-4 bg-[var(--foreground)] text-[var(--background)] font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 mt-4 text-lg">
                                                     <IconDownload className="w-5 h-5" /> DOWNLOAD FILE
@@ -269,7 +306,7 @@ export default function PDFPage() {
                                             </div>
                                         ) : (
                                             <button onClick={convert}
-                                                disabled={status !== "idle"}
+                                                disabled={status !== "idle" && status !== "error"}
                                                 className="w-full py-5 bg-[var(--foreground)] text-[var(--background)] font-bold tracking-widest hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 text-lg">
                                                 START CONVERSION
                                             </button>
@@ -278,7 +315,7 @@ export default function PDFPage() {
                                         {status === "error" && (
                                             <div className="p-4 border border-red-500/20 text-center bg-red-500/5 mt-4">
                                                 <p className="text-red-500 font-bold text-sm mb-1">Conversion Failed</p>
-                                                <p className="text-red-500/60 text-xs font-mono">{errorMsg}</p>
+                                                <p className="text-red-500/60 text-xs font-mono break-all">{errorMsg}</p>
                                             </div>
                                         )}
                                     </div>
