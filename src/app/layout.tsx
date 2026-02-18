@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Background from "@/components/ui/Background";
-import { CRTOverlay } from "@/components/ui/CRTOverlay";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AdminProvider } from "@/components/AdminContext";
 
@@ -28,8 +26,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AdminProvider>
-            <Background />
-            <CRTOverlay />
             {children}
           </AdminProvider>
         </ThemeProvider>
