@@ -179,7 +179,7 @@ export default function ChatPage() {
                 user: {
                     id: user.telegram_id,
                     firstName: user.first_name,
-                    lastName: user.last_name || "",
+                    lastName: "", // Not stored currently
                     username: user.username || "",
                     photoUrl: user.photo_url || "",
                     language: navigator.language,
