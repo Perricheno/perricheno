@@ -30,10 +30,10 @@ body {
   border: 1px solid var(--border);
   background: var(--background);
   transition: all 0.2s ease;
-}
 
-@utility minimal-card:hover {
-  border-color: var(--foreground);
+  &:hover {
+    border-color: var(--foreground);
+  }
 }
 
 /* Minimal Scrollbar */
