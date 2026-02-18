@@ -5,10 +5,12 @@ import {
     IconBrandGithub, IconArrowUpRight,
     IconTerminal2, IconChartBar, IconMessageCircle, IconFileTypePdf, IconRobot
 } from "@tabler/icons-react";
+import MinimalSidebar from "@/components/MinimalSidebar";
 
 export default function HomePage() {
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-all">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 transition-all">
+            <MinimalSidebar />
             
             <main className="max-w-5xl mx-auto px-6 py-20 md:py-32">
                 {/* HERO */}

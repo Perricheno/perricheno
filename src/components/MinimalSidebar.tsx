@@ -45,9 +45,8 @@ export default function MinimalSidebar() {
                     <Link key={l.href} href={l.href} 
                         className={cn(
                             "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium",
-                            isActive(l.href) 
-                                ? "bg-[var(--foreground)] text-[var(--background)]" 
-                                : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                            isActive(l.href)                                    ? "bg-[var(--foreground)] text-[var(--background)] shadow-lg"
+                                    : "text-[var(--foreground)] hover:bg-[var(--muted)] hover:translate-x-1"
                         )}>
                         <l.icon className="w-5 h-5 shrink-0" stroke={1.5} />
                         <span className="hidden md:block">{l.label}</span>
