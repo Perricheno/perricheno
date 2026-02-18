@@ -60,7 +60,7 @@ export default function MinimalSidebar() {
                 {user ? (
                     <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full text-left mb-4 hover:opacity-80 transition-opacity">
                         <div className="w-8 h-8 rounded-full bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center overflow-hidden">
-                            {user.photo_url ? <img src={user.photo_url} alt={user.first_name} /> : <IconUser className="w-5 h-5" />}
+                            {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name} /> : <IconUser className="w-5 h-5" />}
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold truncate">{user.first_name}</p>
@@ -87,7 +87,7 @@ export default function MinimalSidebar() {
                 <button onClick={() => setShowLogin(true)} className="p-2 rounded-lg hover:bg-[var(--muted)]">
                     {user ? (
                          <div className="w-8 h-8 rounded-full bg-[var(--foreground)] overflow-hidden">
-                            {user.photo_url ? <img src={user.photo_url} alt="User" /> : <div className="w-full h-full bg-[var(--foreground)]" />}
+                            {user.photo_url ? <img src={user.photo_url || ""} alt="User" /> : <div className="w-full h-full bg-[var(--foreground)]" />}
                         </div>
                     ) : (
                         <IconLogin className="w-6 h-6 opacity-70" />
