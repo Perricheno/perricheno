@@ -139,4 +139,4 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
         </motion.div>
     );
 };
-```
+
