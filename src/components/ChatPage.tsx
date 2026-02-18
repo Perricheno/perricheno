@@ -5,7 +5,7 @@ import {
     IconSend, IconPaperclip, IconMicrophone, IconPlayerStop,
     IconPhoto, IconFile, IconX, IconChevronDown,
     IconSettings, IconPlus, IconMessage, IconTrash, IconUser,
-    IconLogin, IconSun, IconMoon
+    IconLogin, IconSun, IconMoon, IconMenu2
 } from "@tabler/icons-react";
 import ChatSettingsModal from "@/components/ChatSettingsModal";
 import { useAdmin } from "@/components/AdminContext";
@@ -13,6 +13,7 @@ import { LoginModal } from "@/components/LoginModal";
 import { getSettings, saveSettings, type ChatSettings } from "@/app/actions";
 import { useTheme } from "next-themes";
 import MinimalSidebar from "@/components/MinimalSidebar";
+import { AnimatePresence, motion } from "framer-motion";
 
 /* ── Types ── */
 interface ChatMessage {
@@ -61,9 +62,10 @@ export default function ChatPage() {
     const [settings, setSettings] = useState<ChatSettings | null>(null);
     const [modelOpen, setModelOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [account, setAccount] = useState<UserAccount | null>(null);
+    const [account, setAccount] = useState<UserAccount | null>(null); // Local guest account if needed
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Admin
+    // Admin / Auth
     const { user, isEditing, setIsEditing, showLogin, setShowLogin } = useAdmin();
     const { theme, setTheme } = useTheme();
 
@@ -76,29 +78,19 @@ export default function ChatPage() {
     const activeThread = threads.find(t => t.id === activeThreadId)!;
     const messages = activeThread?.messages || [];
 
-    // Fetch settings + load account from localStorage
+    // Fetch settings
     useEffect(() => {
         getSettings().then(setSettings);
-        const saved = localStorage.getItem("chat_account");
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (!parsed.id) parsed.id = genId();
-            setAccount(parsed);
-        }
     }, []);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-    const handleLogout = () => {
-        setAccount(null);
-        localStorage.removeItem("chat_account");
-    };
 
     /* ── Thread management ── */
     const createThread = () => {
         const id = genId();
         setThreads(prev => [{ id, title: "New Chat", messages: [], createdAt: new Date() }, ...prev]);
         setActiveThreadId(id);
+        setMobileMenuOpen(false);
     };
 
     const deleteThread = (id: string) => {
@@ -223,8 +215,54 @@ export default function ChatPage() {
         setIsRecording(false);
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
-    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const fileIcon = (t: string) => t.startsWith('image/') ? <IconPhoto className="w-3.5 h-3.5" /> : <IconFile className="w-3.5 h-3.5" />;
+
+    /* ── Render Sidebar ── */
+    const SidebarContent = () => (
+        <div className="flex flex-col h-full bg-[var(--background)] border-r border-[var(--border)]">
+            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+                <h2 className="font-bold text-sm">Chats</h2>
+                <button onClick={createThread} className="text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
+                    <IconPlus className="w-5 h-5" />
+                </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {threads.map(t => (
+                    <div key={t.id}
+                        className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${t.id === activeThreadId ? "bg-[var(--foreground)] text-[var(--background)]" : "text-[var(--foreground)] hover:bg-[var(--muted)]"}`}
+                        onClick={() => { setActiveThreadId(t.id); setMobileMenuOpen(false); }}>
+                        <IconMessage className="w-4 h-4 shrink-0 opacity-50" />
+                        <span className="flex-1 truncate">{t.title}</span>
+                        {threads.length > 1 && (
+                            <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-500">
+                                <IconTrash className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                ))}
+            </div>
+            {/* Account / User Area */}
+            <div className="p-4 border-t border-[var(--border)]">
+                {user ? (
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[var(--border)] overflow-hidden">
+                            {user.photo_url ? <img src={user.photo_url} alt="User" /> : <IconUser className="p-1" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold truncate">{user.first_name}</p>
+                        </div>
+                        <button onClick={() => { if (isEditing) setIsEditing(false); else setShowLogin(true); }}>
+                            <IconSettings className="w-4 h-4 opacity-50 hover:opacity-100" />
+                        </button>
+                    </div>
+                ) : (
+                    <button onClick={() => setShowLogin(true)} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-[var(--foreground)] text-[var(--background)] font-medium text-sm">
+                        <IconLogin className="w-4 h-4" /> Sign In
+                    </button>
+                )}
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 flex overflow-hidden">
@@ -234,66 +272,49 @@ export default function ChatPage() {
 
             <MinimalSidebar />
 
-            {/* ══ CHAT SIDEBAR (History) ══ */}
-            <aside className="w-64 border-r border-[var(--border)] bg-[var(--background)] flex flex-col hidden md:flex">
-                <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-                    <h2 className="font-bold text-sm">Chats</h2>
-                    <button onClick={createThread} className="text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
-                        <IconPlus className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {threads.map(t => (
-                        <div key={t.id}
-                            className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${t.id === activeThreadId ? "bg-[var(--foreground)] text-[var(--background)]" : "text-[var(--foreground)] hover:bg-[var(--muted)]"}`}
-                            onClick={() => setActiveThreadId(t.id)}>
-                            <IconMessage className="w-4 h-4 shrink-0 opacity-50" />
-                            <span className="flex-1 truncate">{t.title}</span>
-                            {threads.length > 1 && (
-                                <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-500">
-                                    <IconTrash className="w-3 h-3" />
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                </div>
-                {/* Account / User Area */}
-                <div className="p-4 border-t border-[var(--border)]">
-                    {user ? (
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[var(--border)] overflow-hidden">
-                                {user.photo_url ? <img src={user.photo_url} alt="User" /> : <IconUser className="p-1" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate">{user.first_name}</p>
-                            </div>
-                            <button onClick={() => { if (isEditing) setIsEditing(false); else setShowLogin(true); }}>
-                                <IconSettings className="w-4 h-4 opacity-50 hover:opacity-100" />
-                            </button>
-                        </div>
-                    ) : (
-                        <button onClick={() => setShowLogin(true)} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-[var(--foreground)] text-[var(--background)] font-medium text-sm">
-                            <IconLogin className="w-4 h-4" /> Sign In
-                        </button>
-                    )}
-                </div>
+            {/* Desktop Sidebar */}
+            <aside className="w-64 flex-col hidden md:flex">
+                <SidebarContent />
             </aside>
+
+            {/* Mobile Sidebar Overlay */}
+            <AnimatePresence>
+                {mobileMenuOpen && (
+                    <motion.div initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }}
+                        className="fixed inset-y-0 left-0 z-50 w-64 md:hidden shadow-2xl">
+                        <SidebarContent />
+                    </motion.div>
+                )}
+                {mobileMenuOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" />
+                )}
+            </AnimatePresence>
 
             {/* ══ MAIN CHAT AREA ══ */}
             <div className="flex-1 flex flex-col h-screen min-w-0 bg-[var(--background)] relative">
                 {/* Header */}
-                <header className="h-16 border-b border-[var(--border)] flex items-center justify-between px-6 bg-[var(--background)] z-10">
-                    <div className="flex items-center gap-4">
-                        <span className="font-bold text-lg">{activeThread.title}</span>
+                <header className="h-16 border-b border-[var(--border)] flex items-center justify-between px-4 bg-[var(--background)] z-10">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-1 opacity-60">
+                            <IconMenu2 className="w-5 h-5" />
+                        </button>
+                        <span className="font-bold text-lg truncate max-w-[150px] md:max-w-md">{activeThread.title}</span>
                         {settings && (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${settings.useTestWebhook ? "border-amber-500 text-amber-500" : "border-green-500 text-green-500"}`}>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${settings.useTestWebhook ? "border-amber-500 text-amber-500" : "border-green-500 text-green-500"} hidden sm:inline-block`}>
                                 {settings.useTestWebhook ? "TEST" : "PROD"}
                             </span>
                         )}
                     </div>
                     <div className="flex items-center gap-2">
+                         {!user && (
+                            <button onClick={() => setShowLogin(true)} className="md:hidden text-xs font-bold bg-[var(--foreground)] text-[var(--background)] px-3 py-1.5 rounded-full">
+                                Sign In
+                            </button>
+                        )}
                         {settings && (
-                            <div className="relative">
+                            <div className="relative hidden sm:block">
                                 <button onClick={() => setModelOpen(!modelOpen)} className="flex items-center gap-1 text-xs font-mono border border-[var(--border)] px-2 py-1 rounded hover:bg-[var(--muted)]">
                                     {settings.selectedModel} <IconChevronDown className="w-3 h-3" />
                                 </button>
@@ -319,19 +340,19 @@ export default function ChatPage() {
                 </header>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
                     {messages.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center opacity-30">
+                        <div className="h-full flex flex-col items-center justify-center opacity-30 text-center">
                             <IconMessage className="w-16 h-16 mb-4" />
                             <p>Start a conversation...</p>
                         </div>
                     )}
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                            <div className={`max-w-[80%] rounded-lg px-5 py-3 border ${msg.role === "user" 
+                            <div className={`max-w-[85%] md:max-w-[75%] rounded-lg px-4 py-3 border ${msg.role === "user" 
                                 ? "bg-[var(--foreground)] text-[var(--background)] border-transparent" 
                                 : "bg-[var(--background)] text-[var(--foreground)] border-[var(--border)]"}`}>
-                                <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                <p className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">{msg.text}</p>
                                 {msg.files && msg.files.length > 0 && ( 
                                     <div className="mt-2 space-y-1">{msg.files.map((f, i) => <div key={i} className="text-xs opacity-70 flex gap-2">📄 {f.name}</div>)}</div>
                                 )}
@@ -346,7 +367,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-6 border-t border-[var(--border)] bg-[var(--background)]">
+                <div className="p-4 md:p-6 border-t border-[var(--border)] bg-[var(--background)]">
                      {/* File Previews */}
                     {files.length > 0 && (
                         <div className="flex gap-2 mb-2 flex-wrap">
@@ -369,7 +390,7 @@ export default function ChatPage() {
                             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
                             placeholder={!user ? "Sign in to chat..." : "Type a message..."}
                             disabled={isRecording || !user}
-                            className="flex-1 bg-transparent border-b border-[var(--border)] focus:border-[var(--foreground)] outline-none py-2 px-1 transition-colors" />
+                            className="flex-1 bg-transparent border-b border-[var(--border)] focus:border-[var(--foreground)] outline-none py-2 px-1 transition-colors text-sm md:text-base" />
                          <button onClick={isRecording ? stopRecording : startRecording} disabled={!user}
                             className={`p-2 rounded-full border ${isRecording ? "border-red-500 text-red-500" : "border-[var(--border)] hover:bg-[var(--muted)]"}`}>
                             {isRecording ? <IconPlayerStop className="w-5 h-5" /> : <IconMicrophone className="w-5 h-5" />}

@@ -1,64 +1,61 @@
 "use client";
 
-import { DockSidebar } from "@/components/ui/DockSidebar";
 import { motion } from "framer-motion";
-import { IconBrain, IconFileText, IconPresentation, IconCalendarStats, IconRobot, IconMath } from "@tabler/icons-react";
+import { IconBrain, IconFileText, IconPresentation, IconCalendarStats, IconRobot, IconMath, IconCode, IconTerminal2 } from "@tabler/icons-react";
+import MinimalSidebar from "@/components/MinimalSidebar";
 
 export default function AgentPage() {
     const features = [
-        { title: "Overleaf Integration", icon: IconMath, desc: "Seamless LaTeX editing & sync" },
-        { title: "AI Reports", icon: IconFileText, desc: "Generate academic reports in seconds" },
-        { title: "Presentations", icon: IconPresentation, desc: "Turn data into slides automatically" },
-        { title: "Task Scheduling", icon: IconCalendarStats, desc: "Smart agent-managed calendar" },
+        { title: "Overleaf Sync", icon: IconMath, desc: "Real-time LaTeX editing & compilation." },
+        { title: "Academic Writer", icon: IconFileText, desc: "Drafts papers with citation support." },
+        { title: "Slide Generator", icon: IconPresentation, desc: "Converts notes into presentation decks." },
+        { title: "Smart Scheduling", icon: IconCalendarStats, desc: "Manages deadlines and study sessions." },
+        { title: "Code Assistant", icon: IconCode, desc: " specialized in Python & R for data analysis." },
+        { title: "Infrastructure", icon: IconTerminal2, desc: "Self-hosting & deployment manager." },
     ];
 
     return (
-        <div className="relative z-10 w-full min-h-screen bg-black overflow-hidden flex flex-col items-center justify-center">
-            <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
-            <div className="absolute inset-0 bg-black/80 radial-gradient-mask" />
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 transition-all">
+            <MinimalSidebar />
 
-            <DockSidebar />
-
-            <div className="relative z-20 max-w-4xl mx-auto px-6 text-center">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono mb-6">
+            <div className="max-w-5xl mx-auto px-6 py-20 md:py-32">
+                
+                {/* Header */}
+                <div className="mb-24">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 border border-[var(--foreground)] rounded-full">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--foreground)] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--foreground)]"></span>
                         </span>
-                        Developing
+                        <span className="text-xs font-bold tracking-widest uppercase">System Active</span>
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40 mb-6">
-                        Perricheno Agent
+                    <h1 className="text-4xl md:text-7xl font-bold tracking-tighter mb-6">
+                        Autonomous Agent.
                     </h1>
-
-                    <p className="text-xl text-white/40 mb-12 max-w-2xl mx-auto">
-                        Your autonomous academic assistant. Capable of writing code, managing tasks, and conducting research.
-                        <span className="block mt-2 text-emerald-400/60 font-mono text-sm">Coming Soon...</span>
+                    <p className="text-xl md:text-2xl opacity-60 max-w-2xl leading-relaxed">
+                        Your academic and technical force multiplier. Capable of executing complex workflows, not just chatting.
                     </p>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.8 }}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                {/* Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border)] border border-[var(--border)]">
                     {features.map((f, i) => (
-                        <div key={i} className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm hover:bg-white/[0.06] transition-colors group">
-                            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
-                                <f.icon className="w-6 h-6" />
+                        <div key={i} className="group relative bg-[var(--background)] p-8 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors duration-200 h-64 flex flex-col justify-between">
+                            <f.icon className="w-8 h-8 stroke-1" />
+                            <div>
+                                <h3 className="text-lg font-bold tracking-tight mb-2">{f.title}</h3>
+                                <p className="text-sm opacity-50 group-hover:opacity-80 leading-normal">{f.desc}</p>
                             </div>
-                            <h3 className="text-lg font-semibold text-white mb-1">{f.title}</h3>
-                            <p className="text-white/40 text-sm">{f.desc}</p>
                         </div>
                     ))}
-                </motion.div>
+                </div>
 
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="mt-16">
-                    <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] inline-block">
-                        <p className="text-white/20 text-xs font-mono">System Status: <span className="text-emerald-500">Online</span> • v0.1.0-alpha</p>
-                    </div>
-                </motion.div>
+                {/* Status Footer */}
+                <div className="mt-24 border-t border-[var(--border)] pt-8 flex items-center justify-between opacity-40 font-mono text-xs">
+                    <p>AGENT_ID: 8X-92 ALPHA</p>
+                    <p>STATUS: STANDBY</p>
+                </div>
             </div>
         </div>
     );
