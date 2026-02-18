@@ -31,23 +31,27 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const [isEditing, setIsEditing] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
     const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const checkSession = async () => {
+    const checkAuth = async () => {
         try {
-            const res = await fetch("/api/auth/me");
+            const res = await fetch("/api/auth/me", { cache: 'no-store' }); // Ensure no cache
             if (res.ok) {
                 const data = await res.json();
                 setUser(data.user);
             } else {
                 setUser(null);
             }
-        } catch (e) {
-            console.error("Session check failed", e);
+        } catch (error) {
+            console.error("Auth check failed", error);
+            setUser(null);
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-        checkSession();
+        checkAuth();
     }, []);
 
     const login = async (telegramData: any) => {
