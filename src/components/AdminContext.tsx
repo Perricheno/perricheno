@@ -66,6 +66,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
                 setUser(data.user);
                 // Also trigger guest success if needed elsewhere?
                 // For now, setting user is enough.
+                window.location.reload();
             } else {
                 throw new Error("Login failed");
             }

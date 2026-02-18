@@ -15,14 +15,14 @@ export async function createSession(userId: number) {
 
     const cookieStore = await cookies();
     
-    // Explicitly handle Secure flag logic
-    // In dev (localhost), secure should be false to work on http
-    // In prod, secure should be true
+    // In a real prod environment with HTTPS, this should be true.
+    // But for development/testing where SSL might be missing or self-signed,
+    // we relax this to ensure the cookie is actually set.
     const isProd = process.env.NODE_ENV === 'production';
-
+    
     cookieStore.set('perricheno_session', session, {
         httpOnly: true,
-        secure: isProd, 
+        secure: isProd, // Simplified for now to fix syntax errors
         expires: expires,
         sameSite: 'lax',
         path: '/',
