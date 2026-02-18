@@ -1,35 +1,58 @@
 import { createHmac, createHash } from 'crypto';
 
-interface TelegramUser {
-    id: number;
-    first_name?: string;
-    last_name?: string;
-    username?: string;
-    photo_url?: string;
-    auth_date: number;
-    hash: string;
-}
-
 const BOT_TOKEN = "8270333686:AAEaQLlEmewJeVQ2FSZXDHrOFx_0eN4JQfI";
 
-export function verifyTelegramAuth(data: any): boolean {
-    if (!data || !data.hash) return false;
+export function verifyTelegramAuth(data: Record<string, any>): boolean {
+    if (!data || !data.hash) {
+        console.error("Auth Error: Missing hash or data");
+        return false;
+    }
 
     const { hash, ...userData } = data;
 
-    // Create data check string
-    // Keys must be sorted alphabetically
+    // Filter only valid Telegram fields to avoid pollution
+    const validKeys = [
+        'auth_date', 
+        'first_name', 
+        'id', 
+        'last_name', 
+        'photo_url', 
+        'username'
+    ];
+
+    // Construct the data-check-string
     const checkString = Object.keys(userData)
-        .filter(key => userData[key] !== undefined && userData[key] !== null)
+        .filter(key => validKeys.includes(key) && userData[key] != null) // Filter valid keys and non-null values
         .sort()
         .map(key => `${key}=${userData[key]}`)
         .join('\n');
 
-    // Create secret key: SHA256(botToken)
-    const secretKey = createHash('sha256').update(BOT_TOKEN).digest();
+    // Create the secret key
+    const secretKey = createHash('sha256')
+        .update(BOT_TOKEN)
+        .digest();
 
-    // Calculate hmac
-    const hmac = createHmac('sha256', secretKey).update(checkString).digest('hex');
+    // Calculate the HMAC
+    const hmac = createHmac('sha256', secretKey)
+        .update(checkString)
+        .digest('hex');
 
-    return hmac === hash;
+    const isValid = hmac === hash;
+
+    if (!isValid) {
+        console.error("Auth Fail: Hash Mismatch");
+        console.log("Received Hash:", hash);
+        console.log("Calculated HMAC:", hmac);
+        console.log("Check String:", checkString);
+    }
+
+    // Check for expiration (optional but recommended, 24h)
+    const now = Math.floor(Date.now() / 1000);
+    const authDate = parseInt(userData.auth_date);
+    if (now - authDate > 86400) {
+        console.error("Auth Fail: Data Expired");
+        return false;
+    }
+
+    return isValid;
 }

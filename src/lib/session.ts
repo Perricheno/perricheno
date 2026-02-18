@@ -6,6 +6,7 @@ const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export async function createSession(userId: number) {
     const expires = new Date(Date.now() + SESSION_DURATION);
+    
     const session = await new SignJWT({ userId })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
@@ -13,9 +14,15 @@ export async function createSession(userId: number) {
         .sign(SECRET_KEY);
 
     const cookieStore = await cookies();
+    
+    // Explicitly handle Secure flag logic
+    // In dev (localhost), secure should be false to work on http
+    // In prod, secure should be true
+    const isProd = process.env.NODE_ENV === 'production';
+
     cookieStore.set('perricheno_session', session, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProd, 
         expires: expires,
         sameSite: 'lax',
         path: '/',
@@ -25,6 +32,7 @@ export async function createSession(userId: number) {
 export async function verifySession() {
     const cookieStore = await cookies();
     const session = cookieStore.get('perricheno_session')?.value;
+    
     if (!session) return null;
 
     try {
@@ -33,6 +41,7 @@ export async function verifySession() {
         });
         return payload.userId as number;
     } catch (error) {
+        console.error("Session Verify Error:", error);
         return null;
     }
 }
