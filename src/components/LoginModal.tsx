@@ -17,6 +17,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
         if (user) return; // Don't inject if logged in
 
         (window as any).onTelegramAuth = async (tgUser: any) => {
+            alert("Telegram callback fired! Check console."); 
             console.log("Telegram Auth:", tgUser);
             setLoading(true);
             try {
