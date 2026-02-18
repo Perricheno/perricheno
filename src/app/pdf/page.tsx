@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { DockSidebar } from "@/components/ui/DockSidebar";
-import { AdminBar } from "@/components/AdminBar";
+import { useState, useRef } from "react";
 import { useAdmin } from "@/components/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
@@ -10,6 +8,7 @@ import {
     IconCloudUpload, IconFileTypePdf, IconLoader2, IconDownload, IconArrowLeft,
     IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX, IconFileCheck, IconBrandTelegram
 } from "@tabler/icons-react";
+import MinimalSidebar from "@/components/MinimalSidebar";
 
 type ToolType = "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img";
 
@@ -19,18 +18,16 @@ interface ToolDef {
     desc: string;
     icon: any;
     accept: string;
-    color: string;
-    bg: string;
     outputExt: string;
 }
 
 const TOOLS: ToolDef[] = [
-    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", color: "text-blue-400", bg: "bg-blue-500/10", outputExt: ".pdf" },
-    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", color: "text-purple-400", bg: "bg-purple-500/10", outputExt: ".pdf" },
-    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: IconFileText, accept: ".pdf", color: "text-emerald-400", bg: "bg-emerald-500/10", outputExt: ".docx" },
-    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", color: "text-orange-400", bg: "bg-orange-500/10", outputExt: ".pptx" },
-    { id: "pdf-to-img", title: "PDF to Images", desc: "Extract pages as ZIP", icon: IconPhoto, accept: ".pdf", color: "text-pink-400", bg: "bg-pink-500/10", outputExt: ".zip" },
-    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconCode, accept: ".pdf", color: "text-cyan-400", bg: "bg-cyan-500/10", outputExt: ".txt" },
+    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf" },
+    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", outputExt: ".pdf" },
+    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: IconFileText, accept: ".pdf", outputExt: ".docx" },
+    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", outputExt: ".pptx" },
+    { id: "pdf-to-img", title: "PDF to Images", desc: "Extract pages as ZIP", icon: IconPhoto, accept: ".pdf", outputExt: ".zip" },
+    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconCode, accept: ".pdf", outputExt: ".txt" },
 ];
 
 export default function PDFPage() {
@@ -147,65 +144,62 @@ export default function PDFPage() {
     };
 
     return (
-        <div className="relative z-10 w-full min-h-screen">
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-2xl" />
-            <AdminBar />
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 transition-all">
+            <MinimalSidebar />
 
-            <div className="relative z-10 max-w-[1200px] mx-auto px-4 pt-24 pb-32 md:py-28 md:pl-24 min-h-[80vh]">
-
-                {activeTool && user && <div className="absolute top-24 right-4 z-40 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs flex items-center gap-2">
+            <div className="max-w-5xl mx-auto px-6 py-20 md:py-32">
+                {activeTool && user && <div className="absolute top-6 right-6 z-40 px-3 py-1 rounded-full border border-[var(--border)] text-[var(--foreground)] opacity-50 text-xs flex items-center gap-2">
                     <IconBrandTelegram className="w-3 h-3" /> Auto-send to {user.first_name}
                 </div>}
 
                 <AnimatePresence mode="wait">
                     {!activeTool ? (
                         <motion.div key="grid" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                            className="flex flex-col items-center">
-                            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-center">PDF Tools</h1>
-                            <p className="text-white/40 mb-12 text-center max-w-lg">Secure, private, and powerful PDF tools powered by Perricheno API.</p>
+                            className="flex flex-col">
+                            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">PDF Tools.</h1>
+                            <p className="text-xl text-[var(--foreground)] opacity-60 mb-12 max-w-lg">Secure, private, and powerful PDF operations.</p>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border)] border border-[var(--border)]">
                                 {TOOLS.map((t) => (
-                                    <motion.button key={t.id} onClick={() => setActiveTool(t.id)}
-                                        whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
-                                        className="group relative p-6 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl hover:bg-white/[0.06] text-left transition-all overflow-hidden h-40 flex flex-col justify-between">
-                                        <div className={`absolute top-0 right-0 p-3 rounded-bl-2xl ${t.bg} ${t.color} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                            <IconFileTypePdf className="w-4 h-4" />
+                                    <button key={t.id} onClick={() => setActiveTool(t.id)}
+                                        className="group relative bg-[var(--background)] p-8 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors duration-200 text-left h-48 flex flex-col justify-between">
+                                        
+                                        <div className="flex justify-between items-start">
+                                            <t.icon className="w-8 h-8 stroke-1" />
+                                            <IconArrowLeft className="w-5 h-5 opacity-0 group-hover:opacity-100 rotate-180 transition-opacity" />
                                         </div>
-                                        <div className={`w-10 h-10 rounded-xl ${t.bg} flex items-center justify-center ${t.color} mb-3`}>
-                                            <t.icon className="w-6 h-6" />
-                                        </div>
+                                        
                                         <div>
-                                            <h3 className="text-lg font-bold text-white">{t.title}</h3>
-                                            <p className="text-white/40 text-xs">{t.desc}</p>
+                                            <h3 className="text-lg font-bold tracking-tight mb-1">{t.title}</h3>
+                                            <p className="text-sm opacity-50 group-hover:opacity-80">{t.desc}</p>
                                         </div>
-                                    </motion.button>
+                                    </button>
                                 ))}
                             </div>
                         </motion.div>
                     ) : (
                         <motion.div key="tool" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                            className="flex flex-col items-center max-w-[800px] mx-auto w-full">
+                            className="flex flex-col max-w-3xl mx-auto w-full">
 
-                            <div className="w-full flex items-center justify-between mb-8">
+                            <div className="w-full flex items-center justify-between mb-12">
                                 <button onClick={() => { setActiveTool(null); reset(); }}
-                                    className="flex items-center gap-2 text-white/50 hover:text-white transition-colors">
-                                    <IconArrowLeft className="w-5 h-5" /> Back to Tools
+                                    className="flex items-center gap-2 text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
+                                    <IconArrowLeft className="w-5 h-5" /> Back
                                 </button>
-                                <div className={`px-3 py-1 rounded-full ${tool?.bg} ${tool?.color} text-sm font-medium border border-white/5`}>
+                                <div className="px-3 py-1 rounded-full border border-[var(--border)] text-sm font-medium">
                                     {tool?.title}
                                 </div>
                             </div>
 
-                            <div className="w-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 md:p-12 flex flex-col items-center relative overflow-hidden min-h-[400px]">
+                            <div className="w-full border border-[var(--border)] bg-[var(--background)] p-8 md:p-12 relative min-h-[400px]">
                                 {status === "processing" && (
-                                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-20 flex flex-col items-center justify-center">
-                                        <IconLoader2 className="w-12 h-12 text-emerald-400 animate-spin mb-4" />
-                                        <p className="text-white font-medium text-lg mb-2">Processing Files...</p>
-                                        <p className="text-white/50 text-sm">Converted {progress.current} of {progress.total}</p>
-                                        <div className="w-64 h-2 bg-white/10 rounded-full mt-4 overflow-hidden">
+                                    <div className="absolute inset-0 bg-[var(--background)] z-20 flex flex-col items-center justify-center">
+                                        <IconLoader2 className="w-12 h-12 animate-spin mb-4" stroke={1} />
+                                        <p className="font-medium text-lg mb-2">Processing...</p>
+                                        <p className="opacity-50 text-sm">Converted {progress.current} of {progress.total}</p>
+                                        <div className="w-64 h-1 bg-[var(--border)] mt-6 overflow-hidden">
                                             <motion.div
-                                                className="h-full bg-emerald-500"
+                                                className="h-full bg-[var(--foreground)]"
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${(progress.current / progress.total) * 100}%` }}
                                             />
@@ -215,71 +209,64 @@ export default function PDFPage() {
 
                                 {files.length === 0 ? (
                                     <div
-                                        className="w-full border-2 border-dashed border-white/10 rounded-2xl h-64 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-emerald-500/50 hover:bg-white/[0.02] transition-all group"
+                                        className="w-full border border-dashed border-[var(--border)] h-64 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-[var(--muted)] transition-colors group"
                                         onClick={() => fileInputRef.current?.click()}
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
                                     >
                                         <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
-                                        <div className={`p-4 rounded-full bg-white/5 group-hover:bg-emerald-500/10 group-hover:text-emerald-400 transition-colors`}>
-                                            <IconCloudUpload className="w-8 h-8 text-white/40 group-hover:text-emerald-400" />
-                                        </div>
+                                        <IconCloudUpload className="w-10 h-10 opacity-30 group-hover:opacity-100 transition-opacity" stroke={1} />
                                         <div className="text-center">
-                                            <p className="text-white font-medium">Click or Drag files here</p>
-                                            <p className="text-white/30 text-sm mt-1">Upload up to 100 files</p>
+                                            <p className="font-medium">Click or Drag files</p>
+                                            <p className="opacity-40 text-sm mt-1">Up to 100 files</p>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="w-full flex flex-col gap-6">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-white font-medium">Files ({files.length})</h3>
-                                            <button onClick={() => fileInputRef.current?.click()} className="text-emerald-400 text-sm hover:underline">+ Add more</button>
+                                        <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
+                                            <h3 className="font-bold">Files ({files.length})</h3>
+                                            <button onClick={() => fileInputRef.current?.click()} className="text-sm opacity-50 hover:opacity-100 hover:underline">+ Add more</button>
                                             <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                         </div>
 
-                                        <div className="max-h-60 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                                        <div className="max-h-60 overflow-y-auto space-y-1 pr-2">
                                             {files.map((f, i) => (
-                                                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                                                    className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/10">
-                                                    <div className={`p-2 rounded-lg ${tool?.bg} ${tool?.color}`}>
-                                                        {tool && <tool.icon className="w-5 h-5" />}
-                                                    </div>
+                                                <div key={i} className="flex items-center gap-4 p-3 border border-[var(--border)] hover:bg-[var(--muted)] transition-colors">
+                                                    <IconFileDescription className="w-5 h-5 opacity-50" stroke={1} />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-white text-sm font-medium truncate">{f.name}</p>
-                                                        <p className="text-white/30 text-xs">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                        <p className="text-sm font-medium truncate">{f.name}</p>
+                                                        <p className="opacity-40 text-xs">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
                                                     </div>
-                                                    <button onClick={() => removeFile(i)} className="text-white/30 hover:text-red-400 p-1">
+                                                    <button onClick={() => removeFile(i)} className="opacity-30 hover:opacity-100 hover:text-red-500 p-1">
                                                         <IconX className="w-4 h-4" />
                                                     </button>
-                                                </motion.div>
+                                                </div>
                                             ))}
                                         </div>
 
                                         {status === "done" ? (
-                                            <div className="flex flex-col gap-4 items-center animate-in fade-in slide-in-from-bottom-4 duration-500 pt-4 border-t border-white/10">
-                                                <div className="p-2 rounded-full bg-emerald-500/20 text-emerald-400">
-                                                    <IconFileCheck className="w-8 h-8" />
-                                                </div>
-                                                <p className="text-emerald-400 font-medium text-lg">Conversion Complete!</p>
-                                                {user && <p className="text-blue-400 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
+                                            <div className="flex flex-col gap-4 items-center pt-8 border-t border-[var(--border)] animate-in fade-in slide-in-from-bottom-4">
+                                                <IconFileCheck className="w-10 h-10 mb-2" stroke={1} />
+                                                <p className="font-bold text-lg">Complete</p>
+                                                {user && <p className="opacity-50 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
                                                 <a href={downloadUrl} download={downloadName}
-                                                    className="px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
-                                                    <IconDownload className="w-5 h-5" /> Download {files.length > 1 ? "ZIP Archive" : "File"}
+                                                    className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] font-bold hover:opacity-80 transition-opacity flex items-center gap-2">
+                                                    <IconDownload className="w-4 h-4" /> Download
                                                 </a>
-                                                <button onClick={reset} className="text-white/40 text-sm hover:text-white mt-2">Start Over</button>
+                                                <button onClick={reset} className="opacity-40 text-sm hover:opacity-100 hover:underline mt-2">Start Over</button>
                                             </div>
                                         ) : (
                                             <button onClick={convert}
                                                 disabled={status !== "idle"}
-                                                className="w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-all shadow-lg text-sm uppercase tracking-wide mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
-                                                Convert {files.length} File{files.length > 1 ? "s" : ""}
+                                                className="w-full py-4 bg-[var(--foreground)] text-[var(--background)] font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-4">
+                                                CONVERT FILES
                                             </button>
                                         )}
 
                                         {status === "error" && (
-                                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
-                                                <p className="text-red-400 font-bold text-sm mb-1">Conversion Failed</p>
-                                                <p className="text-red-400/80 text-xs">{errorMsg}</p>
+                                            <div className="p-4 border border-red-500/20 text-center bg-red-500/5">
+                                                <p className="text-red-500 font-bold text-sm mb-1">Failed</p>
+                                                <p className="text-red-500/60 text-xs">{errorMsg}</p>
                                             </div>
                                         )}
                                     </div>
@@ -288,10 +275,7 @@ export default function PDFPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
             </div>
-
-            <DockSidebar />
         </div>
     );
 }
