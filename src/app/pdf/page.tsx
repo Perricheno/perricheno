@@ -22,10 +22,10 @@ interface ToolDef {
 }
 
 const TOOLS: ToolDef[] = [
-    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf" },
-    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", outputExt: ".pdf" },
-    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: IconFileText, accept: ".pdf", outputExt: ".docx" },
-    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", outputExt: ".pptx" },
+    { id: "file-to-pdf", title: "File to PDF", desc: "Convert Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf" },
+    { id: "img-to-pdf", title: "Image to PDF", desc: "Convert JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", outputExt: ".pdf" },
+    { id: "pdf-to-word", title: "PDF to Word", desc: "Convert PDF to Editable Word", icon: IconFileText, accept: ".pdf", outputExt: ".docx" },
+    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "Convert PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", outputExt: ".pptx" },
     { id: "pdf-to-img", title: "PDF to Images", desc: "Extract pages as ZIP", icon: IconPhoto, accept: ".pdf", outputExt: ".zip" },
     { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconCode, accept: ".pdf", outputExt: ".txt" },
 ];
@@ -91,6 +91,7 @@ export default function PDFPage() {
                 if (activeTool === "img-to-pdf") {
                     formData.append("fitOption", "fillPage");
                     formData.append("colorType", "color");
+                    formData.append("autoRotate", "true");
                 }
 
                 const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
@@ -147,7 +148,7 @@ export default function PDFPage() {
         <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 transition-all">
             <MinimalSidebar />
 
-            <div className="max-w-5xl mx-auto px-6 py-20 md:py-32">
+            <div className="max-w-[1400px] mx-auto px-6 py-20 md:py-32">
                 {activeTool && user && <div className="absolute top-6 right-6 z-40 px-3 py-1 rounded-full border border-[var(--border)] text-[var(--foreground)] opacity-50 text-xs flex items-center gap-2">
                     <IconBrandTelegram className="w-3 h-3" /> Auto-send to {user.first_name}
                 </div>}
@@ -156,13 +157,15 @@ export default function PDFPage() {
                     {!activeTool ? (
                         <motion.div key="grid" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
                             className="flex flex-col">
-                            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">PDF Tools.</h1>
-                            <p className="text-xl text-[var(--foreground)] opacity-60 mb-12 max-w-lg">Secure, private, and powerful PDF operations.</p>
+                            <h1 className="text-[8vw] md:text-8xl font-bold tracking-tighter mb-8 leading-none">
+                                PDF Tools<span className="text-[var(--border)]">.</span>
+                            </h1>
+                            <p className="text-xl opacity-60 mb-16 max-w-lg">Secure, private, and powerful PDF operations.</p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border)] border border-[var(--border)]">
                                 {TOOLS.map((t) => (
                                     <button key={t.id} onClick={() => setActiveTool(t.id)}
-                                        className="group relative bg-[var(--background)] p-8 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors duration-200 text-left h-48 flex flex-col justify-between">
+                                        className="group relative bg-[var(--background)] p-8 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors duration-200 text-left h-56 flex flex-col justify-between">
                                         
                                         <div className="flex justify-between items-start">
                                             <t.icon className="w-8 h-8 stroke-1" />
@@ -170,7 +173,7 @@ export default function PDFPage() {
                                         </div>
                                         
                                         <div>
-                                            <h3 className="text-lg font-bold tracking-tight mb-1">{t.title}</h3>
+                                            <h3 className="text-xl font-bold tracking-tight mb-2">{t.title}</h3>
                                             <p className="text-sm opacity-50 group-hover:opacity-80">{t.desc}</p>
                                         </div>
                                     </button>
@@ -183,20 +186,20 @@ export default function PDFPage() {
 
                             <div className="w-full flex items-center justify-between mb-12">
                                 <button onClick={() => { setActiveTool(null); reset(); }}
-                                    className="flex items-center gap-2 text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
-                                    <IconArrowLeft className="w-5 h-5" /> Back
+                                    className="flex items-center gap-2 font-mono text-sm opacity-50 hover:opacity-100 transition-opacity">
+                                    <IconArrowLeft className="w-4 h-4" /> BACK
                                 </button>
-                                <div className="px-3 py-1 rounded-full border border-[var(--border)] text-sm font-medium">
+                                <div className="px-3 py-1 rounded-full border border-[var(--border)] text-xs font-mono uppercase">
                                     {tool?.title}
                                 </div>
                             </div>
 
-                            <div className="w-full border border-[var(--border)] bg-[var(--background)] p-8 md:p-12 relative min-h-[400px]">
+                            <div className="w-full border border-[var(--border)] bg-[var(--background)] p-8 md:p-16 relative min-h-[500px] flex flex-col">
                                 {status === "processing" && (
                                     <div className="absolute inset-0 bg-[var(--background)] z-20 flex flex-col items-center justify-center">
                                         <IconLoader2 className="w-12 h-12 animate-spin mb-4" stroke={1} />
                                         <p className="font-medium text-lg mb-2">Processing...</p>
-                                        <p className="opacity-50 text-sm">Converted {progress.current} of {progress.total}</p>
+                                        <p className="opacity-50 text-sm font-mono">Completed {progress.current} / {progress.total}</p>
                                         <div className="w-64 h-1 bg-[var(--border)] mt-6 overflow-hidden">
                                             <motion.div
                                                 className="h-full bg-[var(--foreground)]"
@@ -209,35 +212,35 @@ export default function PDFPage() {
 
                                 {files.length === 0 ? (
                                     <div
-                                        className="w-full border border-dashed border-[var(--border)] h-64 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-[var(--muted)] transition-colors group"
+                                        className="w-full h-full min-h-[300px] border border-dashed border-[var(--border)] flex flex-col items-center justify-center gap-6 cursor-pointer hover:bg-[var(--muted)] transition-colors group"
                                         onClick={() => fileInputRef.current?.click()}
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
                                     >
                                         <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
-                                        <IconCloudUpload className="w-10 h-10 opacity-30 group-hover:opacity-100 transition-opacity" stroke={1} />
+                                        <IconCloudUpload className="w-16 h-16 opacity-20 group-hover:opacity-100 transition-opacity stroke-1" />
                                         <div className="text-center">
-                                            <p className="font-medium">Click or Drag files</p>
-                                            <p className="opacity-40 text-sm mt-1">Up to 100 files</p>
+                                            <p className="text-xl font-medium mb-1">Drop files here</p>
+                                            <p className="opacity-40 text-sm">or click to browse</p>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="w-full flex flex-col gap-6">
+                                    <div className="w-full flex flex-col gap-6 flex-1">
                                         <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
-                                            <h3 className="font-bold">Files ({files.length})</h3>
+                                            <h3 className="font-bold">Queue ({files.length})</h3>
                                             <button onClick={() => fileInputRef.current?.click()} className="text-sm opacity-50 hover:opacity-100 hover:underline">+ Add more</button>
                                             <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                         </div>
 
-                                        <div className="max-h-60 overflow-y-auto space-y-1 pr-2">
+                                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
                                             {files.map((f, i) => (
-                                                <div key={i} className="flex items-center gap-4 p-3 border border-[var(--border)] hover:bg-[var(--muted)] transition-colors">
-                                                    <IconFileDescription className="w-5 h-5 opacity-50" stroke={1} />
+                                                <div key={i} className="flex items-center gap-4 p-4 border border-[var(--border)] hover:bg-[var(--muted)] transition-colors">
+                                                    <IconFileDescription className="w-6 h-6 opacity-50" stroke={1} />
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium truncate">{f.name}</p>
-                                                        <p className="opacity-40 text-xs">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                        <p className="opacity-40 text-xs font-mono">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
                                                     </div>
-                                                    <button onClick={() => removeFile(i)} className="opacity-30 hover:opacity-100 hover:text-red-500 p-1">
+                                                    <button onClick={() => removeFile(i)} className="opacity-30 hover:opacity-100 hover:text-red-500 p-2">
                                                         <IconX className="w-4 h-4" />
                                                     </button>
                                                 </div>
@@ -246,27 +249,29 @@ export default function PDFPage() {
 
                                         {status === "done" ? (
                                             <div className="flex flex-col gap-4 items-center pt-8 border-t border-[var(--border)] animate-in fade-in slide-in-from-bottom-4">
-                                                <IconFileCheck className="w-10 h-10 mb-2" stroke={1} />
-                                                <p className="font-bold text-lg">Complete</p>
+                                                <div className="w-16 h-16 rounded-full bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center mb-2">
+                                                    <IconFileCheck className="w-8 h-8" stroke={1.5} />
+                                                </div>
+                                                <p className="font-bold text-2xl">Ready!</p>
                                                 {user && <p className="opacity-50 text-xs flex items-center gap-1"><IconBrandTelegram className="w-3 h-3" /> Sent to Telegram</p>}
                                                 <a href={downloadUrl} download={downloadName}
-                                                    className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] font-bold hover:opacity-80 transition-opacity flex items-center gap-2">
-                                                    <IconDownload className="w-4 h-4" /> Download
+                                                    className="w-full py-4 bg-[var(--foreground)] text-[var(--background)] font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 mt-4 text-lg">
+                                                    <IconDownload className="w-5 h-5" /> DOWNLOAD FILE
                                                 </a>
-                                                <button onClick={reset} className="opacity-40 text-sm hover:opacity-100 hover:underline mt-2">Start Over</button>
+                                                <button onClick={reset} className="opacity-40 text-sm hover:opacity-100 hover:underline mt-2">Convert more files</button>
                                             </div>
                                         ) : (
                                             <button onClick={convert}
                                                 disabled={status !== "idle"}
-                                                className="w-full py-4 bg-[var(--foreground)] text-[var(--background)] font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-4">
-                                                CONVERT FILES
+                                                className="w-full py-5 bg-[var(--foreground)] text-[var(--background)] font-bold tracking-widest hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 text-lg">
+                                                START CONVERSION
                                             </button>
                                         )}
 
                                         {status === "error" && (
-                                            <div className="p-4 border border-red-500/20 text-center bg-red-500/5">
-                                                <p className="text-red-500 font-bold text-sm mb-1">Failed</p>
-                                                <p className="text-red-500/60 text-xs">{errorMsg}</p>
+                                            <div className="p-4 border border-red-500/20 text-center bg-red-500/5 mt-4">
+                                                <p className="text-red-500 font-bold text-sm mb-1">Conversion Failed</p>
+                                                <p className="text-red-500/60 text-xs font-mono">{errorMsg}</p>
                                             </div>
                                         )}
                                     </div>
