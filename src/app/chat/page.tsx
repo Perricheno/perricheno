@@ -58,7 +58,9 @@ function getSystemInfo() {
 export default function ChatPage() {
     /* ── State ── */
     const [initialChatId] = useState(() => genId());
-    const [threads, setThreads] = useState<ChatThread[]>([]);
+    const [threads, setThreads] = useState<ChatThread[]>([
+        { id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }
+    ]);
     const [activeThreadId, setActiveThreadId] = useState(initialChatId);
     
     // UI & Settings State
