@@ -58,10 +58,10 @@ function getSystemInfo() {
 export default function ChatPage() {
     /* ── State ── */
     const [initialChatId] = useState(() => genId());
-    const [threads, setThreads] = useState<ChatThread[]>([
-        { id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() },
-    ]);
+    const [threads, setThreads] = useState<ChatThread[]>([]);
     const [activeThreadId, setActiveThreadId] = useState(initialChatId);
+    
+    // UI & Settings State
     const [input, setInput] = useState("");
     const [files, setFiles] = useState<File[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -84,7 +84,49 @@ export default function ChatPage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const activeThread = threads.find(t => t.id === activeThreadId)!;
+    // Load threads from local storage when user changes
+    useEffect(() => {
+        if (!user) {
+            setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
+            setActiveThreadId(initialChatId);
+            return;
+        }
+        
+        const storageKey = `perricheno_chats_${user.telegram_id}`;
+        try {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Convert string dates back to Date objects
+                const restoredThreads: ChatThread[] = parsed.map((t: any) => ({
+                    ...t,
+                    createdAt: new Date(t.createdAt),
+                    messages: t.messages.map((m: any) => ({
+                        ...m,
+                        timestamp: new Date(m.timestamp)
+                    }))
+                }));
+                setThreads(restoredThreads);
+                if (restoredThreads.length > 0) setActiveThreadId(restoredThreads[0].id);
+            } else {
+                setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
+                setActiveThreadId(initialChatId);
+            }
+        } catch (e) {
+            console.error("Failed to load chat history:", e);
+            setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
+            setActiveThreadId(initialChatId);
+        }
+    }, [user, initialChatId]);
+
+    // Save threads to local storage whenever they change (if user is logged in)
+    useEffect(() => {
+        if (!user || threads.length === 0) return;
+        const storageKey = `perricheno_chats_${user.telegram_id}`;
+        localStorage.setItem(storageKey, JSON.stringify(threads));
+    }, [threads, user]);
+
+    const activeThread = threads.find(t => t.id === activeThreadId) || threads[0];
     const messages = activeThread?.messages || [];
 
     // Fetch settings
@@ -225,8 +267,17 @@ export default function ChatPage() {
 
             if (!response.ok) throw new Error(`Webhook Error: ${response.status}`);
 
-            const data = await response.json();
-            const responseText = data.output || data.text || data.message || data.response || JSON.stringify(data);
+            // Handle both JSON and plain text responses safely
+            const textResponse = await response.text();
+            let responseText = textResponse;
+            
+            try {
+                // If it's valid JSON, extract the text from common fields
+                const data = JSON.parse(textResponse);
+                responseText = data.output || data.text || data.message || data.response || textResponse;
+            } catch (jsonErr) {
+                // If parsing fails, it's just a raw string from n8n (e.g. "Привет..."). Keep responseText as is.
+            }
 
             updateThreadMessages(activeThreadId, [...updatedMessages, { 
                 id: String(Date.now()), 
