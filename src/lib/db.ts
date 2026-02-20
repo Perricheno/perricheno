@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 
 // For Next.js development, we need to ensure we don't create multiple connections
 // but better-sqlite3 handles this well as long as we reuse the instance or rely on Next.js clearing cache.
@@ -13,6 +14,11 @@ const dbPath = process.env.NODE_ENV === 'production'
 // Declare global type for db
 declare global {
     var db: ReturnType<typeof Database> | undefined;
+}
+
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
 }
 
 const db = globalThis.db || new Database(dbPath);
