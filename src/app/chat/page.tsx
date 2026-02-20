@@ -192,7 +192,28 @@ export default function ChatPage() {
             };
 
             const formData = new FormData();
-            formData.append("payload", JSON.stringify(payload));
+            
+            // --- Flat fields for easier access in n8n ---
+            formData.append("chatId", activeThreadId);
+            formData.append("message", msgText);
+            formData.append("timestamp", payload.timestamp);
+            formData.append("mode", payload.mode);
+            
+            // User Data
+            formData.append("userId", String(user.telegram_id));
+            formData.append("userFirstName", user.first_name || "");
+            formData.append("userUsername", user.username || "");
+            
+            // Context & Settings
+            formData.append("threadTitle", activeThread.title);
+            formData.append("model", settings.selectedModel);
+            
+            // Send the deeply nested stuff as JSON strings for advanced use
+            formData.append("previousMessages", JSON.stringify(payload.context.previousMessages));
+            formData.append("systemInfo", JSON.stringify(payload.system));
+            
+            // Keep the full payload as backup
+            formData.append("full_payload_json", JSON.stringify(payload));
             
             files.forEach((file, i) => formData.append(`file_${i}`, file, file.name));
             if (audioBlob) formData.append("audio", audioBlob, "voice.webm");
