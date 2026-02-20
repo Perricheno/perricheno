@@ -68,10 +68,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
                 // For now, setting user is enough.
                 window.location.reload();
             } else {
-                throw new Error("Login failed");
+                const errorData = await res.json().catch(() => ({ error: res.statusText }));
+                console.error("Server Login Error Details:", errorData);
+                throw new Error(errorData.error || errorData.details || "Login failed");
             }
         } catch (e) {
-            console.error(e);
+            console.error("Login Exception:", e);
             throw e;
         }
     };
