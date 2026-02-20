@@ -28,8 +28,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Settings data (writeable by nextjs user)
+# Settings and DB data (writeable by nextjs user)
 COPY --from=builder --chown=nextjs:nodejs /app/src/data ./src/data
+RUN mkdir -p /app/db && chown nextjs:nodejs /app/db
 
 USER nextjs
 

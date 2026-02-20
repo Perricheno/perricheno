@@ -5,7 +5,10 @@ import path from 'path';
 // but better-sqlite3 handles this well as long as we reuse the instance or rely on Next.js clearing cache.
 // However, in dev mode, module might reload. We can use globalThis pattern.
 
-const dbPath = path.join(process.cwd(), 'perricheno.db');
+// Use a writable path in production (Docker volume), otherwise local project root
+const dbPath = process.env.NODE_ENV === 'production' 
+    ? path.join('/app/db', 'perricheno.db') 
+    : path.join(process.cwd(), 'perricheno.db');
 
 // Declare global type for db
 declare global {
