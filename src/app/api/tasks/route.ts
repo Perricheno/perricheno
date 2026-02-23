@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import * as jwt from 'jose';
+import db, { getTasksByUserId, createTask, updateTaskStatus, deleteTask, getUserById } from '@/lib/db';
+
+const JWT_SECRET = new TextEncoder().encode(
+    process.env.JWT_SECRET || 'fallback_secret_key_for_development_only'
+);
+
+async function verifyAuth(req: NextRequest) {
+    const sessionToken = req.cookies.get('session')?.value;
+    if (!sessionToken) return null;
+
+    try {
+        const { payload } = await jwt.jwtVerify(sessionToken, JWT_SECRET);
+        return getUserById(Number(payload.userId));
+    } catch {
+        return null;
+    }
+}
+
+export async function GET(req: NextRequest) {
+    const user = await verifyAuth(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const tasks = getTasksByUserId(user.id);
+    return NextResponse.json(tasks);
+}
+
+export async function POST(req: NextRequest) {
+    const user = await verifyAuth(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const body = await req.json();
+        const { text, remindAt } = body;
+
+        if (!text || !remindAt) {
+            return NextResponse.json({ error: 'Text and remindAt are required' }, { status: 400 });
+        }
+
+        const task = createTask(user.id, text, remindAt);
+        return NextResponse.json(task);
+    } catch (e) {
+        return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+    }
+}
+
+export async function PUT(req: NextRequest) {
+    const user = await verifyAuth(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const body = await req.json();
+        const { taskId, status } = body;
+
+        if (!taskId || !status) {
+            return NextResponse.json({ error: 'taskId and status are required' }, { status: 400 });
+        }
+
+        updateTaskStatus(taskId, status);
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: NextRequest) {
+    const user = await verifyAuth(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const { searchParams } = new URL(req.url);
+        const taskId = searchParams.get('id');
+
+        if (!taskId) {
+            return NextResponse.json({ error: 'id parameter is required' }, { status: 400 });
+        }
+
+        deleteTask(Number(taskId));
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+    }
+}

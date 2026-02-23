@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
     IconHome, IconTerminal2, IconChartBar, 
-    IconRobot, IconFileTypePdf,
+    IconRobot, IconFileTypePdf, IconListCheck,
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand
@@ -38,6 +38,7 @@ const NAV_GROUPS: NavGroup[] = [
     {
         title: "Activity",
         links: [
+            { href: "/tasks", icon: IconListCheck, label: "Tasks" },
             { href: "/agent", icon: IconRobot, label: "AI Agent" },
             { href: "/pdf", icon: IconFileTypePdf, label: "PDF Tools" },
         ]
@@ -50,13 +51,13 @@ const NAV_GROUPS: NavGroup[] = [
     }
 ];
 
-// Mobile bottom bar — 5 key items (icons only)
+// Mobile bottom bar — 5 key items (icons + labels)
 const MOBILE_NAV: NavLink[] = [
     { href: "/", icon: IconHome, label: "Home" },
-    { href: "/dashboard", icon: IconChartBar, label: "Dashboard" },
+    { href: "/tasks", icon: IconListCheck, label: "Tasks" },
     { href: "/pdf", icon: IconFileTypePdf, label: "PDF" },
     { href: "/agent", icon: IconRobot, label: "Agent" },
-    // 5th slot = profile/sign-in (rendered separately)
+    // 5th slot = profile/sign-in
 ];
 
 export default function MinimalSidebar() {
@@ -164,43 +165,64 @@ export default function MinimalSidebar() {
             {/* ═══════════════════════════════════════ */}
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
-            <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 md:hidden">
-                <div className="flex items-center gap-1 px-3 py-2.5 bg-white/90 dark:bg-[#27272a]/90 backdrop-blur-xl rounded-full border border-[var(--border)] shadow-lg shadow-black/10">
+            <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[95%] max-w-[400px]">
+                <div className="flex items-center justify-between px-2 py-2 bg-white dark:bg-[#18181b] rounded-[1.5rem] border border-[var(--border)] shadow-xl shadow-black/5">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
-                            className={cn(
-                                "relative flex items-center justify-center w-12 h-12 rounded-full transition-all",
+                            className="flex flex-col items-center justify-center w-[60px] relative group h-[48px]">
+                            {/* The pill background for active state */}
+                            <div className={cn(
+                                "absolute top-0 w-12 h-7 rounded-full transition-all duration-300 z-0",
                                 isActive(l.href)
-                                    ? "bg-black/10 dark:bg-white/10"
-                                    : "hover:bg-black/5 dark:hover:bg-white/5"
-                            )}>
-                            <l.icon className={cn(
-                                "w-5 h-5 transition-colors",
-                                isActive(l.href) ? "text-[var(--foreground)]" : "text-gray-400"
-                            )} stroke={isActive(l.href) ? 2 : 1.5} />
+                                    ? "bg-black dark:bg-white scale-100"
+                                    : "bg-transparent scale-90 opacity-0 group-hover:bg-black/5 dark:group-hover:bg-white/5 group-hover:scale-100 group-hover:opacity-100"
+                            )} />
                             
-                            {/* Active dot indicator */}
-                            {isActive(l.href) && (
-                                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-green-500" />
-                            )}
+                            {/* Icon */}
+                            <l.icon className={cn(
+                                "w-5 h-5 relative z-10 transition-colors mt-[2px]",
+                                isActive(l.href) 
+                                    ? "text-white dark:text-black stroke-[2.5px]" 
+                                    : "text-gray-500 stroke-[1.5px]"
+                            )} />
+                            
+                            {/* Label */}
+                            <span className={cn(
+                                "text-[10px] absolute bottom-[-2px] tracking-wide transition-colors font-medium",
+                                isActive(l.href) ? "text-[var(--foreground)] font-bold" : "text-gray-500"
+                            )}>
+                                {l.label}
+                            </span>
                         </Link>
                     ))}
 
                     {/* Profile / Sign In slot */}
                     <button onClick={() => setShowLogin(true)}
-                        className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-full transition-all",
+                        className="flex flex-col items-center justify-center w-[60px] relative group h-[48px]">
+                        <div className={cn(
+                            "absolute top-0 w-12 h-7 rounded-full transition-all duration-300 z-0",
                             pathname === "/settings"
-                                ? "bg-black/10 dark:bg-white/10"
-                                : "hover:bg-black/5 dark:hover:bg-white/5"
+                                ? "bg-black dark:bg-white scale-100"
+                                : "bg-transparent scale-90 opacity-0 group-hover:bg-black/5 dark:group-hover:bg-white/5 group-hover:scale-100 group-hover:opacity-100"
+                        )} />
+                        
+                        <div className="relative z-10 w-5 h-5 mt-[2px] flex items-center justify-center rounded-full overflow-hidden">
+                            {user?.photo_url ? (
+                                <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <IconUser className={cn(
+                                    "w-5 h-5 transition-colors",
+                                    pathname === "/settings" ? "text-white dark:text-black stroke-[2.5px]" : "text-gray-500 stroke-[1.5px]"
+                                )} />
+                            )}
+                        </div>
+                        
+                        <span className={cn(
+                            "text-[10px] absolute bottom-[-2px] tracking-wide transition-colors font-medium",
+                            pathname === "/settings" ? "text-[var(--foreground)] font-bold" : "text-gray-500"
                         )}>
-                        {user ? (
-                            <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden border border-[var(--border)]">
-                                {user.photo_url ? <img src={user.photo_url} alt="" className="w-full h-full object-cover" /> : <IconUser className="w-3.5 h-3.5 text-gray-500" />}
-                            </div>
-                        ) : (
-                            <IconUser className="w-5 h-5 text-gray-400" stroke={1.5} />
-                        )}
+                            Account
+                        </span>
                     </button>
                 </div>
             </nav>

@@ -14,6 +14,7 @@ const dbPath = process.env.NODE_ENV === 'production'
 // Declare global type for db
 declare global {
     var db: ReturnType<typeof Database> | undefined;
+    var taskSchedulerActive: boolean | undefined;
 }
 
 const dbDir = path.dirname(dbPath);
@@ -36,7 +37,17 @@ db.exec(`
         first_name TEXT,
         photo_url TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
+    );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        task_text TEXT NOT NULL,
+        remind_at DATETIME NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 `);
 
 export default db;
@@ -96,4 +107,91 @@ export function upsertUser(data: { telegram_id: string; username?: string; first
 export function deleteUser(id: number) {
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
     stmt.run(id);
+}
+
+// --- Tasks ---
+
+export interface Task {
+    id: number;
+    user_id: number;
+    task_text: string;
+    remind_at: string;
+    status: 'pending' | 'done';
+    created_at: string;
+}
+
+export function getTasksByUserId(userId: number): Task[] {
+    const stmt = db.prepare('SELECT * FROM tasks WHERE user_id = ? ORDER BY remind_at ASC');
+    return stmt.all(userId) as Task[];
+}
+
+export function createTask(userId: number, text: string, remindAt: string): Task {
+    const stmt = db.prepare(`
+        INSERT INTO tasks (user_id, task_text, remind_at)
+        VALUES (?, ?, ?)
+    `);
+    const info = stmt.run(userId, text, remindAt);
+    return db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid) as Task;
+}
+
+export function updateTaskStatus(taskId: number, status: 'pending' | 'done'): void {
+    const stmt = db.prepare('UPDATE tasks SET status = ? WHERE id = ?');
+    stmt.run(status, taskId);
+}
+
+export function deleteTask(taskId: number): void {
+    const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
+    stmt.run(taskId);
+}
+
+export function getPendingTasksToRemind(currentTimeIso: string): Task[] {
+    const stmt = db.prepare('SELECT * FROM tasks WHERE status = "pending" AND remind_at <= ?');
+    return stmt.all(currentTimeIso) as Task[];
+}
+
+// --- Background Task Scheduler (Server-side only) ---
+if (typeof window === 'undefined') {
+    const POLLING_INTERVAL = 60000; // Every 1 min
+    
+    // We attach the interval to globalThis to prevent multiple intervals during Next.js HMR
+    if (!globalThis.taskSchedulerActive) {
+        globalThis.taskSchedulerActive = true;
+        
+        setInterval(async () => {
+            try {
+                const now = new Date().toISOString();
+                const pending = getPendingTasksToRemind(now);
+                const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+                if (!botToken || pending.length === 0) return;
+
+                for (const task of pending) {
+                    const user = getUserById(task.user_id);
+                    if (!user || !user.telegram_id) continue;
+
+                    // Send Telegram Reminder
+                    const text = `🔔 *Reminder!*\n\n${task.task_text}`;
+                    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: user.telegram_id,
+                            text: text,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+
+                    if (res.ok) {
+                        updateTaskStatus(task.id, 'done');
+                    } else {
+                        console.error('Failed to send reminder:', await res.text());
+                    }
+                }
+            } catch (err) {
+                console.error('Error in task scheduler interval:', err);
+            }
+        }, POLLING_INTERVAL);
+        
+        console.log('Task background scheduler started.');
+    }
 }
