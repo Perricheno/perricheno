@@ -5,94 +5,149 @@ import { usePathname } from "next/navigation";
 import { 
     IconHome, IconTerminal2, IconChartBar, 
     IconMessageCircle, IconRobot, IconFileTypePdf,
-    IconUser, IconLogin, IconSettings
+    IconUser, IconLogin, IconSettings,
+    IconLayoutSidebarLeftCollapse,
+    IconLayoutSidebarLeftExpand
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
+import { useState } from "react";
+
+type NavLink = {
+    href: string;
+    icon: any;
+    label: string;
+    shortcut?: string;
+};
+
+type NavGroup = {
+    title: string;
+    links: NavLink[];
+};
+
+// Categorized Links matching the UI vibe
+const NAV_GROUPS: NavGroup[] = [
+    {
+        title: "Main menu",
+        links: [
+            { href: "/", icon: IconHome, label: "Home", shortcut: "⌘ H" },
+            { href: "/dashboard", icon: IconChartBar, label: "Dashboard", shortcut: "⌘ D" },
+            // Removed /chat from UI 
+        ]
+    },
+    {
+        title: "Activity",
+        links: [
+            { href: "/agent", icon: IconRobot, label: "AI Agent" },
+            { href: "/pdf", icon: IconFileTypePdf, label: "PDF Tools" },
+        ]
+    },
+    {
+        title: "Set Up",
+        links: [
+            { href: "/projects", icon: IconTerminal2, label: "Projects" },
+            { href: "/settings", icon: IconSettings, label: "Settings" } // Dummy for UI
+        ]
+    }
+];
 
 export default function MinimalSidebar() {
     const pathname = usePathname();
     const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href);
-    const { user, showLogin, setShowLogin, isEditing, setIsEditing } = useAdmin();
-
-    const links = [
-        { href: "/", icon: IconHome, label: "Home" },
-        { href: "/projects", icon: IconTerminal2, label: "Projects" },
-        { href: "/dashboard", icon: IconChartBar, label: "Dashboard" },
-        { href: "/agent", icon: IconRobot, label: "Agent" },
-        { href: "/chat", icon: IconMessageCircle, label: "Chat" },
-        { href: "/pdf", icon: IconFileTypePdf, label: "PDF" },
-    ];
+    const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
+    const [collapsed, setCollapsed] = useState(false); // Add simple collapse state
 
     return (
-        <nav className="fixed left-0 top-0 bottom-0 w-16 md:w-64 border-r border-[var(--border)] bg-[var(--background)] flex flex-col z-50">
-            {/* Login Modal Global Trigger */}
+        <aside className={cn(
+            "fixed left-0 top-0 bottom-0 border-r border-[var(--border)] bg-[var(--muted)] flex flex-col z-50 transition-all duration-300",
+            collapsed ? "w-16 md:w-20" : "w-16 md:w-[260px]" // Use sidebar width matching ref
+        )}>
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
 
             {/* Logo Area */}
-            <div className="h-16 flex items-center justify-center md:justify-start md:px-6 border-b border-[var(--border)]">
-                <div className="w-8 h-8 relative">
-                   <img src="/logo-dark.png" alt="Logo" className="dark:hidden absolute inset-0 w-full h-full object-contain" />
-                   <img src="/logo.png" alt="Logo" className="hidden dark:block absolute inset-0 w-full h-full object-contain" />
-                </div>
-                <span className="hidden md:block ml-3 font-bold text-lg tracking-tight">Perricheno</span>
+            <div className="h-16 flex items-center justify-between px-4 md:px-6 pt-4 mb-4">
+                <Link href="/" className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-black text-white dark:bg-white dark:text-black rounded-[var(--radius)] flex items-center justify-center shrink-0">
+                        {/* Fake hexagon icon for now */}
+                        <div className="flex gap-1">
+                            <div className="w-1 h-3 bg-current rounded-full"></div>
+                            <div className="w-1 h-4 bg-current rounded-full -translate-y-0.5"></div>
+                            <div className="w-1 h-3 bg-current rounded-full"></div>
+                        </div>
+                    </div>
+                </Link>
+                
+                <button 
+                    onClick={() => setCollapsed(!collapsed)} 
+                    className="hidden md:flex p-2 flex-shrink-0 text-gray-400 hover:text-[var(--foreground)] rounded-[var(--radius)] transition-colors"
+                >
+                    {collapsed ? <IconLayoutSidebarLeftExpand size={18} /> : <IconLayoutSidebarLeftCollapse size={18} />}
+                </button>
             </div>
 
-            {/* Links */}
-            <div className="flex-1 py-6 flex flex-col gap-1 px-2 md:px-4">
-                {links.map(l => (
-                    <Link key={l.href} href={l.href} 
-                        className={cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium",
-                            isActive(l.href)                                    ? "bg-[var(--foreground)] text-[var(--background)] shadow-lg"
-                                    : "text-[var(--foreground)] hover:bg-[var(--muted)] hover:translate-x-1"
+            {/* Scrollable Links */}
+            <div className="flex-1 overflow-y-auto px-3 md:px-4 py-2 space-y-6 minimal-scrollbar">
+                {NAV_GROUPS.map((group, sectionIdx) => (
+                    <div key={sectionIdx} className={cn("space-y-1", collapsed && "md:hidden")}>
+                        <h4 className={cn(
+                            "px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2",
+                            collapsed && "hidden"
                         )}>
-                        <l.icon className="w-5 h-5 shrink-0" stroke={1.5} />
-                        <span className="hidden md:block">{l.label}</span>
-                    </Link>
+                            {group.title}
+                        </h4>
+                        
+                        {group.links.map(l => (
+                            <Link key={l.href} href={l.href} 
+                                className={cn(
+                                    "group flex items-center justify-between px-3 py-2 rounded-[var(--radius)] transition-all font-medium text-sm",
+                                    isActive(l.href)                                            
+                                        ? "bg-white dark:bg-[#27272a] text-[var(--foreground)] shadow-sm font-semibold"
+                                        : "text-gray-500 hover:text-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5"
+                                )}>
+                                <div className="flex items-center gap-3">
+                                    <l.icon className={cn(
+                                        "w-[18px] h-[18px] shrink-0",
+                                        isActive(l.href) ? "opacity-100" : "opacity-70 group-hover:opacity-100"
+                                    )} stroke={isActive(l.href) ? 2 : 1.5} />
+                                    <span className={cn(collapsed && "hidden md:hidden")}>{l.label}</span>
+                                </div>
+                                
+                                {l.shortcut && !collapsed && (
+                                     <div className="hidden md:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <kbd className="text-[10px] bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-gray-400">{l.shortcut.split(" ")[0]}</kbd>
+                                        <kbd className="text-[10px] bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-gray-400">{l.shortcut.split(" ")[1]}</kbd>
+                                     </div>
+                                )}
+                            </Link>
+                        ))}
+                    </div>
                 ))}
             </div>
 
-            {/* User / Status Area (Desktop) */}
-            <div className="p-4 border-t border-[var(--border)] hidden md:block">
+            {/* Bottom User Area */}
+            <div className="p-4 mt-auto">
+                 {/* Mobile Group title fallback */}
+                 {!collapsed && <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 hidden md:block">Account</h4>}
+                 
                 {user ? (
-                    <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full text-left mb-4 hover:opacity-80 transition-opacity">
-                        <div className="w-8 h-8 rounded-full bg-[var(--foreground)] text-[var(--background)] flex items-center justify-center overflow-hidden">
-                            {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name || "User"} /> : <IconUser className="w-5 h-5" />}
+                    <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full p-2 rounded-[var(--radius)] hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
+                        <div className="w-8 h-8 rounded-full bg-white dark:bg-[#27272a] shadow-sm flex items-center justify-center overflow-hidden shrink-0 border border-[var(--border)]">
+                            {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name || "User"} /> : <IconUser className="w-4 h-4 text-gray-400" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold truncate">{user.first_name}</p>
-                            <p className="text-[10px] opacity-50 truncate">Online</p>
+                        <div className={cn("flex-1 min-w-0 hidden md:block", collapsed && "md:hidden")}>
+                            <p className="text-sm font-semibold truncate text-[var(--foreground)] leading-tight">{user.first_name}</p>
+                            <p className="text-xs text-gray-500 truncate leading-tight">Admin</p>
                         </div>
-                        <IconSettings className="w-4 h-4 opacity-50" />
                     </button>
                 ) : (
                     <button onClick={() => setShowLogin(true)} 
-                        className="w-full flex items-center justify-center gap-2 mb-4 px-3 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors text-sm font-bold">
-                        <IconLogin className="w-4 h-4" />
-                        <span>Sign In</span>
+                        className="w-full flex items-center justify-center gap-2 p-2 rounded-[var(--radius)] bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity text-sm font-semibold shadow-sm">
+                        <IconLogin className="w-[18px] h-[18px]" />
+                        <span className={cn(collapsed && "hidden md:hidden")}>Sign In</span>
                     </button>
                 )}
-
-                <div className="flex items-center gap-2 text-xs text-[var(--foreground)] opacity-50">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span>Systems Operational</span>
-                </div>
             </div>
-
-            {/* Mobile Auth (Icon only) */}
-             <div className="md:hidden pb-4 flex flex-col items-center gap-4">
-                <button onClick={() => setShowLogin(true)} className="p-2 rounded-lg hover:bg-[var(--muted)]">
-                    {user ? (
-                         <div className="w-8 h-8 rounded-full bg-[var(--foreground)] overflow-hidden">
-                            {user.photo_url ? <img src={user.photo_url || ""} alt="User" /> : <div className="w-full h-full bg-[var(--foreground)]" />}
-                        </div>
-                    ) : (
-                        <IconLogin className="w-6 h-6 opacity-70" />
-                    )}
-                </button>
-            </div>
-        </nav>
+        </aside>
     );
 }

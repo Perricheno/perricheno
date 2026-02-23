@@ -86,6 +86,37 @@ export async function POST(req: NextRequest) {
         // Determine content type based on response or request type
         const contentType = response.headers.get("Content-Type") || "application/octet-stream";
         const contentDisp = response.headers.get("Content-Disposition") || `attachment; filename="converted-file"`;
+        
+        // Background Telegram Delivery
+        const originalName = formData.get("originalName") as string || "converted-file";
+        const tgExt = contentDisp.includes(".zip") ? "zip" : contentType.split("/")[1] || "pdf";
+        const finalName = originalName.includes(".") ? originalName.replace(/\.[^/.]+$/, `.${tgExt}`) : `${originalName}.${tgExt}`;
+
+        // Fire and forget Telegram delivery if user is logged in
+        import("next/headers").then(async ({ cookies }) => {
+            const { verifySession } = await import("@/lib/session");
+            const { getUserById } = await import("@/lib/db");
+            const userId = await verifySession();
+            
+            if (userId) {
+                const user = await getUserById(Number(userId));
+                
+                if (user?.telegram_id) {
+                    console.log(`[Proxy] Sending ${finalName} to Telegram user ${user.telegram_id}`);
+                    const tgFormData = new FormData();
+                    tgFormData.append("document", new Blob([buffer], { type: contentType }), finalName);
+                    tgFormData.append("chat_id", user.telegram_id.toString());
+                    
+                    // Construct absolute URL for the webhook proxy
+                    const protocol = req.headers.get("x-forwarded-proto") || "http";
+                    const host = req.headers.get("host");
+                    const baseUrl = `${protocol}://${host}`;
+                    
+                    fetch(`${baseUrl}/api/telegram/send`, { method: "POST", body: tgFormData })
+                        .catch(e => console.error("[Proxy] Telegram BG Send Failed", e));
+                }
+            }
+        }).catch(e => console.error("[Proxy] Session check failed", e));
 
         return new NextResponse(buffer, {
             status: 200,
