@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import { useAdmin } from "@/components/AdminContext";
 import MinimalSidebar from "@/components/MinimalSidebar";
 import { LoginModal } from "@/components/LoginModal";
@@ -13,12 +14,7 @@ type Theme = "light" | "dark" | "system";
 
 export default function SettingsPage() {
     const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
-    const [theme, setTheme] = useState<Theme>(() => {
-        if (typeof window !== "undefined") {
-            return (localStorage.getItem("theme") as Theme) || "system";
-        }
-        return "system";
-    });
+    const { theme, setTheme } = useTheme();
 
     // PDF defaults
     const [defaultDpi, setDefaultDpi] = useState("300");
@@ -27,20 +23,6 @@ export default function SettingsPage() {
 
     const applyTheme = (t: Theme) => {
         setTheme(t);
-        localStorage.setItem("theme", t);
-        const root = document.documentElement;
-        if (t === "dark") {
-            root.classList.add("dark");
-        } else if (t === "light") {
-            root.classList.remove("dark");
-        } else {
-            // System preference
-            if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-                root.classList.add("dark");
-            } else {
-                root.classList.remove("dark");
-            }
-        }
     };
 
     const themeOptions: { id: Theme; icon: any; label: string }[] = [

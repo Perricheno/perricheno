@@ -74,7 +74,7 @@ export default function MinimalSidebar() {
             {/* Desktop Sidebar — hidden on mobile      */}
             {/* ═══════════════════════════════════════ */}
             <aside className={cn(
-                "fixed left-0 top-0 bottom-0 border-r border-[var(--border)] bg-[var(--muted)] flex-col z-50 transition-all duration-300",
+                "fixed left-0 top-0 bottom-0 border-r border-[var(--border)] bg-[#F4F4F6] dark:bg-[#18181b] flex-col z-50 transition-all duration-300",
                 "hidden md:flex", // Hide on mobile
                 collapsed ? "w-20" : "md:w-[260px]"
             )}>
@@ -192,34 +192,28 @@ export default function MinimalSidebar() {
                         </Link>
                     ))}
 
-                    {/* Profile / Sign In slot */}
-                    <button onClick={() => setShowLogin(true)}
+                    {/* Settings slot */}
+                    <Link href="/settings"
                         className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
                         <div className={cn(
                             "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
-                            pathname === "/settings"
+                            isActive("/settings")
                                 ? "bg-black dark:bg-white"
                                 : "bg-transparent group-hover:bg-black/5 dark:group-hover:bg-white/5"
                         )}>
-                            {user?.photo_url ? (
-                                <div className="w-[18px] h-[18px] rounded-full overflow-hidden">
-                                    <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
-                                </div>
-                            ) : (
-                                <IconUser className={cn(
-                                    "w-[18px] h-[18px] transition-colors",
-                                    pathname === "/settings" ? "text-white dark:text-black stroke-[2.5px]" : "text-gray-500 stroke-[1.5px]"
-                                )} />
-                            )}
+                            <IconSettings className={cn(
+                                "w-[18px] h-[18px] transition-colors",
+                                isActive("/settings") ? "text-white dark:text-black stroke-[2.5px]" : "text-gray-500 stroke-[1.5px]"
+                            )} />
                         </div>
                         
                         <span className={cn(
                             "text-[10px] leading-tight transition-colors",
-                            pathname === "/settings" ? "text-[var(--foreground)] font-bold" : "text-gray-500 font-medium"
+                            isActive("/settings") ? "text-[var(--foreground)] font-bold" : "text-gray-500 font-medium"
                         )}>
-                            Account
+                            Settings
                         </span>
-                    </button>
+                    </Link>
                 </div>
             </nav>
         </>
