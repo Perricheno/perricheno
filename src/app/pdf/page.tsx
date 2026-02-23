@@ -421,7 +421,7 @@ export default function PDFPage() {
             <MinimalSidebar />
 
             <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-24">
-                {activeTool && user && <div className="absolute top-6 right-6 z-40 px-4 py-2 bg-white dark:bg-[#18181b] rounded-full shadow-sm border border-[var(--border)] text-sm font-medium flex items-center gap-2">
+                {activeTool && user && <div className="absolute top-6 right-6 z-40 px-4 py-2 bg-[var(--card)] rounded-full shadow-sm border border-[var(--border)] text-sm font-medium flex items-center gap-2">
                     <IconBrandTelegram className="w-4 h-4 text-blue-500" /> Auto-delivery active
                 </div>}
 
@@ -435,7 +435,7 @@ export default function PDFPage() {
                             <p className="text-lg text-gray-500 mb-10 max-w-xl">Supercharge your workflow with our advanced suite of PDF utilities.</p>
 
                             {/* Categories */}
-                            <div className="flex flex-wrap gap-2 mb-8 bg-white dark:bg-[#18181b] p-1.5 rounded-[var(--radius)] w-fit border border-[var(--border)] shadow-sm">
+                            <div className="flex flex-wrap gap-2 mb-8 bg-[var(--card)] p-1.5 rounded-[var(--radius)] w-fit border border-[var(--border)] shadow-sm">
                                 {CATEGORIES.map(cat => (
                                     <button key={cat} onClick={() => setActiveCategory(cat)}
                                         className={`px-4 py-1.5 rounded-[calc(var(--radius)-4px)] text-sm font-medium transition-all ${
@@ -451,7 +451,7 @@ export default function PDFPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredTools.map((t) => (
                                     <button key={t.id} onClick={() => setActiveTool(t.id)}
-                                        className="group relative bg-white dark:bg-[#18181b] p-6 hover:shadow-md border border-[var(--border)] hover:border-gray-300 dark:hover:border-gray-600 rounded-[var(--radius)] transition-all duration-200 text-left h-44 flex flex-col justify-between overflow-hidden">
+                                        className="group relative bg-[var(--card)] p-6 hover:shadow-md border border-[var(--border)] hover:border-gray-300 dark:hover:border-gray-600 rounded-[var(--radius)] transition-all duration-200 text-left h-44 flex flex-col justify-between overflow-hidden">
                                         
                                         <div className="flex justify-between items-start z-10">
                                             <div className="p-2.5 bg-black/5 dark:bg-white/5 rounded-lg text-[var(--foreground)] group-hover:scale-110 transition-transform">
@@ -477,12 +477,12 @@ export default function PDFPage() {
                                     className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 -ml-3">
                                     <IconArrowLeft className="w-4 h-4" /> Back to tools
                                 </button>
-                                <div className="px-3 py-1 bg-white dark:bg-[#18181b] rounded-full border border-[var(--border)] text-xs font-semibold text-gray-500 shadow-sm">
+                                <div className="px-3 py-1 bg-[var(--card)] rounded-full border border-[var(--border)] text-xs font-semibold text-gray-500 shadow-sm">
                                     {tool?.category} / {tool?.title}
                                 </div>
                             </div>
 
-                            <div className="w-full border border-[var(--border)] bg-white dark:bg-[#18181b] rounded-[var(--radius)] shadow-sm p-8 md:p-12 relative min-h-[400px] flex flex-col overflow-hidden">
+                            <div className="w-full border border-[var(--border)] bg-[var(--card)] rounded-[var(--radius)] shadow-sm p-8 md:p-12 relative min-h-[400px] flex flex-col overflow-hidden">
                                 {(status === "processing" || status === "uploading" || status === "zipping") && (
                                     <div className="absolute inset-0 bg-white/95 dark:bg-[#18181b]/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-8 text-center rounded-[var(--radius)]">
                                         {/* Dual-phase progress */}
@@ -598,7 +598,7 @@ export default function PDFPage() {
                                                     {showSettings ? <IconChevronUp className="w-4 h-4 text-gray-400" /> : <IconChevronDown className="w-4 h-4 text-gray-400" />}
                                                 </button>
                                                 {showSettings && (
-                                                    <div className="px-4 py-4 space-y-4 border-t border-[var(--border)] bg-white dark:bg-[#18181b]">
+                                                    <div className="px-4 py-4 space-y-4 border-t border-[var(--border)] bg-[var(--card)]">
                                                         {currentSettings.map(f => renderSettingField(f))}
                                                     </div>
                                                 )}

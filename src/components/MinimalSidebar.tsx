@@ -163,7 +163,7 @@ export default function MinimalSidebar() {
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
             <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[92%] max-w-[400px]">
-                <div className="flex items-center justify-around px-1 py-1.5 bg-white dark:bg-[#18181b] rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
+                <div className="flex items-center justify-around px-1 py-1.5 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
                             className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">

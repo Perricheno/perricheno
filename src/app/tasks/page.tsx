@@ -218,7 +218,7 @@ export default function TasksPage() {
                 </div>
 
                 {!user ? (
-                    <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-8 text-center">
+                    <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-8 text-center">
                         <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-[#27272a] flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
                             <IconClock className="w-8 h-8 text-gray-400" />
                         </div>
@@ -238,7 +238,7 @@ export default function TasksPage() {
                             <button onClick={() => setActiveTab('ai')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                                     activeTab === 'ai' 
-                                        ? 'bg-white dark:bg-[#18181b] shadow-sm text-[var(--foreground)]' 
+                                        ? 'bg-[var(--card)] shadow-sm text-[var(--foreground)]' 
                                         : 'text-gray-500 hover:text-[var(--foreground)]'
                                 }`}>
                                 <IconSparkles className="w-4 h-4" /> AI Assistant
@@ -246,7 +246,7 @@ export default function TasksPage() {
                             <button onClick={() => { setActiveTab('manual'); if (!manualDate) setManualDate(getDefaultDate()); if (!manualTime) setManualTime(getDefaultTime()); }}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                                     activeTab === 'manual' 
-                                        ? 'bg-white dark:bg-[#18181b] shadow-sm text-[var(--foreground)]' 
+                                        ? 'bg-[var(--card)] shadow-sm text-[var(--foreground)]' 
                                         : 'text-gray-500 hover:text-[var(--foreground)]'
                                 }`}>
                                 <IconPlus className="w-4 h-4" /> Manual
@@ -255,7 +255,7 @@ export default function TasksPage() {
 
                         {/* ━━━━ AI Input ━━━━ */}
                         {activeTab === 'ai' && (
-                            <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
+                            <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <IconSparkles className="w-4 h-4 text-yellow-500" />
                                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ask AI to schedule</span>
@@ -280,7 +280,7 @@ export default function TasksPage() {
 
                         {/* ━━━━ Manual Input ━━━━ */}
                         {activeTab === 'manual' && (
-                            <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
+                            <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <IconCalendar className="w-4 h-4 text-blue-500" />
                                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Create task manually</span>
@@ -337,7 +337,7 @@ export default function TasksPage() {
                                         </h3>
                                         <div className="space-y-2">
                                             {pendingTasks.map(task => (
-                                                <div key={task.id} className="group bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] hover:border-gray-300 dark:hover:border-gray-700 transition-colors shadow-sm overflow-hidden">
+                                                <div key={task.id} className="group bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] hover:border-gray-300 dark:hover:border-gray-700 transition-colors shadow-sm overflow-hidden">
                                                     {editingId === task.id ? (
                                                         /* Edit Mode */
                                                         <div className="p-4 space-y-3">

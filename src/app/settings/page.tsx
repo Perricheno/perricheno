@@ -46,7 +46,7 @@ export default function SettingsPage() {
                         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
                             <IconUser className="w-4 h-4" /> Account
                         </h2>
-                        <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-5">
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5">
                             {user ? (
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-[#27272a] flex items-center justify-center overflow-hidden border border-[var(--border)] shrink-0">
@@ -81,7 +81,7 @@ export default function SettingsPage() {
                         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
                             <IconPalette className="w-4 h-4" /> Appearance
                         </h2>
-                        <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-5">
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5">
                             <p className="text-sm text-gray-500 mb-4">Choose your preferred theme.</p>
                             <div className="grid grid-cols-3 gap-3">
                                 {themeOptions.map(t => (
@@ -104,7 +104,7 @@ export default function SettingsPage() {
                         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
                             <IconFileTypePdf className="w-4 h-4" /> PDF Defaults
                         </h2>
-                        <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-5 space-y-5">
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 space-y-5">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium">Default Image DPI</p>
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
                             <IconInfoCircle className="w-4 h-4" /> About
                         </h2>
-                        <div className="bg-white dark:bg-[#18181b] border border-[var(--border)] rounded-[var(--radius)] p-5 space-y-3">
+                        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 space-y-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-500">Version</span>
                                 <span className="text-sm font-semibold">1.0.0</span>
