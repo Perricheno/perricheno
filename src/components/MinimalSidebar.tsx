@@ -82,12 +82,9 @@ export default function MinimalSidebar() {
                 {/* Logo Area */}
                 <div className="h-16 flex items-center justify-between px-6 pt-4 mb-4">
                     <Link href="/" className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black text-white dark:bg-white dark:text-black rounded-[var(--radius)] flex items-center justify-center shrink-0">
-                            <div className="flex gap-1">
-                                <div className="w-1 h-3 bg-current rounded-full"></div>
-                                <div className="w-1 h-4 bg-current rounded-full -translate-y-0.5"></div>
-                                <div className="w-1 h-3 bg-current rounded-full"></div>
-                            </div>
+                        <div className="w-10 h-10 rounded-[var(--radius)] flex items-center justify-center shrink-0 overflow-hidden">
+                            <img src="/logo-dark.png" alt="Perricheno" className="w-full h-full object-contain hidden dark:block" />
+                            <img src="/logo.png" alt="Perricheno" className="w-full h-full object-contain dark:hidden" />
                         </div>
                     </Link>
                     
@@ -165,31 +162,30 @@ export default function MinimalSidebar() {
             {/* ═══════════════════════════════════════ */}
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
-            <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[95%] max-w-[400px]">
-                <div className="flex items-center justify-between px-2 py-2 bg-white dark:bg-[#18181b] rounded-[1.5rem] border border-[var(--border)] shadow-xl shadow-black/5">
+            <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[92%] max-w-[400px]">
+                <div className="flex items-center justify-around px-1 py-1.5 bg-white dark:bg-[#18181b] rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
-                            className="flex flex-col items-center justify-center w-[60px] relative group h-[48px]">
-                            {/* The pill background for active state */}
+                            className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
+                            {/* Pill background for active state */}
                             <div className={cn(
-                                "absolute top-0 w-12 h-7 rounded-full transition-all duration-300 z-0",
+                                "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
                                 isActive(l.href)
-                                    ? "bg-black dark:bg-white scale-100"
-                                    : "bg-transparent scale-90 opacity-0 group-hover:bg-black/5 dark:group-hover:bg-white/5 group-hover:scale-100 group-hover:opacity-100"
-                            )} />
-                            
-                            {/* Icon */}
-                            <l.icon className={cn(
-                                "w-5 h-5 relative z-10 transition-colors mt-[2px]",
-                                isActive(l.href) 
-                                    ? "text-white dark:text-black stroke-[2.5px]" 
-                                    : "text-gray-500 stroke-[1.5px]"
-                            )} />
+                                    ? "bg-black dark:bg-white"
+                                    : "bg-transparent group-hover:bg-black/5 dark:group-hover:bg-white/5"
+                            )}>
+                                <l.icon className={cn(
+                                    "w-[18px] h-[18px] transition-colors",
+                                    isActive(l.href)
+                                        ? "text-white dark:text-black stroke-[2.5px]"
+                                        : "text-gray-500 stroke-[1.5px]"
+                                )} />
+                            </div>
                             
                             {/* Label */}
                             <span className={cn(
-                                "text-[10px] absolute bottom-[-2px] tracking-wide transition-colors font-medium",
-                                isActive(l.href) ? "text-[var(--foreground)] font-bold" : "text-gray-500"
+                                "text-[10px] leading-tight transition-colors",
+                                isActive(l.href) ? "text-[var(--foreground)] font-bold" : "text-gray-500 font-medium"
                             )}>
                                 {l.label}
                             </span>
@@ -198,28 +194,28 @@ export default function MinimalSidebar() {
 
                     {/* Profile / Sign In slot */}
                     <button onClick={() => setShowLogin(true)}
-                        className="flex flex-col items-center justify-center w-[60px] relative group h-[48px]">
+                        className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
                         <div className={cn(
-                            "absolute top-0 w-12 h-7 rounded-full transition-all duration-300 z-0",
+                            "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
                             pathname === "/settings"
-                                ? "bg-black dark:bg-white scale-100"
-                                : "bg-transparent scale-90 opacity-0 group-hover:bg-black/5 dark:group-hover:bg-white/5 group-hover:scale-100 group-hover:opacity-100"
-                        )} />
-                        
-                        <div className="relative z-10 w-5 h-5 mt-[2px] flex items-center justify-center rounded-full overflow-hidden">
+                                ? "bg-black dark:bg-white"
+                                : "bg-transparent group-hover:bg-black/5 dark:group-hover:bg-white/5"
+                        )}>
                             {user?.photo_url ? (
-                                <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
+                                <div className="w-[18px] h-[18px] rounded-full overflow-hidden">
+                                    <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
+                                </div>
                             ) : (
                                 <IconUser className={cn(
-                                    "w-5 h-5 transition-colors",
+                                    "w-[18px] h-[18px] transition-colors",
                                     pathname === "/settings" ? "text-white dark:text-black stroke-[2.5px]" : "text-gray-500 stroke-[1.5px]"
                                 )} />
                             )}
                         </div>
                         
                         <span className={cn(
-                            "text-[10px] absolute bottom-[-2px] tracking-wide transition-colors font-medium",
-                            pathname === "/settings" ? "text-[var(--foreground)] font-bold" : "text-gray-500"
+                            "text-[10px] leading-tight transition-colors",
+                            pathname === "/settings" ? "text-[var(--foreground)] font-bold" : "text-gray-500 font-medium"
                         )}>
                             Account
                         </span>
