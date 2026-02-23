@@ -3,12 +3,10 @@ import { cookies } from 'next/headers';
 import * as jwt from 'jose';
 import db, { getUserById, createTask } from '@/lib/db';
 
-const JWT_SECRET = new TextEncoder().encode(
-    process.env.JWT_SECRET || 'fallback_secret_key_for_development_only'
-);
+const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env-938210");
 
 async function verifyAuth(req: NextRequest) {
-    const sessionToken = req.cookies.get('session')?.value;
+    const sessionToken = req.cookies.get('perricheno_session')?.value;
     if (!sessionToken) return null;
     try {
         const { payload } = await jwt.jwtVerify(sessionToken, JWT_SECRET);
