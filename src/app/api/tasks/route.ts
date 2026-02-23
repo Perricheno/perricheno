@@ -52,13 +52,25 @@ export async function PUT(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { taskId, status } = body;
+        const { taskId, status, text, remindAt } = body;
 
-        if (!taskId || !status) {
-            return NextResponse.json({ error: 'taskId and status are required' }, { status: 400 });
+        if (!taskId) {
+            return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
         }
 
-        updateTaskStatus(taskId, status);
+        // Update text and remindAt if provided
+        if (text || remindAt) {
+            const updates: string[] = [];
+            const values: any[] = [];
+            if (text) { updates.push('task_text = ?'); values.push(text); }
+            if (remindAt) { updates.push('remind_at = ?'); values.push(remindAt); }
+            if (status) { updates.push('status = ?'); values.push(status); }
+            values.push(taskId);
+            db.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+        } else if (status) {
+            updateTaskStatus(taskId, status);
+        }
+
         return NextResponse.json({ success: true });
     } catch (e) {
         return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
