@@ -361,7 +361,7 @@ export default function ChatPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 flex overflow-hidden font-sans">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-64 pb-24 md:pb-0 flex overflow-hidden font-sans">
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); showToast("Welcome back!", "success"); }} onClose={() => setShowLogin(false)} />}
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
 

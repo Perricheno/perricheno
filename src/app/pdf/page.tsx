@@ -417,7 +417,7 @@ export default function PDFPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-20 transition-all font-sans">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-20 pb-24 md:pb-0 transition-all font-sans">
             <MinimalSidebar />
 
             <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-24">
