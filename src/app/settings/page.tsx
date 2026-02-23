@@ -74,7 +74,7 @@ export default function SettingsPage() {
                                         }
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-base font-semibold truncate">{user.first_name} {user.last_name || ""}</p>
+                                        <p className="text-base font-semibold truncate">{user.first_name}</p>
                                         <p className="text-sm text-gray-500 truncate">@{user.username || "user"}</p>
                                     </div>
                                     <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Connected</span>
