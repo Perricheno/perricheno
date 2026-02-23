@@ -9,7 +9,7 @@ import {
     IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX,
     IconFileCheck, IconBrandTelegram, IconLock, IconLockOpen, IconScissors, IconArrowsShuffle,
     IconRotate, IconLayersIntersect, IconEraser, IconWand, IconMaximize, IconMinimize, IconTxt,
-    IconBrowser, IconFileZip, IconShield
+    IconBrowser, IconFileZip, IconShield, IconSettings, IconChevronDown, IconChevronUp
 } from "@tabler/icons-react";
 import MinimalSidebar from "@/components/MinimalSidebar";
 import { useToast } from "@/components/ToastContext";
@@ -63,6 +63,136 @@ const TOOLS: ToolDef[] = [
 
 const CATEGORIES = ["All", "Convert", "Edit", "Security", "Misc"];
 
+// ═══════════════════════════════════════════
+// Per-tool settings config from Stirling API
+// ═══════════════════════════════════════════
+type SettingFieldType = "select" | "text" | "number" | "toggle" | "slider";
+
+interface SettingField {
+    key: string;
+    label: string;
+    type: SettingFieldType;
+    options?: { value: string; label: string }[];
+    default: any;
+    min?: number;
+    max?: number;
+    step?: number;
+    placeholder?: string;
+}
+
+const TOOL_SETTINGS: Record<string, SettingField[]> = {
+    "img-to-pdf": [
+        { key: "fitOption", label: "Fit Option", type: "select", default: "fillPage", options: [
+            { value: "fillPage", label: "Fill Page" }, { value: "fitDocumentToImage", label: "Fit to Image" }, { value: "maintainAspectRatio", label: "Maintain Aspect Ratio" }
+        ]},
+        { key: "colorType", label: "Color", type: "select", default: "color", options: [
+            { value: "color", label: "Color" }, { value: "greyscale", label: "Greyscale" }, { value: "blackwhite", label: "Black & White" }
+        ]},
+        { key: "autoRotate", label: "Auto Rotate", type: "toggle", default: true },
+    ],
+    "pdf-to-img": [
+        { key: "imageFormat", label: "Format", type: "select", default: "png", options: [
+            { value: "png", label: "PNG" }, { value: "jpeg", label: "JPEG" }, { value: "gif", label: "GIF" }, { value: "webp", label: "WebP" }
+        ]},
+        { key: "singleOrMultiple", label: "Output Mode", type: "select", default: "multiple", options: [
+            { value: "single", label: "Single Image" }, { value: "multiple", label: "One per Page" }
+        ]},
+        { key: "colorType", label: "Color", type: "select", default: "color", options: [
+            { value: "color", label: "Color" }, { value: "greyscale", label: "Greyscale" }, { value: "blackwhite", label: "Black & White" }
+        ]},
+        { key: "dpi", label: "DPI", type: "select", default: "300", options: [
+            { value: "72", label: "72 (Draft)" }, { value: "150", label: "150 (Standard)" }, { value: "300", label: "300 (High)" }, { value: "600", label: "600 (Ultra)" }
+        ]},
+    ],
+    "pdf-to-word": [
+        { key: "outputFormat", label: "Format", type: "select", default: "docx", options: [
+            { value: "docx", label: "DOCX" }, { value: "doc", label: "DOC" }, { value: "odt", label: "ODT" }
+        ]},
+    ],
+    "pdf-to-ppt": [
+        { key: "outputFormat", label: "Format", type: "select", default: "pptx", options: [
+            { value: "pptx", label: "PPTX" }, { value: "ppt", label: "PPT" }, { value: "odp", label: "ODP" }
+        ]},
+    ],
+    "pdf-to-text": [
+        { key: "outputFormat", label: "Format", type: "select", default: "txt", options: [
+            { value: "txt", label: "Plain Text" }, { value: "rtf", label: "RTF" }
+        ]},
+    ],
+    "pdf-to-pdfa": [
+        { key: "outputFormat", label: "PDF/A Type", type: "select", default: "pdfa", options: [
+            { value: "pdfa", label: "PDF/A" }, { value: "pdfa-1", label: "PDF/A-1" }
+        ]},
+    ],
+    "compress-pdf": [
+        { key: "optimizeLevel", label: "Compression Level", type: "slider", default: 5, min: 1, max: 9, step: 1 },
+        { key: "expectedOutputSize", label: "Target Size", type: "text", default: "", placeholder: "e.g. 10MB" },
+        { key: "grayscale", label: "Convert to Grayscale", type: "toggle", default: false },
+    ],
+    "ocr-pdf": [
+        { key: "ocrType", label: "OCR Mode", type: "select", default: "skip-text", options: [
+            { value: "skip-text", label: "Skip existing text" }, { value: "force-ocr", label: "Force OCR" }, { value: "Normal", label: "Normal" }
+        ]},
+        { key: "ocrRenderType", label: "Render Type", type: "select", default: "hocr", options: [
+            { value: "hocr", label: "hOCR" }, { value: "sandwich", label: "Sandwich" }
+        ]},
+        { key: "languages", label: "Language", type: "select", default: "eng", options: [
+            { value: "eng", label: "English" }, { value: "rus", label: "Russian" }, { value: "deu", label: "German" }, { value: "fra", label: "French" }, { value: "spa", label: "Spanish" }, { value: "chi_sim", label: "Chinese (Simplified)" }, { value: "ara", label: "Arabic" }, { value: "jpn", label: "Japanese" }, { value: "kor", label: "Korean" }
+        ]},
+    ],
+    "rotate-pdf": [
+        { key: "angle", label: "Rotation Angle", type: "select", default: "90", options: [
+            { value: "90", label: "90°" }, { value: "180", label: "180°" }, { value: "270", label: "270°" }
+        ]},
+    ],
+    "split-pages": [
+        { key: "pageNumbers", label: "Pages", type: "text", default: "all", placeholder: "e.g. 1,3,5-9 or all" },
+    ],
+    "remove-pages": [
+        { key: "pageNumbers", label: "Pages to Remove", type: "text", default: "", placeholder: "e.g. 2,4,6" },
+    ],
+    "organize-pdf": [
+        { key: "customMode", label: "Mode", type: "select", default: "CUSTOM", options: [
+            { value: "CUSTOM", label: "Custom Order" }, { value: "REVERSE_ORDER", label: "Reverse" }, { value: "DUPLEX_SORT", label: "Duplex Sort" }, { value: "BOOKLET_SORT", label: "Booklet" }, { value: "ODD_EVEN_SPLIT", label: "Odd/Even Split" }
+        ]},
+        { key: "pageNumbers", label: "Page Order", type: "text", default: "all", placeholder: "e.g. 3,1,4,2" },
+    ],
+    "add-password": [
+        { key: "password", label: "User Password", type: "text", default: "", placeholder: "Opens the document" },
+        { key: "ownerPassword", label: "Owner Password", type: "text", default: "", placeholder: "Restricts editing (optional)" },
+        { key: "keyLength", label: "Encryption", type: "select", default: "256", options: [
+            { value: "40", label: "40-bit (weak)" }, { value: "128", label: "128-bit" }, { value: "256", label: "256-bit (recommended)" }
+        ]},
+    ],
+    "remove-password": [
+        { key: "password", label: "Current Password", type: "text", default: "", placeholder: "Enter existing password" },
+    ],
+    "sanitize-pdf": [
+        { key: "removeJavaScript", label: "Remove JavaScript", type: "toggle", default: true },
+        { key: "removeEmbeddedFiles", label: "Remove Embedded Files", type: "toggle", default: true },
+        { key: "removeMetadata", label: "Remove Metadata", type: "toggle", default: true },
+        { key: "removeLinks", label: "Remove Links", type: "toggle", default: false },
+    ],
+    "flatten-pdf": [
+        { key: "flattenOnlyForms", label: "Forms Only", type: "toggle", default: true },
+    ],
+    "extract-images": [
+        { key: "format", label: "Format", type: "select", default: "png", options: [
+            { value: "png", label: "PNG" }, { value: "jpeg", label: "JPEG" }, { value: "gif", label: "GIF" }
+        ]},
+    ],
+    "remove-blanks": [
+        { key: "threshold", label: "Threshold", type: "number", default: 10, min: 1, max: 100 },
+        { key: "whitePercent", label: "White %", type: "number", default: 99.9, min: 50, max: 100, step: 0.1 },
+    ],
+    "scale-pages": [
+        { key: "pageSize", label: "Page Size", type: "select", default: "A4", options: [
+            { value: "A3", label: "A3" }, { value: "A4", label: "A4" }, { value: "A5", label: "A5" }, { value: "LETTER", label: "Letter" }, { value: "LEGAL", label: "Legal" }, { value: "KEEP", label: "Keep Original" }
+        ]},
+        { key: "scaleFactor", label: "Scale Factor", type: "number", default: 1, min: 0.1, max: 5, step: 0.1 },
+    ],
+};
+
 export default function PDFPage() {
     const { user } = useAdmin();
     const { showToast } = useToast();
@@ -70,15 +200,31 @@ export default function PDFPage() {
     const [files, setFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<"idle" | "uploading" | "processing" | "zipping" | "done" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState("");
-    const [progress, setProgress] = useState({ current: 0, total: 0 });
-    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadedCount, setUploadedCount] = useState(0);
+    const [convertedCount, setConvertedCount] = useState(0);
+    const [totalFiles, setTotalFiles] = useState(0);
     const [downloadUrl, setDownloadUrl] = useState<string>("");
     const [downloadName, setDownloadName] = useState<string>("");
-    const [isSendingToTg, setIsSendingToTg] = useState(false);
     const [activeCategory, setActiveCategory] = useState("All");
     
-    // Tool params (simple version for now)
-    const [password, setPassword] = useState(""); 
+    // Tool settings (dynamic per-tool)
+    const [toolSettings, setToolSettings] = useState<Record<string, any>>({});
+    const [showSettings, setShowSettings] = useState(false);
+    
+    // Compat aliases
+    const password = toolSettings.password || "";
+    const setPassword = (v: string) => setToolSettings(prev => ({ ...prev, password: v }));
+    
+    // Initialize settings when tool changes
+    const initSettings = (toolId: ToolType | null) => {
+        if (!toolId) return;
+        const fields = TOOL_SETTINGS[toolId];
+        if (!fields) { setToolSettings({}); return; }
+        const defaults: Record<string, any> = {};
+        fields.forEach(f => { defaults[f.key] = f.default; });
+        setToolSettings(defaults);
+        setShowSettings(false);
+    }; 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,80 +249,51 @@ export default function PDFPage() {
         return `${base}${tool.outputExt}`;
     };
 
-    const sendToTelegram = async (blob: Blob) => {
-        if (!user) return;
-        setIsSendingToTg(true);
-        try {
-            const fd = new FormData();
-            fd.append("document", blob, downloadName || "converted-file");
-            fd.append("chat_id", user.telegram_id);
-            const res = await fetch("/api/telegram/send", { method: "POST", body: fd });
-            if (res.ok) {
-                 showToast("Files sent to Telegram", "success");
-            } else {
-                 showToast("Failed to send to Telegram", "error");
-            }
-        } catch (e) {
-            console.error("BG Telegram Send Failed", e);
-        } finally {
-            setIsSendingToTg(false);
-        }
-    };
 
-    // Fake upload progress effect
+    // Reset settings when tool changes
     useEffect(() => {
-        if (status === "uploading") {
-            setUploadProgress(0);
-            const interval = setInterval(() => {
-                setUploadProgress(prev => {
-                    const next = prev + Math.random() * 20;
-                    return next > 90 ? 90 : next;
-                });
-            }, 500);
-            return () => clearInterval(interval);
-        } else {
-            setUploadProgress(0);
-        }
-    }, [status]);
+        initSettings(activeTool);
+    }, [activeTool]);
 
     const convert = async () => {
         if (files.length === 0 || !activeTool || !tool) return;
+        
+        const total = files.length;
+        setTotalFiles(total);
+        setUploadedCount(0);
+        setConvertedCount(0);
         setStatus("uploading");
-        setProgress({ current: 0, total: files.length });
         setDownloadUrl("");
         setErrorMsg("");
 
         if (user) {
-             showToast("Processing started. You can safely close the browser. Files will be sent to your Telegram automatically.", "success");
+             showToast("Processing started. Files will be sent to your Telegram automatically.", "success");
         } else {
-             showToast("Processing started. Do not close this tab! Or Login via Telegram to receive the file automatically.", "info");
+             showToast("Don't close this tab until the download is ready.", "info");
         }
 
         try {
             const zip = new JSZip();
             
-            // Map files to promises for parallel upload/processing
-            const uploadPromises = files.map(async (file, i) => {
+            // Build per-file promises with split upload/convert tracking
+            const filePromises = files.map(async (file) => {
                 const formData = new FormData();
                 formData.append("fileInput", file);
 
-                // Specific params for Tools
-                if (activeTool === "img-to-pdf") {
-                    formData.append("fitOption", "fillPage");
-                    formData.append("colorType", "color");
-                    formData.append("autoRotate", "true");
-                } else if (activeTool === "pdf-to-img") {
-                    formData.append("imageFormat", "png");
-                    formData.append("singlePage", "false");
-                    formData.append("dpi", "300");
-                } else if (activeTool === "add-password") {
-                    formData.append("password", password || "123456"); 
-                } else if (activeTool === "ocr-pdf") {
-                    formData.append("ocrType", "skip-text");
+                // Append all dynamic tool settings from the settings panel
+                const fields = TOOL_SETTINGS[activeTool] || [];
+                for (const field of fields) {
+                    const val = toolSettings[field.key];
+                    if (val !== undefined && val !== "" && val !== null) {
+                        formData.append(field.key, String(val));
+                    }
                 }
 
-                // Append the original filename so the backend can use it for the telegram message if needed
+                // Append the original filename for telegram delivery
                 formData.append("originalName", file.name);
+
+                // ── Phase 1: Upload tracked ──
+                setUploadedCount(prev => prev + 1);
 
                 const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
                     method: "POST",
@@ -191,14 +308,16 @@ export default function PDFPage() {
                 const blob = await res.blob();
                 const newName = getOutputFilename(file.name, tool);
                 
-                // Update progress as files finish
-                setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+                // ── Phase 2: Conversion done ──
+                setConvertedCount(prev => prev + 1);
                 
                 return { name: newName, blob };
             });
 
+            // Once all are uploaded, switch visual phase
+            // (the status updates reactively based on counters)
             setStatus("processing");
-            const results = await Promise.all(uploadPromises);
+            const results = await Promise.all(filePromises);
 
             setStatus("zipping");
 
@@ -216,8 +335,6 @@ export default function PDFPage() {
             setDownloadUrl(url);
             setStatus("done");
             
-            // Server now handles Telegram delivery in the background via pdf-proxy
-            
         } catch (e: any) {
             console.error(e);
             setStatus("error");
@@ -229,8 +346,74 @@ export default function PDFPage() {
         setFiles([]);
         setStatus("idle");
         setDownloadUrl("");
-        setProgress({ current: 0, total: 0 });
-        setPassword("");
+        setUploadedCount(0);
+        setConvertedCount(0);
+        setTotalFiles(0);
+        initSettings(activeTool);
+    };
+
+    // ═══════════════════════════════
+    // Setting input renderer
+    // ═══════════════════════════════
+    const currentSettings = activeTool ? TOOL_SETTINGS[activeTool] : null;
+
+    const renderSettingField = (field: SettingField) => {
+        const val = toolSettings[field.key] ?? field.default;
+        const update = (v: any) => setToolSettings(prev => ({ ...prev, [field.key]: v }));
+
+        switch (field.type) {
+            case "select":
+                return (
+                    <div key={field.key} className="flex items-center justify-between gap-4">
+                        <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{field.label}</label>
+                        <select value={val} onChange={e => update(e.target.value)}
+                            className="bg-white dark:bg-[#27272a] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] min-w-[140px]">
+                            {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                    </div>
+                );
+            case "text":
+                return (
+                    <div key={field.key} className="flex items-center justify-between gap-4">
+                        <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{field.label}</label>
+                        <input type="text" value={val} onChange={e => update(e.target.value)} placeholder={field.placeholder}
+                            className="bg-white dark:bg-[#27272a] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] min-w-[140px]" />
+                    </div>
+                );
+            case "number":
+                return (
+                    <div key={field.key} className="flex items-center justify-between gap-4">
+                        <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{field.label}</label>
+                        <input type="number" value={val} onChange={e => update(parseFloat(e.target.value))} min={field.min} max={field.max} step={field.step}
+                            className="bg-white dark:bg-[#27272a] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] w-24" />
+                    </div>
+                );
+            case "toggle":
+                return (
+                    <div key={field.key} className="flex items-center justify-between gap-4">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">{field.label}</label>
+                        <button onClick={() => update(!val)}
+                            className={`w-10 h-6 rounded-full transition-colors relative ${val ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${val ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                        </button>
+                    </div>
+                );
+            case "slider":
+                return (
+                    <div key={field.key} className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm text-gray-600 dark:text-gray-400">{field.label}</label>
+                            <span className="text-sm font-semibold tabular-nums">{val}</span>
+                        </div>
+                        <input type="range" value={val} onChange={e => update(parseInt(e.target.value))} min={field.min} max={field.max} step={field.step}
+                            className="w-full accent-[var(--foreground)]" />
+                        <div className="flex justify-between text-[10px] text-gray-400">
+                            <span>Low</span><span>High</span>
+                        </div>
+                    </div>
+                );
+            default: return null;
+        }
     };
 
     return (
@@ -302,28 +485,51 @@ export default function PDFPage() {
                             <div className="w-full border border-[var(--border)] bg-white dark:bg-[#18181b] rounded-[var(--radius)] shadow-sm p-8 md:p-12 relative min-h-[400px] flex flex-col overflow-hidden">
                                 {(status === "processing" || status === "uploading" || status === "zipping") && (
                                     <div className="absolute inset-0 bg-white/95 dark:bg-[#18181b]/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-8 text-center rounded-[var(--radius)]">
-                                        <div className="relative w-16 h-16 mb-6">
-                                            <svg className="animate-spin w-full h-full text-gray-200 dark:text-gray-800" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold">
-                                                {status === "uploading" ? Math.round(uploadProgress) + "%" : Math.round((progress.current / progress.total) * 100) + "%"}
+                                        {/* Dual-phase progress */}
+                                        <div className="w-full max-w-xs mb-6 space-y-5">
+                                            {/* Upload Phase */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <IconCloudUpload className="w-4 h-4 text-blue-500" stroke={1.5} />
+                                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Upload</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold tabular-nums text-blue-600">{uploadedCount}/{totalFiles}</span>
+                                                </div>
+                                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${totalFiles > 0 ? (uploadedCount / totalFiles) * 100 : 0}%` }} />
+                                                </div>
+                                            </div>
+
+                                            {/* Convert Phase */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <IconLoader2 className={`w-4 h-4 text-green-500 ${convertedCount < totalFiles ? 'animate-spin' : ''}`} stroke={1.5} />
+                                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Convert</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold tabular-nums text-green-600">{convertedCount}/{totalFiles}</span>
+                                                </div>
+                                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-green-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${totalFiles > 0 ? (convertedCount / totalFiles) * 100 : 0}%` }} />
+                                                </div>
                                             </div>
                                         </div>
                                         
-                                        <h3 className="font-semibold text-xl mb-2 text-[var(--foreground)]">
-                                            {status === "uploading" ? "Uploading your files..." : status === "zipping" ? "Packaging results..." : "Converting document..."}
+                                        <h3 className="font-semibold text-lg mb-1 text-[var(--foreground)]">
+                                            {status === "zipping" ? "Packaging results..." : uploadedCount < totalFiles ? "Uploading files..." : "Converting..."}
                                         </h3>
+                                        <p className="text-xs text-gray-500 mb-4">
+                                            {status === "zipping" ? "Almost done" : `${convertedCount} of ${totalFiles} files done`}
+                                        </p>
                                         
                                         {user ? (
                                             <p className="text-sm text-gray-500 max-w-xs">
-                                                You can safely close this page. The result will be sent to your Telegram automagically. ✨
+                                                You can safely close this page. Results will arrive via Telegram. ✨
                                             </p>
                                         ) : (
-                                            <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-4 rounded-xl mt-4 border border-blue-100 dark:border-blue-800/50 max-w-sm">
-                                                <p className="text-sm mb-3"><strong>Guest Mode:</strong> Please don't close this tab until the download is ready.</p>
-                                                <p className="text-xs opacity-80">Link your Telegram account to let us process this in the background while you do other things.</p>
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50 max-w-sm">
+                                                <p className="text-xs"><strong>Guest:</strong> Keep this tab open until done.</p>
                                             </div>
                                         )}
                                     </div>
@@ -380,11 +586,22 @@ export default function PDFPage() {
                                             ))}
                                         </div>
 
-                                        {activeTool === "add-password" && (
-                                            <div className="flex flex-col gap-2 p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-[var(--border)]">
-                                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Document Password</label>
-                                                <input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter a secure password..."
-                                                    className="w-full bg-transparent border-b border-gray-300 dark:border-gray-700 outline-none focus:border-[var(--foreground)] pb-2 text-sm transition-colors" />
+                                        {/* Settings Panel */}
+                                        {currentSettings && currentSettings.length > 0 && (
+                                            <div className="border border-[var(--border)] rounded-xl overflow-hidden">
+                                                <button onClick={() => setShowSettings(!showSettings)}
+                                                    className="w-full flex items-center justify-between px-4 py-3 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                                    <div className="flex items-center gap-2">
+                                                        <IconSettings className="w-4 h-4 text-gray-500" stroke={1.5} />
+                                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Conversion Settings</span>
+                                                    </div>
+                                                    {showSettings ? <IconChevronUp className="w-4 h-4 text-gray-400" /> : <IconChevronDown className="w-4 h-4 text-gray-400" />}
+                                                </button>
+                                                {showSettings && (
+                                                    <div className="px-4 py-4 space-y-4 border-t border-[var(--border)] bg-white dark:bg-[#18181b]">
+                                                        {currentSettings.map(f => renderSettingField(f))}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
