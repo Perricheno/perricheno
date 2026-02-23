@@ -112,7 +112,7 @@ export default function MinimalSidebar() {
                                     className={cn(
                                         "group flex items-center justify-between px-3 py-2 rounded-[var(--radius)] transition-all font-medium text-sm",
                                         isActive(l.href)                                            
-                                            ? "bg-white dark:bg-[#27272a] text-[var(--foreground)] shadow-sm font-semibold"
+                                            ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm font-semibold"
                                             : "text-gray-500 hover:text-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5"
                                     )}>
                                     <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export default function MinimalSidebar() {
                      
                     {user ? (
                         <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full p-2 rounded-[var(--radius)] hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
-                            <div className="w-8 h-8 rounded-full bg-white dark:bg-[#27272a] shadow-sm flex items-center justify-center overflow-hidden shrink-0 border border-[var(--border)]">
+                            <div className="w-8 h-8 rounded-full bg-[var(--card)] shadow-sm flex items-center justify-center overflow-hidden shrink-0 border border-[var(--border)]">
                                 {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name || "User"} /> : <IconUser className="w-4 h-4 text-gray-400" />}
                             </div>
                             <div className={cn("flex-1 min-w-0", collapsed && "hidden")}>
@@ -163,7 +163,7 @@ export default function MinimalSidebar() {
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
             <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[92%] max-w-[400px]">
-                <div className="flex items-center justify-around px-1 py-1.5 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
+                <div className="flex items-center justify-around px-1 py-1.5 bg-white dark:bg-[#18181b] rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
                             className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
