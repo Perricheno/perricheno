@@ -18,7 +18,6 @@ import {
     MarkerType
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import MinimalSidebar from "@/components/MinimalSidebar";
 import { IconPlus, IconLink, IconExternalLink, IconTrash, IconCopy, IconCut, IconTypography, IconUpload, IconDownload, IconWand, IconLoader2 } from "@tabler/icons-react";
 import { useFloating, shift, flip, offset } from '@floating-ui/react';
 import { ObsidianNode } from "@/components/canvas/ObsidianNode";
@@ -341,13 +340,9 @@ function CanvasApp() {
 
 export default function CanvasPage() {
     return (
-        <div className="h-screen w-full bg-[#111111] flex font-sans overflow-hidden">
-            {/* Minimal Sidebar still on the left */}
-            <div className="z-50 border-r border-[#222]">
-                 <MinimalSidebar />
-            </div>
+        <div className="h-full w-full bg-[#111111] flex font-sans overflow-hidden rounded-[var(--radius)]">
             
-            <main className="flex-1 h-screen relative flex">
+            <main className="flex-1 h-full relative flex">
                 <ReactFlowProvider>
                     <CanvasApp />
                 </ReactFlowProvider>

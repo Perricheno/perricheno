@@ -11,7 +11,6 @@ import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import { getSettings, saveSettings, type ChatSettings } from "@/app/actions";
 import { useTheme } from "next-themes";
-import MinimalSidebar from "@/components/MinimalSidebar";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useToast } from "@/components/ToastContext";
@@ -361,11 +360,9 @@ export default function ChatPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-64 pb-24 md:pb-0 flex overflow-hidden font-sans">
+        <div className="w-full h-full flex overflow-hidden font-sans">
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); showToast("Welcome back!", "success"); }} onClose={() => setShowLogin(false)} />}
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
-
-            <MinimalSidebar />
 
             {/* Desktop Sidebar */}
             <aside className="w-64 flex-col hidden md:flex">
@@ -424,7 +421,7 @@ export default function ChatPage() {
                                 : "bg-[var(--muted)] text-[var(--foreground)] rounded-bl-sm border border-[var(--border)]"}`}>
                                 
                                 {msg.role === "assistant" ? (
-                                    <div className="prose dark:prose-invert max-w-none prose-p:my-1 prose-pre:bg-black/10 prose-pre:p-2 prose-pre:rounded">
+                                    <div className="prose max-w-none prose-p:my-1 prose-pre:bg-black/10 prose-pre:p-2 prose-pre:rounded">
                                         <ReactMarkdown>{msg.text}</ReactMarkdown>
                                     </div>
                                 ) : (

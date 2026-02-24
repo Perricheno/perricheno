@@ -2,7 +2,6 @@
 
 import { useState, useEffect, KeyboardEvent } from "react";
 import { useAdmin } from "@/components/AdminContext";
-import MinimalSidebar from "@/components/MinimalSidebar";
 import { LoginModal } from "@/components/LoginModal";
 import { 
     IconSend, IconClock, IconCheck, IconTrash, IconLoader2, 
@@ -207,8 +206,7 @@ export default function TasksPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-20 pb-24 md:pb-0 transition-all font-sans">
-            <MinimalSidebar />
+        <div className="w-full h-full font-sans">
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
 
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-24">
@@ -219,7 +217,7 @@ export default function TasksPage() {
 
                 {!user ? (
                     <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-8 text-center">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-[#27272a] flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
+                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
                             <IconClock className="w-8 h-8 text-gray-400" />
                         </div>
                         <h2 className="text-xl font-bold mb-2">Telegram Authentication Required</h2>
@@ -234,7 +232,7 @@ export default function TasksPage() {
                 ) : (
                     <div className="space-y-6">
                         {/* ━━━━ Tab Switcher ━━━━ */}
-                        <div className="flex gap-1 p-1 bg-gray-100 dark:bg-[#27272a] rounded-[var(--radius)] w-fit">
+                        <div className="flex gap-1 p-1 bg-gray-100 rounded-[var(--radius)] w-fit">
                             <button onClick={() => setActiveTab('ai')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                                     activeTab === 'ai' 
@@ -268,7 +266,7 @@ export default function TasksPage() {
                                         onKeyDown={e => e.key === 'Enter' && handleAiSend()}
                                         disabled={isParsing}
                                         placeholder={`"19:00 напомни о лекарствах" or "remind me to call mom tomorrow at 3pm"`}
-                                        className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-3 pr-12 text-sm outline-none focus:border-gray-400 dark:focus:border-gray-600 transition-colors disabled:opacity-50"
+                                        className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-3 pr-12 text-sm outline-none focus:border-gray-400 transition-colors disabled:opacity-50"
                                     />
                                     <button onClick={handleAiSend} disabled={isParsing || !aiInput.trim()}
                                         className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-md bg-[var(--foreground)] text-[var(--background)] disabled:opacity-30 hover:opacity-90 transition-opacity">
@@ -291,7 +289,7 @@ export default function TasksPage() {
                                         value={manualText}
                                         onChange={e => setManualText(e.target.value)}
                                         placeholder="What do you need to do?"
-                                        className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm outline-none focus:border-gray-400 dark:focus:border-gray-600 transition-colors"
+                                        className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
                                     />
                                     <div className="flex gap-3">
                                         <div className="flex-1">
@@ -300,7 +298,7 @@ export default function TasksPage() {
                                                 type="date"
                                                 value={manualDate}
                                                 onChange={e => setManualDate(e.target.value)}
-                                                className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-gray-400 dark:focus:border-gray-600 transition-colors"
+                                                className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
                                             />
                                         </div>
                                         <div className="flex-1">
@@ -309,7 +307,7 @@ export default function TasksPage() {
                                                 type="time"
                                                 value={manualTime}
                                                 onChange={e => setManualTime(e.target.value)}
-                                                className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-gray-400 dark:focus:border-gray-600 transition-colors"
+                                                className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
                                             />
                                         </div>
                                     </div>
@@ -337,7 +335,7 @@ export default function TasksPage() {
                                         </h3>
                                         <div className="space-y-2">
                                             {pendingTasks.map(task => (
-                                                <div key={task.id} className="group bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] hover:border-gray-300 dark:hover:border-gray-700 transition-colors shadow-sm overflow-hidden">
+                                                <div key={task.id} className="group bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] hover:border-gray-300 transition-colors shadow-sm overflow-hidden">
                                                     {editingId === task.id ? (
                                                         /* Edit Mode */
                                                         <div className="p-4 space-y-3">
@@ -351,7 +349,7 @@ export default function TasksPage() {
                                                             </div>
                                                             <div className="flex gap-2 justify-end">
                                                                 <button onClick={() => setEditingId(null)}
-                                                                    className="px-3 py-1.5 text-xs text-gray-500 hover:text-[var(--foreground)] rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                                                    className="px-3 py-1.5 text-xs text-gray-500 hover:text-[var(--foreground)] rounded-md hover:bg-black/5 transition-colors">
                                                                     Cancel
                                                                 </button>
                                                                 <button onClick={saveEdit}
@@ -365,12 +363,12 @@ export default function TasksPage() {
                                                         <div className="flex items-center justify-between p-4">
                                                             <div className="flex items-center gap-4 flex-1 min-w-0">
                                                                 <button onClick={() => handleToggleStatus(task)}
-                                                                    className="w-5 h-5 rounded-md border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-transparent hover:border-green-500 hover:text-green-500 transition-colors shrink-0">
+                                                                    className="w-5 h-5 rounded-md border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-green-500 hover:text-green-500 transition-colors shrink-0">
                                                                     <IconCheck className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
                                                                     <span className="text-sm font-medium truncate">{task.task_text}</span>
-                                                                    <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                                                                    <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                                                                         <IconClock className="w-3 h-3" />
                                                                         {formatTime(task.remind_at)}
                                                                     </div>
@@ -378,11 +376,11 @@ export default function TasksPage() {
                                                             </div>
                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all ml-2 shrink-0">
                                                                 <button onClick={() => startEditing(task)}
-                                                                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors">
+                                                                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors">
                                                                     <IconEdit className="w-4 h-4" />
                                                                 </button>
                                                                 <button onClick={() => handleDelete(task.id)}
-                                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors">
+                                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
                                                                     <IconTrash className="w-4 h-4" />
                                                                 </button>
                                                             </div>
@@ -424,7 +422,7 @@ export default function TasksPage() {
 
                                 {tasks.length === 0 && (
                                     <div className="text-center py-16">
-                                        <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-[#27272a] flex items-center justify-center mx-auto mb-4">
+                                        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
                                             <IconCalendar className="w-7 h-7 text-gray-400" />
                                         </div>
                                         <p className="text-gray-500 text-sm mb-1">No tasks yet</p>

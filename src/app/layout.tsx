@@ -25,6 +25,8 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+import MinimalSidebar from "@/components/MinimalSidebar";
+
 export default function RootLayout({
   children,
 }: {
@@ -32,11 +34,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-[var(--background)] text-[var(--foreground)]`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+      <body className={`${inter.className} bg-[var(--background)] text-[var(--foreground)] h-screen overflow-hidden`}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
             <AdminProvider>
                 <ToastProvider>
-                    {children}
+                    <div className="flex h-screen w-full">
+                        <MinimalSidebar />
+                        <main className="flex-1 flex flex-col p-2 pl-0 md:p-4 md:pl-0 h-full overflow-hidden">
+                            <div className="flex-1 bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] shadow-sm overflow-y-auto">
+                                {children}
+                            </div>
+                        </main>
+                    </div>
                 </ToastProvider>
             </AdminProvider>
         </ThemeProvider>

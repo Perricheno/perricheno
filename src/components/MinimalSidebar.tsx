@@ -75,7 +75,7 @@ export default function MinimalSidebar() {
             {/* Desktop Sidebar — hidden on mobile      */}
             {/* ═══════════════════════════════════════ */}
             <aside className={cn(
-                "fixed left-0 top-0 bottom-0 border-r border-[var(--border)] bg-[#F4F4F6] dark:bg-[#18181b] flex-col z-50 transition-all duration-300",
+                "relative left-0 top-0 bottom-0 bg-transparent flex-col z-50 transition-all duration-300",
                 "hidden md:flex", // Hide on mobile
                 collapsed ? "w-20" : "md:w-[260px]"
             )}>
@@ -84,8 +84,7 @@ export default function MinimalSidebar() {
                 <div className="h-16 flex items-center justify-between px-6 pt-4 mb-4">
                     <Link href="/" className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-[var(--radius)] flex items-center justify-center shrink-0 overflow-hidden">
-                            <img src="/logo-dark.png" alt="Perricheno" className="w-full h-full object-contain hidden dark:block" />
-                            <img src="/logo.png" alt="Perricheno" className="w-full h-full object-contain dark:hidden" />
+                            <img src="/logo.png" alt="Perricheno" className="w-full h-full object-contain" />
                         </div>
                     </Link>
                     
@@ -111,10 +110,10 @@ export default function MinimalSidebar() {
                             {group.links.map(l => (
                                 <Link key={l.href} href={l.href} 
                                     className={cn(
-                                        "group flex items-center justify-between px-3 py-2 rounded-[var(--radius)] transition-all font-medium text-sm",
+                                        "group flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium text-sm",
                                         isActive(l.href)                                            
-                                            ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm font-semibold"
-                                            : "text-gray-500 hover:text-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5"
+                                            ? "bg-white text-[var(--foreground)] shadow-sm font-semibold border border-[var(--border)]"
+                                            : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-black/5"
                                     )}>
                                     <div className="flex items-center gap-3">
                                         <l.icon className={cn(
@@ -126,8 +125,8 @@ export default function MinimalSidebar() {
                                     
                                     {l.shortcut && !collapsed && (
                                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <kbd className="text-[10px] bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-gray-400">{l.shortcut.split(" ")[0]}</kbd>
-                                            <kbd className="text-[10px] bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-gray-400">{l.shortcut.split(" ")[1]}</kbd>
+                                            <kbd className="text-[10px] bg-black/5 px-1.5 py-0.5 rounded text-[var(--muted)]">{l.shortcut.split(" ")[0]}</kbd>
+                                            <kbd className="text-[10px] bg-black/5 px-1.5 py-0.5 rounded text-[var(--muted)]">{l.shortcut.split(" ")[1]}</kbd>
                                          </div>
                                     )}
                                 </Link>
@@ -141,9 +140,9 @@ export default function MinimalSidebar() {
                      {!collapsed && <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Account</h4>}
                      
                     {user ? (
-                        <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full p-2 rounded-[var(--radius)] hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
+                        <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-black/5 transition-colors text-left">
                             <div className="w-8 h-8 rounded-full bg-[var(--card)] shadow-sm flex items-center justify-center overflow-hidden shrink-0 border border-[var(--border)]">
-                                {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name || "User"} /> : <IconUser className="w-4 h-4 text-gray-400" />}
+                                {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name || "User"} /> : <IconUser className="w-4 h-4 text-[var(--muted)]" />}
                             </div>
                             <div className={cn("flex-1 min-w-0", collapsed && "hidden")}>
                                 <p className="text-sm font-semibold truncate text-[var(--foreground)] leading-tight">{user.first_name}</p>
@@ -164,7 +163,7 @@ export default function MinimalSidebar() {
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
             <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[92%] max-w-[400px]">
-                <div className="flex items-center justify-around px-1 py-1.5 bg-white dark:bg-[#18181b] rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
+                <div className="flex items-center justify-around px-1 py-1.5 bg-white rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
                             className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
@@ -172,21 +171,21 @@ export default function MinimalSidebar() {
                             <div className={cn(
                                 "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
                                 isActive(l.href)
-                                    ? "bg-black dark:bg-white"
-                                    : "bg-transparent group-hover:bg-black/5 dark:group-hover:bg-white/5"
+                                    ? "bg-black"
+                                    : "bg-transparent group-hover:bg-black/5"
                             )}>
                                 <l.icon className={cn(
                                     "w-[18px] h-[18px] transition-colors",
                                     isActive(l.href)
-                                        ? "text-white dark:text-black stroke-[2.5px]"
-                                        : "text-gray-500 stroke-[1.5px]"
+                                        ? "text-white stroke-[2.5px]"
+                                        : "text-[var(--muted)] stroke-[1.5px]"
                                 )} />
                             </div>
                             
                             {/* Label */}
                             <span className={cn(
-                                "text-[10px] leading-tight transition-colors",
-                                isActive(l.href) ? "text-[var(--foreground)] font-bold" : "text-gray-500 font-medium"
+                                "text-[10px] leading-tight transition-colors mt-0.5",
+                                isActive(l.href) ? "text-[var(--foreground)] font-bold" : "text-[var(--muted)] font-medium"
                             )}>
                                 {l.label}
                             </span>
@@ -199,18 +198,18 @@ export default function MinimalSidebar() {
                         <div className={cn(
                             "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
                             isActive("/settings")
-                                ? "bg-black dark:bg-white"
-                                : "bg-transparent group-hover:bg-black/5 dark:group-hover:bg-white/5"
+                                ? "bg-black"
+                                : "bg-transparent group-hover:bg-black/5"
                         )}>
                             <IconSettings className={cn(
                                 "w-[18px] h-[18px] transition-colors",
-                                isActive("/settings") ? "text-white dark:text-black stroke-[2.5px]" : "text-gray-500 stroke-[1.5px]"
+                                isActive("/settings") ? "text-white stroke-[2.5px]" : "text-[var(--muted)] stroke-[1.5px]"
                             )} />
                         </div>
                         
                         <span className={cn(
-                            "text-[10px] leading-tight transition-colors",
-                            isActive("/settings") ? "text-[var(--foreground)] font-bold" : "text-gray-500 font-medium"
+                            "text-[10px] leading-tight transition-colors mt-0.5",
+                            isActive("/settings") ? "text-[var(--foreground)] font-bold" : "text-[var(--muted)] font-medium"
                         )}>
                             Settings
                         </span>

@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { IconBrain, IconFileText, IconPresentation, IconCalendarStats, IconRobot, IconMath, IconCode, IconTerminal2 } from "@tabler/icons-react";
-import MinimalSidebar from "@/components/MinimalSidebar";
 
 export default function AgentPage() {
     const features = [
@@ -15,8 +14,7 @@ export default function AgentPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-64 pb-24 md:pb-0 transition-all">
-            <MinimalSidebar />
+        <div className="w-full h-full">
 
             <div className="max-w-5xl mx-auto px-6 py-20 md:py-32">
                 

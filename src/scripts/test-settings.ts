@@ -6,14 +6,14 @@ async function testSettings() {
     console.log("Initial:", initial);
 
     console.log("Updating settings...");
-    const newSettings = { ...initial, model: "test-model-" + Date.now() };
+    const newSettings = { ...initial, selectedModel: "test-model-" + Date.now() };
     await saveSettings(newSettings);
 
     console.log("Reading updated settings...");
     const updated = await getSettings();
     console.log("Updated:", updated);
 
-    if (updated.model === newSettings.model) {
+    if (updated.selectedModel === newSettings.selectedModel) {
         console.log("SUCCESS: Settings persistence verified!");
     } else {
         console.error("FAILURE: Settings were not persisted correctly.");

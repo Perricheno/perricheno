@@ -12,7 +12,6 @@ import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import { getSettings, saveSettings, type ChatSettings } from "@/app/actions";
 import { useTheme } from "next-themes";
-import MinimalSidebar from "@/components/MinimalSidebar";
 import { AnimatePresence, motion } from "framer-motion";
 
 /* ── Types ── */
@@ -265,12 +264,10 @@ export default function ChatPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-16 md:pl-64 flex overflow-hidden">
+        <div className="w-full h-full flex overflow-hidden">
             {/* Admin login modal */}
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
-
-            <MinimalSidebar />
 
             {/* Desktop Sidebar */}
             <aside className="w-64 flex-col hidden md:flex">

@@ -11,7 +11,6 @@ import {
     IconRotate, IconLayersIntersect, IconEraser, IconWand, IconMaximize, IconMinimize, IconTxt,
     IconBrowser, IconFileZip, IconShield, IconSettings, IconChevronDown, IconChevronUp
 } from "@tabler/icons-react";
-import MinimalSidebar from "@/components/MinimalSidebar";
 import { useToast } from "@/components/ToastContext";
 
 type ToolType = 
@@ -365,9 +364,9 @@ export default function PDFPage() {
             case "select":
                 return (
                     <div key={field.key} className="flex items-center justify-between gap-4">
-                        <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{field.label}</label>
+                        <label className="text-sm text-gray-600 whitespace-nowrap">{field.label}</label>
                         <select value={val} onChange={e => update(e.target.value)}
-                            className="bg-white dark:bg-[#27272a] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] min-w-[140px]">
+                            className="bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] min-w-[140px]">
                             {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                     </div>
@@ -375,25 +374,25 @@ export default function PDFPage() {
             case "text":
                 return (
                     <div key={field.key} className="flex items-center justify-between gap-4">
-                        <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{field.label}</label>
+                        <label className="text-sm text-gray-600 whitespace-nowrap">{field.label}</label>
                         <input type="text" value={val} onChange={e => update(e.target.value)} placeholder={field.placeholder}
-                            className="bg-white dark:bg-[#27272a] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] min-w-[140px]" />
+                            className="bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] min-w-[140px]" />
                     </div>
                 );
             case "number":
                 return (
                     <div key={field.key} className="flex items-center justify-between gap-4">
-                        <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{field.label}</label>
+                        <label className="text-sm text-gray-600 whitespace-nowrap">{field.label}</label>
                         <input type="number" value={val} onChange={e => update(parseFloat(e.target.value))} min={field.min} max={field.max} step={field.step}
-                            className="bg-white dark:bg-[#27272a] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] w-24" />
+                            className="bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--foreground)] w-24" />
                     </div>
                 );
             case "toggle":
                 return (
                     <div key={field.key} className="flex items-center justify-between gap-4">
-                        <label className="text-sm text-gray-600 dark:text-gray-400">{field.label}</label>
+                        <label className="text-sm text-gray-600">{field.label}</label>
                         <button onClick={() => update(!val)}
-                            className={`w-10 h-6 rounded-full transition-colors relative ${val ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                            className={`w-10 h-6 rounded-full transition-colors relative ${val ? 'bg-green-500' : 'bg-gray-300'}`}>
                             <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${val ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                         </button>
                     </div>
@@ -402,7 +401,7 @@ export default function PDFPage() {
                 return (
                     <div key={field.key} className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                            <label className="text-sm text-gray-600 dark:text-gray-400">{field.label}</label>
+                            <label className="text-sm text-gray-600">{field.label}</label>
                             <span className="text-sm font-semibold tabular-nums">{val}</span>
                         </div>
                         <input type="range" value={val} onChange={e => update(parseInt(e.target.value))} min={field.min} max={field.max} step={field.step}
@@ -417,9 +416,7 @@ export default function PDFPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-20 pb-24 md:pb-0 transition-all font-sans">
-            <MinimalSidebar />
-
+        <div className="w-full h-full font-sans">
             <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-24">
                 {activeTool && user && <div className="absolute top-6 right-6 z-40 px-4 py-2 bg-[var(--card)] rounded-full shadow-sm border border-[var(--border)] text-sm font-medium flex items-center gap-2">
                     <IconBrandTelegram className="w-4 h-4 text-blue-500" /> Auto-delivery active
@@ -441,7 +438,7 @@ export default function PDFPage() {
                                         className={`px-4 py-1.5 rounded-[calc(var(--radius)-4px)] text-sm font-medium transition-all ${
                                             activeCategory === cat 
                                             ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm" 
-                                            : "text-gray-500 hover:text-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5"
+                                            : "text-gray-500 hover:text-[var(--foreground)] hover:bg-black/5"
                                         }`}>
                                         {cat}
                                     </button>
@@ -451,10 +448,10 @@ export default function PDFPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredTools.map((t) => (
                                     <button key={t.id} onClick={() => setActiveTool(t.id)}
-                                        className="group relative bg-[var(--card)] p-6 hover:shadow-md border border-[var(--border)] hover:border-gray-300 dark:hover:border-gray-600 rounded-[var(--radius)] transition-all duration-200 text-left h-44 flex flex-col justify-between overflow-hidden">
+                                        className="group relative bg-[var(--card)] p-6 hover:shadow-md border border-[var(--border)] hover:border-gray-300 rounded-[var(--radius)] transition-all duration-200 text-left h-44 flex flex-col justify-between overflow-hidden">
                                         
                                         <div className="flex justify-between items-start z-10">
-                                            <div className="p-2.5 bg-black/5 dark:bg-white/5 rounded-lg text-[var(--foreground)] group-hover:scale-110 transition-transform">
+                                            <div className="p-2.5 bg-black/5 rounded-lg text-[var(--foreground)] group-hover:scale-110 transition-transform">
                                                 <t.icon className="w-6 h-6 stroke-[1.5]" />
                                             </div>
                                             <IconArrowLeft className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 -rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
@@ -474,7 +471,7 @@ export default function PDFPage() {
 
                             <div className="w-full flex items-center justify-between mb-6">
                                 <button onClick={() => { setActiveTool(null); reset(); }}
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 -ml-3">
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5 -ml-3">
                                     <IconArrowLeft className="w-4 h-4" /> Back to tools
                                 </button>
                                 <div className="px-3 py-1 bg-[var(--card)] rounded-full border border-[var(--border)] text-xs font-semibold text-gray-500 shadow-sm">
@@ -484,7 +481,7 @@ export default function PDFPage() {
 
                             <div className="w-full border border-[var(--border)] bg-[var(--card)] rounded-[var(--radius)] shadow-sm p-8 md:p-12 relative min-h-[400px] flex flex-col overflow-hidden">
                                 {(status === "processing" || status === "uploading" || status === "zipping") && (
-                                    <div className="absolute inset-0 bg-white/95 dark:bg-[#18181b]/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-8 text-center rounded-[var(--radius)]">
+                                    <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-8 text-center rounded-[var(--radius)]">
                                         {/* Dual-phase progress */}
                                         <div className="w-full max-w-xs mb-6 space-y-5">
                                             {/* Upload Phase */}
@@ -492,11 +489,11 @@ export default function PDFPage() {
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <IconCloudUpload className="w-4 h-4 text-blue-500" stroke={1.5} />
-                                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Upload</span>
+                                                        <span className="text-xs font-semibold text-gray-700">Upload</span>
                                                     </div>
                                                     <span className="text-xs font-bold tabular-nums text-blue-600">{uploadedCount}/{totalFiles}</span>
                                                 </div>
-                                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                                                     <div className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${totalFiles > 0 ? (uploadedCount / totalFiles) * 100 : 0}%` }} />
                                                 </div>
                                             </div>
@@ -506,11 +503,11 @@ export default function PDFPage() {
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <IconLoader2 className={`w-4 h-4 text-green-500 ${convertedCount < totalFiles ? 'animate-spin' : ''}`} stroke={1.5} />
-                                                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Convert</span>
+                                                        <span className="text-xs font-semibold text-gray-700">Convert</span>
                                                     </div>
                                                     <span className="text-xs font-bold tabular-nums text-green-600">{convertedCount}/{totalFiles}</span>
                                                 </div>
-                                                <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                                                     <div className="h-full bg-green-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${totalFiles > 0 ? (convertedCount / totalFiles) * 100 : 0}%` }} />
                                                 </div>
                                             </div>
@@ -528,7 +525,7 @@ export default function PDFPage() {
                                                 You can safely close this page. Results will arrive via Telegram. ✨
                                             </p>
                                         ) : (
-                                            <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50 max-w-sm">
+                                            <div className="bg-blue-50 text-blue-600 p-3 rounded-xl border border-blue-100 max-w-sm">
                                                 <p className="text-xs"><strong>Guest:</strong> Keep this tab open until done.</p>
                                             </div>
                                         )}
@@ -537,13 +534,13 @@ export default function PDFPage() {
 
                                 {files.length === 0 ? (
                                     <div
-                                        className="w-full h-full min-h-[300px] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5 transition-all group p-6"
+                                        className="w-full h-full min-h-[300px] border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-[var(--foreground)] hover:bg-black/5 transition-all group p-6"
                                         onClick={() => fileInputRef.current?.click()}
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
                                     >
                                         <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
-                                        <div className="w-16 h-16 bg-white dark:bg-black rounded-full shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <IconCloudUpload className="w-8 h-8 text-gray-400 group-hover:text-[var(--foreground)] transition-colors" stroke={1.5} />
                                         </div>
                                         <div className="text-center">
@@ -555,7 +552,7 @@ export default function PDFPage() {
                                     <div className="w-full flex flex-col gap-6 flex-1">
                                         <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center">
+                                                <div className="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center">
                                                     <IconFileDescription className="w-5 h-5" stroke={1.5} />
                                                 </div>
                                                 <div>
@@ -563,7 +560,7 @@ export default function PDFPage() {
                                                     <p className="text-xs text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} queued</p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => fileInputRef.current?.click()} className="text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">+ Add</button>
+                                            <button onClick={() => fileInputRef.current?.click()} className="text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-black/5 transition-colors">+ Add</button>
                                             <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                         </div>
 
@@ -571,7 +568,7 @@ export default function PDFPage() {
                                             {files.map((f, i) => (
                                                 <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/50 group hover:shadow-sm transition-all">
                                                     <div className="flex items-center gap-3 min-w-0">
-                                                        <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded flex items-center justify-center shrink-0">
+                                                        <div className="w-8 h-8 bg-blue-50 text-blue-500 rounded flex items-center justify-center shrink-0">
                                                             <span className="text-[10px] font-bold uppercase">{f.name.split('.').pop()}</span>
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -579,7 +576,7 @@ export default function PDFPage() {
                                                             <p className="text-xs text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
                                                         </div>
                                                     </div>
-                                                    <button onClick={() => removeFile(i)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                    <button onClick={() => removeFile(i)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                                                         <IconX className="w-4 h-4" />
                                                     </button>
                                                 </div>
@@ -590,10 +587,10 @@ export default function PDFPage() {
                                         {currentSettings && currentSettings.length > 0 && (
                                             <div className="border border-[var(--border)] rounded-xl overflow-hidden">
                                                 <button onClick={() => setShowSettings(!showSettings)}
-                                                    className="w-full flex items-center justify-between px-4 py-3 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                                    className="w-full flex items-center justify-between px-4 py-3 bg-black/[0.02] hover:bg-black/5 transition-colors">
                                                     <div className="flex items-center gap-2">
                                                         <IconSettings className="w-4 h-4 text-gray-500" stroke={1.5} />
-                                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Conversion Settings</span>
+                                                        <span className="text-sm font-semibold text-gray-700">Conversion Settings</span>
                                                     </div>
                                                     {showSettings ? <IconChevronUp className="w-4 h-4 text-gray-400" /> : <IconChevronDown className="w-4 h-4 text-gray-400" />}
                                                 </button>
@@ -607,7 +604,7 @@ export default function PDFPage() {
 
                                         {status === "done" ? (
                                             <div className="flex flex-col items-center justify-center py-6 animate-in fade-in slide-in-from-bottom-4">
-                                                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-4">
+                                                <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4">
                                                     <IconFileCheck className="w-8 h-8" stroke={1.5} />
                                                 </div>
                                                 <p className="font-bold text-xl mb-1 text-[var(--foreground)]">Success!</p>
@@ -630,7 +627,7 @@ export default function PDFPage() {
                                         )}
 
                                         {status === "error" && (
-                                            <div className="p-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 mt-2 flex gap-3 text-red-600 dark:text-red-400">
+                                            <div className="p-4 rounded-xl border border-red-200 bg-red-50 mt-2 flex gap-3 text-red-600">
                                                 <IconX className="w-5 h-5 shrink-0 mt-0.5" />
                                                 <div>
                                                     <p className="font-semibold text-sm mb-0.5">Operation failed</p>

@@ -13,8 +13,7 @@ export function ThemeToggle() {
 
     return (
         <button
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="p-3 rounded-xl bg-white/10 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-emerald-500/20 hover:border-emerald-500 transition-all backdrop-blur-md"
+            className="p-3 rounded-xl bg-white/10 border border-black/10 hover:bg-emerald-500/20 hover:border-emerald-500 transition-all backdrop-blur-md"
         >
             {resolvedTheme === "dark" ? (
                 <IconSun className="w-5 h-5 text-yellow-400" />

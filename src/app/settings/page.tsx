@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import { useAdmin } from "@/components/AdminContext";
-import MinimalSidebar from "@/components/MinimalSidebar";
 import { LoginModal } from "@/components/LoginModal";
 import {
     IconUser, IconPalette, IconFileTypePdf, IconInfoCircle,
@@ -32,8 +31,7 @@ export default function SettingsPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pl-0 md:pl-20 pb-24 md:pb-0 transition-all font-sans">
-            <MinimalSidebar />
+        <div className="w-full h-full font-sans">
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
 
             <div className="max-w-2xl mx-auto px-6 py-12 md:py-24">
@@ -49,7 +47,7 @@ export default function SettingsPage() {
                         <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5">
                             {user ? (
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-[#27272a] flex items-center justify-center overflow-hidden border border-[var(--border)] shrink-0">
+                                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-[var(--border)] shrink-0">
                                         {user.photo_url
                                             ? <img src={user.photo_url} alt={user.first_name || ""} className="w-full h-full object-cover" />
                                             : <IconUser className="w-6 h-6 text-gray-400" />
@@ -59,11 +57,11 @@ export default function SettingsPage() {
                                         <p className="text-base font-semibold truncate">{user.first_name}</p>
                                         <p className="text-sm text-gray-500 truncate">@{user.username || "user"}</p>
                                     </div>
-                                    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Connected</span>
+                                    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">Connected</span>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center text-center py-4">
-                                    <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-[#27272a] flex items-center justify-center mb-3 border border-[var(--border)]">
+                                    <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3 border border-[var(--border)]">
                                         <IconUser className="w-7 h-7 text-gray-400" />
                                     </div>
                                     <p className="text-sm text-gray-500 mb-4">Sign in with Telegram to enable cloud features and background processing.</p>
@@ -88,8 +86,8 @@ export default function SettingsPage() {
                                     <button key={t.id} onClick={() => applyTheme(t.id)}
                                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                                             theme === t.id
-                                                ? "border-[var(--foreground)] bg-black/5 dark:bg-white/5 shadow-sm"
-                                                : "border-transparent hover:border-[var(--border)] hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+                                                ? "border-[var(--foreground)] bg-black/5 shadow-sm"
+                                                : "border-transparent hover:border-[var(--border)] hover:bg-black/[0.02]"
                                         }`}>
                                         <t.icon className={`w-6 h-6 ${theme === t.id ? "text-[var(--foreground)]" : "text-gray-400"}`} stroke={1.5} />
                                         <span className={`text-xs font-medium ${theme === t.id ? "text-[var(--foreground)]" : "text-gray-500"}`}>{t.label}</span>
