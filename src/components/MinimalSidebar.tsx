@@ -7,7 +7,7 @@ import {
     IconRobot, IconFileTypePdf, IconListCheck,
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
-    IconLayoutSidebarLeftExpand
+    IconLayoutSidebarLeftExpand, IconLayoutBoard
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -38,6 +38,7 @@ const NAV_GROUPS: NavGroup[] = [
     {
         title: "Activity",
         links: [
+            { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
             { href: "/tasks", icon: IconListCheck, label: "Tasks" },
             { href: "/agent", icon: IconRobot, label: "AI Agent" },
             { href: "/pdf", icon: IconFileTypePdf, label: "PDF Tools" },

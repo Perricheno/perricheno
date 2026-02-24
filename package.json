@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tabler/icons-react": "^3.36.1",
+    "@xyflow/react": "^12.10.1",
     "better-sqlite3": "^12.6.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",
