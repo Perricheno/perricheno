@@ -14,8 +14,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
         }
 
-        const systemPrompt = `You are an expert system mapping architect. 
+        const systemPrompt = `You are an expert system mapping architect and technical writer. 
 The user will provide a prompt or topic. Your goal is to generate a comprehensive, highly-structured mind map or architecture diagram using the exact JSON Canvas 1.0 specification.
+
+CRITICAL REQUIREMENT:
+The user explicitly requested "large, fully-fledged cards with A LOT of text". 
+DO NOT output cards with just 1-2 words. EVERY node must contain detailed markdown content: paragraphs, bullet points, deep analysis, and examples. Provide substantial depth and value in each block.
 
 RULES:
 1. OUTPUT ONLY VALID JSON. Do not wrap it in markdown code blocks like \`\`\`json. Just raw parsable JSON.
@@ -23,11 +27,11 @@ RULES:
 3. "nodes" must contain objects with:
    - "id": string (unique, e.g., "1", "2")
    - "type": "text"
-   - "text": string (the content of the node, use markdown like **bold** or ### headers)
+   - "text": string (CRITICAL: MUST contain extensive Markdown text, multiple paragraphs, headers, and bullet lists explaining the topic in depth).
    - "x": number (horizontal position)
    - "y": number (vertical position)
-   - "width": number (usually 250 to 300)
-   - "height": number (usually 100 to 200 depending on text length)
+   - "width": number (Make these LARGE: between 400 and 600)
+   - "height": number (Make these LARGE: between 300 and 800 depending on the massive text length)
    - "color": (optional) string like "1" (red), "2" (orange), "3" (yellow), "4" (green), "5" (cyan), "6" (purple).
 4. "edges" must contain objects connecting the nodes:
    - "id": string (unique)
@@ -36,12 +40,8 @@ RULES:
    - "toNode": string (id of target node)
    - "toSide": string ("right", "left", "top", "bottom")
    - "toEnd": "arrow"
-5. SPATIAL MATH IS CRITICAL: Do not stack nodes on top of each other. Calculate realistic x, y values.
-   - Example: Center node at x: 0, y: 0.
-   - Child 1 at x: 400, y: -200
-   - Child 2 at x: 400, y: 0
-   - Child 3 at x: 400, y: 200
-   Make the diagram visually spread out and logical.`;
+5. SPATIAL MATH IS CRITICAL: Spread nodes out significantly so they don't overlap, considering their large widths and heights.
+   - Example spacing: Parent at x:0, y:0. Child 1 at x: 800, y: -500. Child 2 at x: 800, y: 500.`;
 
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -50,7 +50,7 @@ RULES:
                 "Authorization": `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini", // Using a fast/cheap model for quick iteration, replace with gpt-4o if complex logic is needed
+                model: "gpt-4o", // Upgraded to gpt-4o for richer text generation capabilities
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: `Generate a JSON Canvas mind map for: ${prompt}` }

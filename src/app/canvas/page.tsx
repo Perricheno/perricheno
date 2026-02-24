@@ -80,17 +80,14 @@ export default function CanvasPage() {
     if (!hasStarted) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[var(--background)]">
-                <div className="w-full max-w-4xl px-6 flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-700">
-                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-2 text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 pb-2">
-                        Hello, Perricheno
-                    </h1>
-                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium text-gray-500 mb-12 text-center">
+                <div className="w-full max-w-3xl px-6 flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-700">
+                    <h2 className="text-3xl md:text-4xl font-semibold text-[var(--foreground)] mb-10 text-center tracking-tight">
                         What do you want to build?
                     </h2>
 
                     <div className="w-full relative shadow-sm hover:shadow-md transition-shadow duration-300 rounded-[calc(var(--radius)+0.5rem)] bg-[var(--card)] border border-[var(--border)] overflow-hidden">
-                        <div className="px-6 pt-6 pb-20">
-                            <span className="text-sm font-semibold text-gray-400 mb-2 block">Prototype a canvas with AI</span>
+                        <div className="px-5 pt-5 pb-16">
+                            <span className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wider">Prototype a canvas with AI</span>
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
@@ -101,7 +98,7 @@ export default function CanvasPage() {
                                     }
                                 }}
                                 placeholder="An app that creates recipes from photos..."
-                                className="w-full h-24 outline-none resize-none bg-transparent text-xl md:text-2xl placeholder:text-gray-300 font-medium"
+                                className="w-full h-14 outline-none resize-none bg-transparent text-lg md:text-xl placeholder:text-gray-300 font-medium"
                                 autoFocus
                             />
                         </div>
