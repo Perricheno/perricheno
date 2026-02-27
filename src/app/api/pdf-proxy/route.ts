@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE = "https://pdf.perricheno.ru/api/v1";
-const API_KEY = "19529837-c5f6-4d7e-9452-37e1d8ef3905";
+const API_KEY = "02cb1632-3a3f-4cc2-ae6f-598c8b483bb9";
 
 const ENDPOINTS: Record<string, string> = {
     // Convert
