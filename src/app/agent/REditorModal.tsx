@@ -73,16 +73,9 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
 
             if (!res.ok) throw new Error("AI Edit failed");
 
-            const reader = res.body!.getReader();
-            const decoder = new TextDecoder();
-            let newCode = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                newCode += decoder.decode(value, { stream: true });
-                setCode(newCode);
-            }
+            const data = await res.json();
+            const newCode = data.code;
+            setCode(newCode);
 
             setEditPrompt("");
             setIsEditingMode(false);

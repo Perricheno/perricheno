@@ -7,16 +7,8 @@ export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
-    if (!OPENAI_API_KEY) {
-        return NextResponse.json({ error: "OpenAI API Key not configured" }, { status: 500 });
-    }
-
     try {
         const { currentCode, editPrompt } = await req.json();
-
-        if (!currentCode || !editPrompt) {
-            return NextResponse.json({ error: "currentCode and editPrompt required" }, { status: 400 });
-        }
 
         const prompt = `You are an R visualization expert editing existing R code. 
         
@@ -28,9 +20,7 @@ ${currentCode}
 USER EDIT REQUEST:
 "${editPrompt}"
 
-TASK: Return the FULL updated R code incorporating the user's request. Maintain all requirements (no Cairo() calls, publication quality, self-contained).
-CRITICAL FAIL-SAFE: Do NOT use \`library(X)\` or \`require(X)\`. You MUST load all packages using \`if (!requireNamespace("pacman", quietly=TRUE)) install.packages("pacman", quiet=TRUE); pacman::p_load(pkg1, pkg2)\`.
-Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
+TASK: Return the FULL updated R code incorporating the user's request. Maintain all requirements (no Cairo() calls, publication quality, self-contained). Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
 
         const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -43,58 +33,21 @@ Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
                 messages: [
                     { role: "system", content: "You are an expert R programmer modifying code. Output ONLY raw executable R code. No formatting or explanations." },
                     { role: "user", content: prompt }
-                ],
-                stream: true,
+                ]
             })
         });
 
-        if (!aiRes.ok) {
-            const err = await aiRes.text();
-            return NextResponse.json({ error: `AI error: ${err}` }, { status: 500 });
-        }
+        if (!aiRes.ok) throw new Error("AI Edit failed completion");
 
-        const stream = new ReadableStream({
-            async start(controller) {
-                const reader = aiRes.body!.getReader();
-                const decoder = new TextDecoder();
-                try {
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        const chunk = decoder.decode(value, { stream: true });
-                        const lines = chunk.split('\n').filter(l => l.trim() !== '');
+        const data = await aiRes.json();
+        let newCode = data.choices[0].message.content.trim();
+        if (newCode.startsWith("```")) newCode = newCode.replace(/^```(?:r|R)?\s*/, "");
+        if (newCode.endsWith("```")) newCode = newCode.replace(/```\s*$/, "");
 
-                        for (const line of lines) {
-                            if (line === 'data: [DONE]') continue;
-                            if (line.startsWith('data: ')) {
-                                try {
-                                    const parsed = JSON.parse(line.slice(5));
-                                    const content = parsed.choices[0]?.delta?.content;
-                                    if (content) {
-                                        controller.enqueue(new TextEncoder().encode(content));
-                                    }
-                                } catch (e) {
-                                    // ignore parse err
-                                }
-                            }
-                        }
-                    }
-                } finally {
-                    controller.close();
-                }
-            }
-        });
-
-        return new Response(stream, {
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            }
-        });
+        return NextResponse.json({ code: newCode });
 
     } catch (err: any) {
-        console.error("Visualize edit stream error:", err);
+        console.error("Visualize edit error:", err);
         return NextResponse.json({ error: err.message || "Failed" }, { status: 500 });
     }
 }

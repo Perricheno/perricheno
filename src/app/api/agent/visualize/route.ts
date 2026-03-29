@@ -18,9 +18,15 @@ const CHART_PROMPTS: Record<string, string> = {
     violin: 'a violin plot using ggplot2 with geom_violin',
     network: 'a network/graph visualization using igraph',
     ridge: 'a ridgeline density plot using ggridges',
+    radar: 'a radar/spider chart using fmsb',
+    waffle: 'a waffle chart using waffle package',
+    waterfall: 'a waterfall chart using waterfalls package',
+    wordcloud: 'a wordcloud visualization using wordcloud package',
+    marginal: 'a scatter plot with marginal histograms/density using ggExtra',
+    dumbbell: 'a dumbbell plot using ggalt::geom_dumbbell',
 };
 
-function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string) {
+function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string) {
     const chartDesc = CHART_PROMPTS[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
 
@@ -28,38 +34,29 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
 
 TASK: Create ${chartDesc} related to this research topic: "${topic}"
 
-REQUIREMENTS:
-1. Create REALISTIC synthetic data that makes sense for the topic
-2. Use the ${palette} color palette (from viridis or RColorBrewer)
-3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} labels
-4. Include: title, axis labels, legend if applicable
-5. Use clean, modern aesthetics (theme_minimal or similar)
-6. The script must be completely self-contained — NO external data files
-7. Do NOT include library() calls for Cairo — it's pre-loaded
-8. Do NOT include CairoPNG() or dev.off() — they're handled externally
-9. The last expression should be the plot (print() the ggplot object if using ggplot2)
+${dataContext ? `USER INSTRUCTIONS & DATA CONTEXT:\n${dataContext}\n` : ''}
 
-OUTPUT: Only the R code. No markdown fences, no commentary. Just pure R code.`;
+REQUIREMENTS:
+1. Create REALISTIC synthetic data matching the topic.
+2. Use the "${palette}" color palette (from viridis, RColorBrewer, etc).
+3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
+4. The script must be completely self-contained — NO external files.
+5. If you use a package (e.g., ggplot2, plotly, etc.), use simple \`library(pkgName)\`.
+6. DO NOT include Cairo() or png() calls. 
+7. The last expression MUST be the plot object itself so it renders.
+
+OUTPUT: Only output the pure R code. NO markdown fences (\`\`\`R). NO commentary. Just executable R code.`;
 }
 
-// POST /api/agent/visualize — generate R code, compile it, return image
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
-    if (!OPENAI_API_KEY) {
-        return NextResponse.json({ error: "OpenAI API Key not configured" }, { status: 500 });
-    }
-
     try {
-        const { topic, chartType, palette = 'viridis', language = 'en' } = await req.json();
+        const { topic, chartType, palette = 'viridis', language = 'en', dataContext = '' } = await req.json();
 
-        if (!topic || !chartType) {
-            return NextResponse.json({ error: "topic and chartType required" }, { status: 400 });
-        }
-
-        // Step 1: Generate R code via OpenAI
-        const prompt = buildVisualizationPrompt(topic, chartType, palette, language);
+        // 1. Generate Code
+        const prompt = buildVisualizationPrompt(topic, chartType, palette, language, dataContext);
 
         const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -70,43 +67,56 @@ export async function POST(req: Request) {
             body: JSON.stringify({
                 model: "gpt-5-mini-2025-08-07",
                 messages: [
-                    { role: "system", content: "You are an expert R programmer. Output ONLY valid R code. No markdown, no explanations." },
+                    { role: "system", content: "You are an expert R programmer. Output ONLY raw executable R code. No formatting." },
                     { role: "user", content: prompt }
-                ],
+                ]
             })
         });
 
-        if (!aiRes.ok) {
-            const err = await aiRes.text();
-            return NextResponse.json({ error: `AI error: ${err.slice(0, 200)}` }, { status: 500 });
-        }
-
+        if (!aiRes.ok) throw new Error("AI Generation failed");
+        
         const aiData = await aiRes.json();
         let rCode = aiData.choices[0].message.content.trim();
-
-        // Clean markdown fences if present
         if (rCode.startsWith("```")) rCode = rCode.replace(/^```(?:r|R)?\s*/, "");
         if (rCode.endsWith("```")) rCode = rCode.replace(/```\s*$/, "");
 
-        // Step 2: Compile R code
+        // Auto-install wrapper to make it fail-safe:
+        // We prepend a block that intercepts package loading and installs them.
+        const failSafeCode = `
+# Fail-safe auto-installer
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
+.orig_lib <- base::library
+library <- function(package, ...) {
+  pkg_name <- as.character(substitute(package))
+  if (length(pkg_name) == 1 && pkg_name != "package") {
+    if (!requireNamespace(pkg_name, quietly = TRUE)) install.packages(pkg_name, quiet = TRUE)
+    invisible(.orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))
+  } else invisible(.orig_lib(...))
+}
+
+# AI Code below
+` + rCode;
+
+        // 2. Compile Code
         const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: rCode }),
-            signal: AbortSignal.timeout(35000),
+            body: JSON.stringify({ code: failSafeCode }),
+            signal: AbortSignal.timeout(45000), // wait 45s for compilation & install
         });
 
-        if (!compileRes.ok) {
-            return NextResponse.json({ error: "R compilation failed", r_code: rCode }, { status: 500 });
-        }
+        if (!compileRes.ok) throw new Error("Compilation server error");
 
         const compileResult = await compileRes.json();
+        
+        if (!compileResult.success) {
+            return NextResponse.json({ error: compileResult.log || "R Compilation failed", r_code: rCode }, { status: 500 });
+        }
 
         return NextResponse.json({
-            success: compileResult.success,
-            image: compileResult.image, // base64 PNG
-            r_code: rCode,
-            log: compileResult.log,
+            success: true,
+            image: compileResult.image,
+            r_code: rCode, // return clean code without wrapper for editor
             chart_type: chartType,
         });
 
