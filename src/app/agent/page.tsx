@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import {
     IconArrowRight, IconLoader2, IconPaperclip,
     IconFileText, IconBook, IconPackage, IconDownload,
-    IconX, IconPencil, IconCheck, IconSparkles, IconEye
+    IconX, IconPencil, IconCheck, IconSparkles, IconEye,
+    IconBug
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
@@ -23,6 +24,8 @@ export default function AgentPage() {
     const [phase, setPhase] = useState<"idle" | "generating" | "done">("idle");
     const [isEditing, setIsEditing] = useState(false);
     const [editPrompt, setEditPrompt] = useState("");
+    const [isFixingErrors, setIsFixingErrors] = useState(false);
+    const [errorLogInput, setErrorLogInput] = useState("");
     const [viewerOpen, setViewerOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<"tex" | "bib">("tex");
     const [mainTex, setMainTex] = useState("");
@@ -127,6 +130,42 @@ export default function AgentPage() {
         if (!editPrompt.trim()) return;
         generate(editPrompt, docType, true);
         setEditPrompt("");
+    };
+
+    const fixErrors = async () => {
+        if (!errorLogInput.trim() || !mainTex) return;
+
+        setError(null);
+        setPhase("generating");
+        setIsFixingErrors(false);
+        setOverallProgress(0);
+        setStages(prev => prev.map(s => ({ ...s, progress: 0, status: "pending" })));
+        startProgressAnimation();
+
+        try {
+            const res = await fetch('/api/agent/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    errorLog: errorLogInput,
+                    currentTex: mainTex,
+                    currentBib: referencesBib,
+                    type: docType,
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Fix failed");
+
+            setMainTex(data.main_tex);
+            setReferencesBib(data.references_bib || null);
+            stopProgressAnimation(true);
+            setErrorLogInput("");
+            setTimeout(() => setPhase("done"), 600);
+        } catch (err: any) {
+            stopProgressAnimation(false);
+            setError(err.message);
+            setPhase("done");
+        }
     };
 
     const downloadFile = (content: string, filename: string) => {
@@ -331,45 +370,93 @@ export default function AgentPage() {
                             </button>
                         </div>
 
-                        {/* Edit section */}
-                        {!isEditing ? (
+                        {/* Edit & Fix Errors buttons */}
+                        <div className="flex items-center justify-center gap-4 mb-2">
                             <button
-                                onClick={() => setIsEditing(true)}
-                                className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-[var(--foreground)] transition-colors font-medium"
+                                onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }}
+                                className={`inline-flex items-center gap-1.5 text-sm transition-colors font-medium ${isEditing ? 'text-[var(--foreground)]' : 'text-gray-400 hover:text-[var(--foreground)]'}`}
                             >
-                                <IconPencil className="w-3.5 h-3.5" /> Edit document
+                                <IconPencil className="w-3.5 h-3.5" /> Edit
                             </button>
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mt-4 w-full"
+                            <span className="text-gray-200">|</span>
+                            <button
+                                onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }}
+                                className={`inline-flex items-center gap-1.5 text-sm transition-colors font-medium ${isFixingErrors ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                             >
-                                <div className="relative border border-[var(--border)] rounded-[1.25rem] bg-white shadow-sm focus-within:shadow-md focus-within:border-[var(--foreground)] transition-all">
-                                    <textarea
-                                        value={editPrompt}
-                                        onChange={(e) => setEditPrompt(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleEdit();
-                                            }
-                                        }}
-                                        placeholder="Add more detail to methodology..."
-                                        className="w-full bg-transparent p-4 pr-12 outline-none resize-none text-[15px] placeholder:text-gray-300 max-h-32 min-h-[56px] font-medium"
-                                        rows={1}
-                                        autoFocus
-                                    />
-                                    <button
-                                        onClick={handleEdit}
-                                        disabled={!editPrompt.trim()}
-                                        className="absolute right-3 bottom-3 p-1.5 rounded-full bg-[var(--foreground)] text-[var(--card)] disabled:opacity-30 transition-colors"
-                                    >
-                                        <IconArrowRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
+                                <IconBug className="w-3.5 h-3.5" /> Fix Errors
+                            </button>
+                        </div>
+
+                        {/* Edit input */}
+                        <AnimatePresence>
+                            {isEditing && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="w-full overflow-hidden"
+                                >
+                                    <div className="relative border border-[var(--border)] rounded-[1.25rem] bg-white shadow-sm focus-within:shadow-md focus-within:border-[var(--foreground)] transition-all mt-3">
+                                        <textarea
+                                            value={editPrompt}
+                                            onChange={(e) => setEditPrompt(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleEdit();
+                                                }
+                                            }}
+                                            placeholder="Add more detail to methodology..."
+                                            className="w-full bg-transparent p-4 pr-12 outline-none resize-none text-[15px] placeholder:text-gray-300 max-h-32 min-h-[56px] font-medium"
+                                            rows={1}
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={handleEdit}
+                                            disabled={!editPrompt.trim()}
+                                            className="absolute right-3 bottom-3 p-1.5 rounded-full bg-[var(--foreground)] text-[var(--card)] disabled:opacity-30 transition-colors"
+                                        >
+                                            <IconArrowRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Fix Errors input */}
+                        <AnimatePresence>
+                            {isFixingErrors && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="w-full overflow-hidden"
+                                >
+                                    <div className="mt-3 border border-red-200 rounded-[1.25rem] bg-red-50/50 shadow-sm overflow-hidden">
+                                        <div className="px-4 pt-3 pb-1">
+                                            <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Paste compilation errors</span>
+                                        </div>
+                                        <textarea
+                                            value={errorLogInput}
+                                            onChange={(e) => setErrorLogInput(e.target.value)}
+                                            placeholder="Runaway argument?\nExtra ), or forgotten \endgroup...\nLaTeX Error: \begin{@twocolumnfalse}..."
+                                            className="w-full bg-transparent px-4 py-2 outline-none resize-none text-[13px] font-mono placeholder:text-red-200 min-h-[100px] max-h-[200px] text-red-700"
+                                            rows={4}
+                                            autoFocus
+                                        />
+                                        <div className="px-4 pb-3 flex justify-end">
+                                            <button
+                                                onClick={fixErrors}
+                                                disabled={!errorLogInput.trim()}
+                                                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full text-xs font-semibold hover:bg-red-600 disabled:opacity-30 transition-colors"
+                                            >
+                                                <IconBug className="w-3.5 h-3.5" /> Fix & Regenerate
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* New generation */}
                         <div className="mt-8 pt-6 border-t border-[var(--border)]">
