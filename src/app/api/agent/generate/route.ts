@@ -225,14 +225,13 @@ Remember: Output ONLY raw JSON with "main_tex" and "references_bib" fields. No m
                     { role: "user", content: userMessage }
                 ],
                 temperature: 0.7,
-                max_tokens: 16000,
             })
         });
 
         if (!response.ok) {
             const errBody = await response.text();
             console.error("OpenAI API Error:", errBody);
-            return NextResponse.json({ error: "Failed to generate document. External API error." }, { status: 500 });
+            return NextResponse.json({ error: `API error: ${errBody.slice(0, 200)}` }, { status: 500 });
         }
 
         const data = await response.json();
