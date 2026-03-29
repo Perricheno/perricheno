@@ -48,6 +48,21 @@ db.exec(`
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS agent_sessions (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        doc_type TEXT DEFAULT 'research',
+        settings_json TEXT,
+        main_tex TEXT,
+        references_bib TEXT,
+        r_images_json TEXT,
+        share_id TEXT UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 `);
 
 export default db;
@@ -193,5 +208,96 @@ if (typeof window === 'undefined') {
         }, POLLING_INTERVAL);
         
         console.log('Task background scheduler started.');
+    }
+}
+
+// --- Agent Sessions ---
+
+export interface AgentSession {
+    id: string;
+    user_id: number;
+    title: string;
+    doc_type: string;
+    settings_json: string | null;
+    main_tex: string | null;
+    references_bib: string | null;
+    r_images_json: string | null;
+    share_id: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export function createAgentSession(data: {
+    id: string;
+    user_id: number;
+    title: string;
+    doc_type: string;
+    settings_json?: string;
+    main_tex?: string;
+    references_bib?: string;
+    r_images_json?: string;
+}): AgentSession {
+    const stmt = db.prepare(`
+        INSERT INTO agent_sessions (id, user_id, title, doc_type, settings_json, main_tex, references_bib, r_images_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(data.id, data.user_id, data.title, data.doc_type, data.settings_json || null, data.main_tex || null, data.references_bib || null, data.r_images_json || null);
+    return db.prepare('SELECT * FROM agent_sessions WHERE id = ?').get(data.id) as AgentSession;
+}
+
+export function getAgentSessionsByUser(userId: number): AgentSession[] {
+    return db.prepare('SELECT id, user_id, title, doc_type, share_id, created_at, updated_at FROM agent_sessions WHERE user_id = ? ORDER BY updated_at DESC').all(userId) as AgentSession[];
+}
+
+export function getAgentSession(id: string): AgentSession | undefined {
+    return db.prepare('SELECT * FROM agent_sessions WHERE id = ?').get(id) as AgentSession | undefined;
+}
+
+export function getAgentSessionByShareId(shareId: string): AgentSession | undefined {
+    return db.prepare('SELECT * FROM agent_sessions WHERE share_id = ?').get(shareId) as AgentSession | undefined;
+}
+
+export function updateAgentSession(id: string, data: {
+    title?: string;
+    main_tex?: string;
+    references_bib?: string;
+    r_images_json?: string;
+    settings_json?: string;
+}): void {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.title !== undefined) { fields.push('title = ?'); values.push(data.title); }
+    if (data.main_tex !== undefined) { fields.push('main_tex = ?'); values.push(data.main_tex); }
+    if (data.references_bib !== undefined) { fields.push('references_bib = ?'); values.push(data.references_bib); }
+    if (data.r_images_json !== undefined) { fields.push('r_images_json = ?'); values.push(data.r_images_json); }
+    if (data.settings_json !== undefined) { fields.push('settings_json = ?'); values.push(data.settings_json); }
+
+    if (fields.length === 0) return;
+
+    fields.push("updated_at = CURRENT_TIMESTAMP");
+    values.push(id);
+
+    db.prepare(`UPDATE agent_sessions SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+}
+
+export function deleteAgentSession(id: string, userId: number): boolean {
+    const info = db.prepare('DELETE FROM agent_sessions WHERE id = ? AND user_id = ?').run(id, userId);
+    return info.changes > 0;
+}
+
+export function toggleAgentSessionShare(id: string, userId: number): string | null {
+    const session = db.prepare('SELECT * FROM agent_sessions WHERE id = ? AND user_id = ?').get(id) as AgentSession | undefined;
+    if (!session) return null;
+
+    if (session.share_id) {
+        // Remove share
+        db.prepare('UPDATE agent_sessions SET share_id = NULL WHERE id = ?').run(id);
+        return null;
+    } else {
+        // Generate share ID
+        const shareId = crypto.randomUUID().split('-')[0]; // short 8-char ID
+        db.prepare('UPDATE agent_sessions SET share_id = ? WHERE id = ?').run(shareId, id);
+        return shareId;
     }
 }

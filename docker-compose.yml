@@ -9,6 +9,9 @@ services:
       - "3002:3000"
     environment:
       - NODE_ENV=production
+      - R_COMPILER_URL=http://r-compiler:8000
+    volumes:
+      - db-data:/app/db
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/" ]
       interval: 15s
@@ -17,6 +20,28 @@ services:
       start_period: 10s
     networks:
       - cloudflare
+    depends_on:
+      r-compiler:
+        condition: service_healthy
+
+  r-compiler:
+    build:
+      context: ./r-compiler
+      dockerfile: Dockerfile
+    container_name: r-compiler
+    restart: always
+    # NO ports exposed — internal only via Docker network
+    healthcheck:
+      test: [ "CMD", "Rscript", "-e", "tryCatch(readLines(url('http://127.0.0.1:8000/health')), error=function(e) quit(status=1))" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - cloudflare
+
+volumes:
+  db-data:
 
 networks:
   cloudflare:
