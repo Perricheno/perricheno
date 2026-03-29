@@ -1,0 +1,205 @@
+\documentclass[twocolumn]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+% --- FONTS ---
+\usepackage{tgtermes} % Main text font: Times New Roman style
+\usepackage{tgheros}  % Sans-serif font: Helvetica/Arial style (for bold headers)
+\usepackage{microtype} 
+
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{ragged2e}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{csquotes}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{float}
+\usepackage{lipsum} 
+\usepackage{listings}
+
+% --- Bibliography (Strictly APA 7th) ---
+\usepackage[style=apa, backend=biber]{biblatex}
+\addbibresource{references.bib} % Connects to your references.bib file
+
+% --- Custom Styling ---
+\geometry{lmargin=0.6in,rmargin=0.6in,tmargin=0.75in,bmargin=0.75in,footskip=20pt,columnsep=0.3in}
+
+% Headers
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{<Course Name>}
+\fancyhead[R]{\today}
+\fancyfoot[C]{\thepage}
+
+\graphicspath{ {images/} }
+
+% Section Titles: Robust calculation to prevent margin bleed
+\newcommand{\styledtitle}[1]{%
+  \noindent\colorbox{black}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\centering\textcolor{white}{\sffamily\bfseries\MakeUppercase{#1}}}}%
+}
+
+\titleformat{\section}
+  {\normalfont}{}{0em}{\styledtitle}
+
+\titleformat{\subsection}
+  {\normalfont\normalsize\sffamily\bfseries}{}{0em}{}
+
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\sffamily\itshape}{}{0em}{}
+
+\lstset{
+    language=Python, 
+    basicstyle=\ttfamily\scriptsize, 
+    breaklines=true,
+    breakatwhitespace=true,
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!40!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    showstringspaces=false,
+    showlines=true
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=black,      
+    urlcolor=blue,
+    citecolor=black
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%% AUTHORS AND TITLE INFO %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\twocolumn[
+\begin{@twocolumnfalse}
+    \begin{center}
+        \LARGE \textbf{<Template Title: Your Academic Article or Diploma Design>} \\ \vspace{0.5cm}
+        
+        \normalsize \textbf{Amangeldy Shyngyskhan\textsuperscript{1}, <Second Author>\textsuperscript{1}} \\ \vspace{0.1cm}
+        \normalsize \textit{\textsuperscript{1}Perricheno Team | Astana IT University} \\ \vspace{0.4cm}
+        
+        % Flattened horizontally to save space and unified font sizes:
+        \normalsize \textbf{Course:} <Course Name> \qquad \textbf{Group:} <Your Group> \qquad \textbf{Supervisor:} <Name> \\ \vspace{0.2cm}
+        
+        \normalsize \today \ | Project Report / Diploma Design
+    \end{center}
+    \vspace{0.3cm}
+    
+    \noindent\textbf{Abstract} \\
+    \textit{This study provides a comprehensive quantitative analysis of the chosen dataset. Please replace this abstract text with a concise summary of your research, covering the background, methodology, key findings, and conclusion. Ensure it is approximately 150-250 words. Note that the font here is safely italicized across all text.}
+    \vspace{0.6cm}
+\end{@twocolumnfalse}
+]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% MAIN TEXT %%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{INTRODUCTION}
+\lipsum[2]
+
+\section{LITERATURE REVIEW}
+\lipsum[3]
+
+% Example of citing placeholder (Using APA 7th and entries from your references.bib)
+\noindent According to \textcite{nguyen2018impact}, delivery speed significantly impacts customer satisfaction. Another study confirms this trend \parencite{rao2011}.
+
+\section{DATA EXPLORATION}
+\lipsum[4]
+
+\begin{itemize}
+    \item \textbf{Key Point A}: Analysis of major dataset factors.
+    \item \textbf{Key Point B}: Distribution of logistics components.
+\end{itemize}
+
+\section{METHODOLOGY}
+\lipsum[5]
+
+\subsection{Statistical Summary}
+We present the correlation structure of our variables in Table \ref{tab:template_table}. 
+
+\begin{table}[H]
+\centering
+\caption{Example Table Template}
+\label{tab:template_table}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+ & Column A & Column B & Column C & Column D \\
+\midrule
+Row 1 & 1.00 & -0.28 & 0.08 & 0.07 \\
+Row 2 & -0.28 & 1.00 & -0.09 & 0.24 \\
+Row 3 & 0.08 & -0.09 & 1.00 & 0.52 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\section{RESULTS \& DISCUSSION}
+
+\subsection{1. First Key Finding}
+\textbf{Business Target}: Placeholder analysis output here.
+
+\textbf{Extended Analysis}: Placeholder explanation output here.
+
+\begin{lstlisting}[caption={Example Code Snippet}]
+# Placeholder for data analysis code
+import pandas as pd
+import numpy as np
+
+def run_analysis(data):
+    """
+    Function to compute core metrics
+    """
+    return np.mean(data)
+\end{lstlisting}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\rule{0pt}{1.5in} \rule{0.9\linewidth}{0pt}} 
+    \caption{Placeholder for an Example Data Figure}
+    \label{fig:example_plot}
+\end{figure}
+
+\subsection{2. Second Key Finding}
+\textbf{Impact}: Key impacts detailed here.
+
+\textbf{Extended Analysis}: Details and correlations.
+
+\begin{figure}[H]
+    \centering
+    \fbox{\rule{0pt}{1.5in} \rule{0.9\linewidth}{0pt}} 
+    \caption{Placeholder for Another Example Figure}
+    \label{fig:example_plot2}
+\end{figure}
+
+\section{CONCLUSION}
+\lipsum[10]
+
+% -------------------------------------------------------------
+% BIBLIOGRAPHY
+% -------------------------------------------------------------
+\nocite{*} % Prints ALL references from your references.bib file, even if you didn't cite them!
+\printbibliography
+
+\end{document}
