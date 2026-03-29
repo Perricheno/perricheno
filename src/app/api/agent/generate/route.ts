@@ -224,7 +224,7 @@ Remember: Output ONLY raw JSON with "main_tex" and "references_bib" fields. No m
                     { role: "system", content: SYSTEM_PROMPT },
                     { role: "user", content: userMessage }
                 ],
-                temperature: 0.7,
+
             })
         });
 
