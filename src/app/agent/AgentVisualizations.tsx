@@ -150,11 +150,11 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
     if (status === "done") return null;
 
     return (
-        <div className="flex flex-col items-center justify-center p-6 bg-white border border-[var(--border)] rounded-xl aspect-[4/3] shadow-sm relative overflow-hidden">
-            <span className="absolute top-2 left-2 px-2 py-1 bg-black/5 text-gray-500 rounded-md text-[10px] font-bold uppercase tracking-wider z-10">
+        <div className={`flex flex-col items-center justify-center ${status === "streaming" ? "p-3 pt-10" : "p-6"} bg-white border border-[var(--border)] rounded-xl aspect-[4/3] shadow-sm relative overflow-hidden transition-all duration-300`}>
+            <span className="absolute top-2 left-2 px-2 py-1 bg-black/5 text-gray-500 rounded-md text-[10px] font-bold uppercase tracking-wider z-10 shadow-sm backdrop-blur-md">
                 {chartType.replace("_", " ")}
             </span>
-            <button onClick={onCancel} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 z-10">
+            <button onClick={onCancel} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 z-10 bg-white/50 backdrop-blur rounded p-0.5">
                 <IconAlertCircle className="w-4 h-4 opacity-0" />
                 <span className="text-xs font-bold px-2">Cancel</span>
             </button>
@@ -167,12 +167,12 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
             )}
             
             {status === "streaming" && (
-                <div className="w-full h-full flex flex-col bg-gray-900 rounded-lg p-3 overflow-hidden text-left relative mt-6 border border-gray-800 shadow-inner">
-                    <span className="text-[9px] text-green-400 font-mono mb-2 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse block"></span>
+                <div className="w-full h-full flex flex-col bg-gray-50/50 rounded-lg p-3 overflow-hidden text-left relative border border-gray-100 shadow-inner">
+                    <span className="text-[9px] text-gray-400 font-mono font-bold mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse block"></span>
                         AI Writing Script...
                     </span>
-                    <pre ref={codeRef} className="text-[9px] text-gray-300 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4">
+                    <pre ref={codeRef} className="text-[9px] text-gray-700 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4">
                         {code}
                     </pre>
                 </div>
