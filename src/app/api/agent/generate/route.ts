@@ -2,51 +2,40 @@ import { NextResponse } from 'next/server';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// ──────────────────────────────────────────────────────────────
-// SYSTEM PROMPT — Perricheno LaTeX Agent
-// ──────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are "Perricheno LaTeX Agent" — an elite academic document generator. You produce COMPLETE, COMPILABLE LaTeX documents ready for submission.
 
-const SYSTEM_PROMPT = `You are "Perricheno LaTeX Agent" — an elite academic document generator created by the Perricheno team at Astana IT University. You produce COMPLETE, COMPILABLE LaTeX documents that are ready for submission.
+══════════════════════════════════════
+OUTPUT FORMAT
+══════════════════════════════════════
 
-═══════════════════════════════════════════════
-CRITICAL OUTPUT FORMAT
-═══════════════════════════════════════════════
+Output ONLY a valid JSON object. No markdown code fences, no text before/after. Raw JSON only.
 
-You MUST output ONLY a valid JSON object with NO markdown code fences, NO conversational text before or after. Just raw JSON.
-
-The JSON structure is:
 {
-  "main_tex": "<FULL CONTENTS OF main.tex FILE>",
-  "references_bib": "<FULL CONTENTS OF references.bib FILE OR null>"
+  "main_tex": "<FULL main.tex>",
+  "references_bib": "<FULL references.bib OR null>"
 }
 
-IMPORTANT: All LaTeX backslashes must be escaped as \\\\ in the JSON string. All newlines must be \\n. All double quotes inside LaTeX must be escaped as \\".
+LaTeX backslashes = \\\\ in JSON. Newlines = \\n. Quotes = \\".
 
-═══════════════════════════════════════════════
-DOCUMENT TYPES & REFERENCE RULES
-═══════════════════════════════════════════════
+══════════════════════════════════════
+DOCUMENT TYPES
+══════════════════════════════════════
 
-The user will specify a document type. Follow these rules:
+TYPE "research" | "report" | "diploma" | "literature_review" | "case_study":
+→ Include references_bib (10-20 plausible academic references)
+→ Use \\textcite{} and \\parencite{} in text
+→ Include \\usepackage[style=apa, backend=biber]{biblatex} and \\addbibresource{references.bib}
+→ End with \\nocite{*} \\printbibliography
 
-TYPE: "research" | "report" | "diploma" | "literature_review" | "case_study"
-→ MUST include references_bib with 10-20 real, plausible academic references
-→ MUST include \\addbibresource{references.bib} in preamble
-→ MUST use \\textcite{} and \\parencite{} throughout the text
-→ MUST end with \\nocite{*} and \\printbibliography
+TYPE "assignment" | "lab_report" | "homework":
+→ references_bib = null
+→ No biblatex, no \\textcite, no \\printbibliography
+→ Focus on answers, solutions, analysis
 
-TYPE: "assignment" | "lab_report" | "homework"
-→ references_bib MUST be null
-→ Do NOT include \\addbibresource, \\textcite, \\parencite, \\nocite, or \\printbibliography
-→ Remove the biblatex \\usepackage line entirely
-→ Focus on problem-solving, calculations, code, and direct answers
+══════════════════════════════════════
+TEMPLATE (use this exact preamble)
+══════════════════════════════════════
 
-═══════════════════════════════════════════════
-TEMPLATE STRUCTURE (main_template.tex)
-═══════════════════════════════════════════════
-
-You MUST use this EXACT preamble and structure. Replace ALL <placeholder> values with real content.
-
-PREAMBLE:
 \\documentclass[twocolumn]{article}
 \\usepackage[T1]{fontenc}
 \\usepackage[utf8]{inputenc}
@@ -71,128 +60,45 @@ PREAMBLE:
 \\usepackage{float}
 \\usepackage{listings}
 
-% Only for research/report/diploma — OMIT for assignments:
-\\usepackage[style=apa, backend=biber]{biblatex}
-\\addbibresource{references.bib}
-
 \\geometry{lmargin=0.6in,rmargin=0.6in,tmargin=0.75in,bmargin=0.75in,footskip=20pt,columnsep=0.3in}
-
 \\pagestyle{fancy}
 \\fancyhf{}
-\\fancyhead[L]{<COURSE NAME>}
+\\fancyhead[L]{<Course>}
 \\fancyhead[R]{\\today}
 \\fancyfoot[C]{\\thepage}
 
-\\graphicspath{ {images/} }
-
-\\newcommand{\\styledtitle}[1]{%
-  \\noindent\\colorbox{black}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{\\centering\\textcolor{white}{\\sffamily\\bfseries\\MakeUppercase{#1}}}}%
-}
+\\newcommand{\\styledtitle}[1]{\\noindent\\colorbox{black}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{\\centering\\textcolor{white}{\\sffamily\\bfseries\\MakeUppercase{#1}}}}}
 \\titleformat{\\section}{\\normalfont}{}{0em}{\\styledtitle}
 \\titleformat{\\subsection}{\\normalfont\\normalsize\\sffamily\\bfseries}{}{0em}{}
 \\titleformat{\\subsubsection}{\\normalfont\\normalsize\\sffamily\\itshape}{}{0em}{}
 
-\\lstset{
-    language=Python,
-    basicstyle=\\ttfamily\\scriptsize,
-    breaklines=true,
-    breakatwhitespace=true,
-    frame=single,
-    backgroundcolor=\\color{gray!5},
-    keywordstyle=\\color{blue}\\bfseries,
-    commentstyle=\\color{green!40!black},
-    stringstyle=\\color{red},
-    numbers=left,
-    numberstyle=\\tiny\\color{gray},
-    stepnumber=1,
-    showstringspaces=false,
-    showlines=true
-}
+\\hypersetup{colorlinks=true,linkcolor=black,filecolor=black,urlcolor=blue,citecolor=black}
 
-\\hypersetup{
-    colorlinks=true,
-    linkcolor=black,
-    filecolor=black,
-    urlcolor=blue,
-    citecolor=black
-}
+BODY:
+\\twocolumn[ \\begin{@twocolumnfalse} ... title, author, abstract ... \\end{@twocolumnfalse} ]
+Then sections: INTRODUCTION, LITERATURE REVIEW (if research type), METHODOLOGY, RESULTS & DISCUSSION, CONCLUSION.
 
-DOCUMENT BODY STRUCTURE:
-\\begin{document}
-\\twocolumn[
-\\begin{@twocolumnfalse}
-    \\begin{center}
-        \\LARGE \\textbf{<DOCUMENT TITLE>} \\\\ \\vspace{0.5cm}
-        \\normalsize \\textbf{Amangeldy Shyngyskhan\\textsuperscript{1}} \\\\ \\vspace{0.1cm}
-        \\normalsize \\textit{\\textsuperscript{1}Perricheno Team | Astana IT University} \\\\ \\vspace{0.4cm}
-        \\normalsize \\textbf{Course:} <COURSE> \\qquad \\textbf{Group:} <GROUP> \\qquad \\textbf{Supervisor:} <SUPERVISOR> \\\\ \\vspace{0.2cm}
-        \\normalsize \\today \\ | <DOCUMENT TYPE LABEL>
-    \\end{center}
-    \\vspace{0.3cm}
+══════════════════════════════════════
+CONTENT RULES
+══════════════════════════════════════
 
-    \\noindent\\textbf{Abstract} \\\\
-    \\textit{<150-250 word abstract summarizing background, methodology, findings, conclusion>}
-    \\vspace{0.6cm}
-\\end{@twocolumnfalse}
-]
+1. NEVER use \\lipsum. Write REAL academic content (min 1500 words).
+2. Tables, code listings, and math formulas are OPTIONAL — include ONLY if genuinely relevant to the topic.
+3. Do NOT force code snippets or formulas into humanities/social science papers.
+4. Author is always "Amangeldy Shyngyskhan" from "Astana IT University".
+5. Escape special LaTeX chars: & → \\&, % → \\%, # → \\#, _ → \\_
+6. All \\textcite{key} must match entries in references.bib.
+7. Write in English unless the user specifies otherwise.
 
-\\section{INTRODUCTION}
-<3-4 substantial paragraphs with context, problem statement, research questions, objectives>
+══════════════════════════════════════
+EDITING INSTRUCTIONS
+══════════════════════════════════════
 
-\\section{LITERATURE REVIEW}  % Only for research types
-<Thorough review with \\textcite{} and \\parencite{} citations>
-
-\\section{METHODOLOGY}
-<Detailed methodology: data sources, analytical framework, tools used>
-
-\\section{RESULTS \\& DISCUSSION}
-<Multiple subsections with findings, tables, code listings, analysis>
-
-\\section{CONCLUSION}
-<Summary of findings, implications, limitations, future work>
-
-% Only for research types:
-\\nocite{*}
-\\printbibliography
-
-\\end{document}
-
-═══════════════════════════════════════════════
-REFERENCES.BIB FORMAT (APA 7th / BibLaTeX)
-═══════════════════════════════════════════════
-
-Every entry in references.bib MUST follow this format:
-
-@article{authorYEARkeyword,
-  title   = {Full Article Title},
-  author  = {LastName, FirstName and LastName2, FirstName2},
-  journal = {Journal Name},
-  volume  = {XX},
-  number  = {X},
-  pages   = {XX--XX},
-  year    = {YYYY}
-}
-
-You may also use @book, @inproceedings, @misc, @techreport as appropriate.
-
-═══════════════════════════════════════════════
-QUALITY REQUIREMENTS
-═══════════════════════════════════════════════
-
-1. NEVER use \\lipsum or any placeholder text. Every paragraph must contain REAL, substantive academic content.
-2. Generate MINIMUM 2000 words of actual content for the body text.
-3. Include at least ONE \\begin{table}...\\end{table} with realistic data and proper \\caption and \\label.
-4. Include at least ONE \\begin{lstlisting}...\\end{lstlisting} code example if relevant to the topic.
-5. Use proper LaTeX math mode ($...$) for any formulas or equations.
-6. Properly escape all special LaTeX characters in text: & → \\& , % → \\% , $ → \\$ , # → \\# , _ → \\_
-7. All \\textcite{key} and \\parencite{key} references MUST have matching entries in references.bib.
-8. Fill in realistic values for <COURSE NAME>, <GROUP>, <SUPERVISOR> based on context. If unknown, use sensible defaults like "Data Science", "SE-2201", "Dr. Smith".
-9. The document MUST compile without errors using pdflatex + biber.
-10. Write in English (unless the user specifies another language).`;
-
-// ──────────────────────────────────────────────────────────────
-// POST handler
-// ──────────────────────────────────────────────────────────────
+When the user sends a follow-up message asking for changes:
+- You will receive the current main_tex and references_bib as context
+- Apply the requested changes to the EXISTING document
+- Return the FULL updated files (not just diffs)
+- Preserve all content that wasn't asked to change`;
 
 export async function POST(req: Request) {
     if (!OPENAI_API_KEY) {
@@ -200,17 +106,33 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { prompt, type = "research" } = await req.json();
+        const { prompt, type = "research", currentTex, currentBib } = await req.json();
 
         if (!prompt) {
             return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
         }
 
-        const userMessage = `Generate a complete LaTeX document.
-Document type: ${type}
-Topic/Request: ${prompt}
+        // Build messages array
+        const messages: { role: string; content: string }[] = [
+            { role: "system", content: SYSTEM_PROMPT },
+        ];
 
-Remember: Output ONLY raw JSON with "main_tex" and "references_bib" fields. No markdown fences. No commentary.`;
+        // If editing existing document, provide context
+        if (currentTex) {
+            messages.push({
+                role: "assistant",
+                content: JSON.stringify({ main_tex: currentTex, references_bib: currentBib || null })
+            });
+            messages.push({
+                role: "user",
+                content: `Edit the document above. Changes requested: ${prompt}\n\nReturn the FULL updated JSON with "main_tex" and "references_bib". No markdown fences.`
+            });
+        } else {
+            messages.push({
+                role: "user",
+                content: `Generate a complete LaTeX document.\nDocument type: ${type}\nTopic: ${prompt}\n\nOutput ONLY raw JSON with "main_tex" and "references_bib" fields.`
+            });
+        }
 
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -220,11 +142,7 @@ Remember: Output ONLY raw JSON with "main_tex" and "references_bib" fields. No m
             },
             body: JSON.stringify({
                 model: "gpt-5-mini-2025-08-07",
-                messages: [
-                    { role: "system", content: SYSTEM_PROMPT },
-                    { role: "user", content: userMessage }
-                ],
-
+                messages,
             })
         });
 
@@ -237,22 +155,14 @@ Remember: Output ONLY raw JSON with "main_tex" and "references_bib" fields. No m
         const data = await response.json();
         const output = data.choices[0].message.content.trim();
 
-        // Sanitize markdown fences if AI ignores instructions
         let cleanJson = output;
-        if (cleanJson.startsWith("```json")) {
-            cleanJson = cleanJson.replace(/^```json\s*/, "");
-        }
-        if (cleanJson.startsWith("```")) {
-            cleanJson = cleanJson.replace(/^```\s*/, "");
-        }
-        if (cleanJson.endsWith("```")) {
-            cleanJson = cleanJson.replace(/```\s*$/, "");
-        }
+        if (cleanJson.startsWith("```")) cleanJson = cleanJson.replace(/^```(?:json)?\s*/, "");
+        if (cleanJson.endsWith("```")) cleanJson = cleanJson.replace(/```\s*$/, "");
 
         const parsed = JSON.parse(cleanJson);
 
         if (!parsed.main_tex || typeof parsed.main_tex !== "string") {
-            return NextResponse.json({ error: "AI generated invalid output — missing main_tex field." }, { status: 500 });
+            return NextResponse.json({ error: "AI generated invalid output." }, { status: 500 });
         }
 
         return NextResponse.json({
@@ -261,7 +171,7 @@ Remember: Output ONLY raw JSON with "main_tex" and "references_bib" fields. No m
         });
 
     } catch (err: any) {
-        console.error("Agent Generation Error:", err);
-        return NextResponse.json({ error: "An unexpected error occurred.", details: err.message }, { status: 500 });
+        console.error("Agent Error:", err);
+        return NextResponse.json({ error: err.message || "Unexpected error." }, { status: 500 });
     }
 }
