@@ -31,7 +31,7 @@ DOCUMENT TYPES
 CRITICAL LATEX RULES
 ══════════════════════════
 
-RULE 1 — TITLE BLOCK SYNTAX (this exact pattern, no variations):
+RULE 1 — TITLE BLOCK (use this EXACT pattern):
 \\twocolumn[
 \\begin{@twocolumnfalse}
 \\begin{center}
@@ -48,25 +48,17 @@ RULE 1 — TITLE BLOCK SYNTAX (this exact pattern, no variations):
 \\end{@twocolumnfalse}
 ]
 
-NEVER put \\begin{abstract} inside @twocolumnfalse. Use \\noindent\\textbf{Abstract} \\\\ instead.
-NEVER nest any other environments incorrectly. The ONLY contents between @twocolumnfalse are: center block + abstract text.
+NEVER use \\begin{abstract} inside @twocolumnfalse.
 
-RULE 2 — BRACE MATCHING:
-Every { must have a matching }. Count your braces carefully. This is the #1 source of errors.
-\\textsuperscript{1} — correct
-\\textbf{Bold text} — correct
+RULE 2 — BRACE MATCHING: Every { must have a matching }. Count carefully.
 
-RULE 3 — SECTION COMMANDS (use \\& not &):
-\\section{RESULTS \\& DISCUSSION} — correct
-\\section{RESULTS & DISCUSSION} — WRONG, will crash
+RULE 3 — SECTIONS: Use \\& not & in section names: \\section{RESULTS \\& DISCUSSION}
 
-RULE 4 — CITATION KEYS:
-If you write \\textcite{smith2023ai} in main_tex, then references_bib MUST contain @article{smith2023ai, ...}
-Use simple lowercase keys like: author2024topic, jones2022ml
+RULE 4 — CITATIONS: Every \\textcite{key} must have a matching @article{key,...} in references_bib.
 
-RULE 5 — NO \\lipsum. Write real content (1500+ words).
+RULE 5 — No \\lipsum. Real content, 1500+ words.
 
-RULE 6 — Tables/code/formulas are OPTIONAL. Only include if relevant.
+RULE 6 — Tables/code/formulas OPTIONAL. Only if relevant.
 
 ══════════════════════════
 PREAMBLE TEMPLATE
@@ -82,9 +74,7 @@ PREAMBLE TEMPLATE
 \\usepackage{tabularx}
 \\usepackage{ragged2e}
 \\usepackage{booktabs}
-\\usepackage{amsmath}
-\\usepackage{amsfonts}
-\\usepackage{amssymb}
+\\usepackage{amsmath,amsfonts,amssymb}
 \\usepackage{longtable}
 \\usepackage[table]{xcolor}
 \\usepackage{caption}
@@ -96,7 +86,7 @@ PREAMBLE TEMPLATE
 \\usepackage{float}
 \\usepackage{listings}
 
-% Only for research/report/diploma types:
+% Only for research/report/diploma:
 \\usepackage[style=apa, backend=biber]{biblatex}
 \\addbibresource{references.bib}
 
@@ -117,9 +107,42 @@ PREAMBLE TEMPLATE
 EDITING & ERROR FIXING
 ══════════════════════════
 
-When editing: receive current files, apply changes, return FULL updated files.
-When fixing errors: receive LaTeX compilation errors + current files. Analyze each error, fix the LaTeX code, return corrected FULL files.
-Common fixes: brace matching, \\& instead of &, matching citation keys, correct @twocolumnfalse nesting.`;
+When editing: apply changes to existing document, return FULL updated files.
+When fixing errors: analyze each LaTeX compilation error, fix code, return corrected FULL files.
+Common fixes: brace matching, \\& instead of &, citation keys, @twocolumnfalse nesting.`;
+
+function buildMessages(params: { prompt?: string; type: string; currentTex?: string; currentBib?: string; errorLog?: string }) {
+    const messages: { role: string; content: string }[] = [
+        { role: "system", content: SYSTEM_PROMPT },
+    ];
+
+    if (params.errorLog && params.currentTex) {
+        messages.push({
+            role: "assistant",
+            content: JSON.stringify({ main_tex: params.currentTex, references_bib: params.currentBib || null })
+        });
+        messages.push({
+            role: "user",
+            content: `The LaTeX document has compilation errors. Fix ALL of them.\n\nERRORS:\n${params.errorLog}\n\nFix brace mismatches, environment nesting, citation keys, special chars. Return FULL corrected JSON.`
+        });
+    } else if (params.currentTex) {
+        messages.push({
+            role: "assistant",
+            content: JSON.stringify({ main_tex: params.currentTex, references_bib: params.currentBib || null })
+        });
+        messages.push({
+            role: "user",
+            content: `Edit the document. Changes: ${params.prompt}\n\nReturn FULL updated JSON.`
+        });
+    } else {
+        messages.push({
+            role: "user",
+            content: `Generate a complete LaTeX document.\nType: ${params.type}\nTopic: ${params.prompt}\n\nOutput ONLY raw JSON.`
+        });
+    }
+
+    return messages;
+}
 
 export async function POST(req: Request) {
     if (!OPENAI_API_KEY) {
@@ -127,53 +150,14 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { prompt, type = "research", currentTex, currentBib, errorLog } = await req.json();
+        const body = await req.json();
+        const { prompt, type = "research", currentTex, currentBib, errorLog } = body;
 
         if (!prompt && !errorLog) {
             return NextResponse.json({ error: "Prompt or error log is required." }, { status: 400 });
         }
 
-        const messages: { role: string; content: string }[] = [
-            { role: "system", content: SYSTEM_PROMPT },
-        ];
-
-        if (errorLog && currentTex) {
-            // Error fix mode
-            messages.push({
-                role: "assistant",
-                content: JSON.stringify({ main_tex: currentTex, references_bib: currentBib || null })
-            });
-            messages.push({
-                role: "user",
-                content: `The LaTeX document above has compilation errors. Fix ALL of them.
-
-COMPILATION ERRORS:
-${errorLog}
-
-INSTRUCTIONS:
-1. Analyze each error carefully
-2. Fix brace mismatches, environment nesting, citation keys, special character escaping
-3. Make sure \\begin{@twocolumnfalse} and \\end{@twocolumnfalse} are correctly nested
-4. Make sure every \\textcite{key} and \\parencite{key} has a matching entry in references.bib
-5. Return the FULL corrected JSON with "main_tex" and "references_bib". No markdown fences.`
-            });
-        } else if (currentTex) {
-            // Edit mode
-            messages.push({
-                role: "assistant",
-                content: JSON.stringify({ main_tex: currentTex, references_bib: currentBib || null })
-            });
-            messages.push({
-                role: "user",
-                content: `Edit the document above. Changes: ${prompt}\n\nReturn FULL updated JSON. No markdown fences.`
-            });
-        } else {
-            // New generation
-            messages.push({
-                role: "user",
-                content: `Generate a complete LaTeX document.\nType: ${type}\nTopic: ${prompt}\n\nOutput ONLY raw JSON.`
-            });
-        }
+        const messages = buildMessages({ prompt, type, currentTex, currentBib, errorLog });
 
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -184,6 +168,7 @@ INSTRUCTIONS:
             body: JSON.stringify({
                 model: "gpt-5-mini-2025-08-07",
                 messages,
+                stream: true,
             })
         });
 
@@ -193,22 +178,54 @@ INSTRUCTIONS:
             return NextResponse.json({ error: `API error: ${errBody.slice(0, 200)}` }, { status: 500 });
         }
 
-        const data = await response.json();
-        const output = data.choices[0].message.content.trim();
+        // Stream the response to the client
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
 
-        let cleanJson = output;
-        if (cleanJson.startsWith("```")) cleanJson = cleanJson.replace(/^```(?:json)?\s*/, "");
-        if (cleanJson.endsWith("```")) cleanJson = cleanJson.replace(/```\s*$/, "");
+        const stream = new ReadableStream({
+            async start(controller) {
+                const reader = response.body!.getReader();
+                let buffer = "";
 
-        const parsed = JSON.parse(cleanJson);
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
 
-        if (!parsed.main_tex || typeof parsed.main_tex !== "string") {
-            return NextResponse.json({ error: "AI generated invalid output." }, { status: 500 });
-        }
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || "";
 
-        return NextResponse.json({
-            main_tex: parsed.main_tex,
-            references_bib: parsed.references_bib || null,
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                            const data = trimmed.slice(6);
+                            if (data === '[DONE]') continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices?.[0]?.delta?.content;
+                                if (content) {
+                                    controller.enqueue(encoder.encode(content));
+                                }
+                            } catch {
+                                // skip malformed chunks
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("Stream error:", err);
+                } finally {
+                    controller.close();
+                }
+            }
+        });
+
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Transfer-Encoding': 'chunked',
+            }
         });
 
     } catch (err: any) {

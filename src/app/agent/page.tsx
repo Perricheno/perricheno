@@ -1,27 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
     IconArrowRight, IconLoader2, IconPaperclip,
     IconFileText, IconBook, IconPackage, IconDownload,
-    IconX, IconPencil, IconCheck, IconSparkles, IconEye,
-    IconBug
+    IconX, IconPencil, IconCheck, IconEye, IconBug,
+    IconClock, IconLetterCase
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
 
 type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study";
 
-type Stage = {
-    label: string;
-    progress: number;
-    status: "pending" | "active" | "done";
-};
-
 export default function AgentPage() {
     const [prompt, setPrompt] = useState("");
     const [docType, setDocType] = useState<DocType>("research");
-    const [phase, setPhase] = useState<"idle" | "generating" | "done">("idle");
+    const [phase, setPhase] = useState<"idle" | "streaming" | "done">("idle");
     const [isEditing, setIsEditing] = useState(false);
     const [editPrompt, setEditPrompt] = useState("");
     const [isFixingErrors, setIsFixingErrors] = useState(false);
@@ -33,16 +27,14 @@ export default function AgentPage() {
     const [error, setError] = useState<string | null>(null);
     const [topic, setTopic] = useState("");
 
-    // Progress stages
-    const [stages, setStages] = useState<Stage[]>([
-        { label: "Analyzing topic", progress: 0, status: "pending" },
-        { label: "Structuring sections", progress: 0, status: "pending" },
-        { label: "Writing content", progress: 0, status: "pending" },
-        { label: "Generating references", progress: 0, status: "pending" },
-        { label: "Formatting LaTeX", progress: 0, status: "pending" },
-    ]);
-    const [overallProgress, setOverallProgress] = useState(0);
-    const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    // Streaming state — REAL data
+    const [streamText, setStreamText] = useState("");
+    const [streamChars, setStreamChars] = useState(0);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const streamBoxRef = useRef<HTMLDivElement>(null);
+
+    const EXPECTED_CHARS = 12000; // rough estimate for progress bar
 
     const suggestions: { label: string; type: DocType }[] = [
         { label: "Research Paper", type: "research" },
@@ -53,119 +45,109 @@ export default function AgentPage() {
         { label: "Case Study", type: "case_study" },
     ];
 
-    // Animate progress stages while generating
-    const startProgressAnimation = () => {
-        let progress = 0;
-        const stageThresholds = [15, 35, 70, 85, 95];
+    // Auto-scroll stream preview
+    useEffect(() => {
+        if (streamBoxRef.current) {
+            streamBoxRef.current.scrollTop = streamBoxRef.current.scrollHeight;
+        }
+    }, [streamText]);
 
-        progressIntervalRef.current = setInterval(() => {
-            progress += Math.random() * 2 + 0.5;
-            if (progress > 95) progress = 95; // Cap at 95 until API returns
-
-            setOverallProgress(Math.round(progress));
-            setStages(prev => prev.map((s, i) => {
-                const start = i === 0 ? 0 : stageThresholds[i - 1];
-                const end = stageThresholds[i];
-                const stageProgress = Math.min(100, Math.max(0, ((progress - start) / (end - start)) * 100));
-
-                if (progress >= end) return { ...s, progress: 100, status: "done" };
-                if (progress >= start) return { ...s, progress: Math.round(stageProgress), status: "active" };
-                return { ...s, progress: 0, status: "pending" };
-            }));
-        }, 200);
+    const startTimer = () => {
+        setElapsedTime(0);
+        timerRef.current = setInterval(() => setElapsedTime(t => t + 0.1), 100);
     };
 
-    const stopProgressAnimation = (success: boolean) => {
-        if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-        }
-        if (success) {
-            setOverallProgress(100);
-            setStages(prev => prev.map(s => ({ ...s, progress: 100, status: "done" })));
+    const stopTimer = () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
         }
     };
 
-    const generate = async (text: string, type: DocType = docType, isEdit = false) => {
-        if (!text.trim()) return;
+    const parseResult = (fullText: string) => {
+        let clean = fullText.trim();
+        if (clean.startsWith("```")) clean = clean.replace(/^```(?:json)?\s*/, "");
+        if (clean.endsWith("```")) clean = clean.replace(/```\s*$/, "");
 
+        const parsed = JSON.parse(clean);
+        if (!parsed.main_tex || typeof parsed.main_tex !== "string") {
+            throw new Error("Invalid output — missing main_tex");
+        }
+        return { main_tex: parsed.main_tex, references_bib: parsed.references_bib || null };
+    };
+
+    const streamGenerate = useCallback(async (body: Record<string, any>, topicText: string) => {
         setError(null);
-        setPhase("generating");
-        setTopic(text);
-        setDocType(type);
+        setPhase("streaming");
+        setTopic(topicText);
+        setStreamText("");
+        setStreamChars(0);
         setIsEditing(false);
-        setOverallProgress(0);
-        setStages(prev => prev.map(s => ({ ...s, progress: 0, status: "pending" })));
-        startProgressAnimation();
+        setIsFixingErrors(false);
+        startTimer();
 
         try {
-            const body: any = { prompt: text, type };
-            if (isEdit && mainTex) {
-                body.currentTex = mainTex;
-                body.currentBib = referencesBib;
-            }
-
             const res = await fetch('/api/agent/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
-            const data = await res.json();
 
-            if (!res.ok) throw new Error(data.error || "Generation failed");
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+                throw new Error(errorData.error || `HTTP ${res.status}`);
+            }
 
-            setMainTex(data.main_tex);
-            setReferencesBib(data.references_bib || null);
-            stopProgressAnimation(true);
+            const reader = res.body!.getReader();
+            const decoder = new TextDecoder();
+            let accumulated = "";
 
-            setTimeout(() => setPhase("done"), 600);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                accumulated += chunk;
+
+                setStreamText(accumulated);
+                setStreamChars(accumulated.length);
+            }
+
+            stopTimer();
+
+            // Parse the accumulated JSON
+            const result = parseResult(accumulated);
+            setMainTex(result.main_tex);
+            setReferencesBib(result.references_bib);
+            setActiveTab("tex");
+            setPhase("done");
+
         } catch (err: any) {
-            stopProgressAnimation(false);
+            stopTimer();
             setError(err.message);
             setPhase("done");
         }
+    }, []);
+
+    const generate = (text: string, type: DocType = docType) => {
+        if (!text.trim()) return;
+        setDocType(type);
+        setPrompt("");
+        streamGenerate({ prompt: text, type }, text);
     };
 
     const handleEdit = () => {
         if (!editPrompt.trim()) return;
-        generate(editPrompt, docType, true);
+        const text = editPrompt;
         setEditPrompt("");
+        streamGenerate({ prompt: text, type: docType, currentTex: mainTex, currentBib: referencesBib }, topic + " (edit)");
     };
 
-    const fixErrors = async () => {
+    const fixErrors = () => {
         if (!errorLogInput.trim() || !mainTex) return;
-
-        setError(null);
-        setPhase("generating");
-        setIsFixingErrors(false);
-        setOverallProgress(0);
-        setStages(prev => prev.map(s => ({ ...s, progress: 0, status: "pending" })));
-        startProgressAnimation();
-
-        try {
-            const res = await fetch('/api/agent/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    errorLog: errorLogInput,
-                    currentTex: mainTex,
-                    currentBib: referencesBib,
-                    type: docType,
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Fix failed");
-
-            setMainTex(data.main_tex);
-            setReferencesBib(data.references_bib || null);
-            stopProgressAnimation(true);
-            setErrorLogInput("");
-            setTimeout(() => setPhase("done"), 600);
-        } catch (err: any) {
-            stopProgressAnimation(false);
-            setError(err.message);
-            setPhase("done");
-        }
+        const log = errorLogInput;
+        setErrorLogInput("");
+        streamGenerate({ errorLog: log, currentTex: mainTex, currentBib: referencesBib, type: docType }, topic + " (fix)");
     };
 
     const downloadFile = (content: string, filename: string) => {
@@ -249,72 +231,55 @@ export default function AgentPage() {
         );
     }
 
-    // ─── GENERATING ───
-    if (phase === "generating") {
+    // ─── STREAMING (REAL) ───
+    if (phase === "streaming") {
+        const estimatedProgress = Math.min(95, Math.round((streamChars / EXPECTED_CHARS) * 100));
+
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[var(--background)] p-6">
+            <div className="w-full h-full flex flex-col font-sans bg-[var(--background)] p-4 md:p-6 overflow-hidden">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="w-full max-w-lg"
+                    className="w-full h-full flex flex-col max-w-4xl mx-auto"
                 >
-                    {/* Overall progress circle */}
-                    <div className="flex flex-col items-center mb-12">
-                        <div className="relative w-28 h-28 mb-4">
-                            <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="44" fill="none" stroke="var(--border)" strokeWidth="6" />
-                                <circle
-                                    cx="50" cy="50" r="44" fill="none"
-                                    stroke="var(--foreground)"
-                                    strokeWidth="6"
-                                    strokeLinecap="round"
-                                    strokeDasharray={`${2 * Math.PI * 44}`}
-                                    strokeDashoffset={`${2 * Math.PI * 44 * (1 - overallProgress / 100)}`}
-                                    className="transition-all duration-300"
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-2xl font-bold tracking-tight">{overallProgress}%</span>
+                    {/* Stats bar */}
+                    <div className="flex items-center justify-between mb-4 px-1">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5 text-sm font-mono text-[var(--foreground)]">
+                                <IconClock className="w-4 h-4 text-gray-400" />
+                                <span className="tabular-nums">{elapsedTime.toFixed(1)}s</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-sm font-mono text-[var(--foreground)]">
+                                <IconLetterCase className="w-4 h-4 text-gray-400" />
+                                <span className="tabular-nums">{streamChars.toLocaleString()}</span>
+                                <span className="text-gray-300 text-xs">chars</span>
                             </div>
                         </div>
-                        <p className="text-sm text-gray-400 font-medium">{topic}</p>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs font-mono text-gray-400 tabular-nums">{estimatedProgress}%</span>
+                            <div className="w-32 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-[var(--foreground)] rounded-full"
+                                    animate={{ width: `${estimatedProgress}%` }}
+                                    transition={{ duration: 0.3 }}
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Stages */}
-                    <div className="space-y-5">
-                        {stages.map((stage, i) => (
-                            <div key={i} className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5">
-                                        {stage.status === "done" ? (
-                                            <div className="w-5 h-5 rounded-full bg-[var(--foreground)] flex items-center justify-center">
-                                                <IconCheck className="w-3 h-3 text-white" />
-                                            </div>
-                                        ) : stage.status === "active" ? (
-                                            <div className="w-5 h-5 rounded-full border-2 border-[var(--foreground)] flex items-center justify-center">
-                                                <div className="w-2 h-2 rounded-full bg-[var(--foreground)] animate-pulse" />
-                                            </div>
-                                        ) : (
-                                            <div className="w-5 h-5 rounded-full border-2 border-[var(--border)]" />
-                                        )}
-                                        <span className={`text-sm font-medium ${stage.status === "pending" ? "text-gray-300" : "text-[var(--foreground)]"}`}>
-                                            {stage.label}
-                                        </span>
-                                    </div>
-                                    <span className={`text-xs font-mono tabular-nums ${stage.status === "pending" ? "text-gray-300" : "text-gray-500"}`}>
-                                        {stage.progress}%
-                                    </span>
-                                </div>
-                                <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden ml-7">
-                                    <motion.div
-                                        className="h-full bg-[var(--foreground)] rounded-full"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${stage.progress}%` }}
-                                        transition={{ duration: 0.3 }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
+                    {/* Live stream preview */}
+                    <div className="flex-1 bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] shadow-sm overflow-hidden flex flex-col">
+                        <div className="h-10 bg-white border-b border-[var(--border)] flex items-center px-4 gap-2 shrink-0">
+                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-xs font-mono text-gray-400">streaming response</span>
+                            <span className="text-xs text-gray-300 ml-auto">{topic}</span>
+                        </div>
+                        <div
+                            ref={streamBoxRef}
+                            className="flex-1 overflow-auto p-4 md:p-6 font-mono text-[13px] leading-relaxed text-gray-600 bg-gray-50/50"
+                        >
+                            <pre className="m-0 whitespace-pre-wrap break-all">{streamText}<span className="animate-pulse text-[var(--foreground)]">▊</span></pre>
+                        </div>
                     </div>
                 </motion.div>
             </div>
@@ -346,13 +311,19 @@ export default function AgentPage() {
                     </>
                 ) : (
                     <>
-                        {/* Success state */}
                         <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6">
                             <IconCheck className="w-8 h-8 text-emerald-500" />
                         </div>
                         <h2 className="text-2xl font-bold mb-2">Document Ready</h2>
                         <p className="text-sm text-gray-400 mb-1 font-medium">{topic}</p>
-                        <p className="text-xs text-gray-300 mb-8 uppercase tracking-wider">{docType.replace("_", " ")}{referencesBib ? " • with references" : ""}</p>
+                        <div className="flex items-center justify-center gap-3 text-xs text-gray-300 mb-8">
+                            <span className="uppercase tracking-wider">{docType.replace("_", " ")}</span>
+                            {referencesBib && <><span>•</span><span>with references</span></>}
+                            <span>•</span>
+                            <span className="font-mono tabular-nums">{elapsedTime.toFixed(1)}s</span>
+                            <span>•</span>
+                            <span className="font-mono tabular-nums">{streamChars.toLocaleString()} chars</span>
+                        </div>
 
                         {/* Action buttons */}
                         <div className="flex items-center justify-center gap-3 mb-6">
@@ -370,7 +341,7 @@ export default function AgentPage() {
                             </button>
                         </div>
 
-                        {/* Edit & Fix Errors buttons */}
+                        {/* Edit & Fix buttons */}
                         <div className="flex items-center justify-center gap-4 mb-2">
                             <button
                                 onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }}
@@ -390,32 +361,18 @@ export default function AgentPage() {
                         {/* Edit input */}
                         <AnimatePresence>
                             {isEditing && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="w-full overflow-hidden"
-                                >
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="w-full overflow-hidden">
                                     <div className="relative border border-[var(--border)] rounded-[1.25rem] bg-white shadow-sm focus-within:shadow-md focus-within:border-[var(--foreground)] transition-all mt-3">
                                         <textarea
                                             value={editPrompt}
                                             onChange={(e) => setEditPrompt(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter" && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleEdit();
-                                                }
-                                            }}
+                                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); } }}
                                             placeholder="Add more detail to methodology..."
                                             className="w-full bg-transparent p-4 pr-12 outline-none resize-none text-[15px] placeholder:text-gray-300 max-h-32 min-h-[56px] font-medium"
                                             rows={1}
                                             autoFocus
                                         />
-                                        <button
-                                            onClick={handleEdit}
-                                            disabled={!editPrompt.trim()}
-                                            className="absolute right-3 bottom-3 p-1.5 rounded-full bg-[var(--foreground)] text-[var(--card)] disabled:opacity-30 transition-colors"
-                                        >
+                                        <button onClick={handleEdit} disabled={!editPrompt.trim()} className="absolute right-3 bottom-3 p-1.5 rounded-full bg-[var(--foreground)] text-[var(--card)] disabled:opacity-30 transition-colors">
                                             <IconArrowRight className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -426,12 +383,7 @@ export default function AgentPage() {
                         {/* Fix Errors input */}
                         <AnimatePresence>
                             {isFixingErrors && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="w-full overflow-hidden"
-                                >
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="w-full overflow-hidden">
                                     <div className="mt-3 border border-red-200 rounded-[1.25rem] bg-red-50/50 shadow-sm overflow-hidden">
                                         <div className="px-4 pt-3 pb-1">
                                             <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Paste compilation errors</span>
@@ -439,7 +391,7 @@ export default function AgentPage() {
                                         <textarea
                                             value={errorLogInput}
                                             onChange={(e) => setErrorLogInput(e.target.value)}
-                                            placeholder="Runaway argument?\nExtra ), or forgotten \endgroup...\nLaTeX Error: \begin{@twocolumnfalse}..."
+                                            placeholder={"Runaway argument?\nExtra ), or forgotten \\endgroup...\nLaTeX Error: ..."}
                                             className="w-full bg-transparent px-4 py-2 outline-none resize-none text-[13px] font-mono placeholder:text-red-200 min-h-[100px] max-h-[200px] text-red-700"
                                             rows={4}
                                             autoFocus
@@ -475,7 +427,6 @@ export default function AgentPage() {
             <AnimatePresence>
                 {viewerOpen && (
                     <>
-                        {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -483,8 +434,6 @@ export default function AgentPage() {
                             onClick={() => setViewerOpen(false)}
                             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
                         />
-
-                        {/* Panel */}
                         <motion.div
                             initial={{ y: "100%", opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
@@ -492,23 +441,18 @@ export default function AgentPage() {
                             transition={{ type: "spring", damping: 30, stiffness: 300 }}
                             className="fixed inset-x-0 bottom-0 z-50 h-[85vh] md:inset-4 md:h-auto md:rounded-[var(--radius)] bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
                         >
-                            {/* Toolbar */}
                             <div className="h-14 bg-white border-b border-[var(--border)] flex items-center justify-between px-4 shrink-0">
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => setActiveTab("tex")}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
-                                            activeTab === "tex" ? "bg-emerald-50 text-emerald-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                        }`}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${activeTab === "tex" ? "bg-emerald-50 text-emerald-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"}`}
                                     >
                                         <IconFileText className="w-4 h-4" /> main.tex
                                     </button>
                                     {referencesBib && (
                                         <button
                                             onClick={() => setActiveTab("bib")}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
-                                                activeTab === "bib" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                            }`}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${activeTab === "bib" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"}`}
                                         >
                                             <IconBook className="w-4 h-4" /> references.bib
                                         </button>
@@ -530,8 +474,6 @@ export default function AgentPage() {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Code */}
                             <div className="flex-1 overflow-auto p-6 font-mono text-sm leading-relaxed text-gray-700 bg-gray-50/50">
                                 <pre className="m-0 w-full min-h-full whitespace-pre-wrap" tabIndex={0}>
                                     <code>{displayedCode}</code>
