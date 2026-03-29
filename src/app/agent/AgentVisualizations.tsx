@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand } from "@tabler/icons-react";
 import { RImage, Language } from "./types";
 
@@ -13,36 +13,36 @@ interface Props {
 }
 
 const CHART_TYPES = [
-    { id: "bar", label: "Bar Chart" },
-    { id: "line", label: "Line Chart" },
-    { id: "scatter", label: "Scatter Plot" },
-    { id: "bubble", label: "Bubble Chart" },
-    { id: "lollipop", label: "Lollipop Chart" },
-    { id: "histogram", label: "Histogram" },
-    { id: "density2d", label: "2D Density" },
-    { id: "ridge", label: "Density Ridge" },
-    { id: "boxplot", label: "Boxplot" },
-    { id: "violin", label: "Violin Plot" },
-    { id: "heatmap", label: "Heatmap" },
-    { id: "marginal", label: "Marginal Scatter" },
-    { id: "hexbin", label: "Hexbin Density" },
-    { id: "pie", label: "Pie Chart" },
-    { id: "rose", label: "Nightingale Rose" },
-    { id: "treemap", label: "Treemap" },
-    { id: "circlepack", label: "Circle Packing" },
-    { id: "radar", label: "Radar Chart" },
-    { id: "network", label: "Network Graph" },
-    { id: "sankey", label: "Sankey Diagram" },
-    { id: "chord", label: "Chord Diagram" },
-    { id: "dendrogram", label: "Dendrogram" },
-    { id: "parallel", label: "Parallel Coords" },
-    { id: "waffle", label: "Waffle Chart" },
-    { id: "waterfall", label: "Waterfall" },
-    { id: "wordcloud", label: "Wordcloud" },
-    { id: "dumbbell", label: "Dumbbell Plot" },
-    { id: "gantt", label: "Gantt Chart" },
-    { id: "3d_surface", label: "3D Surface" },
-    { id: "3d_scatter", label: "3D Scatter" },
+    { id: "bar", label: "Bar Chart", desc: "Best for comparing numerical values across discrete categories." },
+    { id: "line", label: "Line Chart", desc: "Shows trends or changes in data over continuous time intervals." },
+    { id: "scatter", label: "Scatter Plot", desc: "Displays relationship and correlation between two numerical variables." },
+    { id: "bubble", label: "Bubble Chart", desc: "A scatter plot that adds a third dimension through bubble size." },
+    { id: "lollipop", label: "Lollipop Chart", desc: "A minimalist alternative to bar charts that reduces visual clutter." },
+    { id: "histogram", label: "Histogram", desc: "Visualizes the distribution of a single continuous variable." },
+    { id: "density2d", label: "2D Density", desc: "Shows concentrations of data points as contour maps." },
+    { id: "ridge", label: "Density Ridge", desc: "Compares distributions of multiple groups elegantly on the same axis." },
+    { id: "boxplot", label: "Boxplot", desc: "Shows statistical distribution, median, quartiles, and outliers." },
+    { id: "violin", label: "Violin Plot", desc: "Combines a boxplot with a density trace to reveal hidden distributions." },
+    { id: "heatmap", label: "Heatmap", desc: "Matrix representation of relationships or correlations using color intensity." },
+    { id: "marginal", label: "Marginal Scatter", desc: "A scatter plot enhanced with density curves on the edges." },
+    { id: "hexbin", label: "Hexbin Density", desc: "Aggregates dense scatter plots into colored hexagonal bins." },
+    { id: "pie", label: "Pie Chart", desc: "Shows proportional contributions of categories to a whole." },
+    { id: "rose", label: "Nightingale Rose", desc: "A polar bar chart, great for cyclical or temporal data." },
+    { id: "treemap", label: "Treemap", desc: "Displays hierarchical data as nested rectangles proportional to value." },
+    { id: "circlepack", label: "Circle Packing", desc: "A beautiful alternative to treemaps using nested circles." },
+    { id: "radar", label: "Radar Chart", desc: "Compares multiple quantitative variables on a radial grid." },
+    { id: "network", label: "Network Graph", desc: "Visualizes nodes and complex relationships/edges between them." },
+    { id: "sankey", label: "Sankey Diagram", desc: "Shows flow, transfers, and transitions between different states." },
+    { id: "chord", label: "Chord Diagram", desc: "Visualizes inter-relationships and flows arranged in a circle." },
+    { id: "dendrogram", label: "Dendrogram", desc: "Tree diagram showing hierarchical clustering and taxonomy." },
+    { id: "parallel", label: "Parallel Coords", desc: "Analyzes multivariate data across multiple parallel axes." },
+    { id: "waffle", label: "Waffle Chart", desc: "Shows composition using a square grid, an elegant alternative to pie charts." },
+    { id: "waterfall", label: "Waterfall", desc: "Illustrates cumulative effect of sequentially introduced positive or negative values." },
+    { id: "wordcloud", label: "Wordcloud", desc: "Visual representation of text data, sized proportionally to frequency." },
+    { id: "dumbbell", label: "Dumbbell Plot", desc: "Highlights the difference or expected change between two points." },
+    { id: "gantt", label: "Gantt Chart", desc: "Bar chart that illustrates a project schedule or timeline." },
+    { id: "3d_surface", label: "3D Surface", desc: "Plots topological data structures on three continuous axes." },
+    { id: "3d_scatter", label: "3D Scatter", desc: "Plots individual points in a three-dimensional coordinate system." },
 ];
 
 const PALETTES = [
@@ -55,20 +55,74 @@ const PALETTES = [
 
 // Sub-component for parallel/sequential loading
 function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive }: any) {
-    const [status, setStatus] = useState<"pending" | "loading" | "error" | "done">("pending");
+    const [status, setStatus] = useState<"pending" | "streaming" | "compiling" | "error" | "done">("pending");
     const [errorMsg, setErrorMsg] = useState("");
+    const [code, setCode] = useState("");
+    const codeRef = useRef<HTMLPreElement>(null);
+
+    // Auto-scroll code
+    useEffect(() => {
+        if (codeRef.current) codeRef.current.scrollTop = codeRef.current.scrollHeight;
+    }, [code]);
 
     const generate = async () => {
-        setStatus("loading");
+        setStatus("streaming");
+        setCode("");
         try {
-            const res = await fetch('/api/agent/visualize', {
+            // STEP 1: Stream Code
+            const resStream = await fetch('/api/agent/visualize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic, chartType, palette, language, dataContext })
+                body: JSON.stringify({ topic, chartType, palette, language, dataContext, action: "stream" })
             });
-            const data = await res.json();
             
-            if (res.ok && data.success && data.image) {
+            if (!resStream.ok) throw new Error("Stream connection failed");
+            if (!resStream.body) throw new Error("No response body");
+
+            const reader = resStream.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+            let finalCode = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                let boundary = buffer.indexOf("\n\n");
+                
+                while (boundary !== -1) {
+                    const message = buffer.slice(0, boundary).trim();
+                    buffer = buffer.slice(boundary + 2);
+
+                    if (message.startsWith("data: ") && message !== "data: [DONE]") {
+                        try {
+                            const dataStr = message.slice(6);
+                            const jsonObj = JSON.parse(dataStr);
+                            const token = jsonObj.choices[0]?.delta?.content || "";
+                            finalCode += token;
+                            setCode(finalCode);
+                        } catch (e) {}
+                    }
+                    boundary = buffer.indexOf("\n\n");
+                }
+            }
+
+            // Clean code if needed
+            let cleanCode = finalCode.trim();
+            if (cleanCode.startsWith("```")) cleanCode = cleanCode.replace(/^```(?:r|R)?\s*/, "");
+            if (cleanCode.endsWith("```")) cleanCode = cleanCode.replace(/```\s*$/, "");
+
+            // STEP 2: Compile Code
+            setStatus("compiling");
+            const resCompile = await fetch('/api/agent/visualize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chartType, action: "compile", rCode: cleanCode })
+            });
+
+            const data = await resCompile.json();
+            if (resCompile.ok && data.success && data.image) {
                 setStatus("done");
                 onComplete({
                     image: data.image,
@@ -76,9 +130,11 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                     r_code: data.r_code
                 });
             } else {
-                throw new Error(data.error || "Generation failed (timeout or code error)");
+                throw new Error(data.error || "R Compilation failed (syntax error or timeout)");
             }
+
         } catch (e: any) {
+            console.error(e);
             setStatus("error");
             setErrorMsg(e.message);
             onFail(); // Signal the parent to continue to the next job in queue
@@ -95,10 +151,10 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
 
     return (
         <div className="flex flex-col items-center justify-center p-6 bg-white border border-[var(--border)] rounded-xl aspect-[4/3] shadow-sm relative overflow-hidden">
-            <span className="absolute top-2 left-2 px-2 py-1 bg-black/5 text-gray-500 rounded-md text-[10px] font-bold uppercase tracking-wider">
+            <span className="absolute top-2 left-2 px-2 py-1 bg-black/5 text-gray-500 rounded-md text-[10px] font-bold uppercase tracking-wider z-10">
                 {chartType.replace("_", " ")}
             </span>
-            <button onClick={onCancel} className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+            <button onClick={onCancel} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 z-10">
                 <IconAlertCircle className="w-4 h-4 opacity-0" />
                 <span className="text-xs font-bold px-2">Cancel</span>
             </button>
@@ -109,20 +165,34 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                     <span className="text-xs font-bold uppercase tracking-widest">Waiting in queue...</span>
                 </div>
             )}
-            {status === "loading" && (
+            
+            {status === "streaming" && (
+                <div className="w-full h-full flex flex-col bg-gray-900 rounded-lg p-3 overflow-hidden text-left relative mt-6 border border-gray-800 shadow-inner">
+                    <span className="text-[9px] text-green-400 font-mono mb-2 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse block"></span>
+                        AI Writing Script...
+                    </span>
+                    <pre ref={codeRef} className="text-[9px] text-gray-300 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4">
+                        {code}
+                    </pre>
+                </div>
+            )}
+
+            {status === "compiling" && (
                 <div className="flex flex-col items-center gap-3 text-gray-800">
                     <IconLoader2 className="w-8 h-8 animate-spin" />
                     <span className="text-xs font-bold uppercase tracking-widest text-gray-900 animate-pulse">Compiling Output...</span>
                 </div>
             )}
+
             {status === "error" && (
                 <div className="flex flex-col items-center gap-3 w-full">
                     <div className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
                         <IconAlertCircle className="w-5 h-5" />
                     </div>
-                    <p className="text-[10px] text-red-500 font-mono text-center line-clamp-3 w-full px-2 leading-relaxed">
+                    <div className="text-[10px] text-red-500 font-mono text-left max-h-16 overflow-y-auto w-full px-2 leading-relaxed whitespace-pre-wrap break-all border-t border-red-100 pt-2">
                         {errorMsg}
-                    </p>
+                    </div>
                     <button onClick={generate} className="mt-2 px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold flex items-center gap-1.5">
                         <IconReload className="w-3.5 h-3.5" /> Try again
                     </button>
@@ -249,15 +319,26 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
 
                 <div>
                     <div className="flex flex-wrap gap-2">
-                        {CHART_TYPES.map(c => {
+                        {CHART_TYPES.map((c: any) => {
                             const active = selectedCharts.includes(c.id);
                             return (
                                 <button
                                     key={c.id}
                                     onClick={() => toggleChart(c.id)}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors border ${active ? 'bg-[var(--foreground)] text-[var(--card)] border-[var(--foreground)] shadow-sm' : 'bg-[#fbfbfc] text-gray-500 border-[#eaeaea] hover:border-gray-300'}`}
+                                    className={`relative group/btn hover:z-50 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors border ${active ? 'bg-[var(--foreground)] text-[var(--card)] border-[var(--foreground)] shadow-sm z-20' : 'bg-[#fbfbfc] text-gray-500 border-[#eaeaea] hover:border-gray-300 z-10'}`}
                                 >
                                     {c.label}
+                                    
+                                    {/* Tooltip Hover Box */}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-white border border-gray-200 shadow-2xl rounded-xl p-2.5 hidden group-hover/btn:block z-[100] cursor-default pointer-events-none text-left opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200">
+                                        <div className="w-full aspect-[4/3] bg-gray-50 overflow-hidden rounded-lg border border-gray-100 mb-2 flex items-center justify-center">
+                                            {/* Using a placeholder service. Users can swap with local /previews/id.png later */}
+                                            <img src={`https://placehold.co/400x300/f8f9fc/a1a1aa.png?text=${encodeURIComponent(c.label)}\nPreview`} alt={c.label} className="w-full h-full object-cover" />
+                                        </div>
+                                        <p className="text-[10px] text-gray-600 font-medium leading-relaxed normal-case tracking-normal">
+                                            {c.desc}
+                                        </p>
+                                    </div>
                                 </button>
                             );
                         })}

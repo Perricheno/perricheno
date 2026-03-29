@@ -66,9 +66,52 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     try {
-        const { topic, chartType, palette = 'viridis', language = 'en', dataContext = '' } = await req.json();
+        const { topic, chartType, palette = 'viridis', language = 'en', dataContext = '', action, rCode } = await req.json();
 
-        // 1. Generate Code
+        // MODE 1: COMPILE FINISHED CODE
+        if (action === "compile" && rCode) {
+            const failSafeCode = `
+# Fail-safe auto-installer
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
+.orig_lib <- base::library
+library <- function(package, ...) {
+  pkg_name <- as.character(substitute(package))
+  if (length(pkg_name) == 1 && pkg_name != "package") {
+    if (!requireNamespace(pkg_name, quietly = TRUE)) {
+        suppressMessages(suppressWarnings(install.packages(pkg_name, quiet = TRUE)))
+    }
+    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))))
+  } else {
+    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(...))))
+  }
+}
+
+# AI Code below
+` + rCode;
+
+            const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: failSafeCode }),
+                signal: AbortSignal.timeout(45000), 
+            });
+
+            if (!compileRes.ok) throw new Error("Compilation server error");
+            const compileResult = await compileRes.json();
+            
+            if (!compileResult.success) {
+                return NextResponse.json({ error: compileResult.log || "R Compilation failed", r_code: rCode }, { status: 500 });
+            }
+
+            return NextResponse.json({
+                success: true,
+                image: compileResult.image,
+                r_code: rCode, // return clean code without wrapper for editor
+                chart_type: chartType,
+            });
+        }
+
+        // MODE 2: STREAM R SCRIPT GENERATION
         const prompt = buildVisualizationPrompt(topic, chartType, palette, language, dataContext);
 
         const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -79,58 +122,26 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
                 model: "gpt-5-mini-2025-08-07",
+                stream: true,
                 messages: [
-                    { role: "system", content: "You are an expert R programmer. Output ONLY raw executable R code. No formatting." },
+                    { role: "system", content: "You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. Ensure proper syntax." },
                     { role: "user", content: prompt }
                 ]
             })
         });
 
-        if (!aiRes.ok) throw new Error("AI Generation failed");
-        
-        const aiData = await aiRes.json();
-        let rCode = aiData.choices[0].message.content.trim();
-        if (rCode.startsWith("```")) rCode = rCode.replace(/^```(?:r|R)?\s*/, "");
-        if (rCode.endsWith("```")) rCode = rCode.replace(/```\s*$/, "");
-
-        // Auto-install wrapper to make it fail-safe:
-        // We prepend a block that intercepts package loading and installs them.
-        const failSafeCode = `
-# Fail-safe auto-installer
-options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
-.orig_lib <- base::library
-library <- function(package, ...) {
-  pkg_name <- as.character(substitute(package))
-  if (length(pkg_name) == 1 && pkg_name != "package") {
-    if (!requireNamespace(pkg_name, quietly = TRUE)) install.packages(pkg_name, quiet = TRUE)
-    invisible(.orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))
-  } else invisible(.orig_lib(...))
-}
-
-# AI Code below
-` + rCode;
-
-        // 2. Compile Code
-        const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: failSafeCode }),
-            signal: AbortSignal.timeout(45000), // wait 45s for compilation & install
-        });
-
-        if (!compileRes.ok) throw new Error("Compilation server error");
-
-        const compileResult = await compileRes.json();
-        
-        if (!compileResult.success) {
-            return NextResponse.json({ error: compileResult.log || "R Compilation failed", r_code: rCode }, { status: 500 });
+        if (!aiRes.ok) {
+            const err = await aiRes.text();
+            throw new Error("AI Generation failed: " + err);
         }
 
-        return NextResponse.json({
-            success: true,
-            image: compileResult.image,
-            r_code: rCode, // return clean code without wrapper for editor
-            chart_type: chartType,
+        // Pipe the SSE stream back to the client directly
+        return new Response(aiRes.body, {
+            headers: {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive"
+            }
         });
 
     } catch (err: any) {
