@@ -16,9 +16,10 @@ compile_r_code <- function(code) {
   script_path <- file.path(tmp_dir, "script.R")
   output_path <- file.path(tmp_dir, "output.png")
   
-  # Wrap code: set working directory and ensure output goes to output.png
+  # Wrap code: set working directory, auto-install missing packages, and output to output.png
   wrapped_code <- paste0(
     'setwd("', gsub("\\\\", "/", tmp_dir), '")\n',
+    'options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))\n',
     'library(Cairo)\n',
     'CairoPNG("output.png", width=800, height=600, dpi=150)\n',
     code, '\n',

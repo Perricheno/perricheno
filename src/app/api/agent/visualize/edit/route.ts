@@ -28,7 +28,9 @@ ${currentCode}
 USER EDIT REQUEST:
 "${editPrompt}"
 
-TASK: Return the FULL updated R code incorporating the user's request. Maintain all requirements (no Cairo() calls, publication quality, self-contained). Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
+TASK: Return the FULL updated R code incorporating the user's request. Maintain all requirements (no Cairo() calls, publication quality, self-contained).
+CRITICAL FAIL-SAFE: Do NOT use \`library(X)\` or \`require(X)\`. You MUST load all packages using \`if (!requireNamespace("pacman", quietly=TRUE)) install.packages("pacman", quiet=TRUE); pacman::p_load(pkg1, pkg2)\`.
+Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
 
         const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
