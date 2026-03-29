@@ -14,13 +14,23 @@ jobs:
         uses: appleboy/ssh-action@v1.2.2
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LATEX_COMPILER_URL: ${{ secrets.LATEX_COMPILER_URL }}
+          LATEX_COMPILER_KEY: ${{ secrets.LATEX_COMPILER_KEY }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: OPENAI_API_KEY
+          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY
           script: |
             cd ${{ secrets.SERVER_PATH }}
-            # Update or append OPENAI_API_KEY in the server's .env file
+            
+            # Update or append OPENAI_API_KEY
             grep -q '^OPENAI_API_KEY=' .env && sed -i 's/^OPENAI_API_KEY=.*/OPENAI_API_KEY='"$OPENAI_API_KEY"'/' .env || echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> .env
+            
+            # Update or append LATEX_COMPILER_URL
+            grep -q '^LATEX_COMPILER_URL=' .env && sed -i 's/^LATEX_COMPILER_URL=.*/LATEX_COMPILER_URL='"${LATEX_COMPILER_URL//\//\\/}"'/' .env || echo "LATEX_COMPILER_URL=$LATEX_COMPILER_URL" >> .env
+            
+            # Update or append LATEX_COMPILER_KEY
+            grep -q '^LATEX_COMPILER_KEY=' .env && sed -i 's/^LATEX_COMPILER_KEY=.*/LATEX_COMPILER_KEY='"$LATEX_COMPILER_KEY"'/' .env || echo "LATEX_COMPILER_KEY=$LATEX_COMPILER_KEY" >> .env
+            
             bash deploy.sh
