@@ -35,6 +35,7 @@ export default function AgentPage() {
 
     // Output state
     const [viewerOpen, setViewerOpen] = useState(false);
+    const [isCompiling, setIsCompiling] = useState(false);
     const [activeTab, setActiveTab] = useState<"tex" | "bib">("tex");
     const [mainTex, setMainTex] = useState("");
     const [referencesBib, setReferencesBib] = useState<string | null>(null);
@@ -268,7 +269,7 @@ export default function AgentPage() {
         }
     };
 
-    const downloadZip = async () => {
+    const buildZipBlob = async (): Promise<Blob> => {
         const zip = new JSZip();
         zip.file("main.tex", mainTex);
         if (referencesBib) zip.file("references.bib", referencesBib);
@@ -277,13 +278,50 @@ export default function AgentPage() {
             const bytes = new Uint8Array(binary.length);
             for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
             zip.file(`figures/fig_${i + 1}_${img.chart_type}.png`, bytes);
-            zip.file(`figures/fig_${i + 1}_${img.chart_type}.R`, img.r_code);
+            if (img.r_code) zip.file(`figures/fig_${i + 1}_${img.chart_type}.R`, img.r_code);
         });
-        const blob = await zip.generateAsync({ type: "blob" });
+        return await zip.generateAsync({ type: "blob" });
+    };
+
+    const downloadZip = async () => {
+        const blob = await buildZipBlob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url; a.download = `latex_project_${Date.now()}.zip`;
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    };
+
+    const compilePdf = async () => {
+        if (!mainTex) return;
+        setIsCompiling(true);
+        setError(null);
+        try {
+            const blob = await buildZipBlob();
+            const formData = new FormData();
+            formData.append("file", blob, "project.zip");
+            
+            const res = await fetch("/api/agent/compile-pdf", {
+                method: "POST",
+                body: formData,
+            });
+            
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `Server Error ${res.status}`);
+            }
+
+            const pdfBlob = await res.blob();
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `compiled_research_${Date.now()}.pdf`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || "Failed to compile PDF via server.");
+        } finally {
+            setIsCompiling(false);
+        }
     };
 
     // ─── LANDING ───
@@ -427,11 +465,15 @@ export default function AgentPage() {
 
                     {/* Actions */}
                     <div className="flex flex-wrap flex-col sm:flex-row items-center justify-center gap-3 mb-6">
-                        <button onClick={() => setViewerOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full font-semibold text-sm hover:opacity-90 shadow-sm transition-all focus:scale-95">
+                        <button onClick={() => setViewerOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-100 text-gray-700 rounded-full font-semibold text-sm hover:bg-gray-200 transition-colors focus:scale-95">
                             <IconEye className="w-4 h-4" /> View LaTeX
                         </button>
                         <button onClick={downloadZip} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-white text-[var(--foreground)] border border-[var(--border)] rounded-full font-semibold text-sm hover:bg-gray-50 transition-colors focus:scale-95">
                             <IconPackage className="w-4 h-4" /> Download ZIP
+                        </button>
+                        <button onClick={compilePdf} disabled={isCompiling} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full font-semibold text-sm hover:opacity-90 shadow-sm transition-all focus:scale-95 disabled:opacity-50">
+                            {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconFileText className="w-4 h-4" />}
+                            {isCompiling ? "Compiling..." : "Compile to PDF"}
                         </button>
                     </div>
 
