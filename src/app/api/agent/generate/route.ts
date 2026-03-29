@@ -188,13 +188,13 @@ function buildMessages(s: GenerateSettings) {
         });
         
         const contentArr: any[] = [
-            { type: "text", text: `The following ${s.rImages.length} figures have been generated using R. Please edit the document to include them using \\begin{figure} and \\includegraphics{figures/fig_...png}. You MUST also write an analytical description of what these plots are showing within the text.\n\nThe user's extra instructions: ${s.prompt}\n\nReturn FULL updated JSON. Here are the images and their filenames rules:\n` }
+            { type: "text", text: `The following ${s.rImages.length} figures have been generated using R. Please edit the document to logically distribute and integrate ALL of them.\n\nInstructions:\n1. Use \\begin{figure}[H] or [htbp], \\centering, \\includegraphics[width=0.8\\linewidth]{exact_filename}, \\caption{Descriptive text without underscores}, and \\label{}.\n2. You MUST write an analytical description referencing each plot.\n3. CRITICAL: Never use underscores in the visible text or \\caption without escaping them (e.g. \\_). Filenames inside \\includegraphics{} can keep underscores.\n\nThe user's extra instructions: ${s.prompt}\n\nReturn FULL updated JSON. Images:\n` }
         ];
 
         s.rImages.forEach((img, i) => {
             const filename = `figures/fig_${i + 1}_${img.chart_type}.png`;
-            contentArr.push({ type: "text", text: `Filename: ${filename}\nR Source that generated this:\n\`\`\`R\n${img.r_code}\n\`\`\`\n` });
-            contentArr.push({ type: "image_url", image_url: { url: `data:image/png;base64,${img.image}` } });
+            contentArr.push({ type: "text", text: `[Image ${i + 1}]: Filename: ${filename}\nR Source snippet:\n\`\`\`R\n${img.r_code.slice(0, 300)}...\n\`\`\`\n` });
+            contentArr.push({ type: "image_url", image_url: { url: `data:image/png;base64,${img.image}`, detail: "low" } });
         });
 
         messages.push({ role: "user", content: contentArr });

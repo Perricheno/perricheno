@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle } from "@tabler/icons-react";
+import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand } from "@tabler/icons-react";
 import { RImage, Language } from "./types";
 
 interface Props {
@@ -53,9 +53,9 @@ const PALETTES = [
     { id: "Set1", label: "Set1" },
 ];
 
-// Sub-component for parallel loading
-function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel }: any) {
-    const [status, setStatus] = useState<"loading" | "error" | "done">("loading");
+// Sub-component for parallel/sequential loading
+function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive }: any) {
+    const [status, setStatus] = useState<"pending" | "loading" | "error" | "done">("pending");
     const [errorMsg, setErrorMsg] = useState("");
 
     const generate = async () => {
@@ -81,15 +81,17 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
         } catch (e: any) {
             setStatus("error");
             setErrorMsg(e.message);
+            onFail(); // Signal the parent to continue to the next job in queue
         }
     };
 
     useEffect(() => {
-        generate();
-        // eslint-disable-next-line
-    }, []);
+        if (isActive && status === "pending") {
+            generate();
+        }
+    }, [isActive, status]);
 
-    if (status === "done") return null; // Unmounts and goes to main grid upon success
+    if (status === "done") return null;
 
     return (
         <div className="flex flex-col items-center justify-center p-6 bg-white border border-[var(--border)] rounded-xl aspect-[4/3] shadow-sm relative overflow-hidden">
@@ -101,6 +103,12 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                 <span className="text-xs font-bold px-2">Cancel</span>
             </button>
             
+            {status === "pending" && (
+                <div className="flex flex-col items-center gap-3 text-gray-400">
+                    <IconLoader2 className="w-8 h-8 opacity-50" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Waiting in queue...</span>
+                </div>
+            )}
             {status === "loading" && (
                 <div className="flex flex-col items-center gap-3 text-gray-800">
                     <IconLoader2 className="w-8 h-8 animate-spin" />
@@ -130,18 +138,60 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
     const [dataContext, setDataContext] = useState("");
     
     // Concurrency states
-    const [generatingQueue, setGeneratingQueue] = useState<{ id: string, type: string }[]>([]);
+    const [generatingQueue, setGeneratingQueue] = useState<{ id: string, type: string, isActive: boolean, isFailed: boolean }[]>([]);
+    const [isSuggesting, setIsSuggesting] = useState(false);
+
+    useEffect(() => {
+        // Process queue sequentially
+        const activeJob = generatingQueue.find(j => j.isActive);
+        if (!activeJob) {
+            const nextPending = generatingQueue.find(j => !j.isActive && !j.isFailed);
+            if (nextPending) {
+                setGeneratingQueue(prev => prev.map(j => j.id === nextPending.id ? { ...j, isActive: true } : j));
+            }
+        }
+    }, [generatingQueue]);
+
+    const handleAutoSuggest = async () => {
+        if (!topic) return;
+        setIsSuggesting(true);
+        try {
+            const res = await fetch('/api/agent/visualize/recommend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    topic, 
+                    dataContext, 
+                    availableTypes: CHART_TYPES.map(c => c.id) 
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.recommended && Array.isArray(data.recommended)) {
+                    // Filter to actually existing charts to be safe
+                    const validIds = data.recommended.filter((id: string) => CHART_TYPES.some(c => c.id === id));
+                    if (validIds.length > 0) setSelectedCharts(validIds.slice(0, 4));
+                }
+            }
+        } catch (e) {
+            console.error("Failed to suggest charts", e);
+        } finally {
+            setIsSuggesting(false);
+        }
+    };
 
     const toggleChart = (id: string) => {
         if (selectedCharts.includes(id)) setSelectedCharts(selectedCharts.filter(c => c !== id));
-        else if (selectedCharts.length < 4) setSelectedCharts([...selectedCharts, id]);
+        else setSelectedCharts([...selectedCharts, id]);
     };
 
     const startGenerations = () => {
         if (!topic || selectedCharts.length === 0) return;
         const newJobs = selectedCharts.map(type => ({
             id: Math.random().toString(36).substring(7),
-            type: type
+            type: type,
+            isActive: false,
+            isFailed: false
         }));
         setGeneratingQueue([...generatingQueue, ...newJobs]);
     };
@@ -226,13 +276,24 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                         </select>
                     </div>
 
-                    <button
-                        onClick={startGenerations}
-                        disabled={selectedCharts.length === 0}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
-                    >
-                        <IconPhotoPlus className="w-4 h-4" /> Batch Generate Options
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleAutoSuggest}
+                            disabled={isSuggesting || !topic}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 shadow-sm rounded-full text-xs font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                            {isSuggesting ? <IconLoader2 className="w-4 h-4 animate-spin text-gray-400" /> : <IconWand className="w-4 h-4 text-gray-500" />}
+                            Auto-Suggest
+                        </button>
+                        
+                        <button
+                            onClick={startGenerations}
+                            disabled={selectedCharts.length === 0}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+                        >
+                            <IconPhotoPlus className="w-4 h-4" /> Batch Generate Options
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -275,7 +336,9 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                             palette={palette}
                             language={language}
                             dataContext={dataContext}
+                            isActive={job.isActive}
                             onComplete={(img: RImage) => handleJobComplete(job.id, img)}
+                            onFail={() => setGeneratingQueue(prev => prev.map(j => j.id === job.id ? { ...j, isActive: false, isFailed: true } : j))}
                             onCancel={() => setGeneratingQueue(prev => prev.filter(j => j.id !== job.id))}
                         />
                     ))}
