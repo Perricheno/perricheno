@@ -40,10 +40,12 @@ REQUIREMENTS:
 1. Create REALISTIC synthetic data matching the topic.
 2. Use the "${palette}" color palette (from viridis, RColorBrewer, etc).
 3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
-4. The script must be completely self-contained — NO external files.
-5. If you use a package (e.g., ggplot2, plotly, etc.), use simple \`library(pkgName)\`.
-6. DO NOT include Cairo() or png() calls. 
-7. The last expression MUST be the plot object itself so it renders.
+4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`. If adding text labels to points/bars, use \`ggrepel\` or adjust \`vjust\`/\`hjust\` to ensure absolute readability. Do NOT clutter the plot with too many labels.
+5. Ensure a clean visual layout using \`theme_minimal()\` or similar. Keep font sizes readable but not overly large (e.g., \`base_size = 12\`).
+6. The script must be completely self-contained — NO external files.
+7. If you use a package (e.g., ggplot2, plotly, ggrepel), use simple \`library(pkgName)\`.
+8. DO NOT include Cairo() or png() calls. 
+9. The last expression MUST be the plot object itself so it renders.
 
 OUTPUT: Only output the pure R code. NO markdown fences (\`\`\`R). NO commentary. Just executable R code.`;
 }

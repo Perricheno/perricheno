@@ -124,14 +124,14 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsEditingMode(!isEditingMode)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-lg text-[12px] font-bold ${isEditingMode ? 'bg-purple-50 text-purple-600' : 'text-gray-400 hover:text-purple-600'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-lg text-[12px] font-bold ${isEditingMode ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
                         >
                             <IconWand className="w-4 h-4" /> AI Edit
                         </button>
                         <button
                             onClick={() => handleCompile(code)}
                             disabled={isCompiling || isStreaming}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[13px] font-bold hover:bg-blue-100 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-[#fbfbfc] border border-[#f0f0f0] text-gray-800 rounded-lg text-[13px] font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
                         >
                             {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconPlayerPlay className="w-4 h-4" />}
                             Run & Preview
@@ -157,7 +157,7 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                         <div className="h-8 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-3 shrink-0">
                             <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
                                 <span>source.R</span>
-                                {isStreaming && <span className="text-purple-400 animate-pulse font-bold ml-2">AI typing...</span>}
+                                {isStreaming && <span className="text-gray-300 animate-pulse font-bold ml-2">AI typing...</span>}
                             </div>
                             <button onClick={downloadCode} className="text-gray-400 hover:text-white" title="Download R code">
                                 <IconDownload className="w-3.5 h-3.5" />
@@ -176,8 +176,8 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                         {/* AI Edit Floating Input */}
                         <AnimatePresence>
                             {isEditingMode && (
-                                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="absolute bottom-4 left-4 right-4 shadow-xl border border-purple-200 rounded-xl overflow-hidden bg-white flex flex-col">
-                                    <div className="px-3 py-1.5 bg-gradient-to-r from-purple-50 to-white text-[11px] font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5 border-b border-purple-100">
+                                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="absolute bottom-4 left-4 right-4 shadow-xl border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col">
+                                    <div className="px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200">
                                        <IconWand className="w-3.5 h-3.5" /> Instruct AI
                                     </div>
                                     <textarea
@@ -189,8 +189,8 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                                         className="w-full outline-none p-3 text-[13px] text-gray-700 bg-white placeholder:text-gray-300 resize-none"
                                         rows={2}
                                     />
-                                    <div className="flex justify-end p-2 border-t border-purple-50 bg-gray-50/50">
-                                        <button onClick={handleAIEdit} disabled={!editPrompt.trim() || isStreaming} className="p-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-full disabled:opacity-50 transition-colors">
+                                    <div className="flex justify-end p-2 border-t border-gray-100 bg-gray-50/50">
+                                        <button onClick={handleAIEdit} disabled={!editPrompt.trim() || isStreaming} className="p-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-full disabled:opacity-50 transition-colors">
                                             {isStreaming ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
                                         </button>
                                     </div>
@@ -224,7 +224,7 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                             {isCompiling && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center z-0">
                                     <div className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center">
-                                        <IconLoader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                        <IconLoader2 className="w-6 h-6 text-gray-800 animate-spin" />
                                     </div>
                                     <span className="mt-4 text-xs font-bold text-gray-500 uppercase tracking-widest animation-pulse">Rendering...</span>
                                 </div>

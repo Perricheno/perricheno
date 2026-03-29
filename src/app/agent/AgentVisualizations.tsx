@@ -84,9 +84,9 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
             </button>
             
             {status === "loading" && (
-                <div className="flex flex-col items-center gap-3 text-blue-500">
+                <div className="flex flex-col items-center gap-3 text-gray-800">
                     <IconLoader2 className="w-8 h-8 animate-spin" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-blue-600 animate-pulse">Compiling Output...</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-gray-900 animate-pulse">Compiling Output...</span>
                 </div>
             )}
             {status === "error" && (
@@ -153,7 +153,7 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
         <div className="w-full mt-8 p-6 bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <h3 className="text-sm font-bold flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                    <span className="w-6 h-6 rounded-full bg-[var(--foreground)] text-[var(--card)] flex items-center justify-center">
                         <IconPhotoPlus className="w-4 h-4" />
                     </span>
                     Add Visualizations (R Compiler)
@@ -161,7 +161,7 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                 {rImages.length > 0 && generatingQueue.length === 0 && (
                     <button
                         onClick={() => onAddVisualsToReport(rImages)}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 border border-gray-200 shadow-sm rounded-full text-xs font-bold hover:bg-gray-50 transition-colors"
                     >
                         <IconFileImport className="w-4 h-4" /> Add All to Report
                     </button>
@@ -211,7 +211,7 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                     <button
                         onClick={startGenerations}
                         disabled={selectedCharts.length === 0}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-xs font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
                     >
                         <IconPhotoPlus className="w-4 h-4" /> Batch Generate Options
                     </button>
@@ -232,7 +232,7 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                                     onClick={() => openEditor(i)}
                                     className="px-5 py-2.5 bg-white text-black rounded-full text-xs font-bold flex items-center gap-2 hover:bg-gray-100 transition-colors shadow-lg hover:scale-105 active:scale-95"
                                 >
-                                    <IconCode className="w-4 h-4 text-purple-600" /> AI Edit Code
+                                    <IconCode className="w-4 h-4 text-black" /> AI Edit Code
                                 </button>
                                 <button
                                     onClick={() => downloadImage(img.image, `fig_${i + 1}_${img.chart_type}`)}

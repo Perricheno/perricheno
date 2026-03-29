@@ -20,7 +20,9 @@ ${currentCode}
 USER EDIT REQUEST:
 "${editPrompt}"
 
-TASK: Return the FULL updated R code incorporating the user's request. Maintain all requirements (no Cairo() calls, publication quality, self-contained). Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
+TASK: Return the FULL updated R code incorporating the user's request. Maintain all requirements (no Cairo() calls, publication quality, self-contained).
+CRUCIAL: Ensure text readability! Use \`ggrepel\` to prevent text overlaps if labels are used. Rotate x-axis labels if there are many categories. Do not clutter the plot. Use a clean theme.
+Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
 
         const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
