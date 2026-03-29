@@ -1,5 +1,7 @@
-FROM r-base:4.4.0
+# Use rocker/r-ver which is optimized for fast binary installation via Posit Package Manager
+FROM rocker/r-ver:4.4.0
 
+# Install system dependencies required by various R packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2-dev \
     libxt-dev \
@@ -15,18 +17,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Install R packages (comprehensive visualization suite)
-RUN R -e "install.packages(c( \
-    'ggplot2', 'plotly', 'dplyr', 'tidyr', 'readr', 'tibble', 'stringr', \
-    'plot3D', 'scatterplot3d', \
-    'corrplot', 'pheatmap', \
-    'treemap', 'igraph', \
-    'viridis', 'RColorBrewer', 'scales', \
-    'Cairo', 'svglite', \
-    'jsonlite', 'httpuv', \
-    'ggridges', 'ggrepel', 'patchwork', 'gridExtra', \
-    'reshape2', 'forcats', 'lubridate' \
-), repos='https://cran.r-project.org', Ncpus=4)"
+# Install R packages using the pre-configured binary repository (extremely fast)
+RUN install2.r --error --skipinstalled \
+    ggplot2 plotly dplyr tidyr readr tibble stringr \
+    plot3D scatterplot3d \
+    corrplot pheatmap \
+    treemap igraph \
+    viridis RColorBrewer scales \
+    Cairo svglite \
+    jsonlite httpuv \
+    ggridges ggrepel patchwork gridExtra \
+    reshape2 forcats lubridate
 
 COPY server.R /app/server.R
 
