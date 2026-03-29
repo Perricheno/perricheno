@@ -27,7 +27,8 @@ RUN install2.r --error --skipinstalled \
     Cairo svglite \
     jsonlite httpuv \
     ggridges ggrepel patchwork gridExtra \
-    reshape2 forcats lubridate
+    reshape2 forcats lubridate \
+    fmsb waffle waterfalls wordcloud ggExtra ggalt
 
 COPY server.R /app/server.R
 

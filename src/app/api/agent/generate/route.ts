@@ -18,10 +18,11 @@ interface GenerateSettings {
     dateStr?: string;
     groupName?: string;
     supervisorName?: string;
-    // For edits/fixes
+    // For edits/fixes/visuals
     currentTex?: string;
     currentBib?: string;
     errorLog?: string;
+    rImages?: { image: string, chart_type: string, r_code: string }[];
 }
 
 function buildSystemPrompt(s: GenerateSettings): string {
@@ -167,7 +168,7 @@ When fixing errors: analyze each error, fix code, return FULL corrected files.`;
 
 function buildMessages(s: GenerateSettings) {
     const systemPrompt = buildSystemPrompt(s);
-    const messages: { role: string; content: string }[] = [
+    const messages: any[] = [
         { role: "system", content: systemPrompt },
     ];
 
@@ -180,6 +181,23 @@ function buildMessages(s: GenerateSettings) {
             role: "user",
             content: `Fix ALL compilation errors:\n\n${s.errorLog}\n\nReturn FULL corrected JSON.`
         });
+    } else if (s.rImages && s.rImages.length > 0 && s.currentTex) {
+        messages.push({
+            role: "assistant",
+            content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null })
+        });
+        
+        const contentArr: any[] = [
+            { type: "text", text: `The following ${s.rImages.length} figures have been generated using R. Please edit the document to include them using \\begin{figure} and \\includegraphics{figures/fig_...png}. You MUST also write an analytical description of what these plots are showing within the text.\n\nThe user's extra instructions: ${s.prompt}\n\nReturn FULL updated JSON. Here are the images and their filenames rules:\n` }
+        ];
+
+        s.rImages.forEach((img, i) => {
+            const filename = `figures/fig_${i + 1}_${img.chart_type}.png`;
+            contentArr.push({ type: "text", text: `Filename: ${filename}\nR Source that generated this:\n\`\`\`R\n${img.r_code}\n\`\`\`\n` });
+            contentArr.push({ type: "image_url", image_url: { url: `data:image/png;base64,${img.image}` } });
+        });
+
+        messages.push({ role: "user", content: contentArr });
     } else if (s.currentTex) {
         messages.push({
             role: "assistant",
@@ -229,6 +247,7 @@ export async function POST(req: Request) {
             currentTex: body.currentTex,
             currentBib: body.currentBib,
             errorLog: body.errorLog,
+            rImages: body.rImages,
         };
 
         if (!settings.prompt && !settings.errorLog) {

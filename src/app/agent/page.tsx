@@ -208,6 +208,19 @@ export default function AgentPage() {
         streamGenerate({ errorLog: log, type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib }, topic + " → fix");
     };
 
+    const handleAddVisualsToReport = (images: RImage[]) => {
+        if (!mainTex || images.length === 0) return;
+        setViewerOpen(false);
+        streamGenerate({ 
+            prompt: "Please integrate the attached R figures into the report. Place them in appropriate sections and write analytical text referencing them.", 
+            type: docType, 
+            ...settings, 
+            currentTex: mainTex, 
+            currentBib: referencesBib,
+            rImages: images
+        }, topic + " → add visuals");
+    };
+
     // Session handlers
     const handleSelectSession = (s: AgentSession) => {
         setCurrentSessionId(s.id);
@@ -466,6 +479,7 @@ export default function AgentPage() {
                         setRImages={setRImages}
                         sessionId={currentSessionId}
                         openEditor={setActiveEditorIndex}
+                        onAddVisualsToReport={handleAddVisualsToReport}
                     />
                 )}
 
