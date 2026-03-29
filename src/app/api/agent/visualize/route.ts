@@ -24,6 +24,17 @@ const CHART_PROMPTS: Record<string, string> = {
     wordcloud: 'a wordcloud visualization using wordcloud package',
     marginal: 'a scatter plot with marginal histograms/density using ggExtra',
     dumbbell: 'a dumbbell plot using ggalt::geom_dumbbell',
+    hexbin: 'a hexagonal binning density plot using ggplot2 and hexbin with geom_hex',
+    sankey: 'an alluvial or sankey diagram using ggalluvial',
+    lollipop: 'a lollipop chart (a dot connected to an axis by a line) using ggplot2',
+    parallel: 'a parallel coordinates plot using GGally::ggparcoord',
+    dendrogram: 'a hierarchical clustering tree/dendrogram using ggdendro or ggraph',
+    density2d: 'a 2D contour density plot using ggplot2 with geom_density_2d_filled',
+    gantt: 'a Gantt chart/project timeline using ggplot2 with geom_segment',
+    chord: 'a chord diagram representing relational flows using circlize package',
+    circlepack: 'a circle packing diagram using packcircles and ggplot2',
+    bubble: 'a bubble chart (scatter plot with size aesthetic) using ggplot2',
+    rose: 'a polar/Nightingale rose chart using ggplot2 with geom_col and coord_polar',
 };
 
 function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string) {
