@@ -21,7 +21,7 @@ compile_r_code <- function(code) {
     'setwd("', gsub("\\\\", "/", tmp_dir), '")\n',
     'options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))\n',
     'library(Cairo)\n',
-    'CairoPNG("output.png", width=800, height=600, dpi=150)\n',
+    'CairoPNG("output.png", width=1400, height=1000, res=100)\n',
     code, '\n',
     'dev.off()\n'
   )
