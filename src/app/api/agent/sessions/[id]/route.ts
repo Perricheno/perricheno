@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { getAgentSession } from '@/lib/db';
+import { getAgentSession, updateAgentSession, deleteAgentSession } from '@/lib/db';
 
-export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(req: Request, context: RouteContext) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
@@ -17,7 +19,6 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Only return the fields we need for polling to keep the payload light
     return NextResponse.json({ 
         session: {
             id: session.id,
@@ -33,4 +34,56 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
             updated_at: session.updated_at
         } 
     });
+}
+
+// PUT /api/agent/sessions/[id] — update session fields (r_images_json, main_tex, etc.)
+export async function PUT(req: Request, context: RouteContext) {
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
+
+    const { id } = await context.params;
+    const session = getAgentSession(id);
+
+    if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    if (session.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+    try {
+        const body = await req.json();
+        const update: Record<string, any> = {};
+
+        // Only allow specific fields to be updated
+        if (body.main_tex !== undefined) update.main_tex = body.main_tex;
+        if (body.references_bib !== undefined) update.references_bib = body.references_bib;
+        if (body.settings_json !== undefined) update.settings_json = typeof body.settings_json === 'string' ? body.settings_json : JSON.stringify(body.settings_json);
+        if (body.title !== undefined) update.title = body.title;
+
+        // r_images_json: accept array or string
+        if (body.r_images_json !== undefined) {
+            update.r_images_json = typeof body.r_images_json === 'string' 
+                ? body.r_images_json 
+                : JSON.stringify(body.r_images_json);
+        }
+
+        if (Object.keys(update).length === 0) {
+            return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+        }
+
+        updateAgentSession(id, update);
+        return NextResponse.json({ success: true });
+    } catch (e: any) {
+        console.error("PUT session error:", e);
+        return NextResponse.json({ error: e.message || "Update failed" }, { status: 500 });
+    }
+}
+
+// DELETE /api/agent/sessions/[id]
+export async function DELETE(req: Request, context: RouteContext) {
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
+
+    const { id } = await context.params;
+    const deleted = deleteAgentSession(id, userId);
+
+    if (!deleted) return NextResponse.json({ error: "Session not found or unauthorized" }, { status: 404 });
+    return NextResponse.json({ success: true });
 }

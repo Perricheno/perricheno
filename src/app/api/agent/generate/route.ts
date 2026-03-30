@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { createAgentSession, updateAgentSession } from '@/lib/db';
+import { createAgentSession, updateAgentSession, getAgentSession } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
+
+// Increase body size limit — rImages base64 payloads can be very large
+export const maxDuration = 120;
+export const dynamic = 'force-dynamic';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -25,6 +29,7 @@ interface GenerateSettings {
     currentBib?: string;
     errorLog?: string;
     rImages?: { image: string, chart_type: string, r_code: string }[];
+    useDbImages?: boolean;
 }
 
 function buildSystemPrompt(s: GenerateSettings): string {
@@ -337,15 +342,29 @@ export async function POST(req: Request) {
             currentBib: body.currentBib,
             errorLog: body.errorLog,
             rImages: body.rImages,
+            useDbImages: body.useDbImages,
         };
 
         if (!settings.prompt && !settings.errorLog) {
             return NextResponse.json({ error: "Prompt or error log is required." }, { status: 400 });
         }
 
+        let sessionId = body.sessionId;
+
+        // If useDbImages, load rImages from the database instead of from the request body
+        if (settings.useDbImages && sessionId) {
+            const existingSession = getAgentSession(sessionId);
+            if (existingSession?.r_images_json) {
+                try {
+                    settings.rImages = JSON.parse(existingSession.r_images_json);
+                } catch (e) {
+                    console.error("Failed to parse r_images_json from DB:", e);
+                }
+            }
+        }
+
         const messages = buildMessages(settings);
 
-        let sessionId = body.sessionId;
         const shortTitle = settings.prompt.slice(0, 50).trim() || "Generated Document";
 
         if (!sessionId) {
@@ -355,7 +374,14 @@ export async function POST(req: Request) {
                 user_id: userId,
                 title: shortTitle + (settings.prompt.length > 50 ? '...' : ''),
                 doc_type: settings.type,
-                settings_json: JSON.stringify(settings),
+                settings_json: JSON.stringify({
+                    useTemplate: settings.useTemplate, style: settings.style,
+                    wordCount: settings.wordCount, columns: settings.columns,
+                    useReferences: settings.useReferences, language: settings.language,
+                    authorName: settings.authorName, courseName: settings.courseName,
+                    dateStr: settings.dateStr, groupName: settings.groupName,
+                    supervisorName: settings.supervisorName
+                }),
                 status: 'generating',
                 stream_text: '',
             });

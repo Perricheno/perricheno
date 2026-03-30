@@ -197,7 +197,7 @@ export default function AgentPage() {
     };
 
     const handleAddVisualsToReport = (images: RImage[]) => {
-        if (!mainTex || images.length === 0) return;
+        if (!mainTex || images.length === 0 || !currentSessionId) return;
         setViewerOpen(false);
         streamGenerate({ 
             prompt: "Please integrate the attached R figures into the report. Place them in appropriate sections and write analytical text referencing them.", 
@@ -205,63 +205,80 @@ export default function AgentPage() {
             ...settings, 
             currentTex: mainTex, 
             currentBib: referencesBib,
-            rImages: images
+            useDbImages: true  // backend will read images from DB instead of receiving them over HTTP
         }, topic + " → add visuals");
     };
 
-    const handleSelectSession = (s: AgentSession) => {
+    const handleSelectSession = async (s: AgentSession) => {
+        // Set basic fields from sidebar immediately
         setCurrentSessionId(s.id);
         setTopic(s.title);
-        setDocType(s.doc_type);
-        setMainTex(s.main_tex || "");
-        setReferencesBib(s.references_bib);
-        setRImages(s.r_images_json ? JSON.parse(s.r_images_json) : []);
-        setSettings(s.settings_json ? JSON.parse(s.settings_json) : DEFAULT_SETTINGS);
-        
+        setDocType(s.doc_type as DocType);
         setError(null);
+        setSidebarOpen(false);
+
+        // If still generating, go straight to polling mode with whatever we have
         if (s.status === 'generating') {
             setPhase("streaming");
             startTimer();
-            pollRef.current = setTimeout(() => {
-                const pollStatus = async () => {
-                    try {
-                        const statusRes = await fetch(`/api/agent/sessions/${s.id}`);
-                        if (!statusRes.ok) throw new Error("Status check failed");
-                        const { session } = await statusRes.json();
+            setStreamText("");
+            setStreamChars(0);
+            
+            const pollStatus = async () => {
+                try {
+                    const statusRes = await fetch(`/api/agent/sessions/${s.id}`);
+                    if (!statusRes.ok) throw new Error("Status check failed");
+                    const { session } = await statusRes.json();
 
-                        if (session.status === 'error') throw new Error(session.error_msg || "Background Agent crashed.");
+                    if (session.status === 'error') throw new Error(session.error_msg || "Background Agent crashed.");
 
-                        if (session.stream_text) {
-                            setStreamText(session.stream_text);
-                            setStreamChars(session.stream_text.length);
-                        }
-
-                        if (session.status === 'done') {
-                            setMainTex(session.main_tex || "");
-                            setReferencesBib(session.references_bib);
-                            stopTimer();
-                            setActiveTab("tex");
-                            setPhase("done");
-                            loadSessions();
-                        } else if (session.status === 'generating') {
-                            pollRef.current = setTimeout(pollStatus, 1500);
-                        }
-                    } catch (e: any) {
-                        stopTimer();
-                        setError(e.message);
-                        setPhase("done");
+                    if (session.stream_text) {
+                        setStreamText(session.stream_text);
+                        setStreamChars(session.stream_text.length);
                     }
-                };
-                pollStatus();
-            }, 100);
-        } else if (s.status === 'error') {
-            setError(s.error_msg || "Session failed");
+
+                    if (session.status === 'done') {
+                        setMainTex(session.main_tex || "");
+                        setReferencesBib(session.references_bib || null);
+                        setRImages(session.r_images_json ? JSON.parse(session.r_images_json) : []);
+                        setSettings(session.settings_json ? JSON.parse(session.settings_json) : DEFAULT_SETTINGS);
+                        stopTimer();
+                        setActiveTab("tex");
+                        setPhase("done");
+                        loadSessions();
+                    } else if (session.status === 'generating') {
+                        pollRef.current = setTimeout(pollStatus, 1500);
+                    }
+                } catch (e: any) {
+                    stopTimer();
+                    setError(e.message);
+                    setPhase("done");
+                }
+            };
+            pollRef.current = setTimeout(pollStatus, 100);
+            return;
+        }
+
+        // For done/error sessions, fetch full data from API
+        try {
+            const res = await fetch(`/api/agent/sessions/${s.id}`);
+            if (!res.ok) throw new Error("Failed to load session");
+            const { session } = await res.json();
+
+            setMainTex(session.main_tex || "");
+            setReferencesBib(session.references_bib || null);
+            setRImages(session.r_images_json ? JSON.parse(session.r_images_json) : []);
+            setSettings(session.settings_json ? JSON.parse(session.settings_json) : DEFAULT_SETTINGS);
+
+            if (session.status === 'error') {
+                setError(session.error_msg || "Session failed");
+            }
             setPhase("done");
-        } else {
+        } catch (e: any) {
+            console.error("Failed to load session:", e);
+            setError("Failed to load session data");
             setPhase("done");
         }
-        
-        setSidebarOpen(false);
     };
 
     const handleNewSession = () => {

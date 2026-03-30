@@ -165,7 +165,7 @@ export function deleteTask(taskId: number): void {
 }
 
 export function getPendingTasksToRemind(currentTimeIso: string): Task[] {
-    const stmt = db.prepare('SELECT * FROM tasks WHERE status = "pending" AND remind_at <= ?');
+    const stmt = db.prepare("SELECT * FROM tasks WHERE status = 'pending' AND remind_at <= ?");
     return stmt.all(currentTimeIso) as Task[];
 }
 
