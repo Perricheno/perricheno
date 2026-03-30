@@ -48,13 +48,16 @@ export default function HomePage() {
                 </div>
 
                 {/* FOOTER */}
-                <footer className="mt-32 pt-8 border-t border-[var(--border)] flex flex-col md:flex-row justify-between items-center opacity-40 text-sm">
-                    <div className="flex gap-4 mb-4 md:mb-0">
-                        <a href="#" className="hover:underline">LinkedIn</a>
-                        <a href="#" className="hover:underline">Twitter</a>
-                        <a href="mailto:hello@perricheno.com" className="hover:underline">Contact</a>
+                <footer className="mt-32 pt-12 border-t border-[var(--border)] flex flex-col md:flex-row justify-between items-start md:items-center gap-8 opacity-40 text-[11px] uppercase tracking-widest font-bold">
+                    <div className="flex flex-wrap gap-x-8 gap-y-4">
+                        <Link href="/terms" className="hover:text-black transition-colors">Terms of Service / Условия</Link>
+                        <Link href="/privacy" className="hover:text-black transition-colors">Privacy / Конфиденциальность</Link>
+                        <a href="mailto:shyngyskhan.amangeldy@astanaithub.kz" className="hover:text-black transition-colors">Contact</a>
                     </div>
-                    <p>© 2025 Perricheno Inc.</p>
+                    <div className="flex flex-wrap gap-x-8 gap-y-4 items-center">
+                        <a href="https://linkedin.com/in/perricheno" target="_blank" className="hover:text-black transition-colors underline decoration-black/20 underline-offset-4">LinkedIn</a>
+                        <p>© 2026 Perricheno Inc.</p>
+                    </div>
                 </footer>
             </main>
         </div>
