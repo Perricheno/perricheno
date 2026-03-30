@@ -35,29 +35,29 @@ function buildSystemPrompt(s: GenerateSettings): string {
     }[s.style];
 
     const langPackages = isRussian
-        ? `\\\\usepackage[T2A]{fontenc}\n\\\\usepackage[utf8]{inputenc}\n\\\\usepackage[russian]{babel}`
-        : `\\\\usepackage[T1]{fontenc}\n\\\\usepackage[utf8]{inputenc}`;
+        ? `\\usepackage[T2A]{fontenc}\n\\usepackage[utf8]{inputenc}\n\\usepackage[russian]{babel}`
+        : `\\usepackage[T1]{fontenc}\n\\usepackage[utf8]{inputenc}`;
 
     const columnClass = s.columns === 2 ? 'twocolumn' : '';
-    const docClass = columnClass ? `\\\\documentclass[${columnClass}]{article}` : `\\\\documentclass{article}`;
+    const docClass = columnClass ? `\\documentclass[${columnClass}]{article}` : `\\documentclass{article}`;
 
     // Build author/course/date block
     let metaBlock = '';
     const authorLine = s.authorName || 'Amangeldy Shyngyskhan';
-    const dateLine = s.dateStr || '\\\\today';
+    const dateLine = s.dateStr || '\\today';
     if (s.courseName || s.groupName || s.supervisorName) {
         const parts: string[] = [];
-        if (s.courseName) parts.push(`\\\\textbf{${isRussian ? 'Курс' : 'Course'}:} ${s.courseName}`);
-        if (s.groupName) parts.push(`\\\\textbf{${isRussian ? 'Группа' : 'Group'}:} ${s.groupName}`);
-        if (s.supervisorName) parts.push(`\\\\textbf{${isRussian ? 'Преподаватель' : 'Supervisor'}:} ${s.supervisorName}`);
-        metaBlock = parts.join(' \\\\qquad ');
+        if (s.courseName) parts.push(`\\textbf{${isRussian ? 'Курс' : 'Course'}:} ${s.courseName}`);
+        if (s.groupName) parts.push(`\\textbf{${isRussian ? 'Группа' : 'Group'}:} ${s.groupName}`);
+        if (s.supervisorName) parts.push(`\\textbf{${isRussian ? 'Преподаватель' : 'Supervisor'}:} ${s.supervisorName}`);
+        metaBlock = parts.join(' \\qquad ');
     }
 
     const refInstructions = s.useReferences
-        ? `REFERENCES: Include \\\\usepackage[style=apa, backend=biber]{biblatex} and \\\\addbibresource{references.bib}.
-Use \\\\textcite{key} and \\\\parencite{key}. Every citation key MUST match an entry in references_bib.
+        ? `REFERENCES: Include \\usepackage[style=apa, backend=biber]{biblatex} and \\addbibresource{references.bib}.
+Use \\textcite{key} and \\parencite{key}. Every citation key MUST match an entry in references_bib.
 Generate 10-20 plausible academic references in references_bib field.
-End document with \\\\printbibliography.`
+End document with \\printbibliography.`
         : `REFERENCES: Do NOT include biblatex. Set references_bib to null.`;
 
     const templateSection = s.useTemplate
@@ -70,41 +70,41 @@ Use this EXACT preamble structure:
 
 ${docClass}
 ${langPackages}
-\\\\usepackage{tgtermes}
-\\\\usepackage{tgheros}
-\\\\usepackage{microtype}
-\\\\usepackage{graphicx}
-\\\\usepackage{tabularx}
-\\\\usepackage{ragged2e}
-\\\\usepackage{booktabs}
-\\\\usepackage{amsmath,amsfonts,amssymb}
-\\\\usepackage{longtable}
-\\\\usepackage[table]{xcolor}
-\\\\usepackage{caption}
-\\\\usepackage{hyperref}
-\\\\usepackage{csquotes}
-\\\\usepackage{geometry}
-\\\\usepackage{fancyhdr}
-\\\\usepackage{titlesec}
-\\\\usepackage{float}
-\\\\usepackage{listings}
+\\usepackage{tgtermes}
+\\usepackage{tgheros}
+\\usepackage{microtype}
+\\usepackage{graphicx}
+\\usepackage{tabularx}
+\\usepackage{ragged2e}
+\\usepackage{booktabs}
+\\usepackage{amsmath,amsfonts,amssymb}
+\\usepackage{longtable}
+\\usepackage[table]{xcolor}
+\\usepackage{caption}
+\\usepackage{hyperref}
+\\usepackage{csquotes}
+\\usepackage{geometry}
+\\usepackage{fancyhdr}
+\\usepackage{titlesec}
+\\usepackage{float}
+\\usepackage{listings}
 
-\\\\geometry{lmargin=0.6in,rmargin=0.6in,tmargin=0.75in,bmargin=0.75in,footskip=20pt${s.columns === 2 ? ',columnsep=0.3in' : ''}}
-\\\\pagestyle{fancy}
-\\\\fancyhf{}
-\\\\fancyhead[L]{${s.courseName || (isRussian ? 'Отчет' : 'Report')}}
-\\\\fancyhead[R]{${dateLine}}
-\\\\fancyfoot[C]{\\\\thepage}
+\\geometry{lmargin=0.6in,rmargin=0.6in,tmargin=0.75in,bmargin=0.75in,footskip=20pt${s.columns === 2 ? ',columnsep=0.3in' : ''}}
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[L]{${s.courseName || (isRussian ? 'Отчет' : 'Report')}}
+\\fancyhead[R]{${dateLine}}
+\\fancyfoot[C]{\\thepage}
 
-\\\\newcommand{\\\\styledtitle}[1]{\\\\noindent\\\\colorbox{black}{\\\\parbox{\\\\dimexpr\\\\linewidth-2\\\\fboxsep\\\\relax}{\\\\centering\\\\textcolor{white}{\\\\sffamily\\\\bfseries\\\\MakeUppercase{#1}}}}}
-\\\\titleformat{\\\\section}{\\\\normalfont}{}{0em}{\\\\styledtitle}
-\\\\titleformat{\\\\subsection}{\\\\normalfont\\\\normalsize\\\\sffamily\\\\bfseries}{}{0em}{}
-\\\\titleformat{\\\\subsubsection}{\\\\normalfont\\\\normalsize\\\\sffamily\\\\itshape}{}{0em}{}
-\\\\hypersetup{colorlinks=true,linkcolor=black,filecolor=black,urlcolor=blue,citecolor=black}
+\\newcommand{\\styledtitle}[1]{\\noindent\\colorbox{black}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{\\centering\\textcolor{white}{\\sffamily\\bfseries\\MakeUppercase{#1}}}}}
+\\titleformat{\\section}{\\normalfont}{}{0em}{\\styledtitle}
+\\titleformat{\\subsection}{\\normalfont\\normalsize\\sffamily\\bfseries}{}{0em}{}
+\\titleformat{\\subsubsection}{\\normalfont\\normalsize\\sffamily\\itshape}{}{0em}{}
+\\hypersetup{colorlinks=true,linkcolor=black,filecolor=black,urlcolor=blue,citecolor=black}
 
-TITLE BLOCK (use this exact pattern${s.columns === 2 ? ', wrapped in \\\\twocolumn[\\\\begin{@twocolumnfalse}...\\\\end{@twocolumnfalse}]' : ''}):
+TITLE BLOCK (use this exact pattern${s.columns === 2 ? ', wrapped in \\twocolumn[\\begin{@twocolumnfalse}...\\end{@twocolumnfalse}]' : ''}):
 Title, author "${authorLine}", affiliation "Astana IT University"${metaBlock ? `, metadata: ${metaBlock}` : ''}, date ${dateLine}.
-Then \\\\noindent\\\\textbf{${isRussian ? 'Аннотация' : 'Abstract'}} \\\\\\\\ followed by italic abstract text.`
+Then \\noindent\\textbf{${isRussian ? 'Аннотация' : 'Abstract'}} \\\\ followed by italic abstract text.`
         : `
 ══════════════════════════
 CREATE YOUR OWN TEMPLATE
@@ -132,7 +132,7 @@ OUTPUT FORMAT
 Output ONLY valid JSON. No markdown fences, no commentary:
 {"main_tex": "...", "references_bib": "..." }
 
-Backslashes = \\\\\\\\ in JSON. Newlines = \\n. Quotes = \\".
+Escape backslashes properly in JSON (e.g., "\\\\documentclass{article}"). Use \\n for newlines.
 
 ══════════════════════════
 WRITING STYLE
@@ -149,13 +149,13 @@ ${refInstructions}
 CRITICAL LATEX RULES
 ══════════════════════════
 
-1. ${s.columns === 2 ? 'TITLE BLOCK must be wrapped: \\\\twocolumn[\\\\begin{@twocolumnfalse}...\\\\end{@twocolumnfalse}]. NEVER nest other environments incorrectly inside it.' : 'Standard single-column document layout.'}
+1. ${s.columns === 2 ? 'TITLE BLOCK must be wrapped: \\twocolumn[\\begin{@twocolumnfalse}...\\end{@twocolumnfalse}]. NEVER nest other environments incorrectly inside it.' : 'Standard single-column document layout.'}
 2. BRACE MATCHING: Every { must have matching }. Count carefully.
-3. SECTIONS: Use \\\\& not & in section names.
-4. ${s.useReferences ? 'Every \\\\textcite{key} must match entries in references_bib.' : 'No citations needed.'}
-5. No \\\\lipsum. Write REAL content.
+3. SECTIONS: Use \\& not & in section names.
+4. ${s.useReferences ? 'Every \\textcite{key} must match entries in references_bib.' : 'No citations needed.'}
+5. No \\lipsum. Write REAL content.
 6. Tables/code/formulas OPTIONAL — only if relevant.
-7. Properly escape: & → \\\\& , % → \\\\% , # → \\\\# , _ → \\\\_
+7. Properly escape: & → \\& , % → \\% , # → \\# , _ → \\_
 ${templateSection}
 
 ══════════════════════════
