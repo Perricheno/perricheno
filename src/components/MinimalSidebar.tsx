@@ -7,7 +7,8 @@ import {
     IconRobot, IconFileTypePdf, IconListCheck,
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
-    IconLayoutSidebarLeftExpand, IconLayoutBoard
+    IconLayoutSidebarLeftExpand, IconLayoutBoard,
+    IconSparkles
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -39,8 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Activity",
         links: [
             { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
-            { href: "/tasks", icon: IconListCheck, label: "Tasks" },
-            { href: "/agent", icon: IconRobot, label: "AI Agent" },
+            { href: "/agent", icon: IconSparkles, label: "AI Agent" },
             { href: "/pdf", icon: IconFileTypePdf, label: "PDF Tools" },
         ]
     },
@@ -52,13 +52,12 @@ const NAV_GROUPS: NavGroup[] = [
     }
 ];
 
-// Mobile bottom bar — 5 key items (icons + labels)
+// Mobile bottom bar — 5 key items (icons only now)
 const MOBILE_NAV: NavLink[] = [
     { href: "/", icon: IconHome, label: "Home" },
-    { href: "/tasks", icon: IconListCheck, label: "Tasks" },
+    { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
     { href: "/pdf", icon: IconFileTypePdf, label: "PDF" },
-    { href: "/agent", icon: IconRobot, label: "Agent" },
-    // 5th slot = profile/sign-in
+    { href: "/agent", icon: IconSparkles, label: "Agent" },
 ];
 
 export default function MinimalSidebar() {
@@ -153,7 +152,7 @@ export default function MinimalSidebar() {
                         <button onClick={() => setShowLogin(true)} 
                             className="w-full flex items-center justify-center gap-2 p-2 rounded-[var(--radius)] bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity text-sm font-semibold shadow-sm">
                             <IconLogin className="w-[18px] h-[18px]" />
-                            <span className={cn(collapsed && "hidden")}>Sign In</span>
+                                <span className={cn(collapsed && "hidden")}>Sign In</span>
                         </button>
                     )}
                 </div>
@@ -162,57 +161,46 @@ export default function MinimalSidebar() {
             {/* ═══════════════════════════════════════ */}
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
-            <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden w-[92%] max-w-[400px]">
-                <div className="flex items-center justify-around px-1 py-1.5 bg-white rounded-2xl border border-[var(--border)] shadow-xl shadow-black/5">
+            <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 md:hidden w-[95%] max-w-[440px]">
+                <div className="flex items-center justify-around px-2 py-2 bg-white/80 backdrop-blur-xl rounded-[28px] border border-black/5 shadow-2xl shadow-black/10">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
-                            className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
-                            {/* Pill background for active state */}
-                            <div className={cn(
-                                "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
-                                isActive(l.href)
-                                    ? "bg-black"
-                                    : "bg-transparent group-hover:bg-black/5"
-                            )}>
-                                <l.icon className={cn(
-                                    "w-[18px] h-[18px] transition-colors",
-                                    isActive(l.href)
-                                        ? "text-white stroke-[2.5px]"
-                                        : "text-[var(--muted)] stroke-[1.5px]"
-                                )} />
-                            </div>
+                            className="flex items-center justify-center w-14 h-14 relative group">
                             
-                            {/* Label */}
-                            <span className={cn(
-                                "text-[10px] leading-tight transition-colors mt-0.5",
-                                isActive(l.href) ? "text-[var(--foreground)] font-bold" : "text-[var(--muted)] font-medium"
-                            )}>
-                                {l.label}
-                            </span>
+                            {/* Active Indicator Background */}
+                            <div className={cn(
+                                "absolute inset-1 rounded-2xl transition-all duration-300",
+                                isActive(l.href)
+                                    ? "bg-black shadow-lg shadow-black/20 scale-100 opacity-100"
+                                    : "bg-transparent scale-75 opacity-0 group-hover:opacity-10 group-hover:bg-black group-hover:scale-90"
+                            )} />
+
+                            {/* Icon */}
+                            <l.icon className={cn(
+                                "w-6 h-6 z-10 transition-all duration-300",
+                                isActive(l.href)
+                                    ? "text-white scale-110"
+                                    : "text-black/40 group-hover:text-black/60"
+                            )} stroke={isActive(l.href) ? 2.5 : 1.5} />
                         </Link>
                     ))}
 
-                    {/* Settings slot */}
+                    {/* Settings slot (Separated to keep MOBILE_NAV clean) */}
                     <Link href="/settings"
-                        className="flex flex-col items-center justify-center w-[56px] relative group gap-0.5 py-1">
+                        className="flex items-center justify-center w-14 h-14 relative group">
                         <div className={cn(
-                            "w-10 h-6 rounded-full transition-all duration-300 flex items-center justify-center",
+                            "absolute inset-1 rounded-2xl transition-all duration-300",
                             isActive("/settings")
-                                ? "bg-black"
-                                : "bg-transparent group-hover:bg-black/5"
-                        )}>
-                            <IconSettings className={cn(
-                                "w-[18px] h-[18px] transition-colors",
-                                isActive("/settings") ? "text-white stroke-[2.5px]" : "text-[var(--muted)] stroke-[1.5px]"
-                            )} />
-                        </div>
+                                ? "bg-black shadow-lg shadow-black/20 scale-100 opacity-100"
+                                : "bg-transparent scale-75 opacity-0 group-hover:opacity-10 group-hover:bg-black group-hover:scale-90"
+                        )} />
                         
-                        <span className={cn(
-                            "text-[10px] leading-tight transition-colors mt-0.5",
-                            isActive("/settings") ? "text-[var(--foreground)] font-bold" : "text-[var(--muted)] font-medium"
-                        )}>
-                            Settings
-                        </span>
+                        <IconSettings className={cn(
+                            "w-6 h-6 z-10 transition-all duration-300",
+                            isActive("/settings")
+                                ? "text-white scale-110"
+                                : "text-black/40 group-hover:text-black/60"
+                        )} stroke={isActive("/settings") ? 2.5 : 1.5} />
                     </Link>
                 </div>
             </nav>
