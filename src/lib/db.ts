@@ -65,6 +65,11 @@ db.exec(`
     );
 `);
 
+// Safe migrations for legacy database updates
+try { db.exec("ALTER TABLE agent_sessions ADD COLUMN status TEXT DEFAULT 'done'"); } catch (e) {}
+try { db.exec("ALTER TABLE agent_sessions ADD COLUMN error_msg TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE agent_sessions ADD COLUMN stream_text TEXT"); } catch (e) {}
+
 export default db;
 
 export interface User {
@@ -223,6 +228,9 @@ export interface AgentSession {
     references_bib: string | null;
     r_images_json: string | null;
     share_id: string | null;
+    status: string;
+    error_msg: string | null;
+    stream_text: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -236,17 +244,19 @@ export function createAgentSession(data: {
     main_tex?: string;
     references_bib?: string;
     r_images_json?: string;
+    status?: string;
+    stream_text?: string;
 }): AgentSession {
     const stmt = db.prepare(`
-        INSERT INTO agent_sessions (id, user_id, title, doc_type, settings_json, main_tex, references_bib, r_images_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO agent_sessions (id, user_id, title, doc_type, settings_json, main_tex, references_bib, r_images_json, status, stream_text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(data.id, data.user_id, data.title, data.doc_type, data.settings_json || null, data.main_tex || null, data.references_bib || null, data.r_images_json || null);
+    stmt.run(data.id, data.user_id, data.title, data.doc_type, data.settings_json || null, data.main_tex || null, data.references_bib || null, data.r_images_json || null, data.status || 'done', data.stream_text || null);
     return db.prepare('SELECT * FROM agent_sessions WHERE id = ?').get(data.id) as AgentSession;
 }
 
 export function getAgentSessionsByUser(userId: number): AgentSession[] {
-    return db.prepare('SELECT id, user_id, title, doc_type, share_id, created_at, updated_at FROM agent_sessions WHERE user_id = ? ORDER BY updated_at DESC').all(userId) as AgentSession[];
+    return db.prepare('SELECT id, user_id, title, doc_type, share_id, status, created_at, updated_at FROM agent_sessions WHERE user_id = ? ORDER BY updated_at DESC').all(userId) as AgentSession[];
 }
 
 export function getAgentSession(id: string): AgentSession | undefined {
@@ -259,10 +269,13 @@ export function getAgentSessionByShareId(shareId: string): AgentSession | undefi
 
 export function updateAgentSession(id: string, data: {
     title?: string;
-    main_tex?: string;
-    references_bib?: string;
-    r_images_json?: string;
-    settings_json?: string;
+    main_tex?: string | null;
+    references_bib?: string | null;
+    r_images_json?: string | null;
+    settings_json?: string | null;
+    status?: string;
+    error_msg?: string | null;
+    stream_text?: string | null;
 }): void {
     const fields: string[] = [];
     const values: any[] = [];
@@ -272,6 +285,9 @@ export function updateAgentSession(id: string, data: {
     if (data.references_bib !== undefined) { fields.push('references_bib = ?'); values.push(data.references_bib); }
     if (data.r_images_json !== undefined) { fields.push('r_images_json = ?'); values.push(data.r_images_json); }
     if (data.settings_json !== undefined) { fields.push('settings_json = ?'); values.push(data.settings_json); }
+    if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
+    if (data.error_msg !== undefined) { fields.push('error_msg = ?'); values.push(data.error_msg); }
+    if (data.stream_text !== undefined) { fields.push('stream_text = ?'); values.push(data.stream_text); }
 
     if (fields.length === 0) return;
 

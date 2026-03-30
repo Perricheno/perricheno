@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
+import { createAgentSession, updateAgentSession } from '@/lib/db';
+import { v4 as uuidv4 } from 'uuid';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -217,6 +219,93 @@ function buildMessages(s: GenerateSettings) {
     return messages;
 }
 
+async function runAgentTaskBackground(sessionId: string, messages: any[]) {
+    try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "gpt-5-mini-2025-08-07",
+                messages,
+                stream: true,
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error("OpenAI API Error:", errBody);
+            updateAgentSession(sessionId, { status: "error", error_msg: `API error: ${errBody.slice(0, 200)}` });
+            return;
+        }
+
+        const decoder = new TextDecoder();
+        const reader = response.body!.getReader();
+        let buffer = "";
+        let accumulated = "";
+        let lastDbUpdate = Date.now();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                const data = trimmed.slice(6);
+                if (data === '[DONE]') continue;
+
+                try {
+                    const parsed = JSON.parse(data);
+                    const content = parsed.choices?.[0]?.delta?.content;
+                    if (content) {
+                        accumulated += content;
+                    }
+                } catch {}
+            }
+
+            // Sync stream progress to db every 1 second max
+            if (Date.now() - lastDbUpdate > 1000) {
+                updateAgentSession(sessionId, { stream_text: accumulated });
+                lastDbUpdate = Date.now();
+            }
+        }
+
+        // Final db sync
+        updateAgentSession(sessionId, { stream_text: accumulated });
+
+        let clean = accumulated.trim();
+        if (clean.startsWith("```json")) clean = clean.substring(7);
+        if (clean.startsWith("```")) clean = clean.substring(3);
+        if (clean.endsWith("```")) clean = clean.replace(/```\s*$/, "");
+        
+        let finalData: { main_tex?: string, references_bib?: string } = {};
+        try {
+            finalData = JSON.parse(clean);
+            if (!finalData.main_tex) throw new Error("Invalid output — missing main_tex");
+        } catch (e: any) {
+            updateAgentSession(sessionId, { status: "error", error_msg: "AI generated invalid JSON: " + e.message });
+            return;
+        }
+
+        updateAgentSession(sessionId, {
+            status: "done",
+            main_tex: finalData.main_tex,
+            references_bib: finalData.references_bib || null,
+        });
+
+    } catch (err: any) {
+        console.error("Background Agent Error:", err);
+        updateAgentSession(sessionId, { status: "error", error_msg: err.message || "Unexpected background error." });
+    }
+}
+
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) {
@@ -256,68 +345,28 @@ export async function POST(req: Request) {
 
         const messages = buildMessages(settings);
 
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
-                messages,
-                stream: true,
-            })
-        });
+        let sessionId = body.sessionId;
+        const shortTitle = settings.prompt.slice(0, 50).trim() || "Generated Document";
 
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error("OpenAI API Error:", errBody);
-            return NextResponse.json({ error: `API error: ${errBody.slice(0, 200)}` }, { status: 500 });
+        if (!sessionId) {
+            sessionId = uuidv4();
+            createAgentSession({
+                id: sessionId,
+                user_id: userId,
+                title: shortTitle + (settings.prompt.length > 50 ? '...' : ''),
+                doc_type: settings.type,
+                settings_json: JSON.stringify(settings),
+                status: 'generating',
+                stream_text: '',
+            });
+        } else {
+            updateAgentSession(sessionId, { status: 'generating', stream_text: '', error_msg: null });
         }
 
-        const encoder = new TextEncoder();
-        const decoder = new TextDecoder();
+        // Fire and forget
+        runAgentTaskBackground(sessionId, messages);
 
-        const stream = new ReadableStream({
-            async start(controller) {
-                const reader = response.body!.getReader();
-                let buffer = "";
-
-                try {
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-
-                        buffer += decoder.decode(value, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop() || "";
-
-                        for (const line of lines) {
-                            const trimmed = line.trim();
-                            if (!trimmed || !trimmed.startsWith('data: ')) continue;
-                            const data = trimmed.slice(6);
-                            if (data === '[DONE]') continue;
-
-                            try {
-                                const parsed = JSON.parse(data);
-                                const content = parsed.choices?.[0]?.delta?.content;
-                                if (content) {
-                                    controller.enqueue(encoder.encode(content));
-                                }
-                            } catch {}
-                        }
-                    }
-                } catch (err) {
-                    console.error("Stream error:", err);
-                } finally {
-                    controller.close();
-                }
-            }
-        });
-
-        return new Response(stream, {
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
+        return NextResponse.json({ sessionId });
 
     } catch (err: any) {
         console.error("Agent Error:", err);

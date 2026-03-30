@@ -56,6 +56,7 @@ export default function AgentPage() {
     const [streamChars, setStreamChars] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const pollRef = useRef<NodeJS.Timeout | null>(null);
     const streamBoxRef = useRef<HTMLDivElement>(null);
 
     const EXPECTED_CHARS = settings.wordCount * 6;
@@ -94,14 +95,11 @@ export default function AgentPage() {
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
 
-    const parseResult = (fullText: string) => {
-        let clean = fullText.trim();
-        if (clean.startsWith("```")) clean = clean.replace(/^```(?:json)?\s*/, "");
-        if (clean.endsWith("```")) clean = clean.replace(/```\s*$/, "");
-        const parsed = JSON.parse(clean);
-        if (!parsed.main_tex) throw new Error("Invalid output — missing main_tex");
-        return { main_tex: parsed.main_tex, references_bib: parsed.references_bib || null };
-    };
+    useEffect(() => {
+        return () => {
+            if (pollRef.current) clearTimeout(pollRef.current);
+        };
+    }, []);
 
     const streamGenerate = useCallback(async (body: Record<string, any>, topicText: string) => {
         if (!user) { setShowLogin(true); return; }
@@ -115,8 +113,10 @@ export default function AgentPage() {
         setIsFixingErrors(false);
         startTimer();
 
-        let accumulated = "";
         try {
+            // Append current session ID to modify the existing document context if present
+            if (currentSessionId) body.sessionId = currentSessionId;
+            
             const res = await fetch('/api/agent/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -128,61 +128,48 @@ export default function AgentPage() {
                 throw new Error(errData.error || `HTTP ${res.status}`);
             }
 
-            const reader = res.body!.getReader();
-            const decoder = new TextDecoder();
+            const { sessionId } = await res.json();
+            if (!currentSessionId) setCurrentSessionId(sessionId);
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                accumulated += decoder.decode(value, { stream: true });
-                setStreamText(accumulated);
-                setStreamChars(accumulated.length);
-            }
+            const pollStatus = async () => {
+                try {
+                    const statusRes = await fetch(`/api/agent/sessions/${sessionId}`);
+                    if (!statusRes.ok) throw new Error("Status check failed");
+                    
+                    const { session } = await statusRes.json();
 
-            stopTimer();
-            const result = parseResult(accumulated);
-            setMainTex(result.main_tex);
-            setReferencesBib(result.references_bib);
+                    if (session.status === 'error') {
+                        throw new Error(session.error_msg || "Background Agent crashed.");
+                    }
 
-            // Auto-save session
-            if (currentSessionId) {
-                await fetch(`/api/agent/sessions/${currentSessionId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        title: topicText,
-                        main_tex: result.main_tex,
-                        references_bib: result.references_bib,
-                        settings_json: settings,
-                    })
-                });
-            } else {
-                const createRes = await fetch('/api/agent/sessions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        title: topicText,
-                        doc_type: body.type,
-                        main_tex: result.main_tex,
-                        references_bib: result.references_bib,
-                        settings_json: settings,
-                        r_images_json: rImages,
-                    })
-                });
-                if (createRes.ok) {
-                    const { session } = await createRes.json();
-                    setCurrentSessionId(session.id);
-                    setSessions(prev => [session, ...prev]);
+                    if (session.stream_text) {
+                        setStreamText(session.stream_text);
+                        setStreamChars(session.stream_text.length);
+                    }
+
+                    if (session.status === 'done') {
+                        setMainTex(session.main_tex || "");
+                        setReferencesBib(session.references_bib);
+                        stopTimer();
+                        setActiveTab("tex");
+                        setPhase("done");
+                        loadSessions(); // refresh history list
+                    } else if (session.status === 'generating') {
+                        pollRef.current = setTimeout(pollStatus, 1500);
+                    }
+                } catch (e: any) {
+                    stopTimer();
+                    setError(e.message);
+                    setPhase("done");
                 }
-            }
+            };
 
-            setActiveTab("tex");
-            setPhase("done");
+            // Start polling loop
+            pollStatus();
+
         } catch (err: any) {
             stopTimer();
             setError(err.message);
-            // Even on error, show the stream output for debugging
-            setMainTex(accumulated);
             setPhase("done");
         }
     }, [user, setShowLogin, currentSessionId, settings, rImages]);

@@ -1,54 +1,36 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { getAgentSession, updateAgentSession, deleteAgentSession, toggleAgentSessionShare } from '@/lib/db';
+import { getAgentSession } from '@/lib/db';
 
-interface RouteParams {
-    params: Promise<{ id: string }>;
-}
-
-// GET /api/agent/sessions/[id]
-export async function GET(req: Request, { params }: RouteParams) {
-    const { id } = await params;
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
+    const { id } = await context.params;
     const session = getAgentSession(id);
-    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (session.user_id !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    return NextResponse.json({ session });
-}
+    if (!session) {
+        return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
 
-// PUT /api/agent/sessions/[id]
-export async function PUT(req: Request, { params }: RouteParams) {
-    const { id } = await params;
-    const userId = await verifySession();
-    if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
+    if (session.user_id !== userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
 
-    const session = getAgentSession(id);
-    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (session.user_id !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-    const body = await req.json();
-    updateAgentSession(id, {
-        title: body.title,
-        main_tex: body.main_tex,
-        references_bib: body.references_bib,
-        r_images_json: body.r_images_json ? JSON.stringify(body.r_images_json) : undefined,
-        settings_json: body.settings_json ? JSON.stringify(body.settings_json) : undefined,
+    // Only return the fields we need for polling to keep the payload light
+    return NextResponse.json({ 
+        session: {
+            id: session.id,
+            status: session.status,
+            stream_text: session.stream_text,
+            error_msg: session.error_msg,
+            main_tex: session.main_tex,
+            references_bib: session.references_bib,
+            r_images_json: session.r_images_json,
+            settings_json: session.settings_json,
+            doc_type: session.doc_type,
+            title: session.title,
+            updated_at: session.updated_at
+        } 
     });
-
-    return NextResponse.json({ success: true });
-}
-
-// DELETE /api/agent/sessions/[id]
-export async function DELETE(req: Request, { params }: RouteParams) {
-    const { id } = await params;
-    const userId = await verifySession();
-    if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
-
-    const deleted = deleteAgentSession(id, userId);
-    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    return NextResponse.json({ success: true });
 }
