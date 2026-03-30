@@ -16,19 +16,21 @@ export async function POST(req: Request) {
         const formData = await req.formData();
         const zipFile = formData.get("file");
 
-        if (!zipFile) {
-            return NextResponse.json({ error: "No ZIP file provided." }, { status: 400 });
+        if (!zipFile || typeof zipFile === "string") {
+            return NextResponse.json({ error: "No physical ZIP file payload provided." }, { status: 400 });
         }
 
-        // Optional: If Vercel or NextJS mutates formData boundary, it's safer to reconstruct it:
-        // Actually, just passing `formData` to `fetch()` cleanly reconstructs it in modern Node.
-        
+        // Rebuild the proxy FormData carefully to ensure the NextJS wrapper
+        // doesn't inject corrupted boundaries or fields when forwarding.
+        const proxyFormData = new FormData();
+        proxyFormData.append("file", zipFile, "project.zip");
+
         const compilerRes = await fetch(COMPILER_URL, {
             method: 'POST',
             headers: {
                 'x-api-key': COMPILER_KEY,
             },
-            body: formData,
+            body: proxyFormData,
             signal: AbortSignal.timeout(90000), // LaTeX can be slow
         });
 
@@ -36,6 +38,18 @@ export async function POST(req: Request) {
             const errText = await compilerRes.text();
             console.error("Compiler microservice returned:", compilerRes.status, errText);
             return NextResponse.json({ error: `Compiler Error (${compilerRes.status}): ` + errText }, { status: compilerRes.status });
+        }
+
+        const contentType = compilerRes.headers.get("content-type") || "";
+        if (contentType.includes("json") || contentType.includes("text")) {
+            const errText = await compilerRes.text();
+            console.error("Compiler returned JSON/text instead of PDF:", errText);
+            let msg = errText;
+            try {
+                const j = JSON.parse(errText);
+                msg = j.error || j.detail || JSON.stringify(j);
+            } catch(e) {}
+            return NextResponse.json({ error: `Compiler returned text/json: ` + msg }, { status: 500 });
         }
 
         // Return the PDF buffer directly
