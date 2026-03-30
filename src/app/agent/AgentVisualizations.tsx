@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand } from "@tabler/icons-react";
+import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash } from "@tabler/icons-react";
 import { RImage, Language } from "./types";
 
 interface Props {
@@ -65,15 +65,24 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
         if (codeRef.current) codeRef.current.scrollTop = codeRef.current.scrollHeight;
     }, [code]);
 
-    const generate = async () => {
+    const generate = async (isRetry = false) => {
         setStatus("streaming");
+
+        const reqBody: any = { topic, chartType, palette, language, dataContext, action: "stream" };
+        if (isRetry && errorMsg && code) {
+            reqBody.previousError = errorMsg;
+            reqBody.previousCode = code;
+        }
+
         setCode("");
+        setErrorMsg("");
+
         try {
             // STEP 1: Stream Code
             const resStream = await fetch('/api/agent/visualize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic, chartType, palette, language, dataContext, action: "stream" })
+                body: JSON.stringify(reqBody)
             });
             
             if (!resStream.ok) throw new Error("Stream connection failed");
@@ -193,7 +202,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                     <div className="text-[10px] text-red-500 font-mono text-left max-h-16 overflow-y-auto w-full px-2 leading-relaxed whitespace-pre-wrap break-all border-t border-red-100 pt-2">
                         {errorMsg}
                     </div>
-                    <button onClick={generate} className="mt-2 px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold flex items-center gap-1.5">
+                    <button onClick={() => generate(true)} className="mt-2 px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold flex items-center gap-1.5">
                         <IconReload className="w-3.5 h-3.5" /> Try again
                     </button>
                 </div>
@@ -285,6 +294,19 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
         a.href = `data:image/png;base64,${base64}`;
         a.download = `${name}.png`;
         a.click();
+    };
+
+    const handleDeleteImage = async (index: number) => {
+        if (!confirm("Delete this visualization?")) return;
+        const newArr = rImages.filter((_, i) => i !== index);
+        setRImages(newArr);
+        if (sessionId) {
+            await fetch(`/api/agent/sessions/${sessionId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ r_images_json: newArr })
+            });
+        }
     };
 
     return (
@@ -405,6 +427,14 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                             <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 text-gray-900 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm border border-gray-100">
                                 {img.chart_type.replace("_", " ")}
                             </div>
+                            
+                            <button
+                                onClick={() => handleDeleteImage(i)}
+                                className="absolute top-3 right-3 p-1.5 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg shadow-sm backdrop-blur-sm border border-transparent hover:border-red-100 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Delete visualization"
+                            >
+                                <IconTrash className="w-4 h-4" />
+                            </button>
                         </div>
                     ))}
 

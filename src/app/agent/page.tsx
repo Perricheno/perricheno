@@ -209,7 +209,6 @@ export default function AgentPage() {
         }, topic + " → add visuals");
     };
 
-    // Session handlers
     const handleSelectSession = (s: AgentSession) => {
         setCurrentSessionId(s.id);
         setTopic(s.title);
@@ -218,7 +217,50 @@ export default function AgentPage() {
         setReferencesBib(s.references_bib);
         setRImages(s.r_images_json ? JSON.parse(s.r_images_json) : []);
         setSettings(s.settings_json ? JSON.parse(s.settings_json) : DEFAULT_SETTINGS);
-        setPhase("done");
+        
+        setError(null);
+        if (s.status === 'generating') {
+            setPhase("streaming");
+            startTimer();
+            pollRef.current = setTimeout(() => {
+                const pollStatus = async () => {
+                    try {
+                        const statusRes = await fetch(`/api/agent/sessions/${s.id}`);
+                        if (!statusRes.ok) throw new Error("Status check failed");
+                        const { session } = await statusRes.json();
+
+                        if (session.status === 'error') throw new Error(session.error_msg || "Background Agent crashed.");
+
+                        if (session.stream_text) {
+                            setStreamText(session.stream_text);
+                            setStreamChars(session.stream_text.length);
+                        }
+
+                        if (session.status === 'done') {
+                            setMainTex(session.main_tex || "");
+                            setReferencesBib(session.references_bib);
+                            stopTimer();
+                            setActiveTab("tex");
+                            setPhase("done");
+                            loadSessions();
+                        } else if (session.status === 'generating') {
+                            pollRef.current = setTimeout(pollStatus, 1500);
+                        }
+                    } catch (e: any) {
+                        stopTimer();
+                        setError(e.message);
+                        setPhase("done");
+                    }
+                };
+                pollStatus();
+            }, 100);
+        } else if (s.status === 'error') {
+            setError(s.error_msg || "Session failed");
+            setPhase("done");
+        } else {
+            setPhase("done");
+        }
+        
         setSidebarOpen(false);
     };
 
@@ -500,7 +542,7 @@ export default function AgentPage() {
                 </div>
 
                 {/* Visualizations component */}
-                {!error && (
+                {true && (
                     <AgentVisualizations
                         topic={topic}
                         language={settings.language}

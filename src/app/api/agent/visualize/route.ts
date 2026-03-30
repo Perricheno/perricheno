@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     try {
-        const { topic, chartType, palette = 'viridis', language = 'en', dataContext = '', action, rCode } = await req.json();
+        const { topic, chartType, palette = 'viridis', language = 'en', dataContext = '', action, rCode, previousError, previousCode } = await req.json();
 
         // MODE 1: COMPILE FINISHED CODE
         if (action === "compile" && rCode) {
@@ -125,7 +125,11 @@ library <- function(package, ...) {
                 stream: true,
                 messages: [
                     { role: "system", content: "You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. Ensure proper syntax." },
-                    { role: "user", content: prompt }
+                    { role: "user", content: prompt },
+                    ...(previousError ? [
+                        { role: "assistant", content: previousCode },
+                        { role: "user", content: `The code you generated caused this exact R execution error:\n\n${previousError}\n\nPlease fix your code and output ONLY pure pure R code that resolves this error.` }
+                    ] : [])
                 ]
             })
         });

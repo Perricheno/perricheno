@@ -41,6 +41,9 @@ export interface AgentSession {
     user_id: number;
     title: string;
     doc_type: DocType;
+    status: "generating" | "done" | "error";
+    error_msg: string | null;
+    stream_text: string | null;
     settings_json: string | null;
     main_tex: string | null;
     references_bib: string | null;
