@@ -1,11 +1,7 @@
-Here is the complete, legally sound, and detailed English translation of the Privacy Policy. It uses standard international legal terminology (Legalese) appropriate for compliance with major data protection regulations such as GDPR, CCPA, and others.
-
----
-
 # PERRICHENO INC. PRIVACY POLICY
 
-**Effective Date: [Insert Date]**
-**Last Updated: [Insert Date]**
+**Effective Date: 30/03/2026**
+**Last Updated: 30/03/2026**
 
 This Privacy Policy (hereinafter referred to as the "Policy") explains how **Perricheno Inc.** (hereinafter referred to as the "Company", "We", "Our", or "Us") collects, uses, discloses, stores, and protects your personal information when you use our website, microservices, AI Agents, R-compiler nodes, Telegram bots, and all related software solutions (collectively referred to as the "Platform" or "Services").
 
