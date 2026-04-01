@@ -111,40 +111,40 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                 className="w-full max-w-6xl h-[90vh] flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] shadow-2xl overflow-hidden relative"
             >
                 {/* Header */}
-                <div className="h-14 border-b border-[var(--border)] flex flex-wrap items-center justify-between px-4 shrink-0 bg-[var(--background)]">
-                    <div className="flex items-center gap-3">
-                        <span className="px-2 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-widest rounded-md">
-                            R Editor
+                <div className="h-16 border-b border-gray-100 flex flex-wrap items-center justify-between px-6 shrink-0 bg-white">
+                    <div className="flex items-center gap-4">
+                        <span className="px-2 py-1 bg-black text-white text-[9px] font-black uppercase tracking-[0.2em] rounded">
+                            R Engine
                         </span>
-                        <span className="text-sm font-semibold max-w-[150px] truncate md:max-w-none">
+                        <span className="text-sm font-black uppercase tracking-widest text-black">
                             {image.chart_type.replace("_", " ")}
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsEditingMode(!isEditingMode)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-lg text-[12px] font-bold ${isEditingMode ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
+                            className={`flex items-center gap-2 px-4 py-2 transition-all rounded-xl text-[10px] font-black uppercase tracking-widest ${isEditingMode ? 'bg-black text-white' : 'text-gray-300 hover:text-black border border-transparent hover:border-gray-100'}`}
                         >
-                            <IconWand className="w-4 h-4" /> AI Edit
+                            <IconWand className="w-4 h-4" /> AI Manipulate
                         </button>
                         <button
                             onClick={() => handleCompile(code)}
                             disabled={isCompiling || isStreaming}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[#fbfbfc] border border-[#f0f0f0] text-gray-800 rounded-lg text-[13px] font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-100 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-black transition-all disabled:opacity-30"
                         >
                             {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconPlayerPlay className="w-4 h-4" />}
-                            Run & Preview
+                            Execute
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={isStreaming}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[var(--foreground)] text-[var(--card)] rounded-lg text-[13px] font-bold hover:opacity-90 transition-opacity"
+                            className="flex items-center gap-2 px-6 py-2 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-xl"
                         >
-                            <IconDeviceFloppy className="w-4 h-4" /> Save
+                            <IconDeviceFloppy className="w-4 h-4" /> Commit
                         </button>
-                        <div className="w-px h-6 bg-[var(--border)] mx-1" />
-                        <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-[var(--foreground)] transition-colors rounded-md">
+                        <div className="w-px h-6 bg-gray-100 mx-2" />
+                        <button onClick={onClose} className="p-2 text-gray-300 hover:text-black transition-colors">
                             <IconX className="w-5 h-5" />
                         </button>
                     </div>
@@ -176,22 +176,22 @@ export function REditorModal({ image, index, onClose, onSave, sessionId }: Props
                         {/* AI Edit Floating Input */}
                         <AnimatePresence>
                             {isEditingMode && (
-                                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="absolute bottom-4 left-4 right-4 shadow-xl border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col">
-                                    <div className="px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-200">
-                                       <IconWand className="w-3.5 h-3.5" /> Instruct AI
+                                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="absolute bottom-6 left-6 right-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-gray-100 rounded-[28px] overflow-hidden bg-white flex flex-col p-2">
+                                    <div className="px-4 py-2 text-[9px] font-black text-black uppercase tracking-[0.25em] flex items-center gap-2">
+                                       <IconWand className="w-3.5 h-3.5" /> Logical Instruction
                                     </div>
                                     <textarea
                                         value={editPrompt}
                                         onChange={e => setEditPrompt(e.target.value)}
                                         onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAIEdit(); } }}
-                                        placeholder="E.g., Change the bar colors to red, add a trendline..."
+                                        placeholder="Describe the structural or visual shift..."
                                         disabled={isStreaming}
-                                        className="w-full outline-none p-3 text-[13px] text-gray-700 bg-white placeholder:text-gray-300 resize-none"
+                                        className="w-full outline-none px-4 py-3 text-[13px] font-bold text-black bg-white placeholder:text-gray-100 resize-none"
                                         rows={2}
                                     />
-                                    <div className="flex justify-end p-2 border-t border-gray-100 bg-gray-50/50">
-                                        <button onClick={handleAIEdit} disabled={!editPrompt.trim() || isStreaming} className="p-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-full disabled:opacity-50 transition-colors">
-                                            {isStreaming ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
+                                    <div className="flex justify-end p-2 px-4">
+                                        <button onClick={handleAIEdit} disabled={!editPrompt.trim() || isStreaming} className="px-6 py-2 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#222] disabled:opacity-30 transition-all flex items-center gap-2">
+                                            {isStreaming ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <>Apply <IconArrowRight className="w-3.5 h-3.5" /></>}
                                         </button>
                                     </div>
                                 </motion.div>

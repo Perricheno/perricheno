@@ -379,11 +379,11 @@ export default function AgentPage() {
         setIdleSubPhase("config_form");
     };
 
-    const MODES: { id: DocType; label: string; icon: any; description: string; color: string }[] = [
-        { id: "research", label: "Research Paper", icon: IconSearch, description: "Full academic analysis with citations", color: "blue" },
-        { id: "assignment", label: "Assignment", icon: IconSchool, description: "Complete tasks or homework based on requirements", color: "emerald" },
-        { id: "diploma", label: "Thesis / Diploma", icon: IconCertificate, description: "Extensive structure and high-level deep dives", color: "indigo" },
-        { id: "report", label: "Analytical Report", icon: IconChartPie, description: "Data-driven business or scientific reports", color: "rose" },
+    const MODES: { id: DocType; label: string; icon: any; description: string }[] = [
+        { id: "research", label: "Research Paper", icon: IconSearch, description: "Full academic analysis with citations" },
+        { id: "assignment", label: "Assignment", icon: IconSchool, description: "Complete tasks or homework based on requirements" },
+        { id: "diploma", label: "Thesis / Diploma", icon: IconCertificate, description: "Extensive structure and high-level deep dives" },
+        { id: "report", label: "Analytical Report", icon: IconChartPie, description: "Data-driven business or scientific reports" },
     ];
 
     const handleLinkAdd = () => {
@@ -410,112 +410,114 @@ export default function AgentPage() {
     // ─── LANDING ───
     if (phase === "idle") {
         return (
-            <div className="w-full h-full flex flex-col font-sans bg-[var(--background)] overflow-y-auto relative p-4 md:p-8">
+            <div className="w-full h-full flex flex-col font-sans bg-[#FBFBFC] overflow-y-auto relative p-4 md:p-8">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
                 <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-10">
                     <AnimatePresence mode="wait">
                         {idleSubPhase === "mode_select" ? (
-                            <motion.div key="mode_select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full flex flex-col items-center">
-                                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-center">Let's create something.</h1>
-                                <p className="text-gray-400 mb-12 text-center text-lg">Select a mode to get started with precise AI assistance.</p>
+                            <motion.div key="mode_select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="w-full flex flex-col items-center">
+                                <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4 text-center text-black">Let's create something.</h1>
+                                <p className="text-gray-400 mb-14 text-center text-lg font-medium tracking-tight">Select a mode to get started with precise AI assistance.</p>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
                                     {MODES.map((m) => (
-                                        <button key={m.id} onClick={() => handleSelectMode(m.id)} className="group flex items-start gap-5 p-6 bg-[var(--card)] border border-[var(--border)] rounded-3xl hover:border-black transition-all text-left shadow-sm hover:shadow-xl">
-                                            <div className={`p-4 rounded-2xl bg-${m.color}-50 text-${m.color}-600 group-hover:bg-black group-hover:text-white transition-colors`}>
-                                                <m.icon className="w-6 h-6" />
+                                        <button key={m.id} onClick={() => handleSelectMode(m.id)} className="group flex items-center justify-between p-7 bg-white border border-gray-100 rounded-3xl hover:border-black hover:bg-black transition-all text-left shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)]">
+                                            <div className="flex items-center gap-6">
+                                                <div className="p-1 text-black group-hover:text-white transition-colors">
+                                                    <m.icon className="w-7 h-7" stroke={1.5} />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-xl mb-1 group-hover:text-white transition-colors">{m.label}</h3>
+                                                    <p className="text-xs text-gray-400 group-hover:text-gray-400 leading-relaxed font-medium transition-colors">{m.description}</p>
+                                                </div>
                                             </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-bold text-lg mb-1">{m.label}</h3>
-                                                <p className="text-sm text-gray-400 leading-relaxed">{m.description}</p>
-                                            </div>
-                                            <IconArrowRight className="w-5 h-5 text-gray-200 mt-1" />
+                                            <IconArrowRight className="w-5 h-5 text-gray-200 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                         </button>
                                     ))}
                                 </div>
                             </motion.div>
                         ) : (
-                            <motion.div key="config_form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-[32px] shadow-2xl p-8 md:p-12">
-                                <button onClick={() => setIdleSubPhase("mode_select")} className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-black mb-10 transition-colors uppercase tracking-widest">
-                                    <IconChevronLeft className="w-4 h-4" /> Change Mode
+                            <motion.div key="config_form" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="w-full max-w-2xl bg-white border border-gray-100 rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-14">
+                                <button onClick={() => setIdleSubPhase("mode_select")} className="flex items-center gap-2 text-[10px] font-black text-gray-400 hover:text-black mb-12 transition-colors uppercase tracking-[0.3em]">
+                                    <IconChevronLeft className="w-3.5 h-3.5" /> Change Mode
                                 </button>
 
-                                <div className="space-y-10">
+                                <div className="space-y-12">
                                     {/* Section: Title */}
                                     <div className="space-y-4">
-                                        <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Research Topic</label>
-                                        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }} placeholder="What is the title of your work?" className="w-full text-2xl md:text-3xl font-bold bg-transparent outline-none placeholder:text-gray-200 border-b border-gray-100 pb-4 focus:border-black transition-colors resize-none h-20" autoFocus />
+                                        <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Research Topic</label>
+                                        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }} placeholder="What is the title of your work?" className="w-full text-2xl md:text-3xl font-bold bg-transparent outline-none placeholder:text-gray-100 border-b border-gray-50 pb-6 focus:border-black transition-all resize-none h-24" autoFocus />
                                     </div>
 
                                     {/* Section: Authorship */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-4">
-                                            <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Author Name</label>
-                                            <div className="relative">
-                                                <IconUser className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                                <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your full name" className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-black transition-colors font-medium text-sm" />
+                                            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Author Name</label>
+                                            <div className="relative group">
+                                                <IconUser className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-black transition-colors" />
+                                                <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your full name" className="w-full pl-14 pr-5 py-4 bg-[#FBFBFC] border border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-black transition-all font-bold text-sm shadow-none focus:shadow-sm" />
                                             </div>
                                         </div>
                                         {docType === "diploma" && (
                                              <div className="space-y-4">
-                                                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Supervisor</label>
-                                                <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Scientific Advisor" className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-black transition-colors font-medium text-sm" />
+                                                <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Supervisor</label>
+                                                <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Scientific Advisor" className="w-full px-5 py-4 bg-[#FBFBFC] border border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-black transition-all font-bold text-sm" />
                                             </div>
                                         )}
                                         {docType === "assignment" && (
                                              <div className="space-y-4">
-                                                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Course / Group</label>
-                                                <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="CS-201 / Group B" className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-black transition-colors font-medium text-sm" />
+                                                <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Course / Group</label>
+                                                <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="CS-201 / Group B" className="w-full px-5 py-4 bg-[#FBFBFC] border border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-black transition-all font-bold text-sm" />
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Section: Task Description (Collapsible style or direct) */}
+                                    {/* Section: Task Description (Assignment Specific) */}
                                     {docType === "assignment" && (
                                         <div className="space-y-4 pt-4">
                                             <div className="flex items-center justify-between">
-                                                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">The Assignment Task</label>
-                                                <label className="cursor-pointer flex items-center gap-2 text-xs font-bold text-emerald-600 hover:text-emerald-700">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">The Assignment Task</label>
+                                                <label className="cursor-pointer flex items-center gap-2 text-[10px] font-black text-black hover:underline uppercase tracking-widest">
                                                     <IconFilePlus className="w-4 h-4" /> 
-                                                    {settings.taskFileText ? "File Attached" : "Attach Task PDF/TXT"}
+                                                    {settings.taskFileText ? "File Attached" : "Attach PDF/TXT"}
                                                     <input type="file" className="hidden" accept=".txt,.pdf" onChange={e => handleFileUpload(e, 'task')} />
                                                 </label>
                                             </div>
-                                            <textarea value={settings.taskDescription} onChange={e => setSettings({...settings, taskDescription: e.target.value})} placeholder="Paste the requirement text here..." className="w-full p-5 bg-emerald-50/30 border border-emerald-100 rounded-2xl outline-none focus:border-emerald-500 transition-colors text-sm min-h-[100px] resize-none" />
+                                            <textarea value={settings.taskDescription} onChange={e => setSettings({...settings, taskDescription: e.target.value})} placeholder="Paste the requirement text here..." className="w-full p-6 bg-[#FBFBFC] border border-gray-50 rounded-[24px] outline-none focus:bg-white focus:border-black transition-all text-sm font-medium min-h-[120px] resize-none" />
                                         </div>
                                     )}
 
                                     {/* Section: References Toggle */}
-                                    <div className="space-y-4 pt-6">
-                                        <div className="flex items-center justify-between pb-2 border-b border-gray-50">
+                                    <div className="space-y-6 pt-6">
+                                        <div className="flex items-center justify-between pb-4 border-b border-gray-50">
                                             <div>
-                                                <p className="text-sm font-bold">Use Custom References</p>
-                                                <p className="text-xs text-gray-400">Add external articles or links to ground the research.</p>
+                                                <p className="text-sm font-black">Use Custom References</p>
+                                                <p className="text-[11px] text-gray-400 font-medium">Add external articles or links to ground the research.</p>
                                             </div>
-                                            <button onClick={() => setSettings(s => ({ ...s, useReferences: !s.useReferences }))} className={`w-12 h-6 rounded-full transition-colors relative ${settings.useReferences ? 'bg-black' : 'bg-gray-100'}`}>
-                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.useReferences ? 'translate-x-7' : 'translate-x-1'}`} />
+                                            <button onClick={() => setSettings(s => ({ ...s, useReferences: !s.useReferences }))} className={`w-14 h-7 rounded-full transition-all relative ${settings.useReferences ? 'bg-black' : 'bg-gray-100'}`}>
+                                                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${settings.useReferences ? 'translate-x-8' : 'translate-x-1'}`} />
                                             </button>
                                         </div>
 
                                         {settings.useReferences && (
-                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 pt-4 overflow-hidden">
-                                                <div className="space-y-2">
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-5 pt-4 overflow-hidden">
+                                                <div className="space-y-3">
                                                     {settings.referenceLinks.map((link, idx) => (
-                                                        <div key={idx} className="flex gap-2">
-                                                            <div className="flex-1 relative">
-                                                                <IconLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                                                <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:border-black font-medium" />
+                                                        <div key={idx} className="flex gap-3">
+                                                            <div className="flex-1 relative group">
+                                                                <IconLink className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-black transition-colors" />
+                                                                <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="w-full pl-12 pr-5 py-3.5 bg-[#FBFBFC] border border-gray-50 rounded-xl text-xs outline-none focus:bg-white focus:border-black font-bold transition-all" />
                                                             </div>
-                                                            <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-3 text-gray-300 hover:text-red-500"><IconX className="w-4 h-4" /></button>
+                                                            <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-3 text-gray-200 hover:text-black transition-colors"><IconX className="w-5 h-5" /></button>
                                                         </div>
                                                     ))}
-                                                    <button onClick={handleLinkAdd} className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest pl-2">
+                                                    <button onClick={handleLinkAdd} className="flex items-center gap-2 text-[10px] font-black text-gray-300 hover:text-black uppercase tracking-[0.2em] pl-2 transition-colors">
                                                         + Add source link
                                                     </button>
                                                 </div>
                                                 <div className="pt-2">
-                                                    <label className="cursor-pointer flex items-center justify-center gap-3 p-4 border-2 border-dashed border-gray-100 rounded-2xl text-xs font-bold text-gray-400 hover:border-black hover:text-black transition-all">
+                                                    <label className="cursor-pointer flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-100 rounded-3xl text-[11px] font-black text-gray-300 hover:border-black hover:text-black transition-all uppercase tracking-widest bg-[#FBFBFC] hover:bg-white">
                                                         <IconFilePlus className="w-5 h-5" />
                                                         {settings.referenceFilesText.length > 0 ? `${settings.referenceFilesText.length} Files Attached` : "Upload Reference Articles (PDF/TXT)"}
                                                         <input type="file" className="hidden" multiple accept=".txt,.pdf" onChange={e => handleFileUpload(e, 'ref')} />
@@ -526,8 +528,8 @@ export default function AgentPage() {
                                     </div>
 
                                     {/* Submit */}
-                                    <div className="pt-6">
-                                        <button onClick={handleGenerate} disabled={!prompt.trim() || (docType === "assignment" && !settings.authorName)} className="w-full py-5 bg-black text-white rounded-2xl font-bold text-lg hover:opacity-90 disabled:opacity-20 shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]">
+                                    <div className="pt-8">
+                                        <button onClick={handleGenerate} disabled={!prompt.trim() || (docType === "assignment" && !settings.authorName)} className="w-full py-6 bg-black text-white rounded-[24px] font-bold text-lg hover:bg-[#1A1A1A] disabled:opacity-5 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3 active:scale-[0.97]">
                                             Create Document <IconArrowRight className="w-6 h-6" />
                                         </button>
                                     </div>
@@ -544,34 +546,34 @@ export default function AgentPage() {
     if (phase === "streaming") {
         const estimatedProgress = Math.min(95, Math.round((streamChars / EXPECTED_CHARS) * 100));
         return (
-            <div className="w-full h-full flex flex-col font-sans bg-[var(--background)] p-4 md:p-6 overflow-hidden relative">
+            <div className="w-full h-full flex flex-col font-sans bg-[#FBFBFC] p-4 md:p-6 overflow-hidden relative">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full h-full flex flex-col max-w-4xl mx-auto pl-12 md:pl-0 pt-4 md:pt-0">
-                    <div className="flex items-center justify-between mb-4 md:px-1">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1.5 text-sm font-mono text-[var(--foreground)]">
-                                <IconClock className="w-4 h-4 text-gray-400" /> <span className="tabular-nums">{elapsedTime.toFixed(1)}s</span>
+                    <div className="flex items-center justify-between mb-6 md:px-1">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
+                                <IconClock className="w-3.5 h-3.5" stroke={2.5} /> <span className="tabular-nums">{elapsedTime.toFixed(1)}s</span>
                             </div>
-                            <div className="hidden sm:flex items-center gap-1.5 text-sm font-mono text-[var(--foreground)]">
-                                <IconLetterCase className="w-4 h-4 text-gray-400" /> <span className="tabular-nums">{streamChars.toLocaleString()}</span> <span className="text-xs text-gray-300">chars</span>
+                            <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
+                                <IconLetterCase className="w-4 h-4" stroke={2.5} /> <span className="tabular-nums">{streamChars.toLocaleString()} chars</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs font-mono text-gray-400 tabular-nums">{estimatedProgress}%</span>
-                            <div className="w-32 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                                <motion.div className="h-full bg-[var(--foreground)] rounded-full" animate={{ width: `${estimatedProgress}%` }} transition={{ duration: 0.3 }} />
+                        <div className="flex items-center gap-4">
+                            <span className="text-[10px] font-black text-black tabular-nums tracking-widest">{estimatedProgress}%</span>
+                            <div className="w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <motion.div className="h-full bg-black" animate={{ width: `${estimatedProgress}%` }} transition={{ duration: 0.3 }} />
                             </div>
                         </div>
                     </div>
-                    <div className="flex-1 bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] shadow-sm overflow-hidden flex flex-col">
-                        <div className="h-10 bg-white border-b border-[var(--border)] flex items-center px-4 gap-2 shrink-0">
-                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="text-xs font-mono text-gray-400">streaming</span>
-                            <span className="text-xs text-gray-300 ml-auto truncate max-w-[150px] sm:max-w-xs">{topic}</span>
+                    <div className="flex-1 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col">
+                        <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-3 shrink-0">
+                            <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                            <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">Agent Logic Stream</span>
+                            <span className="text-[10px] font-black text-[#D4D4D8] ml-auto truncate uppercase tracking-widest max-w-[150px] sm:max-w-xs">{topic}</span>
                         </div>
-                        <div ref={streamBoxRef} className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed text-gray-600 bg-gray-50/50">
-                            <pre className="m-0 whitespace-pre-wrap break-all">{streamText}<span className="animate-pulse text-[var(--foreground)]">▊</span></pre>
+                        <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 font-mono text-[11px] leading-[1.8] text-[#52525B] bg-[#FAFAFA]">
+                            <pre className="m-0 whitespace-pre-wrap break-all">{streamText}<span className="animate-pulse text-black font-black">|</span></pre>
                         </div>
                     </div>
                 </motion.div>
@@ -581,76 +583,77 @@ export default function AgentPage() {
 
     // ─── DONE ───
     return (
-        <div className="w-full h-full flex flex-col items-center justify-start py-8 font-sans bg-[var(--background)] p-6 relative overflow-y-auto">
+        <div className="w-full h-full flex flex-col items-center justify-start py-10 font-sans bg-[#FBFBFC] p-6 relative overflow-y-auto">
             <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-4xl pt-8 md:pt-0">
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-4xl pt-8 md:pt-0">
                 {/* Header Section */}
-                <div className="text-center mb-8 max-w-lg mx-auto">
+                <div className="text-center mb-10 max-w-2xl mx-auto">
                     {error ? (
                         <>
-                            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4 border border-red-100">
-                                <IconX className="w-8 h-8 text-red-500" />
+                            <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
+                                <IconX className="w-10 h-10 text-black" stroke={2.5} />
                             </div>
-                            <h2 className="text-2xl font-bold mb-2">Generation Failed</h2>
-                            <p className="text-sm text-gray-500 mb-6">{error}</p>
+                            <h2 className="text-2xl font-black mb-3 text-black">Process Interrupted</h2>
+                            <p className="text-sm text-[#A1A1AA] font-bold uppercase tracking-widest mb-8">{error}</p>
                         </>
                     ) : (
                         <>
-                            <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4 border border-emerald-100">
-                                <IconCheck className="w-8 h-8 text-emerald-500" />
+                            <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
+                                <IconCheck className="w-10 h-10 text-black" stroke={2.5} />
                             </div>
-                            <h2 className="text-2xl font-bold mb-2 break-words">{topic}</h2>
-                            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-400 mb-6 font-medium uppercase tracking-wider">
-                                <span>{docType.replace("_", " ")}</span>
-                                {referencesBib && <><span>•</span><span>with refs</span></>}
-                                <span>•</span><span>{settings.style}</span>
+                            <h2 className="text-3xl font-black mb-4 break-words text-black tracking-tight">{topic}</h2>
+                            <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] text-[#D4D4D8] mb-8 font-black uppercase tracking-[0.25em]">
+                                <span className="text-black">{docType.replace("_", " ")}</span>
+                                <span>•</span>
+                                <span>{settings.style}</span>
+                                {referencesBib && <><span>•</span><span className="text-black">Refs Attached</span></>}
                             </div>
                         </>
                     )}
 
                     {/* Actions */}
-                    <div className="flex flex-wrap flex-col sm:flex-row items-center justify-center gap-3 mb-6">
-                        <button onClick={() => setViewerOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-100 text-gray-700 rounded-full font-semibold text-sm hover:bg-gray-200 transition-colors focus:scale-95">
+                    <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+                        <button onClick={() => setViewerOpen(true)} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
                             <IconEye className="w-4 h-4" /> View LaTeX
                         </button>
-                        <button onClick={downloadZip} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-white text-[var(--foreground)] border border-[var(--border)] rounded-full font-semibold text-sm hover:bg-gray-50 transition-colors focus:scale-95">
-                            <IconPackage className="w-4 h-4" /> Download ZIP
+                        <button onClick={downloadZip} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-black rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-xl active:scale-95">
+                            <IconPackage className="w-4 h-4" /> Project ZIP
                         </button>
-                        <button onClick={compilePdf} disabled={isCompiling} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full font-semibold text-sm hover:opacity-90 shadow-sm transition-all focus:scale-95 disabled:opacity-50">
+                        <button onClick={compilePdf} disabled={isCompiling} className="flex items-center gap-2 px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-5">
                             {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconFileText className="w-4 h-4" />}
-                            {isCompiling ? "Compiling..." : "Compile to PDF"}
+                            {isCompiling ? "Compiling..." : "Generate PDF"}
                         </button>
                     </div>
 
                     {/* Edit / Fix */}
-                    <div className="flex items-center justify-center gap-4 text-sm font-medium">
-                        <button onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }} className={`flex items-center gap-1.5 transition-colors ${isEditing ? 'text-[var(--foreground)]' : 'text-gray-400 hover:text-[var(--foreground)]'}`}>
-                            <IconPencil className="w-4 h-4" /> Edit
+                    <div className="flex items-center justify-center gap-6">
+                        <button onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isEditing ? 'text-black' : 'text-gray-300 hover:text-black'}`}>
+                            <IconPencil className="w-3.5 h-3.5" stroke={2.5} /> Modify
                         </button>
-                        <span className="text-gray-300">|</span>
-                        <button onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }} className={`flex items-center gap-1.5 transition-colors ${isFixingErrors ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
-                            <IconBug className="w-4 h-4" /> Fix Errors
+                        <div className="w-1 h-1 rounded-full bg-gray-100" />
+                        <button onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isFixingErrors ? 'text-black underline' : 'text-gray-300 hover:text-black'}`}>
+                            <IconBug className="w-3.5 h-3.5" stroke={2.5} /> Fix Errors
                         </button>
                     </div>
 
                     {/* Inputs */}
                     <AnimatePresence>
                         {isEditing && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="w-full max-w-lg mx-auto mt-4 overflow-hidden px-2">
-                                <div className="relative border border-[var(--border)] rounded-2xl bg-white shadow-sm focus-within:shadow-md focus-within:border-[var(--foreground)] transition-all">
-                                    <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); } }} placeholder="Add more detail..." className="w-full bg-transparent p-4 pr-12 outline-none resize-none text-[15px] font-medium placeholder:text-gray-300 min-h-[56px] max-h-32" rows={1} autoFocus />
-                                    <button onClick={handleEdit} disabled={!editPrompt.trim()} className="absolute right-3 bottom-3 p-1.5 rounded-full bg-[var(--foreground)] text-[var(--card)] disabled:opacity-30"><IconArrowRight className="w-4 h-4" /></button>
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
+                                <div className="relative border border-gray-100 rounded-[24px] bg-white shadow-2xl focus-within:border-black transition-all p-2">
+                                    <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); } }} placeholder="Direct the modification..." className="w-full bg-transparent px-5 py-4 pr-14 outline-none resize-none text-[15px] font-bold text-black placeholder:text-gray-100 min-h-[64px] max-h-32" rows={1} autoFocus />
+                                    <button onClick={handleEdit} disabled={!editPrompt.trim()} className="absolute right-4 bottom-4 p-2.5 rounded-xl bg-black text-white disabled:opacity-5 transition-all active:scale-90"><IconArrowRight className="w-4 h-4" /></button>
                                 </div>
                             </motion.div>
                         )}
                         {isFixingErrors && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="w-full max-w-lg mx-auto mt-4 overflow-hidden px-2">
-                                <div className="border border-red-200 rounded-2xl bg-red-50 shadow-sm overflow-hidden">
-                                    <div className="px-4 py-2 bg-red-100/50 border-b border-red-200"><span className="text-xs font-bold text-red-600 uppercase tracking-wider">Paste compilation errors</span></div>
-                                    <textarea value={errorLogInput} onChange={e => setErrorLogInput(e.target.value)} placeholder="Runaway argument? ..." className="w-full bg-transparent p-4 outline-none resize-none text-[13px] font-mono text-red-700 min-h-[100px] max-h-[200px]" rows={4} autoFocus />
-                                    <div className="px-4 pb-3 flex justify-end">
-                                        <button onClick={fixErrors} disabled={!errorLogInput.trim()} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full text-xs font-bold hover:bg-red-600 disabled:opacity-50"><IconBug className="w-4 h-4" /> Fix</button>
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
+                                <div className="border border-gray-100 rounded-[24px] bg-white shadow-2xl overflow-hidden p-2">
+                                    <div className="px-5 py-2 text-[9px] font-black text-black uppercase tracking-[0.3em]">Compiler Log</div>
+                                    <textarea value={errorLogInput} onChange={e => setErrorLogInput(e.target.value)} placeholder="Paste the log here..." className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[12px] font-mono text-black min-h-[120px] max-h-[200px]" rows={4} autoFocus />
+                                    <div className="px-2 pt-2 flex justify-end">
+                                        <button onClick={fixErrors} disabled={!errorLogInput.trim()} className="px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all flex items-center gap-2">Identify & Solve <IconBug className="w-4 h-4" /></button>
                                     </div>
                                 </div>
                             </motion.div>
@@ -659,20 +662,56 @@ export default function AgentPage() {
                 </div>
 
                 {/* Visualizations component */}
-                {true && (
-                    <AgentVisualizations
-                        topic={topic}
-                        language={settings.language}
-                        rImages={rImages}
-                        setRImages={setRImages}
-                        sessionId={currentSessionId}
-                        openEditor={setActiveEditorIndex}
-                        onAddVisualsToReport={handleAddVisualsToReport}
-                    />
-                )}
+                <AgentVisualizations
+                    topic={topic}
+                    language={settings.language}
+                    rImages={rImages}
+                    setRImages={setRImages}
+                    sessionId={currentSessionId}
+                    openEditor={setActiveEditorIndex}
+                    onAddVisualsToReport={handleAddVisualsToReport}
+                />
 
             </motion.div>
 
+            {/* LaTeX Viewer Modal */}
+            <AnimatePresence>
+                {viewerOpen && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setViewerOpen(false)} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md" />
+                        <motion.div initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", damping: 35, stiffness: 400 }} className="fixed inset-x-0 bottom-0 z-[100] h-[90vh] md:inset-6 md:h-auto md:rounded-[40px] bg-white border border-gray-100 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden">
+                            <div className="h-20 bg-white border-b border-gray-50 flex items-center justify-between px-8 shrink-0">
+                                <div className="flex items-center gap-4">
+                                    <button onClick={() => setActiveTab("tex")} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "tex" ? "bg-black text-white shadow-xl" : "text-gray-300 hover:text-black border border-transparent hover:border-gray-50"}`}>
+                                        <IconFileText className="w-4 h-4" /> Main Body
+                                    </button>
+                                    {referencesBib && (
+                                        <button onClick={() => setActiveTab("bib")} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "bib" ? "bg-black text-white shadow-xl" : "text-gray-300 hover:text-black border border-transparent hover:border-gray-50"}`}>
+                                            <IconBook className="w-4 h-4" /> Bibliography
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <button onClick={() => {
+                                        const blob = new Blob([activeTab === "tex" ? mainTex : referencesBib!], { type: "text/plain" });
+                                        const url = URL.createObjectURL(blob); const a = document.createElement("a");
+                                        a.href = url; a.download = activeTab === "tex" ? "main.tex" : "references.bib";
+                                        a.click(); URL.revokeObjectURL(url);
+                                    }} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#D4D4D8] hover:text-black transition-all border border-transparent hover:border-gray-50 rounded-xl">
+                                        <IconDownload className="w-4 h-4 inline mr-2" /> Download
+                                    </button>
+                                    <button onClick={() => setViewerOpen(false)} className="p-3 text-gray-300 hover:text-black transition-colors"><IconX className="w-6 h-6" /></button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-auto bg-[#FBFBFC]">
+                                <pre className="m-0 p-10 w-full min-h-full whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-[#52525B]" tabIndex={0}>
+                                    <code>{activeTab === "tex" ? mainTex : referencesBib}</code>
+                                </pre>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
             {/* Editor Modal */}
             <AnimatePresence>
                 {activeEditorIndex !== null && rImages[activeEditorIndex] && (
@@ -684,7 +723,6 @@ export default function AgentPage() {
                             const newArr = [...rImages];
                             newArr[idx] = newImg;
                             setRImages(newArr);
-                            // Update DB
                             if (currentSessionId) {
                                 fetch(`/api/agent/sessions/${currentSessionId}`, {
                                     method: 'PUT',
@@ -695,45 +733,6 @@ export default function AgentPage() {
                         }}
                         sessionId={currentSessionId}
                     />
-                )}
-            </AnimatePresence>
-
-            {/* LaTeX Viewer Modal */}
-            <AnimatePresence>
-                {viewerOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setViewerOpen(false)} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-                        <motion.div initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed inset-x-0 bottom-0 z-50 h-[85vh] md:inset-4 md:h-auto md:rounded-[var(--radius)] bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden">
-                            <div className="h-14 bg-[var(--background)] border-b border-[var(--border)] flex items-center justify-between px-4 shrink-0">
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => setActiveTab("tex")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${activeTab === "tex" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
-                                        <IconFileText className="w-4 h-4" /> main.tex
-                                    </button>
-                                    {referencesBib && (
-                                        <button onClick={() => setActiveTab("bib")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${activeTab === "bib" ? "bg-blue-50 text-blue-600 border border-blue-100" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}>
-                                            <IconBook className="w-4 h-4" /> references.bib
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => {
-                                        const blob = new Blob([activeTab === "tex" ? mainTex : referencesBib!], { type: "text/plain" });
-                                        const url = URL.createObjectURL(blob); const a = document.createElement("a");
-                                        a.href = url; a.download = activeTab === "tex" ? "main.tex" : "references.bib";
-                                        a.click(); URL.revokeObjectURL(url);
-                                    }} className="flex flex-row gap-1 items-center px-3 py-2 text-xs font-semibold text-gray-500 hover:text-[var(--foreground)] hover:bg-gray-100 rounded-lg transition-colors">
-                                        <IconDownload className="w-4 h-4" /> <span className="hidden sm:inline">Download File</span>
-                                    </button>
-                                    <button onClick={() => setViewerOpen(false)} className="p-2 text-gray-400 hover:text-[var(--foreground)] hover:bg-gray-100 rounded-lg transition-colors"><IconX className="w-5 h-5" /></button>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-auto bg-[#FBFBFC]">
-                                <pre className="m-0 p-6 w-full min-h-full whitespace-pre-wrap font-mono text-[13px] text-gray-800" tabIndex={0}>
-                                    <code>{activeTab === "tex" ? mainTex : referencesBib}</code>
-                                </pre>
-                            </div>
-                        </motion.div>
-                    </>
                 )}
             </AnimatePresence>
         </div>

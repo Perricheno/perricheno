@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash } from "@tabler/icons-react";
+import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash, IconX } from "@tabler/icons-react";
 import { RImage, Language } from "./types";
 
 interface Props {
@@ -159,51 +159,48 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
     if (status === "done") return null;
 
     return (
-        <div className={`flex flex-col items-center justify-center ${status === "streaming" ? "p-3 pt-10" : "p-6"} bg-white border border-[var(--border)] rounded-xl aspect-[4/3] shadow-sm relative overflow-hidden transition-all duration-300`}>
-            <span className="absolute top-2 left-2 px-2 py-1 bg-black/5 text-gray-500 rounded-md text-[10px] font-bold uppercase tracking-wider z-10 shadow-sm backdrop-blur-md">
+        <div className={`flex flex-col items-center justify-center ${status === "streaming" ? "p-3 pt-10" : "p-6"} bg-white border border-gray-100 rounded-2xl aspect-[4/3] shadow-sm relative overflow-hidden transition-all duration-300`}>
+            <span className="absolute top-3 left-3 px-2 py-1 bg-black text-white rounded text-[9px] font-black uppercase tracking-widest z-10">
                 {chartType.replace("_", " ")}
             </span>
-            <button onClick={onCancel} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 z-10 bg-white/50 backdrop-blur rounded p-0.5">
-                <IconAlertCircle className="w-4 h-4 opacity-0" />
-                <span className="text-xs font-bold px-2">Cancel</span>
+            <button onClick={onCancel} className="absolute top-3 right-3 text-gray-300 hover:text-black z-10 transition-colors">
+                <IconX className="w-4 h-4" />
             </button>
             
             {status === "pending" && (
-                <div className="flex flex-col items-center gap-3 text-gray-400">
-                    <IconLoader2 className="w-8 h-8 opacity-50" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Waiting in queue...</span>
+                <div className="flex flex-col items-center gap-4 text-gray-300">
+                    <IconLoader2 className="w-6 h-6 animate-spin opacity-20" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Queueing...</span>
                 </div>
             )}
             
             {status === "streaming" && (
-                <div className="w-full h-full flex flex-col bg-gray-50/50 rounded-lg p-3 overflow-hidden text-left relative border border-gray-100 shadow-inner">
-                    <span className="text-[9px] text-gray-400 font-mono font-bold mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse block"></span>
-                        AI Writing Script...
+                <div className="w-full h-full flex flex-col bg-[#FBFBFC] rounded-xl p-4 overflow-hidden text-left relative border border-gray-50 shadow-inner">
+                    <span className="text-[9px] text-black font-black mb-3 flex items-center gap-2 uppercase tracking-[0.2em]">
+                        <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
+                        Writing R Logic
                     </span>
-                    <pre ref={codeRef} className="text-[9px] text-gray-700 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4">
+                    <pre ref={codeRef} className="text-[9px] text-gray-500 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4 selection:bg-black selection:text-white">
                         {code}
                     </pre>
                 </div>
             )}
 
             {status === "compiling" && (
-                <div className="flex flex-col items-center gap-3 text-gray-800">
-                    <IconLoader2 className="w-8 h-8 animate-spin" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-900 animate-pulse">Compiling Output...</span>
+                <div className="flex flex-col items-center gap-4 text-black">
+                    <IconLoader2 className="w-6 h-6 animate-spin" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Rendering...</span>
                 </div>
             )}
 
             {status === "error" && (
-                <div className="flex flex-col items-center gap-3 w-full">
-                    <div className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
-                        <IconAlertCircle className="w-5 h-5" />
-                    </div>
-                    <div className="text-[10px] text-red-500 font-mono text-left max-h-16 overflow-y-auto w-full px-2 leading-relaxed whitespace-pre-wrap break-all border-t border-red-100 pt-2">
+                <div className="flex flex-col items-center gap-4 w-full p-4 text-center">
+                    <IconAlertCircle className="w-6 h-6 text-black opacity-20" />
+                    <p className="text-[10px] text-gray-400 font-medium leading-relaxed max-h-20 overflow-y-auto w-full px-2">
                         {errorMsg}
-                    </div>
-                    <button onClick={() => generate(true)} className="mt-2 px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold flex items-center gap-1.5">
-                        <IconReload className="w-3.5 h-3.5" /> Try again
+                    </p>
+                    <button onClick={() => generate(true)} className="mt-2 px-5 py-2 bg-black text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#333] transition-all">
+                        Retry
                     </button>
                 </div>
             )}
@@ -310,18 +307,16 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
     };
 
     return (
-        <div className="w-full mt-8 p-6 bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                <h3 className="text-sm font-bold flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-[var(--foreground)] text-[var(--card)] flex items-center justify-center">
-                        <IconPhotoPlus className="w-4 h-4" />
-                    </span>
-                    Add Visualizations (R Compiler)
+        <div className="w-full mt-12 p-8 bg-white border border-gray-100 rounded-[32px] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <h3 className="text-sm font-black flex items-center gap-3 uppercase tracking-[0.2em] text-gray-400">
+                    <IconPhotoPlus className="w-5 h-5 text-black" stroke={2} />
+                    Visual Component
                 </h3>
                 {rImages.length > 0 && generatingQueue.length === 0 && (
                     <button
                         onClick={() => onAddVisualsToReport(rImages)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 border border-gray-200 shadow-sm rounded-full text-xs font-bold hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all shadow-xl hover:scale-[1.02]"
                     >
                         <IconFileImport className="w-4 h-4" /> Add All to Report
                     </button>
@@ -329,13 +324,14 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
             </div>
 
             {/* Controls */}
-            <div className="space-y-5 mb-6">
-                <div className="space-y-2">
+            <div className="space-y-8 mb-8">
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Analysis Focus</label>
                     <textarea 
                         value={dataContext}
                         onChange={e => setDataContext(e.target.value)}
-                        placeholder="Data Context & Focus Area (Optional). e.g., Focus the bar chart on years 2020-2024..."
-                        className="w-full h-12 bg-[var(--background)] border border-[var(--border)] rounded-xl px-4 py-3 text-[13px] font-medium text-gray-700 outline-none focus:border-[var(--foreground)] resize-none placeholder:text-gray-400 focus:shadow-sm transition-all"
+                        placeholder="E.g., Compare growth rates across regions B and C..."
+                        className="w-full h-16 bg-[#FBFBFC] border border-gray-50 rounded-2xl px-5 py-4 text-[13px] font-bold text-black outline-none focus:bg-white focus:border-black resize-none placeholder:text-gray-200 transition-all shadow-none focus:shadow-sm"
                     />
                 </div>
 
@@ -347,54 +343,45 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                                 <button
                                     key={c.id}
                                     onClick={() => toggleChart(c.id)}
-                                    className={`relative group/btn hover:z-50 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors border ${active ? 'bg-[var(--foreground)] text-[var(--card)] border-[var(--foreground)] shadow-sm z-20' : 'bg-[#fbfbfc] text-gray-500 border-[#eaeaea] hover:border-gray-300 z-10'}`}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black shadow-lg z-20' : 'bg-white text-gray-300 border-gray-100 hover:border-gray-300 z-10'}`}
                                 >
                                     {c.label}
-                                    
-                                    {/* Tooltip Hover Box */}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-white border border-gray-200 shadow-2xl rounded-xl p-2.5 hidden group-hover/btn:block z-[100] cursor-default pointer-events-none text-left opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200">
-                                        <div className="w-full aspect-[4/3] bg-gray-50 overflow-hidden rounded-lg border border-gray-100 mb-2 flex items-center justify-center">
-                                            {/* Using a placeholder service. Users can swap with local /previews/id.png later */}
-                                            <img src={`https://placehold.co/400x300/f8f9fc/a1a1aa.png?text=${encodeURIComponent(c.label)}\nPreview`} alt={c.label} className="w-full h-full object-cover" />
-                                        </div>
-                                        <p className="text-[10px] text-gray-600 font-medium leading-relaxed normal-case tracking-normal">
-                                            {c.desc}
-                                        </p>
-                                    </div>
                                 </button>
                             );
                         })}
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block ml-1">Color Palette</label>
-                        <select
-                            value={palette}
-                            onChange={(e) => setPalette(e.target.value)}
-                            className="text-[13px] font-bold bg-[#fbfbfc] text-gray-700 border border-[#eaeaea] rounded-full px-4 py-1.5 outline-none cursor-pointer"
-                        >
-                            {PALETTES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                        </select>
+                <div className="flex flex-wrap items-center justify-between gap-6 pt-4 border-t border-gray-50">
+                    <div className="flex items-center gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] block ml-1">Palette</label>
+                            <select
+                                value={palette}
+                                onChange={(e) => setPalette(e.target.value)}
+                                className="text-[11px] font-black bg-white text-black border border-gray-100 rounded-lg px-3 py-1.5 outline-none cursor-pointer hover:border-black transition-colors uppercase tracking-widest"
+                            >
+                                {PALETTES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={handleAutoSuggest}
                             disabled={isSuggesting || !topic}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 shadow-sm rounded-full text-xs font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-2 px-6 py-2.5 bg-white text-black border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-black transition-all disabled:opacity-30"
                         >
-                            {isSuggesting ? <IconLoader2 className="w-4 h-4 animate-spin text-gray-400" /> : <IconWand className="w-4 h-4 text-gray-500" />}
-                            Auto-Suggest
+                            {isSuggesting ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconWand className="w-4 h-4" />}
+                            Suggest
                         </button>
                         
                         <button
                             onClick={startGenerations}
                             disabled={selectedCharts.length === 0}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-[var(--foreground)] text-[var(--card)] rounded-full text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+                            className="flex items-center gap-2 px-8 py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#1A1A1A] transition-all disabled:opacity-5 shadow-2xl hover:scale-[1.02] active:scale-95"
                         >
-                            <IconPhotoPlus className="w-4 h-4" /> Batch Generate Options
+                            <IconPhotoPlus className="w-4 h-4" /> Generate Options
                         </button>
                     </div>
                 </div>
@@ -402,36 +389,37 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
 
             {/* Grid of Results + Generating Loaders */}
             {(rImages.length > 0 || generatingQueue.length > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-6 border-t border-[var(--border)] bg-gray-50/30 rounded-xl p-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-8 border-t border-gray-50">
                     
                     {/* Finished Images */}
                     {rImages.map((img, i) => (
-                        <div key={i} className="group relative bg-white border border-[var(--border)] rounded-xl overflow-hidden hover:shadow-lg transition-all shadow-sm">
-                            <img src={`data:image/png;base64,${img.image}`} alt={img.chart_type} className="w-full aspect-square object-cover bg-white" />
+                        <div key={i} className="group relative bg-white border border-gray-100 rounded-3xl overflow-hidden hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] transition-all shadow-[0_4px_12px_-4px_rgba(0,0,0,0.02)]">
+                            <img src={`data:image/png;base64,${img.image}`} alt={img.chart_type} className="w-full aspect-square object-cover" />
 
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+                            <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-4 backdrop-blur-md p-6">
                                 <button
                                     onClick={() => openEditor(i)}
-                                    className="px-5 py-2.5 bg-white text-black rounded-full text-xs font-bold flex items-center gap-2 hover:bg-gray-100 transition-colors shadow-lg hover:scale-105 active:scale-95"
+                                    className="w-full py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-[#222] transition-all shadow-xl hover:scale-105 active:scale-95"
                                 >
-                                    <IconCode className="w-4 h-4 text-black" /> AI Edit Code
+                                    <IconCode className="w-4 h-4" /> AI Edit Code
                                 </button>
                                 <button
                                     onClick={() => downloadImage(img.image, `fig_${i + 1}_${img.chart_type}`)}
-                                    className="px-5 py-2.5 bg-black/40 border border-white/30 text-white rounded-full text-xs font-bold flex items-center gap-2 hover:bg-black/60 transition-colors hover:scale-105 active:scale-95"
+                                    className="w-full py-3 bg-white text-black border border-black rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-gray-50 transition-all hover:scale-105 active:scale-95"
                                 >
-                                    <IconDownload className="w-4 h-4" /> Download PNG
+                                    <IconDownload className="w-4 h-4" /> Save PNG
                                 </button>
                             </div>
 
-                            <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 text-gray-900 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm border border-gray-100">
-                                {img.chart_type.replace("_", " ")}
+                            <div className="absolute top-4 left-4 flex gap-2">
+                                <span className="px-2 py-1 bg-black text-white rounded text-[8px] font-black uppercase tracking-widest shadow-sm">
+                                    {img.chart_type.replace("_", " ")}
+                                </span>
                             </div>
                             
                             <button
                                 onClick={() => handleDeleteImage(i)}
-                                className="absolute top-3 right-3 p-1.5 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg shadow-sm backdrop-blur-sm border border-transparent hover:border-red-100 transition-colors opacity-0 group-hover:opacity-100"
-                                title="Delete visualization"
+                                className="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-black transition-colors opacity-0 group-hover:opacity-100"
                             >
                                 <IconTrash className="w-4 h-4" />
                             </button>
