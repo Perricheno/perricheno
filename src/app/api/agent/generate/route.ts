@@ -24,6 +24,11 @@ interface GenerateSettings {
     dateStr?: string;
     groupName?: string;
     supervisorName?: string;
+    // Context fields
+    taskDescription?: string;
+    taskFileText?: string;
+    referenceLinks?: string[];
+    referenceFilesText?: string[];
     // For edits/fixes/visuals
     currentTex?: string;
     currentBib?: string;
@@ -50,7 +55,7 @@ function buildSystemPrompt(s: GenerateSettings): string {
 
     // Build author/course/date block
     let metaBlock = '';
-    const authorLine = s.authorName || 'Amangeldy Shyngyskhan';
+    const authorLine = s.authorName || 'Student';
     const dateLine = s.dateStr || '\\today';
     if (s.courseName || s.groupName || s.supervisorName) {
         const parts: string[] = [];
@@ -63,39 +68,12 @@ function buildSystemPrompt(s: GenerateSettings): string {
     const refInstructions = s.useReferences
         ? `REFERENCES: Include \\usepackage[style=apa, backend=biber]{biblatex} and \\addbibresource{references.bib}.
 Use \\textcite{key} and \\parencite{key}. Every citation key MUST match an entry in references_bib.
-Generate 10-20 plausible academic references in references_bib field.
-End document with \\printbibliography.`
+If user provided reference data (links/files), use them to generate REAL entries in references_bib.
+Otherwise, generate 10-20 plausible academic references in references_bib field.`
         : `REFERENCES: Do NOT include biblatex. Set references_bib to null.`;
 
     const templateSection = s.useTemplate
         ? `
-══════════════════════════
-USE PERRICHENO TEMPLATE
-══════════════════════════
-
-Use this EXACT preamble structure:
-
-${docClass}
-${langPackages}
-\\usepackage{tgtermes}
-\\usepackage{tgheros}
-\\usepackage{microtype}
-\\usepackage{graphicx}
-\\usepackage{tabularx}
-\\usepackage{ragged2e}
-\\usepackage{booktabs}
-\\usepackage{amsmath,amsfonts,amssymb}
-\\usepackage{longtable}
-\\usepackage[table]{xcolor}
-\\usepackage{caption}
-\\usepackage{hyperref}
-\\usepackage{csquotes}
-\\usepackage{geometry}
-\\usepackage{fancyhdr}
-\\usepackage{titlesec}
-\\usepackage{float}
-\\usepackage{listings}
-
 \\geometry{lmargin=0.6in,rmargin=0.6in,tmargin=0.75in,bmargin=0.75in,footskip=20pt${s.columns === 2 ? ',columnsep=0.3in' : ''}}
 \\pagestyle{fancy}
 \\fancyhf{}
@@ -106,29 +84,19 @@ ${langPackages}
 \\newcommand{\\styledtitle}[1]{\\noindent\\colorbox{black}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{\\centering\\textcolor{white}{\\sffamily\\bfseries\\MakeUppercase{#1}}}}}
 \\titleformat{\\section}{\\normalfont}{}{0em}{\\styledtitle}
 \\titleformat{\\subsection}{\\normalfont\\normalsize\\sffamily\\bfseries}{}{0em}{}
-\\titleformat{\\subsubsection}{\\normalfont\\normalsize\\sffamily\\itshape}{}{0em}{}
 \\hypersetup{colorlinks=true,linkcolor=black,filecolor=black,urlcolor=blue,citecolor=black}
 
 TITLE BLOCK (use this exact pattern${s.columns === 2 ? ', wrapped in \\twocolumn[\\begin{@twocolumnfalse}...\\end{@twocolumnfalse}]' : ''}):
 Title, author "${authorLine}", affiliation "Astana IT University"${metaBlock ? `, metadata: ${metaBlock}` : ''}, date ${dateLine}.
 Then \\noindent\\textbf{${isRussian ? 'Аннотация' : 'Abstract'}} \\\\ followed by italic abstract text.`
-        : `
-══════════════════════════
-CREATE YOUR OWN TEMPLATE
-══════════════════════════
+        : `CREATE YOUR OWN TEMPLATE: Author: "${authorLine}", Affiliation: "Astana IT University" ${metaBlock ? `, Metadata: ${metaBlock}` : ''}`;
 
-Design a professional, beautiful LaTeX document template from scratch.
-Requirements:
-- ${docClass}
-- ${langPackages}
-- Use professional fonts and clean layout
-- Include proper geometry, headers/footers
-- Make it visually appealing — use colors, custom section styles, clean typography
-- Author: "${authorLine}", Affiliation: "Astana IT University"
-${metaBlock ? `- Metadata: ${metaBlock}` : ''}
-- Date: ${dateLine}
-- Include an abstract section
-- Be creative with the design — don't just copy a generic template`;
+    let modeContext = '';
+    if (s.type === 'assignment') {
+        modeContext = `MODE: Assignment. Adhere STRICTLY to the provided task requirements. Ensure the tone is appropriate for student work but maintains academic rigor.`;
+    } else if (s.type === 'diploma') {
+        modeContext = `MODE: Thesis / Diploma. Create a highly structured, deep academic document. Use sophisticated vocabulary and extensive sections. Focus on the depth of the topic.`;
+    }
 
     return `You are "Perricheno LaTeX Agent" — an expert academic LaTeX document generator.
 
@@ -175,49 +143,29 @@ When fixing errors: analyze each error, fix code, return FULL corrected files.`;
 
 function buildMessages(s: GenerateSettings) {
     const systemPrompt = buildSystemPrompt(s);
-    const messages: any[] = [
-        { role: "system", content: systemPrompt },
-    ];
+    const messages: any[] = [{ role: "system", content: systemPrompt }];
+
+    let contextData = '';
+    if (s.taskDescription) contextData += `\nASSIGNMENT TASK DESCRIPTION:\n${s.taskDescription}`;
+    if (s.taskFileText) contextData += `\nATTACHED TASK FILE CONTEXT:\n${s.taskFileText}`;
+    if (s.referenceLinks && s.referenceLinks.length > 0) contextData += `\nREFERENCE LINKS:\n${s.referenceLinks.join('\n')}`;
+    if (s.referenceFilesText && s.referenceFilesText.length > 0) {
+        contextData += `\nREFERENCE ARTICLES DATA:\n${s.referenceFilesText.join('\n---\n')}`;
+    }
 
     if (s.errorLog && s.currentTex) {
-        messages.push({
-            role: "assistant",
-            content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null })
-        });
-        messages.push({
-            role: "user",
-            content: `Fix ALL compilation errors:\n\n${s.errorLog}\n\nReturn FULL corrected JSON.`
-        });
+        messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
+        messages.push({ role: "user", content: `Fix ALL compilation errors:\n\n${s.errorLog}\n\nReturn FULL corrected JSON.` });
     } else if (s.rImages && s.rImages.length > 0 && s.currentTex) {
-        messages.push({
-            role: "assistant",
-            content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null })
-        });
-        
-        const contentArr: any[] = [
-            { type: "text", text: `The following ${s.rImages.length} figures have been generated using R. Please edit the document to logically distribute and integrate ALL of them.\n\nInstructions:\n1. Use \\begin{figure}[H] or [htbp], \\centering, \\includegraphics[width=0.8\\linewidth]{exact_filename}, \\caption{Descriptive text without underscores}, and \\label{}.\n2. You MUST write an analytical description referencing each plot.\n3. CRITICAL: Never use underscores in the visible text or \\caption without escaping them (e.g. \\_). Filenames inside \\includegraphics{} can keep underscores.\n\nThe user's extra instructions: ${s.prompt}\n\nReturn FULL updated JSON. Images:\n` }
-        ];
-
-        s.rImages.forEach((img, i) => {
-            const filename = `figures/fig_${i + 1}_${img.chart_type}.png`;
-            contentArr.push({ type: "text", text: `[Image ${i + 1}]: Filename: ${filename}\nR Source snippet:\n\`\`\`R\n${img.r_code.slice(0, 300)}...\n\`\`\`\n` });
-            contentArr.push({ type: "image_url", image_url: { url: `data:image/png;base64,${img.image}`, detail: "low" } });
-        });
-
-        messages.push({ role: "user", content: contentArr });
+        messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
+        messages.push({ role: "user", content: `Integrate the attached figures. User instructions: ${s.prompt}\n\nReturn FULL updated JSON.` });
     } else if (s.currentTex) {
-        messages.push({
-            role: "assistant",
-            content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null })
-        });
-        messages.push({
-            role: "user",
-            content: `Edit the document. Changes: ${s.prompt}\n\nReturn FULL updated JSON.`
-        });
+        messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
+        messages.push({ role: "user", content: `Edit the document. Changes: ${s.prompt}\n\nReturn FULL updated JSON.` });
     } else {
         messages.push({
             role: "user",
-            content: `Generate a complete LaTeX document.\nType: ${s.type}\nTopic: ${s.prompt}\n\nOutput ONLY raw JSON.`
+            content: `Generate a complete LaTeX document.${contextData ? `\n\nCONTEXT DATA:\n${contextData}` : ''}\n\nType: ${s.type}\nTopic: ${s.prompt}\n\nOutput ONLY raw JSON.`
         });
     }
 
@@ -338,6 +286,10 @@ export async function POST(req: Request) {
             dateStr: body.dateStr,
             groupName: body.groupName,
             supervisorName: body.supervisorName,
+            taskDescription: body.taskDescription,
+            taskFileText: body.taskFileText,
+            referenceLinks: body.referenceLinks,
+            referenceFilesText: body.referenceFilesText,
             currentTex: body.currentTex,
             currentBib: body.currentBib,
             errorLog: body.errorLog,

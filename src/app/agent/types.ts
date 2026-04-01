@@ -14,6 +14,11 @@ export interface AgentSettings {
     dateStr: string;
     groupName: string;
     supervisorName: string;
+    // New fields for Context-Aware Generation
+    taskDescription: string;
+    taskFileText: string; 
+    referenceLinks: string[];
+    referenceFilesText: string[];
 }
 
 export const DEFAULT_SETTINGS: AgentSettings = {
@@ -21,13 +26,17 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     style: "medium",
     wordCount: 2000,
     columns: 2,
-    useReferences: true,
+    useReferences: false, // Default to OFF as requested
     language: "en",
     authorName: "",
     courseName: "",
     dateStr: "",
     groupName: "",
     supervisorName: "",
+    taskDescription: "",
+    taskFileText: "",
+    referenceLinks: [],
+    referenceFilesText: [],
 };
 
 export interface RImage {

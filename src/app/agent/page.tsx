@@ -5,7 +5,9 @@ import {
     IconArrowRight, IconLoader2, IconPaperclip,
     IconFileText, IconBook, IconPackage, IconDownload,
     IconX, IconPencil, IconCheck, IconEye, IconBug,
-    IconClock, IconLetterCase, IconSettings
+    IconClock, IconLetterCase, IconSettings,
+    IconSchool, IconSearch, IconCertificate, IconChartPie,
+    IconLink, IconFilePlus, IconUser, IconChevronLeft
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
@@ -370,68 +372,166 @@ export default function AgentPage() {
         }
     };
 
+    const [idleSubPhase, setIdleSubPhase] = useState<"mode_select" | "config_form">("mode_select");
+
+    const handleSelectMode = (type: DocType) => {
+        setDocType(type);
+        setIdleSubPhase("config_form");
+    };
+
+    const MODES: { id: DocType; label: string; icon: any; description: string; color: string }[] = [
+        { id: "research", label: "Research Paper", icon: IconSearch, description: "Full academic analysis with citations", color: "blue" },
+        { id: "assignment", label: "Assignment", icon: IconSchool, description: "Complete tasks or homework based on requirements", color: "emerald" },
+        { id: "diploma", label: "Thesis / Diploma", icon: IconCertificate, description: "Extensive structure and high-level deep dives", color: "indigo" },
+        { id: "report", label: "Analytical Report", icon: IconChartPie, description: "Data-driven business or scientific reports", color: "rose" },
+    ];
+
+    const handleLinkAdd = () => {
+        setSettings(s => ({ ...s, referenceLinks: [...s.referenceLinks, ""] }));
+    };
+    const updateLink = (idx: number, val: string) => {
+        const newLinks = [...settings.referenceLinks];
+        newLinks[idx] = val;
+        setSettings(s => ({ ...s, referenceLinks: newLinks }));
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'task' | 'ref') => {
+        const files = Array.from(e.target.files || []);
+        for (const file of files) {
+            const text = await file.text();
+            if (target === 'task') {
+                setSettings(s => ({ ...s, taskFileText: text }));
+            } else {
+                setSettings(s => ({ ...s, referenceFilesText: [...s.referenceFilesText, text] }));
+            }
+        }
+    };
+
     // ─── LANDING ───
     if (phase === "idle") {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[var(--background)] overflow-y-auto relative">
-                <AgentSidebar
-                    sessions={sessions}
-                    currentSessionId={currentSessionId}
-                    isOpen={sidebarOpen}
-                    setIsOpen={setSidebarOpen}
-                    onSelectSession={handleSelectSession}
-                    onDeleteSession={handleDeleteSession}
-                    onShareSession={handleShareSession}
-                    onNewSession={handleNewSession}
-                />
+            <div className="w-full h-full flex flex-col font-sans bg-[var(--background)] overflow-y-auto relative p-4 md:p-8">
+                <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-                <div className="w-full max-w-3xl px-6 flex flex-col items-center py-12">
-                    <h2 className="text-3xl md:text-4xl font-semibold text-[var(--foreground)] mb-10 text-center tracking-tight">
-                        What do you want to research?
-                    </h2>
-
-                    <div className="w-full relative shadow-sm hover:shadow-md transition-shadow duration-300 rounded-[calc(var(--radius)+0.5rem)] bg-[var(--card)] border border-[var(--border)] overflow-hidden mb-4">
-                        <div className="px-5 pt-5 pb-16">
-                            <span className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wider">Generate LaTeX with AI</span>
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); }
-                                }}
-                                placeholder={settings.language === 'ru' ? "Исследование ИИ в Казахстане..." : "Research paper..."}
-                                className="w-full h-14 outline-none resize-none bg-transparent text-lg md:text-xl placeholder:text-gray-300 font-medium"
-                                autoFocus
-                            />
-                        </div>
-                        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-2.5 rounded-full transition-colors ${settingsOpen ? 'text-[var(--foreground)] bg-black/5' : 'text-gray-400 hover:text-[var(--foreground)] hover:bg-black/5'}`}>
-                                    <IconSettings className="w-5 h-5" />
-                                </button>
-                                <div className="hidden md:flex gap-2">
-                                    {suggestions.map((s, i) => (
-                                        <button key={i} onClick={() => setPrompt(s.label + ": ")} className="px-3 py-1.5 text-[13px] font-medium text-gray-500 bg-[var(--background)] hover:bg-black/5 border border-[var(--border)] rounded-full transition-colors whitespace-nowrap">
-                                            {s.label}
+                <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-10">
+                    <AnimatePresence mode="wait">
+                        {idleSubPhase === "mode_select" ? (
+                            <motion.div key="mode_select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full flex flex-col items-center">
+                                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-center">Let's create something.</h1>
+                                <p className="text-gray-400 mb-12 text-center text-lg">Select a mode to get started with precise AI assistance.</p>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                    {MODES.map((m) => (
+                                        <button key={m.id} onClick={() => handleSelectMode(m.id)} className="group flex items-start gap-5 p-6 bg-[var(--card)] border border-[var(--border)] rounded-3xl hover:border-black transition-all text-left shadow-sm hover:shadow-xl">
+                                            <div className={`p-4 rounded-2xl bg-${m.color}-50 text-${m.color}-600 group-hover:bg-black group-hover:text-white transition-colors`}>
+                                                <m.icon className="w-6 h-6" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-lg mb-1">{m.label}</h3>
+                                                <p className="text-sm text-gray-400 leading-relaxed">{m.description}</p>
+                                            </div>
+                                            <IconArrowRight className="w-5 h-5 text-gray-200 mt-1" />
                                         </button>
                                     ))}
                                 </div>
-                            </div>
-                            <button onClick={handleGenerate} disabled={!prompt.trim()} className="p-3 rounded-full bg-[var(--foreground)] text-[var(--card)] hover:opacity-90 disabled:opacity-30 flex items-center shrink-0">
-                                <IconArrowRight className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div key="config_form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full max-w-2xl bg-[var(--card)] border border-[var(--border)] rounded-[32px] shadow-2xl p-8 md:p-12">
+                                <button onClick={() => setIdleSubPhase("mode_select")} className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-black mb-10 transition-colors uppercase tracking-widest">
+                                    <IconChevronLeft className="w-4 h-4" /> Change Mode
+                                </button>
 
-                    <AnimatePresence>
-                        {settingsOpen && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="w-full overflow-hidden">
-                                <AgentSettingsPanel
-                                    settings={settings}
-                                    updateSetting={(k, v) => setSettings({ ...settings, [k]: v })}
-                                    detailsOpen={detailsOpen}
-                                    setDetailsOpen={setDetailsOpen}
-                                />
+                                <div className="space-y-10">
+                                    {/* Section: Title */}
+                                    <div className="space-y-4">
+                                        <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Research Topic</label>
+                                        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }} placeholder="What is the title of your work?" className="w-full text-2xl md:text-3xl font-bold bg-transparent outline-none placeholder:text-gray-200 border-b border-gray-100 pb-4 focus:border-black transition-colors resize-none h-20" autoFocus />
+                                    </div>
+
+                                    {/* Section: Authorship */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Author Name</label>
+                                            <div className="relative">
+                                                <IconUser className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your full name" className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-black transition-colors font-medium text-sm" />
+                                            </div>
+                                        </div>
+                                        {docType === "diploma" && (
+                                             <div className="space-y-4">
+                                                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Supervisor</label>
+                                                <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Scientific Advisor" className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-black transition-colors font-medium text-sm" />
+                                            </div>
+                                        )}
+                                        {docType === "assignment" && (
+                                             <div className="space-y-4">
+                                                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">Course / Group</label>
+                                                <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="CS-201 / Group B" className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-black transition-colors font-medium text-sm" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Section: Task Description (Collapsible style or direct) */}
+                                    {docType === "assignment" && (
+                                        <div className="space-y-4 pt-4">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 ml-1">The Assignment Task</label>
+                                                <label className="cursor-pointer flex items-center gap-2 text-xs font-bold text-emerald-600 hover:text-emerald-700">
+                                                    <IconFilePlus className="w-4 h-4" /> 
+                                                    {settings.taskFileText ? "File Attached" : "Attach Task PDF/TXT"}
+                                                    <input type="file" className="hidden" accept=".txt,.pdf" onChange={e => handleFileUpload(e, 'task')} />
+                                                </label>
+                                            </div>
+                                            <textarea value={settings.taskDescription} onChange={e => setSettings({...settings, taskDescription: e.target.value})} placeholder="Paste the requirement text here..." className="w-full p-5 bg-emerald-50/30 border border-emerald-100 rounded-2xl outline-none focus:border-emerald-500 transition-colors text-sm min-h-[100px] resize-none" />
+                                        </div>
+                                    )}
+
+                                    {/* Section: References Toggle */}
+                                    <div className="space-y-4 pt-6">
+                                        <div className="flex items-center justify-between pb-2 border-b border-gray-50">
+                                            <div>
+                                                <p className="text-sm font-bold">Use Custom References</p>
+                                                <p className="text-xs text-gray-400">Add external articles or links to ground the research.</p>
+                                            </div>
+                                            <button onClick={() => setSettings(s => ({ ...s, useReferences: !s.useReferences }))} className={`w-12 h-6 rounded-full transition-colors relative ${settings.useReferences ? 'bg-black' : 'bg-gray-100'}`}>
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.useReferences ? 'translate-x-7' : 'translate-x-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        {settings.useReferences && (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 pt-4 overflow-hidden">
+                                                <div className="space-y-2">
+                                                    {settings.referenceLinks.map((link, idx) => (
+                                                        <div key={idx} className="flex gap-2">
+                                                            <div className="flex-1 relative">
+                                                                <IconLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                                <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-xl text-xs outline-none focus:border-black font-medium" />
+                                                            </div>
+                                                            <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-3 text-gray-300 hover:text-red-500"><IconX className="w-4 h-4" /></button>
+                                                        </div>
+                                                    ))}
+                                                    <button onClick={handleLinkAdd} className="flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest pl-2">
+                                                        + Add source link
+                                                    </button>
+                                                </div>
+                                                <div className="pt-2">
+                                                    <label className="cursor-pointer flex items-center justify-center gap-3 p-4 border-2 border-dashed border-gray-100 rounded-2xl text-xs font-bold text-gray-400 hover:border-black hover:text-black transition-all">
+                                                        <IconFilePlus className="w-5 h-5" />
+                                                        {settings.referenceFilesText.length > 0 ? `${settings.referenceFilesText.length} Files Attached` : "Upload Reference Articles (PDF/TXT)"}
+                                                        <input type="file" className="hidden" multiple accept=".txt,.pdf" onChange={e => handleFileUpload(e, 'ref')} />
+                                                    </label>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </div>
+
+                                    {/* Submit */}
+                                    <div className="pt-6">
+                                        <button onClick={handleGenerate} disabled={!prompt.trim() || (docType === "assignment" && !settings.authorName)} className="w-full py-5 bg-black text-white rounded-2xl font-bold text-lg hover:opacity-90 disabled:opacity-20 shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98]">
+                                            Create Document <IconArrowRight className="w-6 h-6" />
+                                        </button>
+                                    </div>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
