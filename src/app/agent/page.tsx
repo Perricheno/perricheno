@@ -372,19 +372,32 @@ export default function AgentPage() {
         }
     };
 
-    const [idleSubPhase, setIdleSubPhase] = useState<"mode_select" | "config_form">("mode_select");
+    const MODES: { id: DocType; label: string; icon: any }[] = [
+        { id: "research", label: "Research", icon: IconSearch },
+        { id: "assignment", label: "Assignment", icon: IconSchool },
+        { id: "diploma", label: "Thesis", icon: IconCertificate },
+        { id: "report", label: "Report", icon: IconChartPie },
+    ];
 
-    const handleSelectMode = (type: DocType) => {
-        setDocType(type);
-        setIdleSubPhase("config_form");
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        for (const file of files) {
+            const text = await file.text();
+            setSettings(s => ({ 
+                ...s, 
+                referenceFilesText: [...s.referenceFilesText, text],
+                referenceFileNames: [...s.referenceFileNames, file.name]
+            }));
+        }
     };
 
-    const MODES: { id: DocType; label: string; icon: any; description: string }[] = [
-        { id: "research", label: "Research Paper", icon: IconSearch, description: "Full academic analysis with citations" },
-        { id: "assignment", label: "Assignment", icon: IconSchool, description: "Complete tasks or homework based on requirements" },
-        { id: "diploma", label: "Thesis / Diploma", icon: IconCertificate, description: "Extensive structure and high-level deep dives" },
-        { id: "report", label: "Analytical Report", icon: IconChartPie, description: "Data-driven business or scientific reports" },
-    ];
+    const removeFile = (idx: number) => {
+        setSettings(s => ({
+            ...s,
+            referenceFilesText: s.referenceFilesText.filter((_, i) => i !== idx),
+            referenceFileNames: s.referenceFileNames.filter((_, i) => i !== idx)
+        }));
+    };
 
     const handleLinkAdd = () => {
         setSettings(s => ({ ...s, referenceLinks: [...s.referenceLinks, ""] }));
@@ -395,148 +408,163 @@ export default function AgentPage() {
         setSettings(s => ({ ...s, referenceLinks: newLinks }));
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'task' | 'ref') => {
-        const files = Array.from(e.target.files || []);
-        for (const file of files) {
-            const text = await file.text();
-            if (target === 'task') {
-                setSettings(s => ({ ...s, taskFileText: text }));
-            } else {
-                setSettings(s => ({ ...s, referenceFilesText: [...s.referenceFilesText, text] }));
-            }
-        }
-    };
-
-    // ─── LANDING ───
+    // ─── LANDING (UNIFIED COMMAND CENTER) ───
     if (phase === "idle") {
         return (
-            <div className="w-full h-full flex flex-col font-sans bg-[#FBFBFC] overflow-y-auto relative p-4 md:p-8">
+            <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[#FBFBFC] relative p-6 overflow-hidden">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-                <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-10">
-                    <AnimatePresence mode="wait">
-                        {idleSubPhase === "mode_select" ? (
-                            <motion.div key="mode_select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="w-full flex flex-col items-center">
-                                <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4 text-center text-black">Let's create something.</h1>
-                                <p className="text-gray-400 mb-14 text-center text-lg font-medium tracking-tight">Select a mode to get started with precise AI assistance.</p>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-                                    {MODES.map((m) => (
-                                        <button key={m.id} onClick={() => handleSelectMode(m.id)} className="group flex items-center justify-between p-7 bg-white border border-gray-100 rounded-3xl hover:border-black hover:bg-black transition-all text-left shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)]">
-                                            <div className="flex items-center gap-6">
-                                                <div className="p-1 text-black group-hover:text-white transition-colors">
-                                                    <m.icon className="w-7 h-7" stroke={1.5} />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-bold text-xl mb-1 group-hover:text-white transition-colors">{m.label}</h3>
-                                                    <p className="text-xs text-gray-400 group-hover:text-gray-400 leading-relaxed font-medium transition-colors">{m.description}</p>
-                                                </div>
-                                            </div>
-                                            <IconArrowRight className="w-5 h-5 text-gray-200 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-3xl flex flex-col">
+                    
+                    {/* Header Title */}
+                    <div className="mb-10 text-center">
+                        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-2">Perricheno Intelligence.</h1>
+                        <p className="text-[#A1A1AA] font-bold text-xs uppercase tracking-[0.4em]">Academic Precision / Technical Rigor</p>
+                    </div>
+
+                    {/* Main Command Zone */}
+                    <div className="bg-white border border-gray-100 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col p-2 focus-within:border-black transition-all">
+                        
+                        {/* Topic Input */}
+                        <div className="px-6 pt-6 pb-2">
+                             <textarea 
+                                value={prompt} 
+                                onChange={e => setPrompt(e.target.value)} 
+                                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+                                placeholder="State your research topic or analysis task..." 
+                                className="w-full text-xl md:text-2xl font-bold bg-transparent outline-none placeholder:text-gray-100 resize-none h-32 leading-tight" 
+                                autoFocus 
+                            />
+                        </div>
+
+                        {/* File Chips Display */}
+                        {settings.referenceFileNames.length > 0 && (
+                            <div className="px-6 pb-2 flex flex-wrap gap-2">
+                                {settings.referenceFileNames.map((name, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-[#FBFBFC] border border-gray-100 rounded-full text-[9px] font-black uppercase tracking-widest text-black">
+                                        <IconFileText className="w-3 h-3" />
+                                        <span className="max-w-[120px] truncate">{name}</span>
+                                        <button onClick={() => removeFile(idx)} className="text-gray-300 hover:text-black transition-colors">
+                                            <IconX className="w-3 h-3" />
                                         </button>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div key="config_form" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="w-full max-w-2xl bg-white border border-gray-100 rounded-[40px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] p-8 md:p-14">
-                                <button onClick={() => setIdleSubPhase("mode_select")} className="flex items-center gap-2 text-[10px] font-black text-gray-400 hover:text-black mb-12 transition-colors uppercase tracking-[0.3em]">
-                                    <IconChevronLeft className="w-3.5 h-3.5" /> Change Mode
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Toolbar: Chips & Universal Files */}
+                        <div className="px-6 pb-4 flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex flex-wrap gap-2">
+                                {MODES.map((m) => {
+                                    const active = docType === m.id;
+                                    return (
+                                        <button 
+                                            key={m.id} 
+                                            onClick={() => setDocType(m.id)} 
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-[#D4D4D8] border-gray-100 hover:border-gray-200 hover:text-black'}`}
+                                        >
+                                            <m.icon className="w-3.5 h-3.5" stroke={2.5} />
+                                            {m.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-black transition-all">
+                                    <IconPaperclip className="w-3.5 h-3.5" />
+                                    Attach Context
+                                    <input type="file" className="hidden" multiple accept=".pdf,.txt" onChange={handleFileUpload} />
+                                </label>
+                                <button onClick={handleLinkAdd} className="p-2.5 text-gray-200 hover:text-black hover:bg-gray-50 rounded-xl transition-all">
+                                    <IconLink className="w-4 h-4" />
                                 </button>
+                            </div>
+                        </div>
 
-                                <div className="space-y-12">
-                                    {/* Section: Title */}
-                                    <div className="space-y-4">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Research Topic</label>
-                                        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }} placeholder="What is the title of your work?" className="w-full text-2xl md:text-3xl font-bold bg-transparent outline-none placeholder:text-gray-100 border-b border-gray-50 pb-6 focus:border-black transition-all resize-none h-24" autoFocus />
-                                    </div>
-
-                                    {/* Section: Authorship */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Author Name</label>
-                                            <div className="relative group">
-                                                <IconUser className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-black transition-colors" />
-                                                <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your full name" className="w-full pl-14 pr-5 py-4 bg-[#FBFBFC] border border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-black transition-all font-bold text-sm shadow-none focus:shadow-sm" />
-                                            </div>
+                        {/* Expandable Metadata Area */}
+                        <AnimatePresence>
+                            {(docType !== "research" || settings.authorName) && (
+                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-gray-50 bg-[#FBFBFC] px-8 py-6 space-y-6 overflow-hidden">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4D4D8] ml-1">Author</label>
+                                            <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your Name" className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-black font-bold text-xs" />
                                         </div>
+
                                         {docType === "diploma" && (
-                                             <div className="space-y-4">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Supervisor</label>
-                                                <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Scientific Advisor" className="w-full px-5 py-4 bg-[#FBFBFC] border border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-black transition-all font-bold text-sm" />
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4D4D8] ml-1">Supervisor</label>
+                                                <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Scientific Advisor" className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-black font-bold text-xs" />
                                             </div>
                                         )}
+
                                         {docType === "assignment" && (
-                                             <div className="space-y-4">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">Course / Group</label>
-                                                <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="CS-201 / Group B" className="w-full px-5 py-4 bg-[#FBFBFC] border border-gray-50 rounded-2xl outline-none focus:bg-white focus:border-black transition-all font-bold text-sm" />
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4D4D8] ml-1">Course</label>
+                                                <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="e.g. CS-50" className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-black font-bold text-xs" />
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Section: Task Description (Assignment Specific) */}
-                                    {docType === "assignment" && (
-                                        <div className="space-y-4 pt-4">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-300 ml-1">The Assignment Task</label>
-                                                <label className="cursor-pointer flex items-center gap-2 text-[10px] font-black text-black hover:underline uppercase tracking-widest">
-                                                    <IconFilePlus className="w-4 h-4" /> 
-                                                    {settings.taskFileText ? "File Attached" : "Attach PDF/TXT"}
-                                                    <input type="file" className="hidden" accept=".txt,.pdf" onChange={e => handleFileUpload(e, 'task')} />
-                                                </label>
-                                            </div>
-                                            <textarea value={settings.taskDescription} onChange={e => setSettings({...settings, taskDescription: e.target.value})} placeholder="Paste the requirement text here..." className="w-full p-6 bg-[#FBFBFC] border border-gray-50 rounded-[24px] outline-none focus:bg-white focus:border-black transition-all text-sm font-medium min-h-[120px] resize-none" />
+                                    {/* Links Section */}
+                                    {settings.referenceLinks.length > 0 && (
+                                        <div className="space-y-3">
+                                            {settings.referenceLinks.map((link, idx) => (
+                                                <div key={idx} className="flex items-center gap-3">
+                                                    <div className="flex-1 relative">
+                                                        <IconLink className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-[#D4D4D8]" />
+                                                        <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://external-resource.com" className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-lg text-xs font-bold outline-none focus:border-black" />
+                                                    </div>
+                                                    <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-2 text-gray-200 hover:text-black transition-colors"><IconX className="w-4 h-4" /></button>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
 
-                                    {/* Section: References Toggle */}
-                                    <div className="space-y-6 pt-6">
-                                        <div className="flex items-center justify-between pb-4 border-b border-gray-50">
-                                            <div>
-                                                <p className="text-sm font-black">Use Custom References</p>
-                                                <p className="text-[11px] text-gray-400 font-medium">Add external articles or links to ground the research.</p>
-                                            </div>
-                                            <button onClick={() => setSettings(s => ({ ...s, useReferences: !s.useReferences }))} className={`w-14 h-7 rounded-full transition-all relative ${settings.useReferences ? 'bg-black' : 'bg-gray-100'}`}>
-                                                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${settings.useReferences ? 'translate-x-8' : 'translate-x-1'}`} />
-                                            </button>
-                                        </div>
+                    {/* Execute Region */}
+                    <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-[#D4D4D8]">
+                            <span>Multi-Model Intelligence</span>
+                            <div className="w-1 h-1 rounded-full bg-gray-100" />
+                            <span>LaTeX 3.0 Standard</span>
+                        </div>
+                        <button 
+                            onClick={handleGenerate} 
+                            disabled={!prompt.trim()} 
+                            className="w-full md:w-auto px-12 py-5 bg-black text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] hover:bg-[#1A1A1A] disabled:opacity-5 transition-all shadow-[0_24px_48px_-12px_rgba(0,0,0,0.4)] active:scale-95"
+                        >
+                            Generate Research
+                        </button>
+                    </div>
 
-                                        {settings.useReferences && (
-                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-5 pt-4 overflow-hidden">
-                                                <div className="space-y-3">
-                                                    {settings.referenceLinks.map((link, idx) => (
-                                                        <div key={idx} className="flex gap-3">
-                                                            <div className="flex-1 relative group">
-                                                                <IconLink className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-black transition-colors" />
-                                                                <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="w-full pl-12 pr-5 py-3.5 bg-[#FBFBFC] border border-gray-50 rounded-xl text-xs outline-none focus:bg-white focus:border-black font-bold transition-all" />
-                                                            </div>
-                                                            <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-3 text-gray-200 hover:text-black transition-colors"><IconX className="w-5 h-5" /></button>
-                                                        </div>
-                                                    ))}
-                                                    <button onClick={handleLinkAdd} className="flex items-center gap-2 text-[10px] font-black text-gray-300 hover:text-black uppercase tracking-[0.2em] pl-2 transition-colors">
-                                                        + Add source link
-                                                    </button>
-                                                </div>
-                                                <div className="pt-2">
-                                                    <label className="cursor-pointer flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-100 rounded-3xl text-[11px] font-black text-gray-300 hover:border-black hover:text-black transition-all uppercase tracking-widest bg-[#FBFBFC] hover:bg-white">
-                                                        <IconFilePlus className="w-5 h-5" />
-                                                        {settings.referenceFilesText.length > 0 ? `${settings.referenceFilesText.length} Files Attached` : "Upload Reference Articles (PDF/TXT)"}
-                                                        <input type="file" className="hidden" multiple accept=".txt,.pdf" onChange={e => handleFileUpload(e, 'ref')} />
-                                                    </label>
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </div>
+                    {/* Feature Highlights */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 opacity-40">
+                         <div className="text-center md:text-left space-y-2">
+                            <span className="text-[10px] font-black text-black uppercase tracking-widest block">Structural Integrity</span>
+                            <p className="text-[11px] font-medium leading-relaxed">Full LaTeX compilation with automated page layout and bibliography.</p>
+                         </div>
+                         <div className="text-center md:text-left space-y-2">
+                            <span className="text-[10px] font-black text-black uppercase tracking-widest block">R Visual Logic</span>
+                            <p className="text-[11px] font-medium leading-relaxed">Integrated statistical visualization components with AI-driven source code.</p>
+                         </div>
+                         <div className="text-center md:text-left space-y-2">
+                            <span className="text-[10px] font-black text-black uppercase tracking-widest block">Contextual Grounding</span>
+                            <p className="text-[11px] font-medium leading-relaxed">Cross-reference your uploaded materials for fact-accurate research.</p>
+                         </div>
+                    </div>
 
-                                    {/* Submit */}
-                                    <div className="pt-8">
-                                        <button onClick={handleGenerate} disabled={!prompt.trim() || (docType === "assignment" && !settings.authorName)} className="w-full py-6 bg-black text-white rounded-[24px] font-bold text-lg hover:bg-[#1A1A1A] disabled:opacity-5 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3 active:scale-[0.97]">
-                                            Create Document <IconArrowRight className="w-6 h-6" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                </motion.div>
+
+                {/* Status Bar / Settings Indicator */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                     <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-white border border-gray-100 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-300 hover:text-black hover:border-black transition-all">
+                        <IconSettings className="w-3.5 h-3.5" /> Engine Settings
+                     </button>
                 </div>
             </div>
         );

@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: "Perricheno",
   description: "Student. Analyst. DevOps Engineer.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/newlogo.png",
+    apple: "/newlogo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

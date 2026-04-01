@@ -19,6 +19,7 @@ export interface AgentSettings {
     taskFileText: string; 
     referenceLinks: string[];
     referenceFilesText: string[];
+    referenceFileNames: string[];
 }
 
 export const DEFAULT_SETTINGS: AgentSettings = {
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     taskFileText: "",
     referenceLinks: [],
     referenceFilesText: [],
+    referenceFileNames: [],
 };
 
 export interface RImage {

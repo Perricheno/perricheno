@@ -83,7 +83,7 @@ export default function MinimalSidebar() {
                 <div className="h-16 flex items-center justify-between px-6 pt-4 mb-4">
                     <Link href="/" className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-[var(--radius)] flex items-center justify-center shrink-0 overflow-hidden">
-                            <img src="/logo.png" alt="Perricheno" className="w-full h-full object-contain" />
+                            <img src="/Vector.svg" alt="Perricheno" className="w-full h-full object-contain" />
                         </div>
                     </Link>
                     
