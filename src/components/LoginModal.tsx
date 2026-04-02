@@ -7,8 +7,6 @@ import { useAdmin } from "@/components/AdminContext";
 
 export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: () => void; onGuestSuccess?: (name: string) => void; onClose: () => void }) => {
     const { user, login, logout, deleteAccount } = useAdmin();
-    const [username, setUsername] = useState("");
-    const [pass, setPass] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -47,11 +45,6 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
 
         return () => {};
     }, [user]);
-
-    const handleAdminLogin = () => {
-        if (username === "admin" && pass === "admin") onSuccess();
-        else setError("Invalid credentials");
-    };
 
     return (
         <AnimatePresence>
@@ -153,58 +146,29 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                         <div className="p-8 pt-10">
                             {/* Header */}
                             <div className="flex flex-col items-center text-center mb-8">
-                                <div className="w-16 h-16 rounded-2xl bg-[#1a1a1a] flex items-center justify-center mb-5 shadow-xl">
-                                    <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 invert" />
+                                <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex items-center justify-center mb-5 shadow-lg">
+                                    <img src="/newlogo.png" alt="Perricheno" className="w-10 h-10 object-contain" />
                                 </div>
                                 <h2 className="text-2xl font-black text-[#1a1a1a] tracking-tight mb-1">Welcome Back</h2>
-                                <p className="text-sm text-gray-400 font-medium">Sign in to access your workspace</p>
+                                <p className="text-sm text-gray-400 font-medium">Sign in with Telegram to continue</p>
                             </div>
 
                             {/* Telegram Auth */}
-                            <div className="bg-gray-50 rounded-2xl p-5 mb-5 flex flex-col items-center">
+                            <div className="bg-gray-50 rounded-2xl p-6 flex flex-col items-center">
                                 <div className="flex items-center gap-2 mb-4">
                                     <IconShieldCheck className="w-4 h-4 text-green-500" />
                                     <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Secure One-Click Login</span>
                                 </div>
-                                <div id="telegram-login-container" className="min-h-[44px]"></div>
+                                <div id="telegram-login-container" className="min-h-[48px] flex items-center justify-center"></div>
                                 {loading && (
                                     <div className="mt-3 flex items-center gap-2">
                                         <div className="w-3 h-3 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
                                         <p className="text-xs text-gray-400 font-medium">Authenticating...</p>
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Divider */}
-                            <div className="relative my-6">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                                <div className="relative flex justify-center">
-                                    <span className="bg-white px-4 text-[10px] font-black uppercase tracking-widest text-gray-300">Admin Access</span>
-                                </div>
-                            </div>
-
-                            {/* Admin Form */}
-                            <div className="space-y-3">
-                                <input
-                                    value={username}
-                                    onChange={e => setUsername(e.target.value)}
-                                    placeholder="Username"
-                                    className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl outline-none focus:border-[#1a1a1a] focus:bg-white transition-all text-sm font-medium placeholder:text-gray-300"
-                                />
-                                <input
-                                    type="password"
-                                    value={pass}
-                                    onChange={e => setPass(e.target.value)}
-                                    placeholder="Password"
-                                    onKeyDown={e => { if (e.key === 'Enter') handleAdminLogin(); }}
-                                    className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl outline-none focus:border-[#1a1a1a] focus:bg-white transition-all text-sm font-medium placeholder:text-gray-300"
-                                />
-                                <button
-                                    onClick={handleAdminLogin}
-                                    className="w-full bg-[#1a1a1a] text-white font-black py-3.5 rounded-2xl hover:bg-black transition-colors text-sm tracking-wide"
-                                >
-                                    Sign In
-                                </button>
+                                {!loading && (
+                                    <p className="text-[10px] text-gray-300 mt-3 text-center">If the button doesn{"'"}t appear, please disable your ad blocker.</p>
+                                )}
                             </div>
 
                             {error && (
