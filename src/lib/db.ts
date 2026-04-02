@@ -83,6 +83,31 @@ try { db.exec("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'free'"); 
 try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
 
+// Logging tracking tables
+try { 
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            topic TEXT NOT NULL,
+            amount_text TEXT NOT NULL,
+            is_positive BOOLEAN NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS usage_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            tokens INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
 export default db;
 
 export interface User {
@@ -179,6 +204,8 @@ export function checkAndDeductUsage(
             SET daily_chars_used = 0, daily_visuals_used = 0, daily_reports_used = 0, last_reset_date = ?
             WHERE id = ?
         `).run(today, userId);
+        
+        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Daily quota reset", "Reset", 1);
         user = getUserById(userId)!;
     }
 
@@ -193,6 +220,8 @@ export function checkAndDeductUsage(
     // Visuals have NO quota limit — they just count chars
     if (type === 'visuals') {
         db.prepare(`UPDATE users SET daily_visuals_used = daily_visuals_used + ? WHERE id = ?`).run(amount, userId);
+        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Visual generation", `-${amount} chars`, 0);
+        db.prepare(`INSERT INTO usage_logs (user_id, tokens) VALUES (?, ?)`).run(userId, amount);
         return { success: true, remaining: 999999 };
     }
 
@@ -219,6 +248,9 @@ export function checkAndDeductUsage(
             WHERE id = ?
         `).run(fromFree, fromFree, fromPurchased, userId);
 
+        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Agent generation", `-${amount} chars`, 0);
+        db.prepare(`INSERT INTO usage_logs (user_id, tokens) VALUES (?, ?)`).run(userId, amount);
+
         return { success: true, remaining: totalAvailable - amount };
     }
 
@@ -241,11 +273,18 @@ export function checkAndDeductUsage(
         WHERE id = ?
     `).run(amountToDeductDaily, amountToDeductPurchased, userId);
 
+    db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Report compilation", `-${amount} reports`, 0);
+
     return { success: true, remaining: totalAvailable - amount };
 }
 
 export function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | 'reports', amount: number) {
     db.prepare(`UPDATE users SET purchased_${type} = purchased_${type} + ? WHERE id = ?`).run(amount, userId);
+    
+    let typeName = type === 'chars' ? 'chars' : type === 'reports' ? 'reports' : 'visuals';
+    if (amount > 0) {
+        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Purchased resource pack", `+${amount.toLocaleString()} ${typeName}`, 1);
+    }
 }
 
 // --- Tasks ---

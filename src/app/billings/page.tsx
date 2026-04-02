@@ -22,25 +22,7 @@ const PACKS = [
     { id: 'combo_pro', name: 'Pro Bundle', desc: '10M Chars + 30 Reports', price: 20, tag: 'Ultimate', category: 'combo', icon: IconFlame },
 ];
 
-// ── Fake transaction history for UI ──
-function generateFakeTransactions() {
-    const types = ['Daily quota reset', 'Report generated', 'Visual generated', 'Purchased tokens', 'Research completed'];
-    const amounts = ['-12,400 chars', '-34,200 chars', '-5,800 chars', '+500,000 chars', '-88,100 chars'];
-    const statuses = ['completed', 'completed', 'completed', 'completed', 'completed'];
-    const result = [];
-    const now = Date.now();
-    for (let i = 0; i < 8; i++) {
-        const date = new Date(now - i * 3600000 * (3 + Math.random() * 8));
-        result.push({
-            id: `txn_${i}`,
-            type: types[i % types.length],
-            amount: amounts[i % amounts.length],
-            status: statuses[i % statuses.length],
-            date: date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        });
-    }
-    return result;
-}
+// Real transaction data is now loaded from API.
 
 // ── Usage chart bar component ──
 function UsageBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
@@ -67,13 +49,21 @@ export default function BillingsPage() {
     const [activeFilter, setActiveFilter] = useState<'all' | 'chars' | 'reports' | 'combo'>('all');
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
-    const transactions = useMemo(() => generateFakeTransactions(), []);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [hourlyData, setHourlyData] = useState<any[]>([]);
 
     useEffect(() => {
         if (user) {
             fetch("/api/auth/me")
                 .then(r => r.json())
                 .then(d => { setLimits(d.limits); setFullUser(d.user); });
+
+            fetch("/api/billing/stats")
+                .then(r => r.json())
+                .then(d => {
+                    if (d.transactions) setTransactions(d.transactions);
+                    if (d.hourlyData) setHourlyData(d.hourlyData);
+                });
         }
     }, [user]);
 
@@ -89,8 +79,9 @@ export default function BillingsPage() {
             if (data.url) window.open(data.url, '_blank');
             else if (data.fallback_url) window.open(data.fallback_url, '_blank');
             else alert('Checkout failed: ' + (data.error || 'Unknown error'));
-        } catch {
-            alert('Checkout error.');
+        } catch (err: any) {
+            console.error("Checkout fetch failed:", err);
+            alert(`Checkout error: ${err.message || 'Unknown network error. Check console.'}`);
         } finally {
             setCheckoutLoading(null);
         }
@@ -98,20 +89,7 @@ export default function BillingsPage() {
 
     const filteredPacks = PACKS.filter(p => activeFilter === 'all' || p.category === activeFilter);
 
-    // Simulated hourly usage data for graph
-    const hourlyData = useMemo(() => {
-        const hours = [];
-        for (let i = 23; i >= 0; i--) {
-            const h = (new Date().getHours() - i + 24) % 24;
-            hours.push({
-                label: `${h}:00`,
-                value: Math.floor(Math.random() * 15000) + 500,
-            });
-        }
-        return hours;
-    }, []);
-
-    const maxHourly = Math.max(...hourlyData.map(h => h.value));
+    const maxHourly = Math.max(...hourlyData.map(h => h?.value || 0), 100); // minimum scale
 
     return (
         <div className="w-full h-full font-sans overflow-auto bg-[var(--background)]">
@@ -230,15 +208,15 @@ export default function BillingsPage() {
                                 {transactions.map((tx) => (
                                     <div key={tx.id} className="flex items-center justify-between px-6 py-4 hover:bg-black/[0.02] transition-colors">
                                         <div className="flex items-center gap-4 min-w-0">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.amount.startsWith('+') ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
-                                                {tx.amount.startsWith('+') ? <IconTrendingUp className="w-4 h-4" /> : <IconClock className="w-4 h-4" />}
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tx.is_positive ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                {tx.is_positive ? <IconTrendingUp className="w-4 h-4" /> : <IconClock className="w-4 h-4" />}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-bold truncate">{tx.type}</p>
                                                 <p className="text-[11px] text-gray-400 font-medium">{tx.date}</p>
                                             </div>
                                         </div>
-                                        <span className={`text-sm font-black tabular-nums whitespace-nowrap ${tx.amount.startsWith('+') ? 'text-green-600' : 'text-gray-500'}`}>
+                                        <span className={`text-sm font-black tabular-nums whitespace-nowrap ${tx.is_positive ? 'text-green-600' : 'text-gray-500'}`}>
                                             {tx.amount}
                                         </span>
                                     </div>
@@ -339,7 +317,7 @@ export default function BillingsPage() {
                                             <button
                                                 onClick={() => handleCheckout(pack.id)}
                                                 disabled={checkoutLoading === pack.id}
-                                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all active:scale-95 ${
+                                                className={`w-full py-4 mt-2 rounded-2xl flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 ${
                                                     checkoutLoading === pack.id ? 'opacity-50 cursor-not-allowed' : ''
                                                 } ${
                                                     isUltimate ? 'bg-white text-black hover:bg-gray-200 shadow-xl' : 
@@ -350,7 +328,7 @@ export default function BillingsPage() {
                                                 {checkoutLoading === pack.id ? (
                                                     <span className="w-4 h-4 border-2 border-current border-t-transparent animate-spin rounded-full" />
                                                 ) : (
-                                                    <>Purchase Now <IconArrowRight className="w-4 h-4" /></>
+                                                    <>BUY NOW <IconArrowRight className="w-4 h-4 shrink-0" /></>
                                                 )}
                                             </button>
                                         </div>
