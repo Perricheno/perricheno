@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { motion, Variants } from "framer-motion";
 import {
-    IconBrandGithub, IconArrowUpRight,
-    IconTerminal2, IconChartBar, IconMessageCircle, IconFileTypePdf, IconRobot, IconBolt,
-    IconChevronRight
+    IconArrowUpRight,
+    IconTerminal2, IconChartBar, IconFileTypePdf, IconRobot, IconBolt,
+    IconChevronRight, IconCode, IconLayersIntersect
 } from "@tabler/icons-react";
 
 const container: Variants = {
@@ -44,25 +44,13 @@ export default function HomePage() {
                 
                 {/* HERO SECTION */}
                 <header className="mb-20 md:mb-32">
-                    <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="flex items-center gap-2 mb-6"
-                    >
-                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white">
-                            <IconBolt size={18} />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Engineering Excellence</span>
-                    </motion.div>
-
                     <motion.h1 
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                        className="text-7xl md:text-[11rem] font-black tracking-tighter leading-[0.85] mb-10"
+                        className="text-6xl md:text-8xl font-black tracking-tighter leading-none mb-10"
                     >
-                        Perrich<br />eno.
+                        Perricheno.
                     </motion.h1>
 
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -73,11 +61,11 @@ export default function HomePage() {
                             className="max-w-xl"
                         >
                             <p className="text-xl md:text-2xl font-medium tracking-tight leading-snug opacity-70">
-                                Shyngyskhan Amangeldy. Student at AITU, DevOps Engineer, and Full-stack Developer.
+                                Shyngyskhan Amangeldy. Student at AITU, DevOps Engineer, and Analyst.
                             </p>
                             <p className="mt-4 text-[var(--muted)] text-sm md:text-base leading-relaxed max-w-md">
-                                Crafting high-performance digital infrastructure and intuitive user experiences with surgical precision. 
-                                Based in Kazakhstan, scaling globally.
+                                Developing highly efficient automated systems and data-driven solutions. 
+                                Focused on high-load infrastructure and systemic optimization.
                             </p>
                         </motion.div>
 
@@ -103,50 +91,43 @@ export default function HomePage() {
                     animate="show"
                     className="grid grid-cols-1 md:grid-cols-12 gap-5 auto-rows-[240px] md:auto-rows-[180px]"
                 >
-                    {/* PROJECTS TILE */}
+                    {/* CORE PLATFORM TILE */}
                     <motion.div variants={item} className="md:col-span-8 md:row-span-2 group relative overflow-hidden bg-white border border-[#E5E5E5] rounded-[32px] p-10 hover:shadow-2xl transition-all">
                         <div className="relative z-10 h-full flex flex-col">
-                            <IconTerminal2 className="mb-6 opacity-30 group-hover:opacity-100 transition-opacity" size={40} />
-                            <h3 className="text-3xl font-black tracking-tight mb-2">Project Terminal</h3>
-                            <p className="text-sm opacity-50 max-w-xs">A curated collection of DevOps tools, infrastructure as code, and open-source contributions.</p>
+                            <IconLayersIntersect className="mb-6 opacity-30 group-hover:opacity-100 transition-opacity" size={40} />
+                            <h3 className="text-3xl font-black tracking-tight mb-2">Platform Overseer</h3>
+                            <p className="text-sm opacity-50 max-w-xs">A unified command center for automated report generation, data analytics, and infrastructure control.</p>
                             <div className="mt-auto flex gap-3">
-                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Docker</span>
-                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Terraform</span>
-                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">K8s</span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Architecture</span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Analysis</span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">DevOps</span>
                             </div>
                         </div>
                         <div className="absolute right-[-10%] bottom-[-10%] w-[60%] h-[60%] bg-[#F5F5F7] rounded-full group-hover:scale-110 transition-transform duration-700" />
-                        <Link href="/projects" className="absolute inset-0" />
+                        <Link href="/agent" className="absolute inset-0" />
                     </motion.div>
 
-                    {/* AI ASSISTANT TILE */}
-                    <motion.div variants={item} className="md:col-span-4 md:row-span-1 group relative overflow-hidden bg-black text-white rounded-[32px] p-8 hover:shadow-2xl transition-all">
-                        <div className="relative z-10 flex flex-col h-full justify-between">
-                            <div className="flex justify-between items-start">
-                                <IconMessageCircle size={32} />
-                                <IconArrowUpRight size={20} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                    {/* CODE LAB TILE */}
+                    <motion.div variants={item} className="md:col-span-4 md:row-span-2 group relative overflow-hidden bg-black text-white rounded-[32px] p-8 hover:shadow-2xl transition-all">
+                        <div className="relative z-10 flex flex-col h-full">
+                            <div className="flex justify-between items-start mb-8">
+                                <IconCode size={40} className="text-gray-400" />
+                                <div className="px-2 py-1 bg-white/10 rounded text-[9px] font-bold uppercase tracking-widest text-white/50">Coming Soon</div>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-black tracking-tight">AI Assistant</h3>
-                                <p className="text-xs opacity-50 mt-1">LLM-powered research partner.</p>
-                            </div>
-                        </div>
-                        <Link href="/chat" className="absolute inset-0" />
-                    </motion.div>
-
-                    {/* GITHUB TILE */}
-                    <motion.div variants={item} className="md:col-span-4 md:row-span-1 group relative overflow-hidden bg-[#24292F] text-white rounded-[32px] p-8 hover:shadow-2xl transition-all">
-                        <div className="relative z-10 flex flex-col h-full justify-between">
-                            <div className="flex justify-between items-start">
-                                <IconBrandGithub size={32} />
-                                <IconArrowUpRight size={20} className="opacity-40 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black tracking-tight">Source Code</h3>
-                                <p className="text-xs opacity-50 mt-1">Open source contributions.</p>
+                            <h3 className="text-2xl font-black tracking-tight">Code Lab</h3>
+                            <p className="text-sm opacity-50 mt-2 leading-relaxed">Advanced R & Python online compiler with integrated AI terminal. Cloud-native IDE environment.</p>
+                            
+                            <div className="mt-auto bg-white/5 rounded-xl p-4 font-mono text-[10px] space-y-1">
+                                <div className="flex gap-2"><span className="text-blue-400">import</span> <span className="text-gray-300">pandas as pd</span></div>
+                                <div className="flex gap-2"><span className="text-purple-400">df</span> <span className="text-gray-300">= pd.read_csv(</span><span className="text-green-400">'data.csv'</span><span className="text-gray-300">)</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500"># Initializing analysis...</span></div>
+                                <motion.div 
+                                    animate={{ opacity: [0, 1, 0] }} 
+                                    transition={{ repeat: Infinity, duration: 1 }}
+                                    className="w-1.5 h-3 bg-white ml-0.5 mt-1" 
+                                />
                             </div>
                         </div>
-                        <a href="https://github.com/perricheno" target="_blank" className="absolute inset-0" />
                     </motion.div>
 
                     {/* AGENT TILE (Wide/Small) */}
