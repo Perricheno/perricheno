@@ -33,7 +33,6 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Main menu",
         links: [
             { href: "/", icon: IconHome, label: "Home", shortcut: "⌘ H" },
-            { href: "/dashboard", icon: IconChartBar, label: "Dashboard", shortcut: "⌘ D" },
         ]
     },
     {

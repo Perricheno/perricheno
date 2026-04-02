@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { IconChevronDown } from "@tabler/icons-react";
+import { IconChevronDown, IconShieldLock } from "@tabler/icons-react";
 import { AgentSettings } from "./types";
 
 interface Props {
@@ -8,9 +8,10 @@ interface Props {
     detailsOpen: boolean;
     setDetailsOpen: (v: boolean) => void;
     onOpenBilling?: () => void;
+    isAdmin?: boolean;
 }
 
-export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, onOpenBilling }: Props) {
+export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, onOpenBilling, isAdmin }: Props) {
     const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
         <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
@@ -145,13 +146,21 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
             </div>
 
             {/* Quick action helper */}
-            <div className="pt-4 border-t border-[var(--border)] mt-4">
+            <div className="pt-4 border-t border-[var(--border)] mt-4 space-y-2">
                 <button 
                     onClick={() => onOpenBilling?.()} 
                     className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--foreground)] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-transform active:scale-[0.98]"
                 >
                     Manage Billing & Tokens
                 </button>
+                {isAdmin && (
+                    <a 
+                        href="/dashboard" 
+                        className="w-full flex items-center justify-center gap-2 py-2.5 border border-[var(--border)] text-[var(--foreground)] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[var(--background)] transition-colors"
+                    >
+                        <IconShieldLock className="w-3.5 h-3.5" /> Project Overseer
+                    </a>
+                )}
             </div>
         </div>
     );

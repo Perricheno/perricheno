@@ -8,7 +8,7 @@ export async function createSession(userId: number) {
     const expires = new Date(Date.now() + SESSION_DURATION);
     
     const session = await new SignJWT({ userId })
-        .setProtectedHeader({ alg: 'HS256' })
+        .setProtectedHeader({ alg: 'HS512' })
         .setIssuedAt()
         .setExpirationTime('7d')
         .sign(SECRET_KEY);
@@ -37,7 +37,7 @@ export async function verifySession() {
 
     try {
         const { payload } = await jwtVerify(session, SECRET_KEY, {
-            algorithms: ['HS256'],
+            algorithms: ['HS512'],
         });
         return payload.userId as number;
     } catch (error) {

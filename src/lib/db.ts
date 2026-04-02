@@ -109,6 +109,43 @@ try {
     `);
 } catch (e) {}
 
+// OVERSEER Advanced Tables
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            type TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            uses INTEGER DEFAULT 0,
+            max_uses INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS system_config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS system_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
 export default db;
 
 export interface User {
