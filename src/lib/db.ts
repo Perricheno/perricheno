@@ -250,8 +250,10 @@ export function checkAndDeductUsage(
             WHERE id = ?
         `).run(fromFree, fromFree, fromPurchased, userId);
 
-        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Agent generation", `-${amount} chars`, 0);
-        db.prepare(`INSERT INTO usage_logs (user_id, tokens) VALUES (?, ?)`).run(userId, amount);
+        if (amount > 0) {
+            db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Agent generation", `-${amount.toLocaleString()} chars`, 0);
+            db.prepare(`INSERT INTO usage_logs (user_id, tokens) VALUES (?, ?)`).run(userId, amount);
+        }
 
         return { success: true, remaining: totalAvailable - amount };
     }

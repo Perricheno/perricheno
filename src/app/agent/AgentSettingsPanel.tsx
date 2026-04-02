@@ -7,9 +7,10 @@ interface Props {
     updateSetting: <K extends keyof AgentSettings>(key: K, value: AgentSettings[K]) => void;
     detailsOpen: boolean;
     setDetailsOpen: (v: boolean) => void;
+    onOpenBilling?: () => void;
 }
 
-export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen }: Props) {
+export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, onOpenBilling }: Props) {
     const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
         <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
@@ -141,6 +142,16 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                         </motion.div>
                     )}
                 </AnimatePresence>
+            </div>
+
+            {/* Quick action helper */}
+            <div className="pt-4 border-t border-[var(--border)] mt-4">
+                <button 
+                    onClick={() => onOpenBilling?.()} 
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--foreground)] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-transform active:scale-[0.98]"
+                >
+                    Manage Billing & Tokens
+                </button>
             </div>
         </div>
     );

@@ -651,6 +651,10 @@ export default function AgentPage() {
                                     updateSetting={(k, v) => setSettings(s => ({ ...s, [k]: v }))}
                                     detailsOpen={detailsOpen}
                                     setDetailsOpen={setDetailsOpen}
+                                    onOpenBilling={() => {
+                                        if (!user) setShowLogin(true);
+                                        else { setSettingsOpen(false); setBillingOpen(true); }
+                                    }}
                                 />
                             </motion.div>
                         )}
