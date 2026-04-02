@@ -420,9 +420,11 @@ export default function AgentPage() {
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-2xl flex flex-col items-center">
                     
                     {/* Minimal Branding */}
-                    <div className="mb-12 text-center select-none">
-                        <img src="/Vector.svg" alt="Perricheno" className="w-12 h-12 mx-auto mb-4 opacity-80" />
-                        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-300">Intelligence / Rigor</p>
+                    <div className="mb-12 text-center select-none flex flex-col items-center">
+                        <img src="/Vector.svg" alt="Perricheno" className="w-12 h-12 mb-5 opacity-90 drop-shadow-sm" />
+                        <h1 className="text-xl md:text-2xl font-semibold text-gray-800 tracking-tight" style={{ fontFamily: "Georgia, serif" }}>
+                            Perricheno Intelligence
+                        </h1>
                     </div>
 
                     {/* Chat Input Shell */}
