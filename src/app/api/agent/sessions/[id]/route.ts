@@ -27,7 +27,7 @@ export async function GET(req: Request, context: RouteContext) {
             error_msg: session.error_msg,
             main_tex: session.main_tex,
             references_bib: session.references_bib,
-            r_images_json: session.r_images_json,
+            visuals_json: session.visuals_json,
             settings_json: session.settings_json,
             doc_type: session.doc_type,
             title: session.title,
@@ -36,7 +36,7 @@ export async function GET(req: Request, context: RouteContext) {
     });
 }
 
-// PUT /api/agent/sessions/[id] — update session fields (r_images_json, main_tex, etc.)
+// PUT /api/agent/sessions/[id] — update session fields (visuals_json, main_tex, etc.)
 export async function PUT(req: Request, context: RouteContext) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
@@ -57,11 +57,11 @@ export async function PUT(req: Request, context: RouteContext) {
         if (body.settings_json !== undefined) update.settings_json = typeof body.settings_json === 'string' ? body.settings_json : JSON.stringify(body.settings_json);
         if (body.title !== undefined) update.title = body.title;
 
-        // r_images_json: accept array or string
-        if (body.r_images_json !== undefined) {
-            update.r_images_json = typeof body.r_images_json === 'string' 
-                ? body.r_images_json 
-                : JSON.stringify(body.r_images_json);
+        // visuals_json: accept array or string
+        if (body.visuals_json !== undefined) {
+            update.visuals_json = typeof body.visuals_json === 'string' 
+                ? body.visuals_json 
+                : JSON.stringify(body.visuals_json);
         }
 
         if (Object.keys(update).length === 0) {

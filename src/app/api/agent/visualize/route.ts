@@ -3,43 +3,56 @@ import { verifySession } from '@/lib/session';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const R_COMPILER_URL = process.env.R_COMPILER_URL || 'http://r-compiler:8000';
+const PYTHON_COMPILER_URL = process.env.PYTHON_COMPILER_URL || 'http://python-compiler:8000';
 
 const CHART_PROMPTS: Record<string, string> = {
     bar: 'a bar chart showing comparative data across categories using ggplot2 with geom_bar',
     line: 'a line chart showing trends over time using ggplot2 with geom_line',
     scatter: 'a scatter plot showing correlations between two variables using ggplot2 with geom_point',
-    heatmap: 'a heatmap/correlation matrix using corrplot or pheatmap',
-    '3d_surface': 'a 3D surface plot using plot3D::persp3D with realistic data',
-    '3d_scatter': 'a 3D scatter plot using scatterplot3d',
-    treemap: 'a treemap visualization using treemap package',
-    pie: 'a pie chart or donut chart using ggplot2 with coord_polar',
+    heatmap: 'a heatmap/correlation matrix using pheatmap or corrplot',
+    treemap: 'a treemap visualization using the treemap package',
     histogram: 'a histogram showing distribution using ggplot2 with geom_histogram',
     boxplot: 'a boxplot showing statistical distribution using ggplot2 with geom_boxplot',
     violin: 'a violin plot using ggplot2 with geom_violin',
-    network: 'a network/graph visualization using igraph',
-    ridge: 'a ridgeline density plot using ggridges',
-    radar: 'a radar/spider chart using fmsb',
-    waffle: 'a waffle chart using waffle package',
-    waterfall: 'a waterfall chart using waterfalls package',
-    wordcloud: 'a wordcloud visualization using wordcloud package',
-    marginal: 'a scatter plot with marginal histograms/density using ggExtra',
-    dumbbell: 'a dumbbell plot using ggalt::geom_dumbbell',
-    hexbin: 'a hexagonal binning density plot using ggplot2 and hexbin with geom_hex',
-    sankey: 'an alluvial or sankey diagram using ggalluvial',
-    lollipop: 'a lollipop chart (a dot connected to an axis by a line) using ggplot2',
-    parallel: 'a parallel coordinates plot using GGally::ggparcoord',
-    dendrogram: 'a hierarchical clustering tree/dendrogram using ggdendro or ggraph',
-    density2d: 'a 2D contour density plot using ggplot2 with geom_density_2d_filled',
-    gantt: 'a Gantt chart/project timeline using ggplot2 with geom_segment',
-    chord: 'a chord diagram representing relational flows using circlize package',
-    circlepack: 'a circle packing diagram using packcircles and ggplot2',
-    bubble: 'a bubble chart (scatter plot with size aesthetic) using ggplot2',
-    rose: 'a polar/Nightingale rose chart using ggplot2 with geom_col and coord_polar',
 };
 
-function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string) {
-    const chartDesc = CHART_PROMPTS[chartType] || `a ${chartType} visualization`;
+const PYTHON_CHART_PROMPTS: Record<string, string> = {
+    bar: 'a bar chart using seaborn.barplot or matplotlib.pyplot.bar',
+    line: 'a line chart representing trends with seaborn.lineplot or plt.plot',
+    scatter: 'a scatter plot showing data correlation with seaborn.scatterplot or plt.scatter',
+    heatmap: 'a correlation heatmap using seaborn.heatmap(df.corr())',
+    treemap: 'a treemap using squarify or plotly.express.treemap',
+    histogram: 'a distribution histogram with seaborn.histplot',
+    boxplot: 'a boxplot illustrating statistical variance using seaborn.boxplot',
+    violin: 'a violin plot visualizing probability density with seaborn.violinplot',
+};
+
+function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string, runtime: 'R' | 'Python' = 'R') {
+    const isPython = runtime === 'Python';
+    const prompts = isPython ? PYTHON_CHART_PROMPTS : CHART_PROMPTS;
+    const chartDesc = prompts[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
+    
+    if (isPython) {
+        return `You are a Python data visualization expert (Matplotlib/Seaborn/Pandas). Generate a SINGLE, complete, self-contained Python script.
+        
+        TASK: Create ${chartDesc} related to this research topic: "${topic}"
+        
+        ${dataContext ? `USER INSTRUCTIONS & DATA CONTEXT:\n${dataContext}\n` : ''}
+        
+        REQUIREMENTS:
+        1. Create REALISTIC synthetic data matching the topic using Pandas.
+        2. Use the "${palette}" style color palette (if using Seaborn, use \`sns.set_palette\`).
+        3. The plot must be professional with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
+        4. CRUCIAL: Use \`plt.tight_layout()\` to prevent text overlap. Ensure high readability.
+        5. Ensure a clean visual style with \`sns.set_style("whitegrid")\` or similar.
+        6. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
+        7. The script must be completely self-contained.
+        8. DO NOT include \`plt.show()\`. 
+        9. The figure MUST be stored in the global \`fig\` variable or just use the functional plt interface. The compiler will capture the output.
+        
+        OUTPUT: Only output pure Python code. NO markdown fences (\`\`\`python). NO commentary.`;
+    }
 
     return `You are an R visualization expert. Generate a SINGLE, complete, self-contained R script.
 
@@ -51,8 +64,8 @@ REQUIREMENTS:
 1. Create REALISTIC synthetic data matching the topic.
 2. Use the "${palette}" color palette (from viridis, RColorBrewer, etc).
 3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
-4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`. If adding text labels to points/bars, use \`ggrepel\` or adjust \`vjust\`/\`hjust\` to ensure absolute readability. Do NOT clutter the plot with too many labels.
-5. Ensure a clean visual layout using \`theme_minimal()\` or similar. Keep font sizes readable but not overly large (e.g., \`base_size = 12\`).
+4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
+5. Ensure a clean visual layout using \`theme_minimal()\` or similar.
 6. The script must be completely self-contained — NO external files.
 7. If you use a package (e.g., ggplot2, plotly, ggrepel), use simple \`library(pkgName)\`.
 8. DO NOT include Cairo() or png() calls. 
@@ -66,11 +79,20 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     try {
-        const { topic, chartType, palette = 'viridis', language = 'en', dataContext = '', action, rCode, previousError, previousCode } = await req.json();
+        const { 
+            topic, chartType, palette = 'viridis', language = 'en', 
+            dataContext = '', action, code, previousError, previousCode,
+            runtime = 'R'
+        } = await req.json();
+
+        const isPython = runtime === 'Python';
+        const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
 
         // MODE 1: COMPILE FINISHED CODE
-        if (action === "compile" && rCode) {
-            const failSafeCode = `
+        if (action === "compile" && code) {
+            let finalCode = code;
+            if (!isPython) {
+                finalCode = `
 # Fail-safe auto-installer
 options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
 .orig_lib <- base::library
@@ -87,32 +109,33 @@ library <- function(package, ...) {
 }
 
 # AI Code below
-` + rCode;
+` + code;
+            }
 
-            const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
+            const compileRes = await fetch(`${compilerUrl}/compile`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: failSafeCode }),
+                body: JSON.stringify({ code: finalCode }),
                 signal: AbortSignal.timeout(45000), 
             });
 
-            if (!compileRes.ok) throw new Error("Compilation server error");
+            if (!compileRes.ok) throw new Error(`${runtime} Compilation server error`);
             const compileResult = await compileRes.json();
             
             if (!compileResult.success) {
-                return NextResponse.json({ error: compileResult.log || "R Compilation failed", r_code: rCode }, { status: 500 });
+                return NextResponse.json({ error: compileResult.log || `${runtime} Execution failed`, code: code }, { status: 500 });
             }
 
             return NextResponse.json({
                 success: true,
                 image: compileResult.image,
-                r_code: rCode, // return clean code without wrapper for editor
+                code: code, 
                 chart_type: chartType,
             });
         }
 
-        // MODE 2: STREAM R SCRIPT GENERATION
-        const prompt = buildVisualizationPrompt(topic, chartType, palette, language, dataContext);
+        // MODE 2: STREAM SCRIPT GENERATION
+        const prompt = buildVisualizationPrompt(topic, chartType, palette, language, dataContext, runtime);
 
         const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -124,11 +147,11 @@ library <- function(package, ...) {
                 model: "gpt-5-mini-2025-08-07",
                 stream: true,
                 messages: [
-                    { role: "system", content: "You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. Ensure proper syntax." },
+                    { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. Ensure proper syntax.` },
                     { role: "user", content: prompt },
                     ...(previousError ? [
                         { role: "assistant", content: previousCode },
-                        { role: "user", content: `The code you generated caused this exact R execution error:\n\n${previousError}\n\nPlease fix your code and output ONLY pure pure R code that resolves this error.` }
+                        { role: "user", content: `The code you generated caused this exact ${runtime} execution error:\n\n${previousError}\n\nPlease fix your code and output ONLY pure ${runtime} code that resolves this error.` }
                     ] : [])
                 ]
             })
@@ -139,7 +162,6 @@ library <- function(package, ...) {
             throw new Error("AI Generation failed: " + err);
         }
 
-        // Pipe the SSE stream back to the client directly
         return new Response(aiRes.body, {
             headers: {
                 "Content-Type": "text/event-stream",

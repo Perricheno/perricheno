@@ -78,17 +78,27 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 </div>
             </div>
 
-            {/* Row 3: Toggles */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Columns</label>
-                    <SegmentedControl
-                        options={[{ label: "One", value: "1" }, { label: "Two", value: "2" }]}
-                        value={String(settings.columns)}
-                        onChange={(v) => updateSetting("columns", Number(v) as 1 | 2)}
-                    />
+            {/* Row 3: Toggles & Runtime */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider underline decoration-gray-100 underline-offset-4">Columns</label>
+                        <SegmentedControl
+                            options={[{ label: "One", value: "1" }, { label: "Two", value: "2" }]}
+                            value={String(settings.columns)}
+                            onChange={(v) => updateSetting("columns", Number(v) as 1 | 2)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider underline decoration-gray-100 underline-offset-4">Scientific Runtime</label>
+                        <SegmentedControl
+                            options={[{ label: "R (Stats)", value: "R" }, { label: "Python (DS)", value: "Python" }]}
+                            value={settings.runtime}
+                            onChange={(v) => updateSetting("runtime", v)}
+                        />
+                    </div>
                 </div>
-                <div className="space-y-3 pt-5 md:pt-0 md:space-y-2">
+                <div className="space-y-3 pt-5 md:pt-6 md:space-y-4">
                     <Toggle label="Use Perricheno Template" value={settings.useTemplate} onChange={(v) => updateSetting("useTemplate", v)} />
                     <Toggle label="Include References" value={settings.useReferences} onChange={(v) => updateSetting("useReferences", v)} />
                 </div>

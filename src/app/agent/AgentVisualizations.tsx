@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash, IconX } from "@tabler/icons-react";
-import { RImage, Language } from "./types";
+import { CodeImage, Language } from "./types";
+import { IconBrandPython, IconLetterR } from "@tabler/icons-react";
 
 interface Props {
     topic: string;
     language: Language;
-    rImages: RImage[];
-    setRImages: (v: RImage[] | ((prev: RImage[]) => RImage[])) => void;
+    visuals: CodeImage[];
+    setVisuals: (v: CodeImage[] | ((prev: CodeImage[]) => CodeImage[])) => void;
     sessionId: string | null;
     openEditor: (index: number) => void;
-    onAddVisualsToReport: (images: RImage[]) => void;
+    onAddVisualsToReport: (images: CodeImage[]) => void;
+    runtime: 'R' | 'Python';
+    setRuntime: (r: 'R' | 'Python') => void;
 }
 
 const CHART_TYPES = [
@@ -54,7 +57,7 @@ const PALETTES = [
 ];
 
 // Sub-component for parallel/sequential loading
-function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive }: any) {
+function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive, runtime }: any) {
     const [status, setStatus] = useState<"pending" | "streaming" | "compiling" | "error" | "done">("pending");
     const [errorMsg, setErrorMsg] = useState("");
     const [code, setCode] = useState("");
@@ -127,7 +130,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
             const resCompile = await fetch('/api/agent/visualize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chartType, action: "compile", rCode: cleanCode })
+                body: JSON.stringify({ chartType, action: "compile", code: cleanCode, runtime })
             });
 
             const data = await resCompile.json();
@@ -136,7 +139,8 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                 onComplete({
                     image: data.image,
                     chart_type: data.chart_type,
-                    r_code: data.r_code
+                    code: data.code,
+                    language: runtime
                 });
             } else {
                 throw new Error(data.error || "R Compilation failed (syntax error or timeout)");
@@ -178,7 +182,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                 <div className="w-full h-full flex flex-col bg-[#FBFBFC] rounded-xl p-4 overflow-hidden text-left relative border border-gray-50 shadow-inner">
                     <span className="text-[9px] text-black font-black mb-3 flex items-center gap-2 uppercase tracking-[0.2em]">
                         <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
-                        Writing R Logic
+                        Generating {runtime} Logic
                     </span>
                     <pre ref={codeRef} className="text-[9px] text-gray-500 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4 selection:bg-black selection:text-white">
                         {code}
@@ -208,7 +212,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
     );
 }
 
-export function AgentVisualizations({ topic, language, rImages, setRImages, sessionId, openEditor, onAddVisualsToReport }: Props) {
+export function AgentVisualizations({ topic, language, visuals, setVisuals, sessionId, openEditor, onAddVisualsToReport, runtime, setRuntime }: Props) {
     const [selectedCharts, setSelectedCharts] = useState<string[]>(["bar"]);
     const [palette, setPalette] = useState("viridis");
     const [dataContext, setDataContext] = useState("");
@@ -272,16 +276,16 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
         setGeneratingQueue([...generatingQueue, ...newJobs]);
     };
 
-    const handleJobComplete = async (jobId: string, resultImg: RImage) => {
+    const handleJobComplete = async (jobId: string, resultImg: CodeImage) => {
         setGeneratingQueue(prev => prev.filter(j => j.id !== jobId));
-        const updatedImages = [...rImages, resultImg];
-        setRImages(updatedImages);
+        const updatedImages = [...visuals, resultImg];
+        setVisuals(updatedImages);
         
         if (sessionId) {
             await fetch(`/api/agent/sessions/${sessionId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ r_images_json: updatedImages })
+                body: JSON.stringify({ visuals_json: updatedImages })
             });
         }
     };
@@ -295,13 +299,13 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
 
     const handleDeleteImage = async (index: number) => {
         if (!confirm("Delete this visualization?")) return;
-        const newArr = rImages.filter((_, i) => i !== index);
-        setRImages(newArr);
+        const newArr = visuals.filter((_, i) => i !== index);
+        setVisuals(newArr);
         if (sessionId) {
             await fetch(`/api/agent/sessions/${sessionId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ r_images_json: newArr })
+                body: JSON.stringify({ visuals_json: newArr })
             });
         }
     };
@@ -313,9 +317,9 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                     <IconPhotoPlus className="w-5 h-5 text-black" stroke={2} />
                     Visual Component
                 </h3>
-                {rImages.length > 0 && generatingQueue.length === 0 && (
+                {visuals.length > 0 && generatingQueue.length === 0 && (
                     <button
-                        onClick={() => onAddVisualsToReport(rImages)}
+                        onClick={() => onAddVisualsToReport(visuals)}
                         className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all shadow-xl hover:scale-[1.02]"
                     >
                         <IconFileImport className="w-4 h-4" /> Add All to Report
@@ -353,13 +357,33 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-6 pt-4 border-t border-gray-50">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] block ml-1">Environment</label>
+                            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                <button 
+                                    onClick={() => setRuntime('R')}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${runtime === 'R' ? 'bg-white text-black shadow-sm' : 'text-gray-300 hover:text-gray-400'}`}
+                                >
+                                    <IconLetterR className="w-3.5 h-3.5" stroke={3} />
+                                    R
+                                </button>
+                                <button 
+                                    onClick={() => setRuntime('Python')}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${runtime === 'Python' ? 'bg-white text-black shadow-sm' : 'text-gray-300 hover:text-gray-400'}`}
+                                >
+                                    <IconBrandPython className="w-3.5 h-3.5" />
+                                    Python
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="space-y-1">
                             <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] block ml-1">Palette</label>
                             <select
                                 value={palette}
                                 onChange={(e) => setPalette(e.target.value)}
-                                className="text-[11px] font-black bg-white text-black border border-gray-100 rounded-lg px-3 py-1.5 outline-none cursor-pointer hover:border-black transition-colors uppercase tracking-widest"
+                                className="text-[11px] font-black bg-white text-black border border-gray-100 rounded-xl px-3 py-1.5 outline-none cursor-pointer hover:border-black transition-colors uppercase tracking-widest h-[34px]"
                             >
                                 {PALETTES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                             </select>
@@ -388,11 +412,11 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
             </div>
 
             {/* Grid of Results + Generating Loaders */}
-            {(rImages.length > 0 || generatingQueue.length > 0) && (
+            {(visuals.length > 0 || generatingQueue.length > 0) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-8 border-t border-gray-50">
                     
                     {/* Finished Images */}
-                    {rImages.map((img, i) => (
+                    {visuals.map((img, i) => (
                         <div key={i} className="group relative bg-white border border-gray-100 rounded-3xl overflow-hidden hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] transition-all shadow-[0_4px_12px_-4px_rgba(0,0,0,0.02)]">
                             <img src={`data:image/png;base64,${img.image}`} alt={img.chart_type} className="w-full aspect-square object-cover" />
 
@@ -436,9 +460,10 @@ export function AgentVisualizations({ topic, language, rImages, setRImages, sess
                             language={language}
                             dataContext={dataContext}
                             isActive={job.isActive}
-                            onComplete={(img: RImage) => handleJobComplete(job.id, img)}
+                            onComplete={(img: CodeImage) => handleJobComplete(job.id, img)}
                             onFail={() => setGeneratingQueue(prev => prev.map(j => j.id === job.id ? { ...j, isActive: false, isFailed: true } : j))}
                             onCancel={() => setGeneratingQueue(prev => prev.filter(j => j.id !== job.id))}
+                            runtime={runtime}
                         />
                     ))}
                 </div>

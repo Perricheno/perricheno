@@ -13,11 +13,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
 import { useAdmin } from "@/components/AdminContext";
 
-import { DocType, AgentSettings, DEFAULT_SETTINGS, RImage, AgentSession } from "./types";
+import { DocType, AgentSettings, DEFAULT_SETTINGS, CodeImage, AgentSession } from "./types";
 import { AgentSettingsPanel } from "./AgentSettingsPanel";
 import { AgentSidebar } from "./AgentSidebar";
 import { AgentVisualizations } from "./AgentVisualizations";
-import { REditorModal } from "./REditorModal";
+import { CodeEditorModal } from "./CodeEditorModal";
 
 export default function AgentPage() {
     const { user, setShowLogin } = useAdmin();
@@ -41,7 +41,7 @@ export default function AgentPage() {
     const [activeTab, setActiveTab] = useState<"tex" | "bib">("tex");
     const [mainTex, setMainTex] = useState("");
     const [referencesBib, setReferencesBib] = useState<string | null>(null);
-    const [rImages, setRImages] = useState<RImage[]>([]);
+    const [visuals, setVisuals] = useState<CodeImage[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [topic, setTopic] = useState("");
 
@@ -174,7 +174,7 @@ export default function AgentPage() {
             setError(err.message);
             setPhase("done");
         }
-    }, [user, setShowLogin, currentSessionId, settings, rImages]);
+    }, [user, setShowLogin, currentSessionId, settings, visuals]);
 
     const handleGenerate = () => {
         if (!user) { setShowLogin(true); return; }
@@ -198,7 +198,7 @@ export default function AgentPage() {
         streamGenerate({ errorLog: log, type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib }, topic + " → fix");
     };
 
-    const handleAddVisualsToReport = (images: RImage[]) => {
+    const handleAddVisualsToReport = (images: CodeImage[]) => {
         if (!mainTex || images.length === 0 || !currentSessionId) return;
         setViewerOpen(false);
         streamGenerate({ 
@@ -242,7 +242,7 @@ export default function AgentPage() {
                     if (session.status === 'done') {
                         setMainTex(session.main_tex || "");
                         setReferencesBib(session.references_bib || null);
-                        setRImages(session.r_images_json ? JSON.parse(session.r_images_json) : []);
+                        setVisuals(session.visuals_json ? JSON.parse(session.visuals_json) : []);
                         setSettings(session.settings_json ? JSON.parse(session.settings_json) : DEFAULT_SETTINGS);
                         stopTimer();
                         setActiveTab("tex");
@@ -269,7 +269,9 @@ export default function AgentPage() {
 
             setMainTex(session.main_tex || "");
             setReferencesBib(session.references_bib || null);
-            setRImages(session.r_images_json ? JSON.parse(session.r_images_json) : []);
+            setMainTex(session.main_tex || "");
+            setReferencesBib(session.references_bib || null);
+            setVisuals(session.visuals_json ? JSON.parse(session.visuals_json) : []);
             setSettings(session.settings_json ? JSON.parse(session.settings_json) : DEFAULT_SETTINGS);
 
             if (session.status === 'error') {
@@ -288,7 +290,7 @@ export default function AgentPage() {
         setTopic("");
         setMainTex("");
         setReferencesBib(null);
-        setRImages([]);
+        setVisuals([]);
         setSettings(DEFAULT_SETTINGS);
         setPrompt("");
         setPhase("idle");
@@ -321,12 +323,13 @@ export default function AgentPage() {
         const zip = new JSZip();
         zip.file("main.tex", mainTex);
         if (referencesBib) zip.file("references.bib", referencesBib);
-        rImages.forEach((img, i) => {
+        visuals.forEach((img, i) => {
             const binary = atob(img.image);
             const bytes = new Uint8Array(binary.length);
             for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+            const ext = img.language === 'Python' ? 'py' : 'R';
             zip.file(`figures/fig_${i + 1}_${img.chart_type}.png`, bytes);
-            if (img.r_code) zip.file(`figures/fig_${i + 1}_${img.chart_type}.R`, img.r_code);
+            if (img.code) zip.file(`figures/fig_${i + 1}_${img.chart_type}.${ext}`, img.code);
         });
         return await zip.generateAsync({ type: "blob" });
     };
@@ -664,11 +667,13 @@ export default function AgentPage() {
                 <AgentVisualizations
                     topic={topic}
                     language={settings.language}
-                    rImages={rImages}
-                    setRImages={setRImages}
+                    visuals={visuals}
+                    setVisuals={setVisuals}
                     sessionId={currentSessionId}
                     openEditor={setActiveEditorIndex}
                     onAddVisualsToReport={handleAddVisualsToReport}
+                    runtime={settings.runtime}
+                    setRuntime={(r) => setSettings(s => ({ ...s, runtime: r }))}
                 />
 
             </motion.div>
@@ -713,20 +718,20 @@ export default function AgentPage() {
             </AnimatePresence>
             {/* Editor Modal */}
             <AnimatePresence>
-                {activeEditorIndex !== null && rImages[activeEditorIndex] && (
-                    <REditorModal
-                        image={rImages[activeEditorIndex]}
+                {activeEditorIndex !== null && visuals[activeEditorIndex] && (
+                    <CodeEditorModal
+                        image={visuals[activeEditorIndex]}
                         index={activeEditorIndex}
                         onClose={() => setActiveEditorIndex(null)}
                         onSave={(idx, newImg) => {
-                            const newArr = [...rImages];
+                            const newArr = [...visuals];
                             newArr[idx] = newImg;
-                            setRImages(newArr);
+                            setVisuals(newArr);
                             if (currentSessionId) {
                                 fetch(`/api/agent/sessions/${currentSessionId}`, {
                                     method: 'PUT',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ r_images_json: newArr })
+                                    body: JSON.stringify({ visuals_json: newArr })
                                 });
                             }
                         }}

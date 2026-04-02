@@ -20,6 +20,7 @@ export interface AgentSettings {
     referenceLinks: string[];
     referenceFilesText: string[];
     referenceFileNames: string[];
+    runtime: 'R' | 'Python';
 }
 
 export const DEFAULT_SETTINGS: AgentSettings = {
@@ -39,12 +40,14 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     referenceLinks: [],
     referenceFilesText: [],
     referenceFileNames: [],
+    runtime: 'R',
 };
 
-export interface RImage {
+export interface CodeImage {
     image: string; // base64
     chart_type: string;
-    r_code: string;
+    code: string;
+    language: 'R' | 'Python';
 }
 
 export interface AgentSession {
@@ -58,7 +61,7 @@ export interface AgentSession {
     settings_json: string | null;
     main_tex: string | null;
     references_bib: string | null;
-    r_images_json: string | null;
+    visuals_json: string | null; // Renamed from r_images_json
     share_id: string | null;
     created_at: string;
     updated_at: string;
