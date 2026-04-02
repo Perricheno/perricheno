@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     const body = await req.json();
-    const { title, doc_type, settings_json, main_tex, references_bib, r_images_json } = body;
+    const { title, doc_type, settings_json, main_tex, references_bib, visuals_json } = body;
 
     if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         settings_json: settings_json ? JSON.stringify(settings_json) : undefined,
         main_tex,
         references_bib,
-        r_images_json: r_images_json ? JSON.stringify(r_images_json) : undefined,
+        visuals_json: visuals_json ? JSON.stringify(visuals_json) : undefined,
     });
 
     return NextResponse.json({ session }, { status: 201 });

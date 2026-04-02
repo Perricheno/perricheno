@@ -4,16 +4,18 @@ import { IconFileText, IconBook, IconDownload, IconPackage, IconX } from "@table
 import { useState } from "react";
 import JSZip from "jszip";
 
+import { CodeImage } from "../../types";
+
 interface Props {
     title: string;
     docType: string;
     mainTex: string;
     referencesBib: string | null;
-    rImages: { image: string; chart_type: string; r_code: string }[];
+    visuals: CodeImage[];
     createdAt: string;
 }
 
-export default function SharedSessionView({ title, docType, mainTex, referencesBib, rImages, createdAt }: Props) {
+export default function SharedSessionView({ title, docType, mainTex, referencesBib, visuals, createdAt }: Props) {
     const [activeTab, setActiveTab] = useState<"tex" | "bib">("tex");
     const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
@@ -31,12 +33,13 @@ export default function SharedSessionView({ title, docType, mainTex, referencesB
         const zip = new JSZip();
         zip.file("main.tex", mainTex);
         if (referencesBib) zip.file("references.bib", referencesBib);
-        rImages.forEach((img, i) => {
+        visuals.forEach((img, i) => {
             const binary = atob(img.image);
             const bytes = new Uint8Array(binary.length);
             for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+            const ext = img.language === 'Python' ? 'py' : 'R';
             zip.file(`figures/fig_${i + 1}_${img.chart_type}.png`, bytes);
-            zip.file(`figures/fig_${i + 1}_${img.chart_type}.R`, img.r_code);
+            if (img.code) zip.file(`figures/fig_${i + 1}_${img.chart_type}.${ext}`, img.code);
         });
         const blob = await zip.generateAsync({ type: "blob" });
         const url = URL.createObjectURL(blob);
@@ -79,10 +82,10 @@ export default function SharedSessionView({ title, docType, mainTex, referencesB
                 </div>
 
                 {/* Images panel */}
-                {rImages.length > 0 && (
+                {visuals.length > 0 && (
                     <div className="w-full lg:w-80 overflow-y-auto p-4 space-y-3 bg-[var(--background)]">
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">Visualizations</h3>
-                        {rImages.map((img, i) => (
+                        {visuals.map((img, i) => (
                             <div key={i} onClick={() => setSelectedImage(i)} className="cursor-pointer rounded-xl overflow-hidden border border-[var(--border)] hover:border-gray-400 transition-colors bg-white">
                                 <img src={`data:image/png;base64,${img.image}`} alt={img.chart_type} className="w-full" />
                                 <div className="px-3 py-2 text-xs text-gray-500 font-medium">{img.chart_type.replace("_", " ")}</div>

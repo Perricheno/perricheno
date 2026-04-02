@@ -33,7 +33,7 @@ interface GenerateSettings {
     currentTex?: string;
     currentBib?: string;
     errorLog?: string;
-    rImages?: { image: string, chart_type: string, r_code: string }[];
+    visuals?: { image: string, chart_type: string, code: string, language: string }[];
     useDbImages?: boolean;
 }
 
@@ -156,7 +156,7 @@ function buildMessages(s: GenerateSettings) {
     if (s.errorLog && s.currentTex) {
         messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
         messages.push({ role: "user", content: `Fix ALL compilation errors:\n\n${s.errorLog}\n\nReturn FULL corrected JSON.` });
-    } else if (s.rImages && s.rImages.length > 0 && s.currentTex) {
+    } else if (s.visuals && s.visuals.length > 0 && s.currentTex) {
         messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
         messages.push({ role: "user", content: `Integrate the attached figures. User instructions: ${s.prompt}\n\nReturn FULL updated JSON.` });
     } else if (s.currentTex) {
@@ -293,7 +293,7 @@ export async function POST(req: Request) {
             currentTex: body.currentTex,
             currentBib: body.currentBib,
             errorLog: body.errorLog,
-            rImages: body.rImages,
+            visuals: body.visuals,
             useDbImages: body.useDbImages,
         };
 
@@ -303,14 +303,14 @@ export async function POST(req: Request) {
 
         let sessionId = body.sessionId;
 
-        // If useDbImages, load rImages from the database instead of from the request body
+        // If useDbImages, load visuals from the database instead of from the request body
         if (settings.useDbImages && sessionId) {
             const existingSession = getAgentSession(sessionId);
-            if (existingSession?.r_images_json) {
+            if (existingSession?.visuals_json) {
                 try {
-                    settings.rImages = JSON.parse(existingSession.r_images_json);
+                    settings.visuals = JSON.parse(existingSession.visuals_json);
                 } catch (e) {
-                    console.error("Failed to parse r_images_json from DB:", e);
+                    console.error("Failed to parse visuals_json from DB:", e);
                 }
             }
         }
