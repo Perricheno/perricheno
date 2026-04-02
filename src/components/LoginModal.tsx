@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { IconX, IconUser, IconTrash, IconLogout } from "@tabler/icons-react";
+import { IconX, IconUser, IconTrash, IconLogout, IconShieldCheck } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
 
@@ -11,12 +11,11 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
     const [pass, setPass] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const scriptRef = useRef<HTMLScriptElement | null>(null);
 
     useEffect(() => {
-        // Global handler
         (window as any).onTelegramAuth = async (tgUser: any) => {
-            console.log("TG Widget Auth:", tgUser);
             setLoading(true);
             try {
                 await login(tgUser);
@@ -24,13 +23,12 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                 onClose();
             } catch (e) {
                 console.error(e);
-                setError("Login failed. Check console.");
+                setError("Authentication failed. Please try again.");
             } finally {
                 setLoading(false);
             }
         };
 
-        // Inject Script
         if (!user) {
             const container = document.getElementById("telegram-login-container");
             if (container && !container.hasChildNodes()) {
@@ -38,7 +36,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                 script.src = "https://telegram.org/js/telegram-widget.js?22";
                 script.setAttribute("data-telegram-login", "PerrichenoBot");
                 script.setAttribute("data-size", "large");
-                script.setAttribute("data-radius", "10");
+                script.setAttribute("data-radius", "14");
                 script.setAttribute("data-onauth", "onTelegramAuth(user)");
                 script.setAttribute("data-request-access", "write");
                 script.async = true;
@@ -47,9 +45,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
             }
         }
 
-        return () => {
-             // Cleanup if needed
-        }
+        return () => {};
     }, [user]);
 
     const handleAdminLogin = () => {
@@ -59,58 +55,163 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
 
     return (
         <AnimatePresence>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={onClose}>
-                
-                <motion.div onClick={e => e.stopPropagation()}
-                    initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-                    className="w-full max-w-sm bg-[#111] border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
-                    
-                    <button onClick={onClose} className="absolute top-4 right-4 opacity-50 hover:opacity-100">
-                        <IconX className="w-5 h-5" />
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl"
+                onClick={onClose}
+            >
+                <motion.div
+                    onClick={e => e.stopPropagation()}
+                    initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                    transition={{ type: "spring", damping: 28, stiffness: 380 }}
+                    className="w-full max-w-[420px] mx-4 bg-white rounded-[28px] shadow-2xl shadow-black/20 relative overflow-hidden"
+                >
+                    {/* Close button */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors z-10"
+                    >
+                        <IconX className="w-4 h-4 text-gray-500" />
                     </button>
 
-                    <h2 className="text-xl font-bold mb-6 text-center tracking-tight">
-                        {user ? `Hello, ${user.first_name}` : "Authentication"}
-                    </h2>
-
                     {user ? (
-                        <div className="flex flex-col gap-4">
-                            <div className="flex justify-center">
-                                <img src={user.photo_url || ""} className="w-20 h-20 rounded-full border-2 border-white/10" />
+                        /* ── Logged In View ── */
+                        <div className="p-8 pt-10">
+                            {/* Profile header */}
+                            <div className="flex flex-col items-center text-center mb-8">
+                                <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden mb-4 shadow-lg">
+                                    {user.photo_url
+                                        ? <img src={user.photo_url} alt={user.first_name || ""} className="w-full h-full object-cover" />
+                                        : <IconUser className="w-8 h-8 text-gray-400" />
+                                    }
+                                </div>
+                                <h2 className="text-xl font-black text-[#1a1a1a] tracking-tight">{user.first_name}</h2>
+                                <p className="text-sm text-gray-400 font-medium mt-0.5">@{user.username || "user"}</p>
+                                <span className="mt-3 px-4 py-1.5 bg-[#1a1a1a] text-white text-[10px] font-black uppercase tracking-widest rounded-full">
+                                    {user.account_tier || "Free Tier"}
+                                </span>
                             </div>
-                            <div className="text-center opacity-50 text-sm font-mono">ID: {user.telegram_id}</div>
-                            <button onClick={() => { logout(); onClose(); }} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
-                                <IconLogout className="w-4 h-4" /> Sign Out
-                            </button>
-                            <button onClick={deleteAccount} className="p-3 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
-                                <IconTrash className="w-4 h-4" /> Delete Data
-                            </button>
+
+                            {/* Account info */}
+                            <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-400">Telegram ID</span>
+                                    <span className="text-xs font-bold text-gray-600 font-mono">{user.telegram_id}</span>
+                                </div>
+                                <div className="border-t border-gray-100" />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-400">Member since</span>
+                                    <span className="text-xs font-bold text-gray-600">
+                                        {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => { logout(); onClose(); }}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-100 text-[#1a1a1a] rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                                >
+                                    <IconLogout className="w-4 h-4" /> Sign Out
+                                </button>
+
+                                {!confirmDelete ? (
+                                    <button
+                                        onClick={() => setConfirmDelete(true)}
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 border border-red-200 text-red-500 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                    >
+                                        <IconTrash className="w-4 h-4" /> Delete Account
+                                    </button>
+                                ) : (
+                                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                                        <p className="text-xs font-medium text-red-600 mb-3 text-center">This will permanently delete all your data. Are you sure?</p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setConfirmDelete(false)}
+                                                className="flex-1 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-50 transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => { deleteAccount(); onClose(); }}
+                                                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-colors"
+                                            >
+                                                Confirm Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-6">
-                            {/* Telegram Section */}
-                            <div className="flex flex-col items-center justify-center py-4 bg-white/5 rounded-xl">
-                                <p className="text-xs opacity-50 uppercase tracking-widest mb-4">One-Click Login</p>
-                                <div id="telegram-login-container" className="min-h-[40px]"></div>
-                                {loading && <p className="mt-2 text-xs animate-pulse opacity-50">Authenticating...</p>}
+                        /* ── Sign In View ── */
+                        <div className="p-8 pt-10">
+                            {/* Header */}
+                            <div className="flex flex-col items-center text-center mb-8">
+                                <div className="w-16 h-16 rounded-2xl bg-[#1a1a1a] flex items-center justify-center mb-5 shadow-xl">
+                                    <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 invert" />
+                                </div>
+                                <h2 className="text-2xl font-black text-[#1a1a1a] tracking-tight mb-1">Welcome Back</h2>
+                                <p className="text-sm text-gray-400 font-medium">Sign in to access your workspace</p>
                             </div>
 
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                                <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#111] px-2 opacity-30">Or Admin</span></div>
+                            {/* Telegram Auth */}
+                            <div className="bg-gray-50 rounded-2xl p-5 mb-5 flex flex-col items-center">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <IconShieldCheck className="w-4 h-4 text-green-500" />
+                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Secure One-Click Login</span>
+                                </div>
+                                <div id="telegram-login-container" className="min-h-[44px]"></div>
+                                {loading && (
+                                    <div className="mt-3 flex items-center gap-2">
+                                        <div className="w-3 h-3 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
+                                        <p className="text-xs text-gray-400 font-medium">Authenticating...</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Divider */}
+                            <div className="relative my-6">
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+                                <div className="relative flex justify-center">
+                                    <span className="bg-white px-4 text-[10px] font-black uppercase tracking-widest text-gray-300">Admin Access</span>
+                                </div>
                             </div>
 
                             {/* Admin Form */}
-                            <div className="flex flex-col gap-2">
-                                <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" className="bg-transparent border border-white/10 p-3 rounded-xl outline-none focus:border-white/40 transition-colors text-sm" />
-                                <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Password" className="bg-transparent border border-white/10 p-3 rounded-xl outline-none focus:border-white/40 transition-colors text-sm" />
-                                <button onClick={handleAdminLogin} className="mt-2 bg-white text-black font-bold p-3 rounded-xl hover:opacity-90 transition-opacity">
-                                    Access Admin
+                            <div className="space-y-3">
+                                <input
+                                    value={username}
+                                    onChange={e => setUsername(e.target.value)}
+                                    placeholder="Username"
+                                    className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl outline-none focus:border-[#1a1a1a] focus:bg-white transition-all text-sm font-medium placeholder:text-gray-300"
+                                />
+                                <input
+                                    type="password"
+                                    value={pass}
+                                    onChange={e => setPass(e.target.value)}
+                                    placeholder="Password"
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAdminLogin(); }}
+                                    className="w-full bg-gray-50 border border-gray-200 p-3.5 rounded-2xl outline-none focus:border-[#1a1a1a] focus:bg-white transition-all text-sm font-medium placeholder:text-gray-300"
+                                />
+                                <button
+                                    onClick={handleAdminLogin}
+                                    className="w-full bg-[#1a1a1a] text-white font-black py-3.5 rounded-2xl hover:bg-black transition-colors text-sm tracking-wide"
+                                >
+                                    Sign In
                                 </button>
                             </div>
-                            
-                            {error && <p className="text-red-500 text-xs text-center bg-red-500/10 p-2 rounded border border-red-500/20">{error}</p>}
+
+                            {error && (
+                                <div className="mt-4 bg-red-50 border border-red-200 text-red-600 text-xs font-medium text-center p-3 rounded-2xl">
+                                    {error}
+                                </div>
+                            )}
                         </div>
                     )}
                 </motion.div>

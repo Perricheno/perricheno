@@ -5,9 +5,15 @@ import { addPurchasedTokens } from '@/lib/db';
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET; 
 
-const PACKAGES = {
-    'data_scientist': { chars: 2000000, visuals: 50 },
-    'researcher': { chars: 5000000, visuals: 150 }
+const PACKAGES: Record<string, { chars: number; reports: number }> = {
+    'starter_chars': { chars: 100000, reports: 0 },
+    'writer': { chars: 500000, reports: 0 },
+    'data_scientist': { chars: 2000000, reports: 0 },
+    'researcher': { chars: 5000000, reports: 0 },
+    'report_single': { chars: 0, reports: 3 },
+    'report_bulk': { chars: 0, reports: 15 },
+    'combo_lite': { chars: 1000000, reports: 5 },
+    'combo_pro': { chars: 10000000, reports: 30 },
 };
 
 export async function POST(req: Request) {
@@ -39,7 +45,7 @@ export async function POST(req: Request) {
         const packId = parts[3];
         
         const userId = parseInt(userIdStr, 10);
-        const pack = PACKAGES[packId as keyof typeof PACKAGES];
+        const pack = PACKAGES[packId];
 
         if (isNaN(userId) || !pack) {
             return new NextResponse('Bad package data', { status: 400 });
@@ -47,8 +53,8 @@ export async function POST(req: Request) {
 
         console.log(`✅ Webhook: Received payment from UID ${userId} for pack ${packId}`);
 
-        addPurchasedTokens(userId, 'chars', pack.chars);
-        addPurchasedTokens(userId, 'visuals', pack.visuals);
+        if (pack.chars > 0) addPurchasedTokens(userId, 'chars', pack.chars);
+        if (pack.reports > 0) addPurchasedTokens(userId, 'reports', pack.reports);
 
         return new NextResponse('OK', { status: 200 });
     } catch (err: any) {

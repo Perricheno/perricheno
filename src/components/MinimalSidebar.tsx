@@ -48,7 +48,7 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Set Up",
         links: [
             { href: "/settings", icon: IconSettings, label: "Settings" },
-            { href: "/settings", icon: IconCreditCard, label: "Billings & Usage" }
+            { href: "/billings", icon: IconCreditCard, label: "Billings & Usage" }
         ]
     }
 ];

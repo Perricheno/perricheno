@@ -208,7 +208,8 @@ library <- function(package, ...) {
                 }, { status: 500 });
             }
 
-            // Deduct usage upon successful generation
+            // Visuals are unlimited overall, but generating code costs characters
+            checkAndDeductUsage(userId, 'chars', generatedCode.length);
             checkAndDeductUsage(userId, 'visuals', 1);
 
             return NextResponse.json({

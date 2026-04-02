@@ -4,20 +4,78 @@ import { verifySession } from '@/lib/session';
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SHOP_ID = process.env.CRYPTOCLOUD_SHOP_ID;
 
-// Packages configuration
-const PACKAGES = {
+// Full packages catalog
+export const PACKAGES: Record<string, {
+    amount: number;
+    chars: number;
+    reports: number;
+    name: string;
+    description: string;
+    tag?: string;
+}> = {
+    // ── Character Packs ──
+    'starter_chars': {
+        amount: 1.00,
+        chars: 100000,
+        reports: 0,
+        name: 'Starter Pack',
+        description: '100K Characters',
+        tag: 'Budget'
+    },
+    'writer': {
+        amount: 3.00,
+        chars: 500000,
+        reports: 0,
+        name: 'Writer Pack',
+        description: '500K Characters',
+    },
     'data_scientist': {
-        amount: 5.00, // $5
+        amount: 5.00,
         chars: 2000000,
-        visuals: 50,
-        name: 'Data Scientist Pack'
+        reports: 0,
+        name: 'Data Scientist',
+        description: '2M Characters',
+        tag: 'Popular'
     },
     'researcher': {
-        amount: 15.00, // $15
+        amount: 12.00,
         chars: 5000000,
-        visuals: 150,
-        name: 'Researcher Bundle'
-    }
+        reports: 0,
+        name: 'Researcher',
+        description: '5M Characters',
+    },
+    // ── Report Packs ──
+    'report_single': {
+        amount: 2.00,
+        chars: 0,
+        reports: 3,
+        name: '3 Reports',
+        description: '3 Full Research Reports',
+    },
+    'report_bulk': {
+        amount: 8.00,
+        chars: 0,
+        reports: 15,
+        name: '15 Reports',
+        description: '15 Full Research Reports',
+        tag: 'Best Value'
+    },
+    // ── Combo Bundles ──
+    'combo_lite': {
+        amount: 7.00,
+        chars: 1000000,
+        reports: 5,
+        name: 'Lite Bundle',
+        description: '1M Chars + 5 Reports',
+    },
+    'combo_pro': {
+        amount: 20.00,
+        chars: 10000000,
+        reports: 30,
+        name: 'Pro Bundle',
+        description: '10M Chars + 30 Reports',
+        tag: 'Ultimate'
+    },
 };
 
 export async function POST(req: Request) {
@@ -28,24 +86,21 @@ export async function POST(req: Request) {
 
     try {
         const { packId } = await req.json();
-        const selectedPack = PACKAGES[packId as keyof typeof PACKAGES];
+        const selectedPack = PACKAGES[packId];
 
         if (!selectedPack) {
             return NextResponse.json({ error: "Invalid package selected" }, { status: 400 });
         }
 
         if (!CRYPTOCLOUD_API_KEY || !CRYPTOCLOUD_SHOP_ID) {
-            // Фолбэк для локального тестирования, если ключи еще не настроены
             return NextResponse.json({ 
-                error: "Payments not fully configured yet. Missing SHOP_ID or API_KEY.", 
+                error: "Payments not fully configured yet.", 
                 fallback_url: "https://donate.cryptocloud.plus/5T8V5K0P" 
             }, { status: 501 });
         }
 
-        // We bind the Perricheno User ID and Pack ID to this unique order
         const uniqueOrderId = `UID_${userId}_PACK_${packId}_TS_${Date.now()}`;
 
-        // Create Invoice via CryptoCloud API v2
         const res = await fetch("https://api.cryptocloud.plus/v2/invoice/create", {
             method: "POST",
             headers: {
@@ -57,14 +112,12 @@ export async function POST(req: Request) {
                 amount: selectedPack.amount,
                 order_id: uniqueOrderId,
                 currency: "USD",
-                // email: "maybe_user_email" // Optional
             })
         });
 
         const data = await res.json();
 
         if (data.status === "success" || data.result?.link) {
-            // Return checkout link
             return NextResponse.json({ url: data.result?.link || data.pay_url });
         } else {
             console.error("CryptoCloud Error:", data);

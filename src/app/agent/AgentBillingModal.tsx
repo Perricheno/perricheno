@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IconX, IconUser, IconCreditCard, IconHistory, IconChartPie, IconDatabase, IconLayoutDashboard } from '@tabler/icons-react';
 
 interface BillingLimits {
-    free: { chars: number; visuals: number; reports: number; };
+    free: { daily_chars: number; weekly_chars: number; reports: number; };
 }
 
 interface UserInfo {
@@ -14,6 +14,7 @@ interface UserInfo {
     photo_url: string | null;
     created_at: string;
     daily_chars_used: number;
+    weekly_chars_used: number;
     purchased_chars: number;
     daily_visuals_used: number;
     purchased_visuals: number;
@@ -160,8 +161,8 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                                             <h2 className="text-2xl font-black text-black mb-1">Compute Usage</h2>
                                             <p className="text-sm font-medium text-gray-400 mb-6 tracking-wide">Track your daily generation tokens. Limits reset at midnight (UTC).</p>
                                             <div className="space-y-4">
-                                                {renderProgressBar('Characters', user.daily_chars_used, limits.free.chars, user.purchased_chars)}
-                                                {renderProgressBar('Visualizations', user.daily_visuals_used, limits.free.visuals, user.purchased_visuals)}
+                                                {renderProgressBar('Daily Characters', user.daily_chars_used, limits.free.daily_chars, user.purchased_chars)}
+                                                {renderProgressBar('Weekly Characters', user.weekly_chars_used || 0, limits.free.weekly_chars, 0)}
                                             </div>
                                         </div>
 

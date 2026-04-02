@@ -5,73 +5,20 @@ import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import {
     IconUser, IconPalette, IconInfoCircle,
-    IconLogin, IconChevronRight,
-    IconCreditCard, IconDatabase, IconLink
+    IconLogin, IconChevronRight, IconLink
 } from "@tabler/icons-react";
 
 export default function SettingsPage() {
     const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
-
-    const [limits, setLimits] = useState<any>(null);
     const [fullUser, setFullUser] = useState<any>(null);
 
     useEffect(() => {
         if (user) {
             fetch("/api/auth/me")
                 .then(r => r.json())
-                .then(d => {
-                    setLimits(d.limits);
-                    setFullUser(d.user);
-                });
+                .then(d => setFullUser(d.user));
         }
     }, [user]);
-
-    const handleCheckout = async (packId: string) => {
-        try {
-            const res = await fetch('/api/billing/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ packId })
-            });
-            const data = await res.json();
-            if (data.url) {
-                window.open(data.url, '_blank');
-            } else if (data.fallback_url) {
-                window.open(data.fallback_url, '_blank');
-            } else {
-                alert('Checkout failed: ' + (data.error || 'Unknown error'));
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Checkout error.');
-        }
-    };
-
-    const renderProgressBar = (label: string, used: number, max: number, purchased: number) => {
-        const dailyRemaining = Math.max(0, max - used);
-        const percentage = Math.min(100, Math.max(0, (used / max) * 100));
-
-        return (
-            <div className="bg-[var(--background)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-                <div className="flex items-center justify-between text-sm font-bold">
-                    <span className="uppercase tracking-widest text-gray-500 text-[10px]">{label} Daily Quota</span>
-                    <span className="text-[var(--foreground)]">{used.toLocaleString()} / {max.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-[var(--border)] h-2 rounded-full overflow-hidden">
-                    <div 
-                        className={`h-full rounded-full transition-all duration-1000 ${percentage > 90 ? 'bg-red-500' : percentage > 70 ? 'bg-orange-400' : 'bg-[var(--foreground)]'}`}
-                        style={{ width: `${percentage}%` }}
-                    />
-                </div>
-                {purchased > 0 && (
-                    <div className="flex items-center gap-2 pt-2 text-xs font-bold text-green-600">
-                        <IconDatabase className="w-4 h-4" />
-                        +{purchased.toLocaleString()} tokens roll-over
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     return (
         <div className="w-full h-full font-sans overflow-auto bg-[var(--background)]">
@@ -79,10 +26,10 @@ export default function SettingsPage() {
 
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3">Settings</h1>
-                <p className="text-gray-500 mb-10 font-medium">Manage your account, billing, and preferences.</p>
+                <p className="text-gray-500 mb-10 font-medium">Manage your account and preferences.</p>
 
                 <div className="space-y-10">
-                    
+
                     {/* ━━━━ Account ━━━━ */}
                     <section>
                         <h2 className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
@@ -112,7 +59,7 @@ export default function SettingsPage() {
                                     <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4 border border-[var(--border)]">
                                         <IconUser className="w-8 h-8 text-gray-400" />
                                     </div>
-                                    <p className="text-sm font-medium text-gray-500 mb-6">Sign in with Telegram to access your billing and agent features.</p>
+                                    <p className="text-sm font-medium text-gray-500 mb-6">Sign in with Telegram to access your account.</p>
                                     <button onClick={() => setShowLogin(true)}
                                         className="flex items-center gap-2 px-8 py-3.5 bg-[var(--foreground)] text-[var(--background)] rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl active:scale-95">
                                         <IconLogin className="w-4 h-4" /> Sign In
@@ -122,40 +69,7 @@ export default function SettingsPage() {
                         </div>
                     </section>
 
-                    {/* ━━━━ Billing & Limits ━━━━ */}
-                    {fullUser && limits && (
-                        <section>
-                            <h2 className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-                                <IconCreditCard className="w-4 h-4" /> Billing & Usage
-                            </h2>
-                            <div className="bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-8 shadow-sm">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                                    {renderProgressBar('Characters', fullUser.daily_chars_used, limits.free.chars, fullUser.purchased_chars)}
-                                    {renderProgressBar('Visualizations', fullUser.daily_visuals_used, limits.free.visuals, fullUser.purchased_visuals)}
-                                </div>
-
-                                <div className="border border-[var(--border)] rounded-3xl p-6 bg-gradient-to-br from-white to-gray-50 shadow-inner">
-                                    <h2 className="text-xl font-black mb-1">Buy Resource Packs</h2>
-                                    <p className="text-[12px] font-medium text-gray-500 mb-6">Need more power? Purchased tokens roll-over permanently until consumed.</p>
-                                    
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                        <button onClick={() => handleCheckout('data_scientist')} className="block group bg-white border border-gray-200 rounded-3xl p-6 hover:border-black transition-all hover:shadow-2xl hover:-translate-y-1 text-left w-full cursor-pointer">
-                                            <h3 className="text-base font-black mb-2 text-black">Data Scientist Pack</h3>
-                                            <p className="text-xs font-medium text-gray-400 mb-6">2M Chars + 50 Visuals</p>
-                                            <div className="bg-black text-white text-[10px] font-black uppercase tracking-widest text-center py-3 rounded-xl group-hover:bg-[#222] transition-colors">Buy for $5</div>
-                                        </button>
-                                        <button onClick={() => handleCheckout('researcher')} className="block group bg-black border border-black rounded-3xl p-6 hover:shadow-2xl hover:shadow-black/30 hover:-translate-y-1 transition-all text-left w-full cursor-pointer text-white">
-                                            <h3 className="text-base font-black mb-2 text-white">Researcher Bundle</h3>
-                                            <p className="text-xs font-medium text-gray-400 mb-6">5M Chars + 150 Visuals</p>
-                                            <div className="bg-white text-black text-[10px] font-black uppercase tracking-widest text-center py-3 rounded-xl group-hover:bg-gray-100 transition-colors">Buy for $15</div>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* ━━━━ Intelligence Preferences ━━━━ */}
+                    {/* ━━━━ Agent Preferences ━━━━ */}
                     <section>
                         <h2 className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
                             <IconPalette className="w-4 h-4" /> Agent Preferences
@@ -171,7 +85,7 @@ export default function SettingsPage() {
 
                             <div className="border-t border-[var(--border)]" />
 
-                            <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-bold">Research Aggressiveness</p>
                                     <p className="text-[11px] font-medium text-gray-500">How deep the AI should search per query</p>
@@ -188,7 +102,7 @@ export default function SettingsPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-bold">Default Output Format</p>
-                                    <p className="text-[11px] font-medium text-gray-500">Preferred style for downloaded code or documents</p>
+                                    <p className="text-[11px] font-medium text-gray-500">Preferred style for downloaded documents</p>
                                 </div>
                                 <select className="bg-[var(--background)] border border-[var(--border)] rounded-xl px-4 py-2 text-sm font-semibold outline-none focus:border-[var(--foreground)] transition-colors">
                                     <option value="markdown">Markdown (.md)</option>
@@ -196,10 +110,25 @@ export default function SettingsPage() {
                                     <option value="pdf">Formal PDF (.pdf)</option>
                                 </select>
                             </div>
+
+                            <div className="border-t border-[var(--border)]" />
+
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-bold">Default Language</p>
+                                    <p className="text-[11px] font-medium text-gray-500">Language for generated content</p>
+                                </div>
+                                <select className="bg-[var(--background)] border border-[var(--border)] rounded-xl px-4 py-2 text-sm font-semibold outline-none focus:border-[var(--foreground)] transition-colors">
+                                    <option value="en">English</option>
+                                    <option value="ru">Russian</option>
+                                    <option value="kz">Kazakh</option>
+                                    <option value="de">German</option>
+                                </select>
+                            </div>
                         </div>
                     </section>
 
-                    {/* ━━━━ Notifications & Integrations ━━━━ */}
+                    {/* ━━━━ Integrations ━━━━ */}
                     <section>
                         <h2 className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
                             <IconLink className="w-4 h-4" /> Integrations

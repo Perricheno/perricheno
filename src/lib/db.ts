@@ -80,6 +80,8 @@ try { db.exec("ALTER TABLE users ADD COLUMN daily_reports_used INTEGER DEFAULT 0
 try { db.exec("ALTER TABLE users ADD COLUMN purchased_reports INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN last_reset_date TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'free'"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
 
 export default db;
 
@@ -93,12 +95,14 @@ export interface User {
     
     // Usage limits
     daily_chars_used: number;
+    weekly_chars_used: number;
     purchased_chars: number;
     daily_visuals_used: number;
     purchased_visuals: number;
     daily_reports_used: number;
     purchased_reports: number;
     last_reset_date: string | null;
+    last_week_reset: string | null;
     account_tier: string;
 }
 
@@ -147,8 +151,15 @@ export function deleteUser(id: number) {
 // --- Strict Usage Tracking ---
 
 export const LIMITS = {
-    free: { chars: 1000000, visuals: 3, reports: 1 }
+    free: { daily_chars: 100000, weekly_chars: 500000, reports: 1 }
 };
+
+function getWeekNumber(d: Date): string {
+    const start = new Date(d.getFullYear(), 0, 1);
+    const diff = d.getTime() - start.getTime();
+    const oneWeek = 604800000;
+    return `${d.getFullYear()}-W${Math.ceil((diff / oneWeek) + 1)}`;
+}
 
 export function checkAndDeductUsage(
     userId: number, 
@@ -159,6 +170,7 @@ export function checkAndDeductUsage(
     if (!user) return { success: false, remaining: 0 };
 
     const today = new Date().toISOString().split('T')[0];
+    const currentWeek = getWeekNumber(new Date());
     
     // Reset daily limits if it's a new day
     if (user.last_reset_date !== today) {
@@ -170,23 +182,62 @@ export function checkAndDeductUsage(
         user = getUserById(userId)!;
     }
 
-    const maxDaily = LIMITS.free[type];
-    const usedDaily = user[`daily_${type}_used` as keyof User] as number;
-    const purchased = user[`purchased_${type}` as keyof User] as number;
+    // Reset weekly limits if it's a new week
+    if (user.last_week_reset !== currentWeek) {
+        db.prepare(`
+            UPDATE users SET weekly_chars_used = 0, last_week_reset = ? WHERE id = ?
+        `).run(currentWeek, userId);
+        user = getUserById(userId)!;
+    }
 
+    // Visuals have NO quota limit — they just count chars
+    if (type === 'visuals') {
+        db.prepare(`UPDATE users SET daily_visuals_used = daily_visuals_used + ? WHERE id = ?`).run(amount, userId);
+        return { success: true, remaining: 999999 };
+    }
+
+    if (type === 'chars') {
+        const dailyMax = LIMITS.free.daily_chars;
+        const weeklyMax = LIMITS.free.weekly_chars;
+        const purchased = user.purchased_chars;
+
+        const remainingDaily = Math.max(0, dailyMax - user.daily_chars_used);
+        const remainingWeekly = Math.max(0, weeklyMax - user.weekly_chars_used);
+        const freeAvailable = Math.min(remainingDaily, remainingWeekly);
+        const totalAvailable = freeAvailable + purchased;
+
+        if (totalAvailable < amount) return { success: false, remaining: totalAvailable };
+
+        const fromFree = Math.min(freeAvailable, amount);
+        const fromPurchased = amount - fromFree;
+
+        db.prepare(`
+            UPDATE users 
+            SET daily_chars_used = daily_chars_used + ?,
+                weekly_chars_used = weekly_chars_used + ?,
+                purchased_chars = purchased_chars - ?
+            WHERE id = ?
+        `).run(fromFree, fromFree, fromPurchased, userId);
+
+        return { success: true, remaining: totalAvailable - amount };
+    }
+
+    // Reports
+    const maxDaily = LIMITS.free.reports;
+    const usedDaily = user.daily_reports_used;
+    const purchased = user.purchased_reports;
     const remainingDaily = Math.max(0, maxDaily - usedDaily);
     const totalAvailable = remainingDaily + purchased;
 
     if (totalAvailable < amount) return { success: false, remaining: totalAvailable };
 
-    // Deduct
-    let amountToDeductDaily = Math.min(remainingDaily, amount);
-    let amountToDeductPurchased = amount - amountToDeductDaily;
+    const amountToDeductDaily = Math.min(remainingDaily, amount);
+    const amountToDeductPurchased = amount - amountToDeductDaily;
 
     db.prepare(`
         UPDATE users 
-        SET daily_${type}_used = daily_${type}_used + ?,
-            purchased_${type} = purchased_${type} - ?
+        SET daily_reports_used = daily_reports_used + ?,
+            purchased_reports = purchased_reports - ?
         WHERE id = ?
     `).run(amountToDeductDaily, amountToDeductPurchased, userId);
 
