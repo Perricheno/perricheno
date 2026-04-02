@@ -56,6 +56,28 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
 
     if (!isOpen) return null;
 
+    const handleCheckout = async (packId: string) => {
+        try {
+            const res = await fetch('/api/billing/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ packId })
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.open(data.url, '_blank');
+            } else if (data.fallback_url) {
+                // If Shop ID is missing, fallback to generic page
+                window.open(data.fallback_url, '_blank');
+            } else {
+                alert('Checkout failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Checkout error.');
+        }
+    };
+
     const renderProgressBar = (label: string, used: number, max: number, purchased: number) => {
         const dailyRemaining = Math.max(0, max - used);
         const totalRemaining = dailyRemaining + purchased;
@@ -148,16 +170,16 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                                             <p className="text-[12px] font-medium text-gray-500 mb-6">Need more power? Purchased tokens roll over until consumed.</p>
                                             
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <a href="https://donate.cryptocloud.plus/5T8V5K0P" target="_blank" rel="noopener noreferrer" className="block group bg-white border border-gray-200 rounded-2xl p-5 hover:border-black transition-all hover:shadow-xl hover:-translate-y-1">
+                                                <button onClick={() => handleCheckout('data_scientist')} className="block group bg-white border border-gray-200 rounded-2xl p-5 hover:border-black transition-all hover:shadow-xl hover:-translate-y-1 text-left w-full text-black cursor-pointer">
                                                     <h3 className="text-sm font-black mb-2 text-black">Data Scientist Pack</h3>
                                                     <p className="text-xs text-gray-400 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">2M Chars + 50 Visuals</p>
                                                     <div className="bg-black text-white text-[10px] font-black uppercase tracking-widest text-center py-2.5 rounded-lg group-hover:bg-[#1A1A1A]">Buy Now</div>
-                                                </a>
-                                                <a href="https://donate.cryptocloud.plus/5T8V5K0P" target="_blank" rel="noopener noreferrer" className="block group bg-black border border-black rounded-2xl p-5 hover:shadow-2xl hover:-translate-y-1 transition-all">
+                                                </button>
+                                                <button onClick={() => handleCheckout('researcher')} className="block group bg-black border border-black rounded-2xl p-5 hover:shadow-2xl hover:-translate-y-1 transition-all text-left w-full cursor-pointer text-white">
                                                     <h3 className="text-sm font-black mb-2 text-white">Researcher Bundle</h3>
                                                     <p className="text-xs text-gray-400 mb-4 whitespace-nowrap overflow-hidden text-ellipsis">5M Chars + 150 Visuals</p>
                                                     <div className="bg-white text-black text-[10px] font-black uppercase tracking-widest text-center py-2.5 rounded-lg group-hover:bg-gray-100">Buy Now</div>
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
