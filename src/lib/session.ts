@@ -35,15 +35,19 @@ export async function verifySession() {
     
     if (!session) return null;
 
-    try {
-        const { payload } = await jwtVerify(session, SECRET_KEY, {
-            algorithms: ['HS512'],
-        });
-        return payload.userId as number;
-    } catch (error) {
-        console.error("Session Verify Error:", error);
-        return null;
+    // Try HS512 first (new), fall back to HS256 (legacy) for backwards compat
+    for (const alg of ['HS512', 'HS256'] as const) {
+        try {
+            const { payload } = await jwtVerify(session, SECRET_KEY, {
+                algorithms: [alg],
+            });
+            return payload.userId as number;
+        } catch {}
     }
+
+    // Both failed — stale/corrupt token, clear it
+    try { cookieStore.delete('perricheno_session'); } catch {}
+    return null;
 }
 
 export async function deleteSession() {
