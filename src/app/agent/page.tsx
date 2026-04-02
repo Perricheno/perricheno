@@ -408,163 +408,134 @@ export default function AgentPage() {
         setSettings(s => ({ ...s, referenceLinks: newLinks }));
     };
 
-    // ─── LANDING (UNIFIED COMMAND CENTER) ───
+    // ─── LANDING (ULTRA-MINIMALIST CHAT) ───
     if (phase === "idle") {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[#FBFBFC] relative p-6 overflow-hidden">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-3xl flex flex-col">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-2xl flex flex-col items-center">
                     
-                    {/* Header Title */}
-                    <div className="mb-10 text-center">
-                        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-black mb-2">Perricheno Intelligence.</h1>
-                        <p className="text-[#A1A1AA] font-bold text-xs uppercase tracking-[0.4em]">Academic Precision / Technical Rigor</p>
+                    {/* Minimal Branding */}
+                    <div className="mb-12 text-center select-none">
+                        <img src="/Vector.svg" alt="Perricheno" className="w-12 h-12 mx-auto mb-4 opacity-80" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-300">Intelligence / Rigor</p>
                     </div>
 
-                    {/* Main Command Zone */}
-                    <div className="bg-white border border-gray-100 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col p-2 focus-within:border-black transition-all">
+                    {/* Chat Input Shell */}
+                    <div className="w-full bg-white border border-gray-100 rounded-[32px] shadow-[0_20px_40px_-12px_rgba(0,0,0,0.05)] focus-within:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] focus-within:border-black transition-all p-3 flex flex-col group relative">
                         
-                        {/* Topic Input */}
-                        <div className="px-6 pt-6 pb-2">
+                        <div className="flex items-start gap-4 px-3 pt-3">
                              <textarea 
                                 value={prompt} 
                                 onChange={e => setPrompt(e.target.value)} 
                                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-                                placeholder="State your research topic or analysis task..." 
-                                className="w-full text-xl md:text-2xl font-bold bg-transparent outline-none placeholder:text-gray-100 resize-none h-32 leading-tight" 
+                                placeholder="What are we researching today?" 
+                                className="flex-1 text-lg font-bold bg-transparent outline-none placeholder:text-gray-100 resize-none h-24 leading-relaxed" 
                                 autoFocus 
                             />
+                            
+                            <button 
+                                onClick={handleGenerate} 
+                                disabled={!prompt.trim()} 
+                                className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center disabled:opacity-5 disabled:bg-gray-100 transition-all hover:bg-[#1A1A1A] active:scale-95 shrink-0 shadow-lg shadow-black/10"
+                            >
+                                <IconArrowRight className="w-6 h-6" />
+                            </button>
                         </div>
 
-                        {/* File Chips Display */}
-                        {settings.referenceFileNames.length > 0 && (
-                            <div className="px-6 pb-2 flex flex-wrap gap-2">
-                                {settings.referenceFileNames.map((name, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-[#FBFBFC] border border-gray-100 rounded-full text-[9px] font-black uppercase tracking-widest text-black">
-                                        <IconFileText className="w-3 h-3" />
-                                        <span className="max-w-[120px] truncate">{name}</span>
-                                        <button onClick={() => removeFile(idx)} className="text-gray-300 hover:text-black transition-colors">
-                                            <IconX className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Toolbar: Chips & Universal Files */}
-                        <div className="px-6 pb-4 flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-wrap gap-2">
+                        {/* Chips & Tools Row */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-3 pb-2 pt-2">
+                             <div className="flex flex-wrap gap-1.5">
                                 {MODES.map((m) => {
                                     const active = docType === m.id;
                                     return (
                                         <button 
                                             key={m.id} 
                                             onClick={() => setDocType(m.id)} 
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black shadow-lg' : 'bg-white text-[#D4D4D8] border-gray-100 hover:border-gray-200 hover:text-black'}`}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black' : 'bg-white text-gray-400 border-gray-50 hover:border-gray-200 hover:text-black'}`}
                                         >
-                                            <m.icon className="w-3.5 h-3.5" stroke={2.5} />
+                                            <m.icon className="w-3 h-3" stroke={3} />
                                             {m.label}
                                         </button>
                                     );
                                 })}
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-black transition-all">
-                                    <IconPaperclip className="w-3.5 h-3.5" />
-                                    Attach Context
+                            <div className="flex items-center gap-1">
+                                <label className="cursor-pointer p-2 text-gray-200 hover:text-black rounded-xl hover:bg-gray-50 transition-all">
+                                    <IconPaperclip className="w-4 h-4" />
                                     <input type="file" className="hidden" multiple accept=".pdf,.txt" onChange={handleFileUpload} />
                                 </label>
-                                <button onClick={handleLinkAdd} className="p-2.5 text-gray-200 hover:text-black hover:bg-gray-50 rounded-xl transition-all">
+                                <button onClick={handleLinkAdd} className="p-2 text-gray-200 hover:text-black rounded-xl hover:bg-gray-50 transition-all">
                                     <IconLink className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setSettingsOpen(true)} className="p-2 text-gray-200 hover:text-black rounded-xl hover:bg-gray-50 transition-all">
+                                    <IconSettings className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Expandable Metadata Area */}
-                        <AnimatePresence>
-                            {(docType !== "research" || settings.authorName) && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="border-t border-gray-50 bg-[#FBFBFC] px-8 py-6 space-y-6 overflow-hidden">
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4D4D8] ml-1">Author</label>
-                                            <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your Name" className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-black font-bold text-xs" />
-                                        </div>
-
-                                        {docType === "diploma" && (
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4D4D8] ml-1">Supervisor</label>
-                                                <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Scientific Advisor" className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-black font-bold text-xs" />
-                                            </div>
-                                        )}
-
-                                        {docType === "assignment" && (
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4D4D8] ml-1">Course</label>
-                                                <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="e.g. CS-50" className="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-black font-bold text-xs" />
-                                            </div>
-                                        )}
+                        {/* File Preview Chips */}
+                        {settings.referenceFileNames.length > 0 && (
+                            <div className="px-3 pb-3 flex flex-wrap gap-2">
+                                {settings.referenceFileNames.map((name, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1 bg-gray-50 rounded-lg text-[9px] font-bold text-black border border-gray-100">
+                                        <IconFileText className="w-3 h-3 text-gray-400" />
+                                        <span>{name}</span>
+                                        <button onClick={() => removeFile(idx)} className="p-1 hover:text-red-500 transition-colors">
+                                            <IconX className="w-3 h-3" />
+                                        </button>
                                     </div>
-
-                                    {/* Links Section */}
-                                    {settings.referenceLinks.length > 0 && (
-                                        <div className="space-y-3">
-                                            {settings.referenceLinks.map((link, idx) => (
-                                                <div key={idx} className="flex items-center gap-3">
-                                                    <div className="flex-1 relative">
-                                                        <IconLink className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-[#D4D4D8]" />
-                                                        <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://external-resource.com" className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-lg text-xs font-bold outline-none focus:border-black" />
-                                                    </div>
-                                                    <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-2 text-gray-200 hover:text-black transition-colors"><IconX className="w-4 h-4" /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Execute Region */}
-                    <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-[#D4D4D8]">
-                            <span>Multi-Model Intelligence</span>
-                            <div className="w-1 h-1 rounded-full bg-gray-100" />
-                            <span>LaTeX 3.0 Standard</span>
+                    {/* Metadata Zone (Adaptive & Subtle) */}
+                    <AnimatePresence>
+                         {(docType !== "research" || settings.authorName) && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full mt-8 flex flex-wrap gap-8 items-start justify-center">
+                                <div className="min-w-[120px] pb-2 border-b border-gray-100 focus-within:border-black transition-colors">
+                                    <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 mb-1">Author</label>
+                                    <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your Name" className="bg-transparent outline-none text-[11px] font-bold w-full uppercase tracking-widest placeholder:text-gray-100 placeholder:italic" />
+                                </div>
+
+                                {docType === "diploma" && (
+                                     <div className="min-w-[120px] pb-2 border-b border-gray-100 focus-within:border-black transition-colors">
+                                        <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 mb-1">Supervisor</label>
+                                        <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Full Name" className="bg-transparent outline-none text-[11px] font-bold w-full uppercase tracking-widest placeholder:text-gray-100 placeholder:italic" />
+                                    </div>
+                                )}
+
+                                {docType === "assignment" && (
+                                     <div className="min-w-[120px] pb-2 border-b border-gray-100 focus-within:border-black transition-colors">
+                                        <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 mb-1">Course</label>
+                                        <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="Module Code" className="bg-transparent outline-none text-[11px] font-bold w-full uppercase tracking-widest placeholder:text-gray-100 placeholder:italic" />
+                                    </div>
+                                )}
+                            </motion.div>
+                         )}
+                    </AnimatePresence>
+
+                    {/* Links Section */}
+                    {settings.referenceLinks.length > 0 && (
+                        <div className="w-full max-w-sm mt-8 space-y-2">
+                            {settings.referenceLinks.map((link, idx) => (
+                                <div key={idx} className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-50 shadow-sm">
+                                    <IconLink className="w-3 h-3 text-gray-300 ml-1" />
+                                    <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="flex-1 bg-transparent outline-none text-[10px] font-medium text-gray-500" />
+                                    <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-1 hover:text-black transition-colors"><IconX className="w-3 h-3" /></button>
+                                </div>
+                            ))}
                         </div>
-                        <button 
-                            onClick={handleGenerate} 
-                            disabled={!prompt.trim()} 
-                            className="w-full md:w-auto px-12 py-5 bg-black text-white rounded-[24px] font-black text-xs uppercase tracking-[0.3em] hover:bg-[#1A1A1A] disabled:opacity-5 transition-all shadow-[0_24px_48px_-12px_rgba(0,0,0,0.4)] active:scale-95"
-                        >
-                            Generate Research
-                        </button>
-                    </div>
-
-                    {/* Feature Highlights */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 opacity-40">
-                         <div className="text-center md:text-left space-y-2">
-                            <span className="text-[10px] font-black text-black uppercase tracking-widest block">Structural Integrity</span>
-                            <p className="text-[11px] font-medium leading-relaxed">Full LaTeX compilation with automated page layout and bibliography.</p>
-                         </div>
-                         <div className="text-center md:text-left space-y-2">
-                            <span className="text-[10px] font-black text-black uppercase tracking-widest block">R Visual Logic</span>
-                            <p className="text-[11px] font-medium leading-relaxed">Integrated statistical visualization components with AI-driven source code.</p>
-                         </div>
-                         <div className="text-center md:text-left space-y-2">
-                            <span className="text-[10px] font-black text-black uppercase tracking-widest block">Contextual Grounding</span>
-                            <p className="text-[11px] font-medium leading-relaxed">Cross-reference your uploaded materials for fact-accurate research.</p>
-                         </div>
-                    </div>
+                    )}
 
                 </motion.div>
 
-                {/* Status Bar / Settings Indicator */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                     <button onClick={() => setSettingsOpen(true)} className="flex items-center gap-2 px-6 py-2 bg-white border border-gray-100 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-300 hover:text-black hover:border-black transition-all">
-                        <IconSettings className="w-3.5 h-3.5" /> Engine Settings
-                     </button>
+                {/* Technical Footnote */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 opacity-20 pointer-events-none select-none">
+                     <span className="text-[9px] font-black uppercase tracking-[0.4em]">Engine v3.0 // Unified Research Logic</span>
                 </div>
             </div>
         );
