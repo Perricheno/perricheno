@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { createAgentSession, updateAgentSession, getAgentSession } from '@/lib/db';
+import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Increase body size limit — rImages base64 payloads can be very large
@@ -172,7 +172,7 @@ function buildMessages(s: GenerateSettings) {
     return messages;
 }
 
-async function runAgentTaskBackground(sessionId: string, messages: any[]) {
+async function runAgentTaskBackground(sessionId: string, messages: any[], userId: number) {
     try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -253,6 +253,11 @@ async function runAgentTaskBackground(sessionId: string, messages: any[]) {
             references_bib: finalData.references_bib || null,
         });
 
+        // Exact Character Billing Mapping (Prompt + Completion)
+        const promptChars = JSON.stringify(messages).length;
+        const completionChars = clean.length;
+        checkAndDeductUsage(userId, 'chars', promptChars + completionChars);
+
     } catch (err: any) {
         console.error("Background Agent Error:", err);
         updateAgentSession(sessionId, { status: "error", error_msg: err.message || "Unexpected background error." });
@@ -263,6 +268,11 @@ export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    }
+
+    const precheck = checkAndDeductUsage(userId, 'chars', 0);
+    if (precheck.remaining <= 0) {
+        return NextResponse.json({ error: "LIMIT_REACHED", details: "Characters limit reached." }, { status: 402 });
     }
 
     if (!OPENAI_API_KEY) {
@@ -342,7 +352,7 @@ export async function POST(req: Request) {
         }
 
         // Fire and forget
-        runAgentTaskBackground(sessionId, messages);
+        runAgentTaskBackground(sessionId, messages, userId);
 
         return NextResponse.json({ sessionId });
 

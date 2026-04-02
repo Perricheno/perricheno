@@ -13,6 +13,7 @@ interface Props {
     onAddVisualsToReport: (images: CodeImage[]) => void;
     runtime: 'R' | 'Python';
     setRuntime: (r: 'R' | 'Python') => void;
+    onQuotaExceeded?: () => void;
 }
 
 const CHART_TYPES = [
@@ -85,7 +86,7 @@ const PALETTES = [
 ];
 
 // Sub-component for generating a single visualization
-function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive, runtime }: any) {
+function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive, runtime, onQuotaExceeded }: any) {
     const [status, setStatus] = useState<"pending" | "generating" | "error" | "done">("pending");
     const [errorMsg, setErrorMsg] = useState("");
     const [failedCode, setFailedCode] = useState("");
@@ -124,6 +125,10 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                 });
             } else {
                 setFailedCode(data.code || "");
+                if (res.status === 402 && onQuotaExceeded) {
+                    onQuotaExceeded();
+                    throw new Error("Quota exceeded! Please buy tokens.");
+                }
                 throw new Error(data.error || `${runtime} visualization failed`);
             }
         } catch (e: any) {
@@ -192,7 +197,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
     );
 }
 
-export function AgentVisualizations({ topic, language, visuals, setVisuals, sessionId, openEditor, onAddVisualsToReport, runtime, setRuntime }: Props) {
+export function AgentVisualizations({ topic, language, visuals, setVisuals, sessionId, openEditor, onAddVisualsToReport, runtime, setRuntime, onQuotaExceeded }: Props) {
     const [selectedCharts, setSelectedCharts] = useState<string[]>(["bar"]);
     const [palette, setPalette] = useState("viridis");
     const [dataContext, setDataContext] = useState("");
@@ -464,9 +469,13 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                             dataContext={dataContext}
                             isActive={job.isActive}
                             onComplete={(img: CodeImage) => handleJobComplete(job.id, img)}
-                            onFail={() => setGeneratingQueue(prev => prev.map(j => j.id === job.id ? { ...j, isActive: false, isFailed: true } : j))}
+                            onFail={(status?: number) => {
+                                if (status === 402) onQuotaExceeded?.();
+                                setGeneratingQueue(q => q.map(i => i.id === job.id ? { ...i, isFailed: true, isActive: false } : i));
+                            }}
                             onCancel={() => setGeneratingQueue(prev => prev.filter(j => j.id !== job.id))}
                             runtime={runtime}
+                            onQuotaExceeded={onQuotaExceeded}
                         />
                     ))}
                 </div>

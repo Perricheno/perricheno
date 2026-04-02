@@ -18,6 +18,7 @@ import { AgentSettingsPanel } from "./AgentSettingsPanel";
 import { AgentSidebar } from "./AgentSidebar";
 import { AgentVisualizations } from "./AgentVisualizations";
 import { CodeEditorModal } from "./CodeEditorModal";
+import { AgentBillingModal } from "./AgentBillingModal";
 
 export default function AgentPage() {
     const { user, setShowLogin } = useAdmin();
@@ -28,6 +29,7 @@ export default function AgentPage() {
     const [settings, setSettings] = useState<AgentSettings>(DEFAULT_SETTINGS);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
+    const [billingOpen, setBillingOpen] = useState(false);
 
     // Edit/Fix state
     const [isEditing, setIsEditing] = useState(false);
@@ -130,6 +132,10 @@ export default function AgentPage() {
             });
 
             if (!res.ok) {
+                if (res.status === 402) {
+                    setBillingOpen(true);
+                    throw new Error("Quota exceeded! Please buy tokens to continue.");
+                }
                 const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
                 throw new Error(errData.error || `HTTP ${res.status}`);
             }
@@ -504,8 +510,11 @@ export default function AgentPage() {
                                 <button onClick={handleLinkAdd} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
                                     <IconLink className="w-4 h-4" stroke={2} />
                                 </button>
-                                <button onClick={() => setSettingsOpen(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                <button onClick={() => setSettingsOpen(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Document Settings">
                                     <IconSettings className="w-4 h-4" stroke={2} />
+                                </button>
+                                <button onClick={() => setBillingOpen(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Account & Billing">
+                                    <IconUser className="w-4 h-4" stroke={2} />
                                 </button>
                             </div>
 
@@ -725,7 +734,6 @@ export default function AgentPage() {
                     </>
                 )}
             </AnimatePresence>
-            {/* Editor Modal */}
             <AnimatePresence>
                 {activeEditorIndex !== null && visuals[activeEditorIndex] && (
                     <CodeEditorModal
@@ -748,6 +756,12 @@ export default function AgentPage() {
                     />
                 )}
             </AnimatePresence>
+            
+            <AgentBillingModal 
+                isOpen={billingOpen} 
+                onClose={() => setBillingOpen(false)} 
+                totalSessions={sessions.length} 
+            />
         </div>
     );
 }

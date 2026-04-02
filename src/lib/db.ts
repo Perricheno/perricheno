@@ -71,6 +71,16 @@ try { db.exec("ALTER TABLE agent_sessions ADD COLUMN error_msg TEXT"); } catch (
 try { db.exec("ALTER TABLE agent_sessions ADD COLUMN stream_text TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE agent_sessions RENAME COLUMN r_images_json TO visuals_json"); } catch (e) {}
 
+// Strict Limits Migrations
+try { db.exec("ALTER TABLE users ADD COLUMN daily_chars_used INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN purchased_chars INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN daily_visuals_used INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN purchased_visuals INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN daily_reports_used INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN purchased_reports INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN last_reset_date TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'free'"); } catch (e) {}
+
 export default db;
 
 export interface User {
@@ -80,6 +90,16 @@ export interface User {
     first_name: string | null;
     photo_url: string | null;
     created_at: string;
+    
+    // Usage limits
+    daily_chars_used: number;
+    purchased_chars: number;
+    daily_visuals_used: number;
+    purchased_visuals: number;
+    daily_reports_used: number;
+    purchased_reports: number;
+    last_reset_date: string | null;
+    account_tier: string;
 }
 
 export function getUserByTelegramId(telegramId: string): User | undefined {
@@ -110,24 +130,71 @@ export function upsertUser(data: { telegram_id: string; username?: string; first
     } else {
         // Insert
         const stmt = db.prepare(`
-            INSERT INTO users (telegram_id, username, first_name, photo_url)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (telegram_id, username, first_name, photo_url, last_reset_date)
+            VALUES (?, ?, ?, ?, ?)
         `);
-        const info = stmt.run(telegram_id, username || null, first_name || null, photo_url || null);
-        return {
-            id: Number(info.lastInsertRowid),
-            telegram_id,
-            username: username || null,
-            first_name: first_name || null,
-            photo_url: photo_url || null,
-            created_at: new Date().toISOString() // Approximate
-        };
+        const today = new Date().toISOString().split('T')[0];
+        const info = stmt.run(telegram_id, username || null, first_name || null, photo_url || null, today);
+        return getUserByTelegramId(telegram_id)!;
     }
 }
 
 export function deleteUser(id: number) {
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
     stmt.run(id);
+}
+
+// --- Strict Usage Tracking ---
+
+export const LIMITS = {
+    free: { chars: 1000000, visuals: 3, reports: 1 }
+};
+
+export function checkAndDeductUsage(
+    userId: number, 
+    type: 'chars' | 'visuals' | 'reports', 
+    amount: number = 1
+): { success: boolean; remaining: number } {
+    let user = getUserById(userId);
+    if (!user) return { success: false, remaining: 0 };
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Reset daily limits if it's a new day
+    if (user.last_reset_date !== today) {
+        db.prepare(`
+            UPDATE users 
+            SET daily_chars_used = 0, daily_visuals_used = 0, daily_reports_used = 0, last_reset_date = ?
+            WHERE id = ?
+        `).run(today, userId);
+        user = getUserById(userId)!;
+    }
+
+    const maxDaily = LIMITS.free[type];
+    const usedDaily = user[`daily_${type}_used` as keyof User] as number;
+    const purchased = user[`purchased_${type}` as keyof User] as number;
+
+    const remainingDaily = Math.max(0, maxDaily - usedDaily);
+    const totalAvailable = remainingDaily + purchased;
+
+    if (totalAvailable < amount) return { success: false, remaining: totalAvailable };
+
+    // Deduct
+    let amountToDeductDaily = Math.min(remainingDaily, amount);
+    let amountToDeductPurchased = amount - amountToDeductDaily;
+
+    db.prepare(`
+        UPDATE users 
+        SET daily_${type}_used = daily_${type}_used + ?,
+            purchased_${type} = purchased_${type} - ?
+        WHERE id = ?
+    `).run(amountToDeductDaily, amountToDeductPurchased, userId);
+
+    return { success: true, remaining: totalAvailable - amount };
+}
+
+export function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | 'reports', amount: number) {
+    db.prepare(`UPDATE users SET purchased_${type} = purchased_${type} + ? WHERE id = ?`).run(amount, userId);
 }
 
 // --- Tasks ---

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
+import { checkAndDeductUsage } from '@/lib/db';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const R_COMPILER_URL = process.env.R_COMPILER_URL || 'http://r-compiler:8000';
@@ -77,6 +78,11 @@ OUTPUT: Only output the pure R code. NO markdown fences (\`\`\`R). NO commentary
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
+
+    const precheck = checkAndDeductUsage(userId, 'visuals', 0);
+    if (precheck.remaining <= 0) {
+        return NextResponse.json({ error: "LIMIT_REACHED", details: "Visual tokens limit reached." }, { status: 402 });
+    }
 
     try {
         const { 
@@ -201,6 +207,9 @@ library <- function(package, ...) {
                     code: generatedCode 
                 }, { status: 500 });
             }
+
+            // Deduct usage upon successful generation
+            checkAndDeductUsage(userId, 'visuals', 1);
 
             return NextResponse.json({
                 success: true,
