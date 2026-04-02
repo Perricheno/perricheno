@@ -440,8 +440,8 @@ export default function AgentPage() {
                     
                     {/* Branding */}
                     <div className="mb-10 text-center select-none">
-                        <img src="/Vector.svg" alt="Perricheno" className="w-10 h-10 mx-auto mb-4 opacity-80" />
-                        <h1 className="text-[22px] font-semibold text-[#1a1a1a] tracking-[-0.02em]">Perricheno Intelligence</h1>
+                        <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 opacity-20 mx-auto mb-6" />
+                        <h1 className="text-5xl md:text-6xl font-black text-[#1a1a1a] tracking-tighter">Perricheno Intelligence.</h1>
                     </div>
 
                     {/* Input Container */}
