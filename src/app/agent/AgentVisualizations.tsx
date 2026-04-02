@@ -16,34 +16,62 @@ interface Props {
 }
 
 const CHART_TYPES = [
+    // Basic Geometry
     { id: "bar", label: "Bar Chart", desc: "Best for comparing numerical values across discrete categories." },
     { id: "line", label: "Line Chart", desc: "Shows trends or changes in data over continuous time intervals." },
     { id: "scatter", label: "Scatter Plot", desc: "Displays relationship and correlation between two numerical variables." },
     { id: "bubble", label: "Bubble Chart", desc: "A scatter plot that adds a third dimension through bubble size." },
     { id: "lollipop", label: "Lollipop Chart", desc: "A minimalist alternative to bar charts that reduces visual clutter." },
+    
+    // Distributions
     { id: "histogram", label: "Histogram", desc: "Visualizes the distribution of a single continuous variable." },
     { id: "density2d", label: "2D Density", desc: "Shows concentrations of data points as contour maps." },
     { id: "ridge", label: "Density Ridge", desc: "Compares distributions of multiple groups elegantly on the same axis." },
     { id: "boxplot", label: "Boxplot", desc: "Shows statistical distribution, median, quartiles, and outliers." },
     { id: "violin", label: "Violin Plot", desc: "Combines a boxplot with a density trace to reveal hidden distributions." },
+    { id: "joyplot", label: "Joyplot", desc: "Staggered, overlapping density plots for comparing distributions across categories." },
+    { id: "kdensity", label: "K-Density", desc: "Kernel Density Estimate for smooth distribution curves." },
+    
+    // Relationships & Matrices
     { id: "heatmap", label: "Heatmap", desc: "Matrix representation of relationships or correlations using color intensity." },
     { id: "marginal", label: "Marginal Scatter", desc: "A scatter plot enhanced with density curves on the edges." },
     { id: "hexbin", label: "Hexbin Density", desc: "Aggregates dense scatter plots into colored hexagonal bins." },
+    { id: "pairplot", label: "Pairplot", desc: "Matrix of basic scatter plots mapping all variable pairs in a dataset." },
+    { id: "qqplot", label: "Q-Q Plot", desc: "Quantile-Quantile plot comparing two probability distributions." },
+    
+    // Proportions & Hierarchy
     { id: "pie", label: "Pie Chart", desc: "Shows proportional contributions of categories to a whole." },
     { id: "rose", label: "Nightingale Rose", desc: "A polar bar chart, great for cyclical or temporal data." },
     { id: "treemap", label: "Treemap", desc: "Displays hierarchical data as nested rectangles proportional to value." },
     { id: "circlepack", label: "Circle Packing", desc: "A beautiful alternative to treemaps using nested circles." },
+    { id: "sunburst", label: "Sunburst", desc: "Shows hierarchical data radially across multiple nested rings." },
+    { id: "waffle", label: "Waffle Chart", desc: "Shows composition using a square grid, an elegant alternative to pie charts." },
+    { id: "dendrogram", label: "Dendrogram", desc: "Tree diagram showing hierarchical clustering and taxonomy." },
+    
+    // Advanced & Specialized
     { id: "radar", label: "Radar Chart", desc: "Compares multiple quantitative variables on a radial grid." },
     { id: "network", label: "Network Graph", desc: "Visualizes nodes and complex relationships/edges between them." },
     { id: "sankey", label: "Sankey Diagram", desc: "Shows flow, transfers, and transitions between different states." },
     { id: "chord", label: "Chord Diagram", desc: "Visualizes inter-relationships and flows arranged in a circle." },
-    { id: "dendrogram", label: "Dendrogram", desc: "Tree diagram showing hierarchical clustering and taxonomy." },
     { id: "parallel", label: "Parallel Coords", desc: "Analyzes multivariate data across multiple parallel axes." },
-    { id: "waffle", label: "Waffle Chart", desc: "Shows composition using a square grid, an elegant alternative to pie charts." },
     { id: "waterfall", label: "Waterfall", desc: "Illustrates cumulative effect of sequentially introduced positive or negative values." },
-    { id: "wordcloud", label: "Wordcloud", desc: "Visual representation of text data, sized proportionally to frequency." },
     { id: "dumbbell", label: "Dumbbell Plot", desc: "Highlights the difference or expected change between two points." },
-    { id: "gantt", label: "Gantt Chart", desc: "Bar chart that illustrates a project schedule or timeline." },
+    { id: "volcano", label: "Volcano Plot", desc: "Scatter plot often used to identify meaningful changes in large datasets like genomics." },
+    { id: "survival", label: "Survival Curve", desc: "Kaplan-Meier survival curves analyzing time until an event occurs." },
+    
+    // Word & Maps
+    { id: "wordcloud", label: "Wordcloud", desc: "Visual representation of text data, sized proportionally to frequency." },
+    { id: "choropleth", label: "Choropleth Map", desc: "Geographical map colored in relation to a data variable." },
+    { id: "bubble_map", label: "Bubble Map", desc: "Map using proportionally sized bubbles to display data by location." },
+    
+    // AI & Machine Learning
+    { id: "pca", label: "PCA Plot", desc: "Principal Component Analysis plotting to visualize high-dimensional variance." },
+    { id: "kmeans", label: "K-Means Cluster", desc: "Visualizes clustering of data points into distinct categorical groups." },
+    { id: "roc", label: "ROC Curve", desc: "Illustrates the diagnostic ability of a binary classifier system." },
+    { id: "regression", label: "Regression", desc: "Scatter plot overlayed with a linear or loess regression fit and confidence interval." },
+    { id: "arima", label: "ARIMA Forecast", desc: "Time series forecasting showing predicted values and confidence bounds." },
+    
+    // 3D
     { id: "3d_surface", label: "3D Surface", desc: "Plots topological data structures on three continuous axes." },
     { id: "3d_scatter", label: "3D Scatter", desc: "Plots individual points in a three-dimensional coordinate system." },
 ];
@@ -296,13 +324,36 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                         {CHART_TYPES.map((c: any) => {
                             const active = selectedCharts.includes(c.id);
                             return (
-                                <button
-                                    key={c.id}
-                                    onClick={() => toggleChart(c.id)}
-                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black shadow-lg z-20' : 'bg-white text-gray-300 border-gray-100 hover:border-gray-300 z-10'}`}
-                                >
-                                    {c.label}
-                                </button>
+                                <div key={c.id} className="relative group">
+                                    <button
+                                        onClick={() => toggleChart(c.id)}
+                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black shadow-lg z-20' : 'bg-white text-gray-300 border-gray-100 hover:border-gray-300 z-10'}`}
+                                    >
+                                        {c.label}
+                                    </button>
+                                    
+                                    {/* Hover Popover Preview */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 bg-white border border-gray-100 rounded-2xl shadow-xl pointer-events-none p-3 translate-y-2 group-hover:translate-y-0">
+                                        <div className="w-full aspect-[4/3] bg-gray-50 rounded-xl overflow-hidden mb-3 border border-gray-100 flex items-center justify-center relative">
+                                            <img 
+                                                src={`/previews/${c.id}.png`} 
+                                                alt={c.label} 
+                                                className="w-full h-full object-cover block"
+                                                onError={(e) => { 
+                                                    e.currentTarget.style.display = 'none'; 
+                                                    const textElem = e.currentTarget.nextElementSibling;
+                                                    if (textElem) textElem.classList.remove('hidden');
+                                                }} 
+                                            />
+                                            <span className="hidden text-[9px] text-gray-300 font-bold uppercase tracking-widest text-center px-4">
+                                                No Preview Image
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] leading-relaxed font-medium text-gray-400">
+                                            {c.desc}
+                                        </p>
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
