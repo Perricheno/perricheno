@@ -8,7 +8,7 @@ import {
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
-    IconSparkles
+    IconSparkles, IconCreditCard
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -47,7 +47,8 @@ const NAV_GROUPS: NavGroup[] = [
     {
         title: "Set Up",
         links: [
-            { href: "/settings", icon: IconSettings, label: "Settings" }
+            { href: "/settings", icon: IconSettings, label: "Settings" },
+            { href: "/settings", icon: IconCreditCard, label: "Billings & Usage" }
         ]
     }
 ];
@@ -161,46 +162,57 @@ export default function MinimalSidebar() {
             {/* ═══════════════════════════════════════ */}
             {/* Mobile Bottom Nav — shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
-            <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 md:hidden w-[95%] max-w-[440px]">
-                <div className="flex items-center justify-around px-2 py-2 bg-white/80 backdrop-blur-xl rounded-[28px] border border-black/5 shadow-2xl shadow-black/10">
+            <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden w-full bg-white/95 backdrop-blur-2xl border-t border-gray-100 pb-safe">
+                <div className="flex items-center justify-around px-2 pt-2 pb-5">
                     {MOBILE_NAV.map(l => (
                         <Link key={l.href} href={l.href}
-                            className="flex items-center justify-center w-14 h-14 relative group">
+                            className="flex flex-col items-center justify-center p-2 relative group w-16 h-14">
                             
                             {/* Active Indicator Background */}
                             <div className={cn(
-                                "absolute inset-1 rounded-2xl transition-all duration-300",
+                                "absolute inset-0 rounded-[18px] transition-all duration-300",
                                 isActive(l.href)
-                                    ? "bg-black shadow-lg shadow-black/20 scale-100 opacity-100"
-                                    : "bg-transparent scale-75 opacity-0 group-hover:opacity-10 group-hover:bg-black group-hover:scale-90"
+                                    ? "bg-gray-100/80 scale-100 opacity-100"
+                                    : "bg-transparent scale-90 opacity-0 group-hover:opacity-100 group-hover:bg-gray-50 group-hover:scale-100"
                             )} />
 
                             {/* Icon */}
                             <l.icon className={cn(
-                                "w-6 h-6 z-10 transition-all duration-300",
+                                "w-6 h-6 z-10 transition-all duration-300 mb-1",
                                 isActive(l.href)
-                                    ? "text-white scale-110"
-                                    : "text-black/40 group-hover:text-black/60"
+                                    ? "text-[#1a1a1a]"
+                                    : "text-gray-400"
                             )} stroke={isActive(l.href) ? 2.5 : 1.5} />
+                            
+                            {/* Label */}
+                            <span className={cn(
+                                "z-10 text-[10px] font-medium tracking-wide transition-all",
+                                isActive(l.href) ? "text-[#1a1a1a]" : "text-gray-400"
+                            )}>{l.label}</span>
                         </Link>
                     ))}
 
-                    {/* Settings slot (Separated to keep MOBILE_NAV clean) */}
+                    {/* Settings slot */}
                     <Link href="/settings"
-                        className="flex items-center justify-center w-14 h-14 relative group">
+                        className="flex flex-col items-center justify-center p-2 relative group w-16 h-14">
                         <div className={cn(
-                            "absolute inset-1 rounded-2xl transition-all duration-300",
+                            "absolute inset-0 rounded-[18px] transition-all duration-300",
                             isActive("/settings")
-                                ? "bg-black shadow-lg shadow-black/20 scale-100 opacity-100"
-                                : "bg-transparent scale-75 opacity-0 group-hover:opacity-10 group-hover:bg-black group-hover:scale-90"
+                                ? "bg-gray-100/80 scale-100 opacity-100"
+                                : "bg-transparent scale-90 opacity-0 group-hover:opacity-100 group-hover:bg-gray-50 group-hover:scale-100"
                         )} />
                         
                         <IconSettings className={cn(
-                            "w-6 h-6 z-10 transition-all duration-300",
+                            "w-6 h-6 z-10 transition-all duration-300 mb-1",
                             isActive("/settings")
-                                ? "text-white scale-110"
-                                : "text-black/40 group-hover:text-black/60"
+                                ? "text-[#1a1a1a]"
+                                : "text-gray-400"
                         )} stroke={isActive("/settings") ? 2.5 : 1.5} />
+                        
+                        <span className={cn(
+                            "z-10 text-[10px] font-medium tracking-wide transition-all",
+                            isActive("/settings") ? "text-[#1a1a1a]" : "text-gray-400"
+                        )}>Settings</span>
                     </Link>
                 </div>
             </nav>
