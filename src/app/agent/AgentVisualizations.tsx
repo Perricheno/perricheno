@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash, IconX } from "@tabler/icons-react";
 import { CodeImage, Language } from "./types";
 import { IconBrandPython, IconLetterR } from "@tabler/icons-react";
@@ -56,85 +56,37 @@ const PALETTES = [
     { id: "Set1", label: "Set1" },
 ];
 
-// Sub-component for parallel/sequential loading
+// Sub-component for generating a single visualization
 function GeneratingCard({ chartType, topic, palette, language, dataContext, onComplete, onCancel, onFail, isActive, runtime }: any) {
-    const [status, setStatus] = useState<"pending" | "streaming" | "compiling" | "error" | "done">("pending");
+    const [status, setStatus] = useState<"pending" | "generating" | "error" | "done">("pending");
     const [errorMsg, setErrorMsg] = useState("");
-    const [code, setCode] = useState("");
-    const codeRef = useRef<HTMLPreElement>(null);
-
-    // Auto-scroll code
-    useEffect(() => {
-        if (codeRef.current) codeRef.current.scrollTop = codeRef.current.scrollHeight;
-    }, [code]);
+    const [failedCode, setFailedCode] = useState("");
 
     const generate = async (isRetry = false) => {
-        setStatus("streaming");
-
-        const reqBody: any = { topic, chartType, palette, language, dataContext, action: "stream" };
-        if (isRetry && errorMsg && code) {
-            reqBody.previousError = errorMsg;
-            reqBody.previousCode = code;
-        }
-
-        setCode("");
+        setStatus("generating");
         setErrorMsg("");
 
         try {
-            // STEP 1: Stream Code
-            const resStream = await fetch('/api/agent/visualize', {
+            const reqBody: any = { 
+                topic, chartType, palette, language, dataContext, 
+                action: "generate", runtime 
+            };
+            
+            // On retry, pass the error and previous code so AI can self-correct
+            if (isRetry && errorMsg && failedCode) {
+                reqBody.previousError = errorMsg;
+                reqBody.previousCode = failedCode;
+            }
+
+            const res = await fetch('/api/agent/visualize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reqBody)
             });
             
-            if (!resStream.ok) throw new Error("Stream connection failed");
-            if (!resStream.body) throw new Error("No response body");
+            const data = await res.json();
 
-            const reader = resStream.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let buffer = "";
-            let finalCode = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                let boundary = buffer.indexOf("\n\n");
-                
-                while (boundary !== -1) {
-                    const message = buffer.slice(0, boundary).trim();
-                    buffer = buffer.slice(boundary + 2);
-
-                    if (message.startsWith("data: ") && message !== "data: [DONE]") {
-                        try {
-                            const dataStr = message.slice(6);
-                            const jsonObj = JSON.parse(dataStr);
-                            const token = jsonObj.choices[0]?.delta?.content || "";
-                            finalCode += token;
-                            setCode(finalCode);
-                        } catch (e) {}
-                    }
-                    boundary = buffer.indexOf("\n\n");
-                }
-            }
-
-            // Clean code if needed
-            let cleanCode = finalCode.trim();
-            if (cleanCode.startsWith("```")) cleanCode = cleanCode.replace(/^```(?:r|R)?\s*/, "");
-            if (cleanCode.endsWith("```")) cleanCode = cleanCode.replace(/```\s*$/, "");
-
-            // STEP 2: Compile Code
-            setStatus("compiling");
-            const resCompile = await fetch('/api/agent/visualize', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chartType, action: "compile", code: cleanCode, runtime })
-            });
-
-            const data = await resCompile.json();
-            if (resCompile.ok && data.success && data.image) {
+            if (res.ok && data.success && data.image) {
                 setStatus("done");
                 onComplete({
                     image: data.image,
@@ -143,14 +95,14 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                     language: runtime
                 });
             } else {
-                throw new Error(data.error || "R Compilation failed (syntax error or timeout)");
+                setFailedCode(data.code || "");
+                throw new Error(data.error || `${runtime} visualization failed`);
             }
-
         } catch (e: any) {
             console.error(e);
             setStatus("error");
             setErrorMsg(e.message);
-            onFail(); // Signal the parent to continue to the next job in queue
+            onFail();
         }
     };
 
@@ -163,7 +115,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
     if (status === "done") return null;
 
     return (
-        <div className={`flex flex-col items-center justify-center ${status === "streaming" ? "p-3 pt-10" : "p-6"} bg-white border border-gray-100 rounded-2xl aspect-[4/3] shadow-sm relative overflow-hidden transition-all duration-300`}>
+        <div className="flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-2xl aspect-[4/3] shadow-sm relative overflow-hidden transition-all duration-300">
             <span className="absolute top-3 left-3 px-2 py-1 bg-black text-white rounded text-[9px] font-black uppercase tracking-widest z-10">
                 {chartType.replace("_", " ")}
             </span>
@@ -174,26 +126,26 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
             {status === "pending" && (
                 <div className="flex flex-col items-center gap-4 text-gray-300">
                     <IconLoader2 className="w-6 h-6 animate-spin opacity-20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Queueing...</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Queued</span>
                 </div>
             )}
             
-            {status === "streaming" && (
-                <div className="w-full h-full flex flex-col bg-[#FBFBFC] rounded-xl p-4 overflow-hidden text-left relative border border-gray-50 shadow-inner">
-                    <span className="text-[9px] text-black font-black mb-3 flex items-center gap-2 uppercase tracking-[0.2em]">
-                        <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
-                        Generating {runtime} Logic
-                    </span>
-                    <pre ref={codeRef} className="text-[9px] text-gray-500 font-mono overflow-y-auto w-full flex-1 whitespace-pre-wrap leading-relaxed outline-none scrollbar-hide pb-4 selection:bg-black selection:text-white">
-                        {code}
-                    </pre>
-                </div>
-            )}
-
-            {status === "compiling" && (
-                <div className="flex flex-col items-center gap-4 text-black">
-                    <IconLoader2 className="w-6 h-6 animate-spin" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Rendering...</span>
+            {status === "generating" && (
+                <div className="flex flex-col items-center gap-5">
+                    {/* Animated dots */}
+                    <div className="flex items-center gap-1.5">
+                        {[0, 1, 2, 3, 4].map(i => (
+                            <div 
+                                key={i} 
+                                className="w-2 h-2 bg-black rounded-full animate-bounce" 
+                                style={{ animationDelay: `${i * 0.12}s`, animationDuration: '0.8s' }}
+                            />
+                        ))}
+                    </div>
+                    <div className="text-center">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black block">Generating</span>
+                        <span className="text-[9px] text-gray-300 mt-1 block">{runtime} • {chartType.replace("_", " ")}</span>
+                    </div>
                 </div>
             )}
 

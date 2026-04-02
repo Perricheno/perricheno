@@ -9,3 +9,6 @@ scikit-learn
 statsmodels
 plotly
 squarify
+Kaleido
+CairoSVG
+SciencePlots

@@ -88,11 +88,9 @@ export async function POST(req: Request) {
         const isPython = runtime === 'Python';
         const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
 
-        // MODE 1: COMPILE FINISHED CODE
-        if (action === "compile" && code) {
-            let finalCode = code;
-            if (!isPython) {
-                finalCode = `
+        // Wrap R code with fail-safe auto-installer
+        function wrapRCode(rawCode: string) {
+            return `
 # Fail-safe auto-installer
 options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
 .orig_lib <- base::library
@@ -109,8 +107,20 @@ library <- function(package, ...) {
 }
 
 # AI Code below
-` + code;
-            }
+` + rawCode;
+        }
+
+        // Clean AI output (remove markdown fences etc.)
+        function cleanCode(raw: string): string {
+            let c = raw.trim();
+            if (c.startsWith("```")) c = c.replace(/^```(?:r|R|python|py)?\s*\n?/, "");
+            if (c.endsWith("```")) c = c.replace(/\n?```\s*$/, "");
+            return c.trim();
+        }
+
+        // MODE 1: COMPILE user-edited code (from the editor modal)
+        if (action === "compile" && code) {
+            const finalCode = isPython ? code : wrapRCode(code);
 
             const compileRes = await fetch(`${compilerUrl}/compile`, {
                 method: 'POST',
@@ -123,52 +133,84 @@ library <- function(package, ...) {
             const compileResult = await compileRes.json();
             
             if (!compileResult.success) {
-                return NextResponse.json({ error: compileResult.log || `${runtime} Execution failed`, code: code }, { status: 500 });
+                return NextResponse.json({ error: compileResult.log || `${runtime} Execution failed`, code }, { status: 500 });
             }
 
             return NextResponse.json({
                 success: true,
                 image: compileResult.image,
-                code: code, 
+                code,
                 chart_type: chartType,
             });
         }
 
-        // MODE 2: STREAM SCRIPT GENERATION
-        const prompt = buildVisualizationPrompt(topic, chartType, palette, language, dataContext, runtime);
+        // MODE 2: GENERATE + COMPILE (one-shot, no streaming)
+        if (action === "generate") {
+            const prompt = buildVisualizationPrompt(topic, chartType, palette, language, dataContext, runtime);
 
-        const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
-                stream: true,
-                messages: [
-                    { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. Ensure proper syntax.` },
-                    { role: "user", content: prompt },
-                    ...(previousError ? [
-                        { role: "assistant", content: previousCode },
-                        { role: "user", content: `The code you generated caused this exact ${runtime} execution error:\n\n${previousError}\n\nPlease fix your code and output ONLY pure ${runtime} code that resolves this error.` }
-                    ] : [])
-                ]
-            })
-        });
+            const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-5-mini-2025-08-07",
+                    stream: false,
+                    messages: [
+                        { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. No commentary. Ensure proper syntax.` },
+                        { role: "user", content: prompt },
+                        ...(previousError ? [
+                            { role: "assistant", content: previousCode },
+                            { role: "user", content: `The code caused this ${runtime} error:\n\n${previousError}\n\nFix the code. Output ONLY pure executable ${runtime} code.` }
+                        ] : [])
+                    ]
+                }),
+                signal: AbortSignal.timeout(60000),
+            });
 
-        if (!aiRes.ok) {
-            const err = await aiRes.text();
-            throw new Error("AI Generation failed: " + err);
+            if (!aiRes.ok) {
+                const err = await aiRes.text();
+                throw new Error("AI Generation failed: " + err);
+            }
+
+            const aiData = await aiRes.json();
+            const rawCode = aiData.choices?.[0]?.message?.content || "";
+            const generatedCode = cleanCode(rawCode);
+
+            if (!generatedCode) {
+                throw new Error("AI returned empty code");
+            }
+
+            // Compile code immediately
+            const finalCode = isPython ? generatedCode : wrapRCode(generatedCode);
+
+            const compileRes = await fetch(`${compilerUrl}/compile`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: finalCode }),
+                signal: AbortSignal.timeout(45000),
+            });
+
+            if (!compileRes.ok) throw new Error(`${runtime} Compilation server error`);
+            const compileResult = await compileRes.json();
+
+            if (!compileResult.success) {
+                return NextResponse.json({ 
+                    error: compileResult.log || `${runtime} Execution failed`, 
+                    code: generatedCode 
+                }, { status: 500 });
+            }
+
+            return NextResponse.json({
+                success: true,
+                image: compileResult.image,
+                code: generatedCode,
+                chart_type: chartType,
+            });
         }
 
-        return new Response(aiRes.body, {
-            headers: {
-                "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive"
-            }
-        });
+        return NextResponse.json({ error: "Invalid action. Use 'generate' or 'compile'." }, { status: 400 });
 
     } catch (err: any) {
         console.error("Visualize error:", err);

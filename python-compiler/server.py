@@ -39,14 +39,29 @@ os.chdir(r"{tmp_dir}")
 {code}
 
 # Auto-save plot logic
-import matplotlib.pyplot as plt
 try:
-    fig.savefig("output.png", dpi=120, bbox_inches="tight")
-except Exception:
-    try:
-        plt.savefig("output.png", dpi=120, bbox_inches="tight")
-    except Exception as e:
-        pass
+    saved = False
+    # Try saving Plotly figures first (if kaleido is available)
+    if 'fig' in globals():
+        try:
+            import plotly.graph_objects as go
+            if isinstance(fig, go.Figure):
+                fig.write_image("output.png")
+                saved = True
+        except ImportError:
+            pass
+            
+    if not saved:
+        import matplotlib.pyplot as plt
+        try:
+            if 'fig' in globals():
+                fig.savefig("output.png", dpi=120, bbox_inches="tight")
+            else:
+                plt.savefig("output.png", dpi=120, bbox_inches="tight")
+        except Exception:
+            plt.savefig("output.png", dpi=120, bbox_inches="tight")
+except Exception as e:
+    pass
 """
 
     with open(script_path, "w", encoding="utf-8") as f:
