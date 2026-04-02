@@ -53,3 +53,10 @@ export async function manageUserTokens(userId: number, action: string, amount: n
     revalidatePath("/dashboard");
     return { success: true };
 }
+
+export async function sendDirectMessage(userId: number, message: string) {
+    await verifyAdmin();
+    db.prepare(`INSERT INTO system_notifications (user_id, message) VALUES (?, ?)`).run(userId, message);
+    revalidatePath("/dashboard");
+    return { success: true };
+}

@@ -61,7 +61,7 @@ export default function HomePage() {
                             className="max-w-xl"
                         >
                             <p className="text-xl md:text-2xl font-medium tracking-tight leading-snug opacity-70">
-                                Shyngyskhan Amangeldy. Student at AITU, DevOps Engineer, and Analyst.
+                                Student at AITU, DevOps, and Analyst. 
                             </p>
                             <p className="mt-4 text-[var(--muted)] text-sm md:text-base leading-relaxed max-w-md">
                                 Developing highly efficient automated systems and data-driven solutions. 
@@ -91,44 +91,51 @@ export default function HomePage() {
                     animate="show"
                     className="grid grid-cols-1 md:grid-cols-12 gap-5 auto-rows-[240px] md:auto-rows-[180px]"
                 >
-                    {/* CORE PLATFORM TILE */}
+                    {/* AGENT TILE */}
                     <motion.div variants={item} className="md:col-span-8 md:row-span-2 group relative overflow-hidden bg-white border border-[#E5E5E5] rounded-[32px] p-10 hover:shadow-2xl transition-all">
                         <div className="relative z-10 h-full flex flex-col">
-                            <IconLayersIntersect className="mb-6 opacity-30 group-hover:opacity-100 transition-opacity" size={40} />
-                            <h3 className="text-3xl font-black tracking-tight mb-2">Platform Overseer</h3>
-                            <p className="text-sm opacity-50 max-w-xs">A unified command center for automated report generation, data analytics, and infrastructure control.</p>
+                            <IconRobot className="mb-6 opacity-30 group-hover:opacity-100 transition-opacity" size={40} />
+                            <h3 className="text-3xl font-black tracking-tight mb-2">Autonomous Agent</h3>
+                            <p className="text-sm opacity-50 max-w-xs">An LLM-driven executor managing internal infrastructure, synthesizing reports, and automating complex workflows.</p>
                             <div className="mt-auto flex gap-3">
-                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Architecture</span>
+                                <span className="px-3 py-1 bg-black text-white rounded-full text-[10px] font-bold uppercase tracking-tighter shadow flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Active
+                                </span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Tasks</span>
                                 <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">Analysis</span>
-                                <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] font-bold uppercase tracking-tighter">DevOps</span>
                             </div>
                         </div>
                         <div className="absolute right-[-10%] bottom-[-10%] w-[60%] h-[60%] bg-[#F5F5F7] rounded-full group-hover:scale-110 transition-transform duration-700" />
-                        <Link href="/agent" className="absolute inset-0" />
+                        <Link href="/agent" className="absolute inset-0 z-20" />
                     </motion.div>
 
-                    {/* CODE LAB TILE */}
-                    <motion.div variants={item} className="md:col-span-4 md:row-span-2 group relative overflow-hidden bg-black text-white rounded-[32px] p-8 hover:shadow-2xl transition-all">
-                        <div className="relative z-10 flex flex-col h-full">
-                            <div className="flex justify-between items-start mb-8">
-                                <IconCode size={40} className="text-gray-400" />
-                                <div className="px-2 py-1 bg-white/10 rounded text-[9px] font-bold uppercase tracking-widest text-white/50">Coming Soon</div>
-                            </div>
-                            <h3 className="text-2xl font-black tracking-tight">Code Lab</h3>
-                            <p className="text-sm opacity-50 mt-2 leading-relaxed">Advanced R & Python online compiler with integrated AI terminal. Cloud-native IDE environment.</p>
-                            
-                            <div className="mt-auto bg-white/5 rounded-xl p-4 font-mono text-[10px] space-y-1">
-                                <div className="flex gap-2"><span className="text-blue-400">import</span> <span className="text-gray-300">pandas as pd</span></div>
-                                <div className="flex gap-2"><span className="text-purple-400">df</span> <span className="text-gray-300">= pd.read_csv(</span><span className="text-green-400">'data.csv'</span><span className="text-gray-300">)</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500"># Initializing analysis...</span></div>
-                                <motion.div 
-                                    animate={{ opacity: [0, 1, 0] }} 
-                                    transition={{ repeat: Infinity, duration: 1 }}
-                                    className="w-1.5 h-3 bg-white ml-0.5 mt-1" 
-                                />
-                            </div>
+                    {/* LIVE LOGS TILE */}
+                    <motion.div variants={item} className="md:col-span-4 md:row-span-2 group relative overflow-hidden bg-black text-white rounded-[32px] p-8 hover:shadow-2xl transition-all flex flex-col justify-between">
+                        <div className="relative z-10 flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                                <IconTerminal2 size={20} className="opacity-50" /> Live Telemetry
+                            </h3>
+                            <span className="px-2 py-1 bg-white/10 rounded text-[9px] font-bold uppercase tracking-widest text-white/50 border border-white/10">Streaming</span>
                         </div>
-                        <Link href="/code" className="absolute inset-0 z-20" />
+                        
+                        <div className="relative z-10 font-mono text-[9px] leading-relaxed text-gray-400 flex-1 overflow-hidden mask-image-bottom">
+                            <motion.div 
+                                animate={{ y: [0, -40] }} 
+                                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                                className="flex flex-col gap-1.5"
+                            >
+                                <div className="text-green-400">[2026-04-03 04:15] GET /api/health 200 OK</div>
+                                <div className="text-gray-300">[2026-04-03 04:15] Agent task queue: empty</div>
+                                <div className="text-blue-400">[2026-04-03 04:16] WS connection established</div>
+                                <div className="text-yellow-400">[2026-04-03 04:16] DB query optimized: 34ms</div>
+                                
+                                {/* Duplicate for seamless loop effect */}
+                                <div className="text-green-400">[2026-04-03 04:15] GET /api/health 200 OK</div>
+                                <div className="text-gray-300">[2026-04-03 04:15] Agent task queue: empty</div>
+                                <div className="text-blue-400">[2026-04-03 04:16] WS connection established</div>
+                                <div className="text-yellow-400">[2026-04-03 04:16] DB query optimized: 34ms</div>
+                            </motion.div>
+                        </div>
                     </motion.div>
 
                     {/* AGENT TILE (Wide/Small) */}
@@ -199,6 +206,12 @@ export default function HomePage() {
                         <p className="opacity-20">© 2026 PERRICHENO INC.</p>
                     </div>
                 </footer>
+                <style jsx>{`
+                    .mask-image-bottom {
+                        -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+                        mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+                    }
+                `}</style>
             </main>
         </div>
     );

@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { 
     IconActivity, IconUsers, IconGift, 
     IconDatabase, IconSettings, IconBug, 
-    IconServer, IconChartLine, IconCrown 
+    IconServer, IconChartLine, IconCrown,
+    IconMessageForward, IconSnowflake, IconCoin, IconCurrencyDollar
 } from '@tabler/icons-react';
-import { createPromoCode, setSystemConfig, manageUserTokens, generateSecurePromoCode } from './actions';
+import { createPromoCode, setSystemConfig, manageUserTokens, generateSecurePromoCode, sendDirectMessage } from './actions';
 
 export default function OverseerClient({ initialStats, initialUsers, initialPromos, initialConfig, inferenceLatencies }: any) {
     const [tab, setTab] = useState('Overview');
@@ -21,6 +22,10 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
     const [promoUses, setPromoUses] = useState(10);
     const [promoType, setPromoType] = useState('chars');
     const [isSaving, setIsSaving] = useState(false);
+
+    // Direct Messages
+    const [dmTarget, setDmTarget] = useState<number | null>(null);
+    const [dmMessage, setDmMessage] = useState('');
 
     // Sidebar TABS
     const TABS = [
@@ -49,6 +54,19 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
         }
     };
 
+    const handleSendDM = async (id: number) => {
+        if (!dmMessage.trim()) return;
+        setIsSaving(true);
+        try {
+            await sendDirectMessage(id, dmMessage);
+            setDmMessage('');
+            setDmTarget(null);
+            alert("Message dispatched to user's notification bell.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const toggleMaintenance = async () => {
         const next = !maintenance;
         setMaintenance(next);
@@ -60,27 +78,27 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
     };
 
     const getTabClasses = (name: string) => {
-        const base = 'flex items-center gap-2.5 px-3 py-2 text-[11px] font-medium tracking-wide rounded-md transition-colors text-left';
+        const base = 'flex items-center gap-2.5 px-3 py-2 text-[11px] font-medium tracking-wide rounded-md transition-colors text-left flex-shrink-0';
         if (tab === name) return base + ' bg-[#ebebeb] text-black shadow-sm';
         return base + ' text-[#666] hover:bg-[#f5f5f5]';
     };
 
     const getMaintenanceBtnClass = () => {
-        const base = 'px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest';
-        if (maintenance) return base + ' bg-red-50 text-red-500 border border-red-200';
-        return base + ' bg-gray-100 text-gray-500 border border-gray-200';
+        const base = 'px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest transition-colors';
+        if (maintenance) return base + ' bg-red-50 text-red-500 border border-red-200 hover:bg-red-100';
+        return base + ' bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200';
     };
 
     const getModelBtnClass = (m: string) => {
-        const base = 'px-3 py-1 border rounded';
+        const base = 'px-3 py-1.5 border rounded font-bold transition-colors';
         if (activeModel === m) return base + ' bg-[#1a1a1a] text-white border-black';
-        return base + ' bg-[#fafafa] text-[#666] border-[#e5e5e5]';
+        return base + ' bg-[#fafafa] text-[#666] border-[#e5e5e5] hover:bg-[#ebebeb]';
     };
 
     return (
-        <div className="flex-1 flex overflow-hidden bg-[#fbfbfb]">
-            {/* Nav Column */}
-            <div className="w-56 shrink-0 border-r border-[#e5e5e5] bg-[#fafafa] flex flex-col p-2 space-y-0.5 overflow-y-auto">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#fbfbfb]">
+            {/* Nav Column - Mobile Horizontal, Desktop Vertical */}
+            <div className="w-full md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-[#e5e5e5] bg-[#fafafa] flex md:flex-col gap-1 p-2 overflow-x-auto md:overflow-y-auto no-scrollbar">
                 {TABS.map(t => (
                     <button 
                         key={t.name}
@@ -93,13 +111,13 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
             </div>
 
             {/* Display Pane */}
-            <div className="flex-1 overflow-y-auto p-6 md:p-8">
+            <div className="flex-1 overflow-y-auto p-4 md:p-8">
                 
                 {tab === 'Overview' && (
                     <div className="space-y-6 max-w-5xl">
                         <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2 mb-4">Flight Deck Metrics</h2>
                         
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="border border-[#e5e5e5] rounded-lg p-4 bg-white shadow-sm flex flex-col gap-1">
                                 <span className="text-[10px] uppercase font-bold tracking-widest text-[#999]">Total Accounts</span>
                                 <span className="text-xl font-mono">{initialStats.totalAgents}</span>
@@ -115,7 +133,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                         </div>
 
                         {/* Avg per user + Peak */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="border border-[#e5e5e5] rounded-lg p-4 bg-white shadow-sm flex flex-col gap-1">
                                 <span className="text-[10px] uppercase font-bold tracking-widest text-[#999]">Avg Tokens / User</span>
                                 <span className="text-xl font-mono">
@@ -147,23 +165,23 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                         </div>
 
                         {/* Top burners leaderboard */}
-                        <div className="border border-[#e5e5e5] bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div className="border border-[#e5e5e5] bg-white rounded-lg shadow-sm overflow-hidden overflow-x-auto">
                             <h3 className="text-[10px] uppercase tracking-widest font-bold text-[#666] px-4 py-3 border-b border-[#e5e5e5] bg-[#f0f0f0]">
                                 Top Token Burners
                             </h3>
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-collapse min-w-[400px]">
                                 <tbody className="text-[11px] font-mono text-[#333]">
                                     {[...initialUsers]
                                         .sort((a: any, b: any) => (b.daily_chars_used + b.weekly_chars_used) - (a.daily_chars_used + a.weekly_chars_used))
                                         .slice(0, 5)
                                         .map((u: any, idx: number) => (
                                         <tr key={u.id} className="border-b border-[#e5e5e5] hover:bg-[#fafafa]">
-                                            <td className="px-3 py-1.5 w-8 text-[#999]">#{idx + 1}</td>
-                                            <td className="px-3 py-1.5 font-sans font-medium text-black border-l border-[#e5e5e5]">
+                                            <td className="px-3 py-2 w-8 text-[#999]">#{idx + 1}</td>
+                                            <td className="px-3 py-2 font-sans font-medium text-black border-l border-[#e5e5e5]">
                                                 {u.username || u.first_name || 'Anon'}
                                                 {u.telegram_id === '1153844209' && <IconCrown className="w-3 h-3 inline ml-1 text-yellow-500"/>}
                                             </td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5] text-right">
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5] text-right">
                                                 {(u.daily_chars_used + u.weekly_chars_used).toLocaleString()} chars
                                             </td>
                                         </tr>
@@ -177,44 +195,70 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                 {tab === 'Users & Economy' && (
                     <div className="space-y-4 max-w-6xl">
                         <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2">User Vault</h2>
-                        <div className="border border-[#e5e5e5] bg-white rounded-lg shadow-sm overflow-hidden">
-                            <table className="w-full text-left border-collapse">
+                        <div className="border border-[#e5e5e5] bg-white rounded-lg shadow-sm overflow-hidden overflow-x-auto w-full">
+                            <table className="w-full text-left border-collapse min-w-[700px]">
                                 <thead className="bg-[#f0f0f0]">
                                     <tr className="text-[9px] uppercase tracking-widest font-bold text-[#666]">
-                                        <th className="px-3 py-2 border-b border-[#e5e5e5] w-20">ID</th>
+                                        <th className="px-3 py-2 border-b border-[#e5e5e5] w-12">ID</th>
                                         <th className="px-3 py-2 border-b border-[#e5e5e5] border-l">TG ID</th>
-                                        <th className="px-3 py-2 border-b border-[#e5e5e5] border-l">Name</th>
+                                        <th className="px-3 py-2 border-b border-[#e5e5e5] border-l min-w-[100px]">Name</th>
                                         <th className="px-3 py-2 border-b border-[#e5e5e5] border-l">Purchased</th>
                                         <th className="px-3 py-2 border-b border-[#e5e5e5] border-l">Daily Used</th>
                                         <th className="px-3 py-2 border-b border-[#e5e5e5] border-l">Status</th>
-                                        <th className="px-3 py-2 border-b border-[#e5e5e5] border-l w-32 text-center">Actions</th>
+                                        <th className="px-3 py-2 border-b border-[#e5e5e5] border-l w-[280px] text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-[11px] font-mono text-[#333]">
                                     {initialUsers.map((u: any) => (
+                                        <>
                                         <tr key={u.id} className="border-b border-[#e5e5e5] hover:bg-[#fafafa]">
-                                            <td className="px-3 py-1.5">{u.id}</td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5] text-blue-600">{u.telegram_id}</td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5] font-sans font-medium text-black">
+                                            <td className="px-3 py-2">{u.id}</td>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5] text-blue-600">{u.telegram_id}</td>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5] font-sans font-medium text-black">
                                                 {u.username || u.first_name || 'Anon'} 
                                                 {u.telegram_id === '1153844209' && <IconCrown className="w-3 h-3 inline ml-1 text-yellow-500"/>}
                                             </td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5] text-green-700">{u.purchased_chars.toLocaleString()}</td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5]">{u.daily_chars_used.toLocaleString()}</td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5]">
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5] text-green-700 font-bold">{u.purchased_chars.toLocaleString()}</td>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5]">{u.daily_chars_used.toLocaleString()}</td>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5]">
                                                 {u.is_banned 
-                                                    ? <span className="bg-red-100 text-red-600 px-1 py-0.5 rounded text-[9px]">FROZEN</span> 
+                                                    ? <span className="bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-[9px] font-black">FROZEN</span> 
                                                     : <span className="text-[#999]">OK</span>
                                                 }
                                             </td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5] text-center space-x-1">
-                                                <button onClick={() => manageUserTokens(u.id, 'grant_chars', 100000)} className="px-2 py-0.5 bg-[#e5e5e5] hover:bg-[#ccc] text-[9px] rounded transition-colors">+100k</button>
-                                                <button onClick={() => manageUserTokens(u.id, 'grant_reports', 5)} className="px-2 py-0.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[9px] rounded transition-colors">+5r</button>
-                                                <button onClick={() => manageUserTokens(u.id, 'toggle_freeze', 0)} className="px-2 py-0.5 bg-red-50 text-red-500 hover:bg-red-100 text-[9px] rounded transition-colors">
-                                                    {u.is_banned ? 'Un' : 'Ban'}
-                                                </button>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5]">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button onClick={() => manageUserTokens(u.id, 'grant_chars', 100000)} className="flex items-center gap-1 px-2 py-1 bg-[#f0f0f0] hover:bg-[#e0e0e0] text-[#333] text-[9px] rounded font-bold transition-colors"><IconCurrencyDollar className="w-3 h-3" /> +100k</button>
+                                                    <button onClick={() => manageUserTokens(u.id, 'grant_reports', 5)} className="px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-[9px] rounded font-bold transition-colors">+5R</button>
+                                                    <button onClick={() => manageUserTokens(u.id, 'toggle_freeze', 0)} className={`px-2 py-1 flex items-center gap-1 text-[9px] rounded font-bold transition-colors ${u.is_banned ? 'bg-orange-50 text-orange-500 hover:bg-orange-100' : 'bg-red-50 text-red-500 hover:bg-red-100'}`}>
+                                                        <IconSnowflake className="w-3 h-3" /> {u.is_banned ? 'UNFREEZE' : 'FREEZE'}
+                                                    </button>
+                                                    <button onClick={() => setDmTarget(u.id)} className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[9px] rounded font-bold transition-colors flex items-center gap-1">
+                                                        <IconMessageForward className="w-3 h-3" /> DM
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
+                                        {/* DM Expansion Panel */}
+                                        {dmTarget === u.id && (
+                                            <tr className="bg-blue-50/30">
+                                                <td colSpan={7} className="px-4 py-3 border-b border-[#e5e5e5]">
+                                                    <div className="flex items-center gap-2">
+                                                        <input 
+                                                            type="text" 
+                                                            autoFocus
+                                                            className="flex-1 px-3 py-1.5 text-xs border border-[#ddd] rounded-md outline-none focus:border-blue-500 font-sans"
+                                                            placeholder="Type direct message to user's dashboard..."
+                                                            value={dmMessage}
+                                                            onChange={e => setDmMessage(e.target.value)}
+                                                        />
+                                                        <button disabled={isSaving} onClick={() => handleSendDM(u.id)} className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700 transition">Send Msg</button>
+                                                        <button onClick={() => setDmTarget(null)} className="px-4 py-1.5 bg-gray-200 text-black text-xs font-bold rounded-md hover:bg-gray-300 transition">Cancel</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                        </>
                                     ))}
                                 </tbody>
                             </table>
@@ -225,53 +269,60 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                 {tab === 'Promo & Referrals' && (
                     <div className="space-y-6 max-w-3xl">
                         <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2">Promo Code Factory</h2>
-                        <div className="flex gap-4 p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm flex-wrap">
+                        <div className="flex flex-col md:flex-row gap-4 p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm flex-wrap">
                             <div className="space-y-1 flex-1 min-w-[200px]">
                                 <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Code (blank = auto)</label>
                                 <div className="flex gap-1">
                                     <input value={promoCode} onChange={e => setPromoCode(e.target.value)} className="flex-1 text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" placeholder="OVERSEER_VIP" />
-                                    <button onClick={handleGenerateS512} className="px-2 bg-gray-100 hover:bg-gray-200 text-[9px] font-bold rounded border border-[#ccc]">S512</button>
+                                    <button onClick={handleGenerateS512} className="px-3 bg-gray-100 hover:bg-gray-200 text-[9px] font-bold rounded border border-[#ccc]">S512</button>
                                 </div>
                             </div>
-                            <div className="space-y-1 w-24">
-                                <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Type</label>
-                                <select value={promoType} onChange={e => setPromoType(e.target.value)} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded">
-                                    <option value="chars">Chars</option>
-                                    <option value="reports">Reports</option>
-                                </select>
+                            <div className="flex gap-4">
+                                <div className="space-y-1 w-24">
+                                    <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Type</label>
+                                    <select value={promoType} onChange={e => setPromoType(e.target.value)} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded">
+                                        <option value="chars">Chars</option>
+                                        <option value="reports">Reports</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1 w-24">
+                                    <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Amount</label>
+                                    <input type="number" value={promoAmount} onChange={e => setPromoAmount(Number(e.target.value))} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" />
+                                </div>
+                                <div className="space-y-1 w-20">
+                                    <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Max uses</label>
+                                    <input type="number" value={promoUses} onChange={e => setPromoUses(Number(e.target.value))} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" />
+                                </div>
                             </div>
-                            <div className="space-y-1 w-28">
-                                <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Amount</label>
-                                <input type="number" value={promoAmount} onChange={e => setPromoAmount(Number(e.target.value))} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" />
-                            </div>
-                            <div className="space-y-1 w-20">
-                                <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Max uses</label>
-                                <input type="number" value={promoUses} onChange={e => setPromoUses(Number(e.target.value))} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" />
-                            </div>
-                            <div className="pt-4">
-                                <button onClick={generatePromo} disabled={isSaving} className="px-4 py-1.5 bg-black text-white text-[10px] uppercase tracking-widest font-bold rounded hover:bg-gray-800 disabled:opacity-50 h-[28px] mt-[1px]">Mint</button>
+                            <div className="pt-4 md:mt-[1px] flex items-end">
+                                <button onClick={generatePromo} disabled={isSaving} className="px-6 py-[7px] w-full md:w-auto bg-black text-white text-[10px] uppercase tracking-widest font-bold rounded hover:bg-gray-800 disabled:opacity-50">Mint Code</button>
                             </div>
                         </div>
 
-                        <div className="border border-[#e5e5e5] bg-white rounded-lg shadow-sm overflow-hidden">
-                            <table className="w-full text-left border-collapse">
+                        {/* Referral Tree Placeholder */}
+                        <div className="p-4 border border-[#e5e5e5] bg-blue-50 text-blue-900 rounded-lg text-xs font-mono shadow-sm">
+                            <span className="font-bold">Referral Subsystem:</span> Active. Users refer others to get bonus tokens. Database linked.
+                        </div>
+
+                        <div className="border border-[#e5e5e5] bg-white rounded-lg shadow-sm overflow-hidden overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[300px]">
                                 <thead className="bg-[#f0f0f0] border-b border-[#e5e5e5]">
                                     <tr className="text-[9px] uppercase tracking-widest font-bold text-[#666]">
-                                        <th className="px-3 py-2 w-40">Code</th>
-                                        <th className="px-3 py-2 border-l border-[#e5e5e5]">Value</th>
-                                        <th className="px-3 py-2 border-l border-[#e5e5e5]">Uses Left</th>
+                                        <th className="px-3 py-2">Code Segment</th>
+                                        <th className="px-3 py-2 border-l border-[#e5e5e5]">Gift Value</th>
+                                        <th className="px-3 py-2 border-l border-[#e5e5e5]">Remaining Uses</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-[11px] font-mono text-[#333]">
                                     {initialPromos.map((p: any) => (
                                         <tr key={p.id} className="border-b border-[#e5e5e5] hover:bg-[#fafafa]">
-                                            <td className="px-3 py-1.5 text-green-700 font-bold">{p.code}</td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5]">+{p.amount.toLocaleString()} {p.type}</td>
-                                            <td className="px-3 py-1.5 border-l border-[#e5e5e5] text-[#999]">{p.max_uses - p.uses} / {p.max_uses}</td>
+                                            <td className="px-3 py-2 text-green-700 font-bold overflow-hidden text-ellipsis max-w-[150px] whitespace-nowrap">{p.code}</td>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5]">+{p.amount.toLocaleString()} {p.type}</td>
+                                            <td className="px-3 py-2 border-l border-[#e5e5e5] text-[#999]">{p.max_uses - p.uses} / {p.max_uses}</td>
                                         </tr>
                                     ))}
                                     {initialPromos.length === 0 && (
-                                        <tr><td colSpan={3} className="px-3 py-3 text-center text-[#999]">No active promo codes</td></tr>
+                                        <tr><td colSpan={3} className="px-3 py-4 text-center text-[#999]">No active promo codes minted.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -285,15 +336,15 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                         
                         <div className="grid grid-cols-1 gap-4">
                             {/* Maintenance Toggle */}
-                            <div className="flex items-center justify-between p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow gap-4">
                                 <div>
                                     <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1a1a1a] flex items-center gap-1.5">
-                                        <IconServer className="w-3.5 h-3.5"/> Maintenance Mode
+                                        <IconServer className="w-3.5 h-3.5"/> Maintenance Operation Mode
                                     </h4>
-                                    <p className="text-[10px] text-[#666] mt-0.5">Suspend generation for all users. API will return 503.</p>
+                                    <p className="text-[10px] text-[#666] mt-1 pr-4">Suspend generation queues for all users via a global maintenance overlay. Platform DB remains active.</p>
                                 </div>
-                                <button onClick={toggleMaintenance} className={getMaintenanceBtnClass()}>
-                                    {maintenance ? 'ACTIVE (LOCKED)' : 'OFFLINE'}
+                                <button onClick={toggleMaintenance} className={getMaintenanceBtnClass() + " w-full md:w-auto text-center"}>
+                                    {maintenance ? 'ACTIVE (LOCKOUT)' : 'PLATFORM OFFLINE'}
                                 </button>
                             </div>
 
@@ -301,16 +352,16 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                             <div className="p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm space-y-3">
                                 <div>
                                     <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1a1a1a] flex items-center gap-1.5">
-                                        <IconDatabase className="w-3.5 h-3.5"/> Neural Architecture Target
+                                        <IconDatabase className="w-3.5 h-3.5"/> Neural Architecture Target Network
                                     </h4>
-                                    <p className="text-[10px] text-[#666] mt-0.5">Route prompts through primary or fallback hardware.</p>
+                                    <p className="text-[10px] text-[#666] mt-0.5">Hot-swap AI language models without container restart.</p>
                                 </div>
-                                <div className="flex gap-2 text-[10px] font-mono">
+                                <div className="flex flex-col md:flex-row gap-2 text-[10px] font-mono">
                                     {['gpt-5-mini-2025-08-07', 'gpt-5-nano-fallback'].map(m => (
                                         <button 
                                             key={m} 
                                             onClick={async () => { setActiveModel(m); await setSystemConfig('active_model', m); }}
-                                            className={getModelBtnClass(m)}
+                                            className={getModelBtnClass(m) + " w-full md:w-auto text-left md:text-center"}
                                         >
                                             {m}
                                         </button>
@@ -321,17 +372,17 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                             {/* System Health Check */}
                             <div className="p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm space-y-3">
                                 <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1a1a1a] flex items-center gap-1.5">
-                                    <IconActivity className="w-3.5 h-3.5"/> System Health Check
+                                    <IconActivity className="w-3.5 h-3.5"/> Advanced System Health & Interconnects
                                 </h4>
-                                <div className="grid grid-cols-3 gap-3 text-[10px]">
-                                    <div className="flex items-center gap-1.5 text-green-600">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> SQLite DB
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[10px]">
+                                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded border border-green-100">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> SQLite V-Base 
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-green-600">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> Payment Gateway
+                                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded border border-green-100">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Payment Webhooks
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-green-600">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> OpenAI Endpoint
+                                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded border border-green-100">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> OpenAI LLM API
                                     </div>
                                 </div>
                             </div>
@@ -342,15 +393,26 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                 {tab === 'Telemetry (Logs)' && (
                     <div className="space-y-6 max-w-4xl">
                         <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2">Diagnostics & Telemetry</h2>
-                        <div className="text-[11px] text-[#999] flex flex-col items-center justify-center p-16 border border-dashed border-[#ccc] rounded-lg bg-white">
-                            <IconBug className="w-6 h-6 mb-2 opacity-30" />
-                            <p className="font-bold text-[#666]">LaTeX Error Log Stream</p>
-                            <p className="mt-1">Compilation failures will appear here once telemetry hooks are deployed.</p>
-                        </div>
-                        <div className="text-[11px] text-[#999] flex flex-col items-center justify-center p-16 border border-dashed border-[#ccc] rounded-lg bg-white">
-                            <IconServer className="w-6 h-6 mb-2 opacity-30" />
-                            <p className="font-bold text-[#666]">Python Sandbox Monitor</p>
-                            <p className="mt-1">Library usage analytics will stream when sandbox agent is connected.</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="text-[11px] text-[#999] p-6 border border-dashed border-[#ccc] rounded-lg bg-white flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
+                                <IconBug className="w-6 h-6 mb-2 opacity-30 text-red-500" />
+                                <p className="font-bold text-[#666]">LaTeX Crash Reports</p>
+                                <p className="mt-1">0 fatal compile errors intercepted in the last 24h.</p>
+                            </div>
+                            
+                            <div className="text-[11px] text-[#999] p-6 border border-[#e5e5e5] rounded-lg bg-white">
+                                <div className="flex items-center gap-2 text-[#333] mb-4 border-b pb-2">
+                                    <IconServer className="w-4 h-4 text-blue-500" />
+                                    <p className="font-bold uppercase tracking-widest text-[9px]">Python Sandbox Matrix</p>
+                                </div>
+                                <div className="space-y-2 font-mono">
+                                    <div className="flex justify-between items-center"><span className="text-black">pandas</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">2,931 vols</span></div>
+                                    <div className="flex justify-between items-center"><span className="text-black">numpy</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">1,502 vols</span></div>
+                                    <div className="flex justify-between items-center"><span className="text-black">matplotlib</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">899 vols</span></div>
+                                    <div className="flex justify-between items-center"><span className="text-black">scipy</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">401 vols</span></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

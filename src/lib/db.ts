@@ -140,11 +140,26 @@ try {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             message TEXT NOT NULL,
-            is_read BOOLEAN DEFAULT 0,
+            read BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 } catch (e) {}
+
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS latex_errors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            error_text TEXT NOT NULL,
+            session_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
+// Referral Tracking
+try { db.exec("ALTER TABLE users ADD COLUMN referred_by INTEGER"); } catch (e) {}
 
 export default db;
 
