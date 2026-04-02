@@ -128,6 +128,7 @@ export default function HomePage() {
                                 />
                             </div>
                         </div>
+                        <Link href="/code" className="absolute inset-0 z-20" />
                     </motion.div>
 
                     {/* AGENT TILE (Wide/Small) */}
