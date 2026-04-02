@@ -20,6 +20,37 @@ import { AgentVisualizations } from "./AgentVisualizations";
 import { CodeEditorModal } from "./CodeEditorModal";
 import { AgentBillingModal } from "./AgentBillingModal";
 
+function Typewriter({ phrases }: { phrases: string[] }) {
+    const [text, setText] = useState("");
+    const [phase, setPhase] = useState<"typing" | "pausing" | "deleting">("typing");
+    const [phraseIndex, setPhraseIndex] = useState(0);
+
+    useEffect(() => {
+        const currentPhrase = phrases[phraseIndex];
+        let timeout: NodeJS.Timeout;
+
+        if (phase === "typing") {
+            if (text.length < currentPhrase.length) {
+                timeout = setTimeout(() => setText(currentPhrase.slice(0, text.length + 1)), 50 + Math.random() * 30);
+            } else {
+                timeout = setTimeout(() => setPhase("pausing"), 2000);
+            }
+        } else if (phase === "pausing") {
+            timeout = setTimeout(() => setPhase("deleting"), 0);
+        } else if (phase === "deleting") {
+            if (text.length > 0) {
+                timeout = setTimeout(() => setText(currentPhrase.slice(0, text.length - 1)), 20 + Math.random() * 10);
+            } else {
+                setPhraseIndex((i) => (i + 1) % phrases.length);
+                setPhase("typing");
+            }
+        }
+        return () => clearTimeout(timeout);
+    }, [text, phase, phraseIndex, phrases]);
+
+    return <span className="text-[#A1A1AA] text-sm md:text-base font-mono tracking-tight">{text}<span className="animate-pulse text-gray-400">|</span></span>;
+}
+
 export default function AgentPage() {
     const { user, setShowLogin } = useAdmin();
 
@@ -439,9 +470,18 @@ export default function AgentPage() {
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-[640px] flex flex-col items-center">
                     
                     {/* Branding */}
-                    <div className="mb-10 text-center select-none">
-                        <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 opacity-20 mx-auto mb-6" />
-                        <h1 className="text-5xl md:text-6xl font-black text-[#1a1a1a] tracking-tighter">Perricheno Intelligence.</h1>
+                    <div className="mb-10 text-center select-none flex flex-col items-center justify-center">
+                        <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 opacity-20 mb-6" />
+                        <h1 className="text-4xl md:text-5xl font-black text-[#1a1a1a] tracking-tighter mb-2">Perricheno Intelligence.</h1>
+                        <div className="h-6 flex items-center justify-center">
+                            <Typewriter phrases={[
+                                "Write a thesis on quantum physics...",
+                                "Analyze Q4 financial statements...",
+                                "Draft a literature review on AI...",
+                                "Generate interactive data dashboards...",
+                                "Compile advanced LaTeX documents..."
+                            ]} />
+                        </div>
                     </div>
 
                     {/* Input Container */}
