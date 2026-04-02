@@ -272,40 +272,89 @@ export default function BillingsPage() {
                             ))}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                             {filteredPacks.map(pack => {
                                 const isUltimate = pack.tag === 'Ultimate';
+                                const isPopular = pack.tag === 'Popular' || pack.tag === 'Best Value';
+                                
                                 return (
-                                    <button
-                                        key={pack.id}
-                                        onClick={() => handleCheckout(pack.id)}
-                                        disabled={checkoutLoading === pack.id}
-                                        className={`group relative text-left rounded-3xl p-6 border transition-all hover:-translate-y-1 hover:shadow-2xl cursor-pointer w-full ${
-                                            isUltimate
-                                                ? 'bg-[#1a1a1a] border-[#1a1a1a] text-white hover:shadow-black/30'
-                                                : 'bg-white border-gray-200 hover:border-black'
-                                        }`}
-                                    >
-                                        {pack.tag && (
-                                            <span className={`absolute top-4 right-4 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${
-                                                isUltimate ? 'bg-white/20 text-white' :
-                                                pack.tag === 'Popular' ? 'bg-amber-100 text-amber-700' :
-                                                pack.tag === 'Best Value' ? 'bg-green-100 text-green-700' :
-                                                'bg-gray-100 text-gray-600'
-                                            }`}>{pack.tag}</span>
-                                        )}
-                                        <pack.icon className={`w-7 h-7 mb-4 ${isUltimate ? 'text-white/60' : 'text-gray-400'}`} stroke={1.5} />
-                                        <h3 className="text-base font-black mb-1">{pack.name}</h3>
-                                        <p className={`text-xs font-medium mb-5 ${isUltimate ? 'text-gray-400' : 'text-gray-400'}`}>{pack.desc}</p>
-                                        <div className={`flex items-center justify-between text-[10px] font-black uppercase tracking-widest py-3 px-4 rounded-xl transition-colors ${
-                                            isUltimate
-                                                ? 'bg-white text-black group-hover:bg-gray-100'
-                                                : 'bg-[#1a1a1a] text-white group-hover:bg-black'
-                                        }`}>
-                                            <span>${pack.price}</span>
-                                            <IconArrowRight className="w-3.5 h-3.5" />
+                                    <div key={pack.id} className="relative group">
+                                        {/* Hover glow effect behind the card */}
+                                        <div className={`absolute -inset-0.5 rounded-[32px] blur opacity-0 group-hover:opacity-100 transition duration-500 ${isUltimate ? 'bg-gradient-to-br from-gray-500 to-black' : isPopular ? 'bg-gradient-to-br from-gray-300 to-gray-400' : 'bg-gray-200'}`}></div>
+                                        
+                                        <div className={`relative h-full flex flex-col rounded-[28px] p-7 transition-all duration-300 ${isUltimate ? 'bg-[#111] text-white border border-[#222]' : 'bg-white text-black border border-[var(--border)] group-hover:border-gray-300'}`}>
+                                            {/* Tag */}
+                                            {pack.tag && (
+                                                <div className={`absolute -top-3 left-7 px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm ${
+                                                    isUltimate ? 'bg-white text-black' : 
+                                                    pack.tag === 'Popular' ? 'bg-[#1a1a1a] text-white' : 
+                                                    pack.tag === 'Best Value' ? 'bg-green-500 text-white' : 
+                                                    'bg-gray-100 text-gray-500 border border-gray-200'
+                                                }`}>
+                                                    {pack.tag}
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-start justify-between mb-6 pt-2">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${isUltimate ? 'bg-white/10 border-white/10' : 'bg-gray-50 border-gray-100'}`}>
+                                                    <pack.icon className={`w-6 h-6 ${isUltimate ? 'text-white' : 'text-gray-700'}`} stroke={1.5} />
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={`text-3xl font-black tracking-tighter ${isUltimate ? 'text-white' : 'text-black'}`}>${pack.price}</span>
+                                                    <span className={`block text-[10px] font-bold uppercase tracking-widest ${isUltimate ? 'text-gray-400' : 'text-gray-400'}`}>One-time</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-6 flex-1">
+                                                <h3 className="text-xl font-black mb-2">{pack.name}</h3>
+                                                <p className={`text-xs font-semibold leading-relaxed ${isUltimate ? 'text-gray-400' : 'text-gray-500'}`}>{pack.desc}</p>
+                                                
+                                                {/* Perks */}
+                                                <ul className="mt-5 space-y-2.5">
+                                                    {pack.category === 'chars' || pack.category === 'combo' ? (
+                                                        <li className="flex items-center gap-2 text-xs font-bold">
+                                                            <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isUltimate ? 'bg-white/20' : 'bg-green-100 text-green-600'}`}>
+                                                                <IconArrowRight className="w-2.5 h-2.5" stroke={4} />
+                                                            </div>
+                                                            <span className={isUltimate ? 'text-gray-300' : 'text-gray-600'}>{pack.desc.split('+')[0]}</span>
+                                                        </li>
+                                                    ) : null}
+                                                    {pack.category === 'reports' || pack.category === 'combo' ? (
+                                                        <li className="flex items-center gap-2 text-xs font-bold">
+                                                            <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isUltimate ? 'bg-white/20' : 'bg-blue-100 text-blue-600'}`}>
+                                                                <IconArrowRight className="w-2.5 h-2.5" stroke={4} />
+                                                            </div>
+                                                            <span className={isUltimate ? 'text-gray-300' : 'text-gray-600'}>Full Academic Reports</span>
+                                                        </li>
+                                                    ) : null}
+                                                    <li className="flex items-center gap-2 text-xs font-bold">
+                                                        <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isUltimate ? 'bg-white/20' : 'bg-gray-100 text-gray-600'}`}>
+                                                            <IconArrowRight className="w-2.5 h-2.5" stroke={4} />
+                                                        </div>
+                                                        <span className={isUltimate ? 'text-gray-300' : 'text-gray-500'}>Tokens Roll-over</span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleCheckout(pack.id)}
+                                                disabled={checkoutLoading === pack.id}
+                                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest transition-all active:scale-95 ${
+                                                    checkoutLoading === pack.id ? 'opacity-50 cursor-not-allowed' : ''
+                                                } ${
+                                                    isUltimate ? 'bg-white text-black hover:bg-gray-200 shadow-xl' : 
+                                                    isPopular ? 'bg-black text-white hover:bg-gray-800 shadow-xl' : 
+                                                    'bg-gray-100 text-black hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {checkoutLoading === pack.id ? (
+                                                    <span className="w-4 h-4 border-2 border-current border-t-transparent animate-spin rounded-full" />
+                                                ) : (
+                                                    <>Purchase Now <IconArrowRight className="w-4 h-4" /></>
+                                                )}
+                                            </button>
                                         </div>
-                                    </button>
+                                    </div>
                                 );
                             })}
                         </div>

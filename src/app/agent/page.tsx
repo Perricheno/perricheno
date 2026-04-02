@@ -442,7 +442,10 @@ export default function AgentPage() {
     };
 
     const handleLinkAdd = () => {
-        setSettings(s => ({ ...s, referenceLinks: [...s.referenceLinks, ""] }));
+        const url = window.prompt("Enter a URL to provide context to the AI:");
+        if (url && url.trim() !== "") {
+            setSettings(s => ({ ...s, referenceLinks: [...s.referenceLinks, url.trim()] }));
+        }
     };
     const updateLink = (idx: number, val: string) => {
         const newLinks = [...settings.referenceLinks];
@@ -579,10 +582,13 @@ export default function AgentPage() {
                                 <button onClick={handleLinkAdd} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
                                     <IconLink className="w-4 h-4" stroke={2} />
                                 </button>
-                                <button onClick={() => setSettingsOpen(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Document Settings">
-                                    <IconSettings className="w-4 h-4" stroke={2} />
-                                </button>
-                                <button onClick={() => setBillingOpen(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Account & Billing">
+                                {/* Settings Dropdown Button */}
+                                <div className="relative">
+                                    <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-2 rounded-lg transition-colors ${settingsOpen ? 'text-[#1a1a1a] bg-[#f5f5f5]' : 'text-[#999] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}`} title="Document Settings">
+                                        <IconSettings className="w-4 h-4" stroke={2} />
+                                    </button>
+                                </div>
+                                <button onClick={() => user ? setBillingOpen(true) : setShowLogin(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Account & Billing">
                                     <IconUser className="w-4 h-4" stroke={2} />
                                 </button>
                             </div>
@@ -625,6 +631,25 @@ export default function AgentPage() {
                             ))}
                         </div>
                     )}
+
+                    {/* Settings Panel */}
+                    <AnimatePresence>
+                        {settingsOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="w-full overflow-hidden"
+                            >
+                                <AgentSettingsPanel
+                                    settings={settings}
+                                    updateSetting={(k, v) => setSettings(s => ({ ...s, [k]: v }))}
+                                    detailsOpen={detailsOpen}
+                                    setDetailsOpen={setDetailsOpen}
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                 </motion.div>
             </div>

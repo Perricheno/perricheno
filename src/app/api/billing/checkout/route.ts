@@ -95,7 +95,7 @@ export async function POST(req: Request) {
         if (!CRYPTOCLOUD_API_KEY || !CRYPTOCLOUD_SHOP_ID) {
             return NextResponse.json({ 
                 error: "Payments not fully configured yet.", 
-                fallback_url: "https://donate.cryptocloud.plus/5T8V5K0P" 
+                fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH" 
             }, { status: 501 });
         }
 
@@ -115,17 +115,34 @@ export async function POST(req: Request) {
             })
         });
 
-        const data = await res.json();
+        let data;
+        const textResponse = await res.text();
+        try {
+            data = JSON.parse(textResponse);
+        } catch (parseError) {
+            console.error("CryptoCloud returned HTML or invalid JSON:", textResponse.substring(0, 200));
+            // Instead of crashing, let's gracefully fallback
+            return NextResponse.json({ 
+                error: "CryptoCloud gateway error. Redirecting to backup link.",
+                fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH"
+            }, { status: 502 });
+        }
 
         if (data.status === "success" || data.result?.link) {
-            return NextResponse.json({ url: data.result?.link || data.pay_url });
+            return NextResponse.json({ url: data.result?.link || data.pay_url || data.result?.pay_url });
         } else {
             console.error("CryptoCloud Error:", data);
-            throw new Error(data.message || "Failed to generate invoice");
+            return NextResponse.json({ 
+                error: data.message || "Failed to generate invoice",
+                fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH" 
+            }, { status: 500 });
         }
 
     } catch (err: any) {
         console.error("Checkout route error:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ 
+            error: err.message,
+            fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH"
+        }, { status: 500 });
     }
 }
