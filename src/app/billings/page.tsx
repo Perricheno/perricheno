@@ -75,7 +75,17 @@ export default function BillingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ packId })
             });
-            const data = await res.json();
+            
+            const rawText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (parseErr) {
+                console.error("Server crashed and returned HTML instead of JSON:", rawText.slice(0, 500));
+                window.open("https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH", "_blank");
+                return;
+            }
+
             if (data.url) window.open(data.url, '_blank');
             else if (data.fallback_url) window.open(data.fallback_url, '_blank');
             else alert('Checkout failed: ' + (data.error || 'Unknown error'));

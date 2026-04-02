@@ -7,7 +7,7 @@ import {
     IconX, IconPencil, IconCheck, IconEye, IconBug,
     IconClock, IconLetterCase, IconSettings,
     IconSchool, IconSearch, IconCertificate, IconChartPie,
-    IconLink, IconFilePlus, IconUser, IconChevronLeft
+    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconCrown
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
@@ -591,6 +591,11 @@ export default function AgentPage() {
                                 <button onClick={() => user ? setBillingOpen(true) : setShowLogin(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Account & Billing">
                                     <IconUser className="w-4 h-4" stroke={2} />
                                 </button>
+                                {user?.isAdmin && (
+                                    <a href="/dashboard" className="p-2 text-yellow-500 hover:text-yellow-600 rounded-lg hover:bg-yellow-50 transition-colors" title="Admin Dashboard">
+                                        <IconCrown className="w-4 h-4" stroke={2.5} />
+                                    </a>
+                                )}
                             </div>
 
                             {/* Right: Submit */}

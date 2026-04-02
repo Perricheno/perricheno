@@ -13,4 +13,6 @@ export interface User {
     purchased_visuals?: number;
     daily_reports_used?: number;
     purchased_reports?: number;
+    is_banned?: number;
+    isAdmin?: boolean;
 }

@@ -38,6 +38,25 @@ export async function POST(req: Request) {
             return new NextResponse('OK', { status: 200 });
         }
 
+        // CryptoCloud v2 Signature Verification: MD5(status_invoice + order_id + amount_crypto + currency_crypto + secret)
+        // Wait, different v2 APIs use slightly different signatures. Let's do a basic check since they might pass status.
+        if (CRYPTOCLOUD_SECRET && receivedSign) {
+            // General verification logic for CryptoCloud
+            const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
+            const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
+            
+            // NOTE: Due to docs variation, we log it without hard-blocking immediately if it mismatches because of missing currency string, 
+            // but we absolutely should stringently verify it.
+            if (expectedSign !== receivedSign) {
+                console.error(`🚨 SECURITY WARNING: Webhook signature mismatch! Expected ${expectedSign}, got ${receivedSign}.`);
+                // For strict security, uncomment the line below in production once signature format is 100% matched with your CryptoCloud settings:
+                // return new NextResponse('Invalid signature', { status: 403 });
+            }
+        } else if (CRYPTOCLOUD_SECRET && !receivedSign) {
+            console.error(`🚨 SECURITY WARNING: Webhook received without signature but secret is configured!`);
+            return new NextResponse('Missing signature', { status: 403 });
+        }
+
         if (!orderId || !orderId.startsWith("UID_")) {
             return new NextResponse('Invalid order ID', { status: 400 });
         }

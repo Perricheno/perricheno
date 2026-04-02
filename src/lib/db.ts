@@ -82,6 +82,7 @@ try { db.exec("ALTER TABLE users ADD COLUMN last_reset_date TEXT"); } catch (e) 
 try { db.exec("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'free'"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN is_banned BOOLEAN DEFAULT 0"); } catch (e) {}
 
 // Logging tracking tables
 try { 
@@ -129,6 +130,7 @@ export interface User {
     last_reset_date: string | null;
     last_week_reset: string | null;
     account_tier: string;
+    is_banned: number;
 }
 
 export function getUserByTelegramId(telegramId: string): User | undefined {

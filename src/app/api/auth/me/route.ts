@@ -16,5 +16,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ user: null }, { status: 404 });
     }
 
-    return NextResponse.json({ user, limits: LIMITS });
+    if (user.is_banned) {
+        // Automatically revoke their access via frontend clearing if banned
+        return NextResponse.json({ user: null, error: "Account suspended" }, { status: 403 });
+    }
+
+    const isAdmin = user.telegram_id === '1153844209';
+
+    return NextResponse.json({ user: { ...user, isAdmin }, limits: LIMITS });
 }

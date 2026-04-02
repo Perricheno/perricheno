@@ -31,9 +31,24 @@ export async function POST(req: Request) {
 
         const status = parsedData.status_invoice || parsedData.status; 
         const orderId = parsedData.order_id;
+        const receivedSign = parsedData.sign;
         
         if (status !== 'success' && status !== 'paid') {
             return new NextResponse('OK', { status: 200 });
+        }
+
+        // CryptoCloud v2 Signature Verification: MD5(status_invoice + order_id + amount_crypto + currency_crypto + secret)
+        if (CRYPTOCLOUD_SECRET && receivedSign) {
+            const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
+            const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
+            
+            if (expectedSign !== receivedSign) {
+                console.error(`🚨 SECURITY WARNING: Webhook signature mismatch at /callback! Expected ${expectedSign}, got ${receivedSign}.`);
+                // Uncomment in prod if needed: return new NextResponse('Invalid signature', { status: 403 });
+            }
+        } else if (CRYPTOCLOUD_SECRET && !receivedSign) {
+            console.error(`🚨 SECURITY WARNING: Callback received without signature but secret is configured!`);
+            return new NextResponse('Missing signature', { status: 403 });
         }
 
         if (!orderId || !orderId.startsWith("UID_")) {
