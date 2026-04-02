@@ -8,7 +8,7 @@ export async function createSession(userId: number) {
     const expires = new Date(Date.now() + SESSION_DURATION);
     
     const session = await new SignJWT({ userId })
-        .setProtectedHeader({ alg: 'HS512' })
+        .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('7d')
         .sign(SECRET_KEY);

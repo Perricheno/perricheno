@@ -3,6 +3,15 @@
 import { revalidatePath } from "next/cache";
 import db, { getUserById } from "@/lib/db";
 import { verifySession } from "@/lib/session";
+import crypto from "crypto";
+
+export async function generateSecurePromoCode() {
+    await verifyAdmin();
+    // Generate a long SHA-512 hash as the promo code base
+    const raw = crypto.randomBytes(32).toString('hex');
+    const hash = crypto.createHash('sha512').update(raw).digest('hex');
+    return { success: true, code: hash.toUpperCase() };
+}
 
 async function verifyAdmin() {
     const userId = await verifySession();

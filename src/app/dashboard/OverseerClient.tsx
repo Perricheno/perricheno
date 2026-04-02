@@ -6,7 +6,7 @@ import {
     IconDatabase, IconSettings, IconBug, 
     IconServer, IconChartLine, IconCrown 
 } from '@tabler/icons-react';
-import { createPromoCode, setSystemConfig, manageUserTokens } from './actions';
+import { createPromoCode, setSystemConfig, manageUserTokens, generateSecurePromoCode } from './actions';
 
 export default function OverseerClient({ initialStats, initialUsers, initialPromos, initialConfig, inferenceLatencies }: any) {
     const [tab, setTab] = useState('Overview');
@@ -37,6 +37,16 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
         await createPromoCode(code, promoType, promoAmount, promoUses);
         setIsSaving(false);
         setPromoCode('');
+    };
+
+    const handleGenerateS512 = async () => {
+        setIsSaving(true);
+        try {
+            const res = await generateSecurePromoCode();
+            if (res.code) setPromoCode(res.code);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const toggleMaintenance = async () => {
@@ -216,9 +226,12 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                     <div className="space-y-6 max-w-3xl">
                         <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2">Promo Code Factory</h2>
                         <div className="flex gap-4 p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm flex-wrap">
-                            <div className="space-y-1 flex-1 min-w-[120px]">
+                            <div className="space-y-1 flex-1 min-w-[200px]">
                                 <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Code (blank = auto)</label>
-                                <input value={promoCode} onChange={e => setPromoCode(e.target.value)} className="w-full text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" placeholder="OVERSEER_VIP" />
+                                <div className="flex gap-1">
+                                    <input value={promoCode} onChange={e => setPromoCode(e.target.value)} className="flex-1 text-[11px] px-2 py-1.5 border border-[#ccc] rounded font-mono" placeholder="OVERSEER_VIP" />
+                                    <button onClick={handleGenerateS512} className="px-2 bg-gray-100 hover:bg-gray-200 text-[9px] font-bold rounded border border-[#ccc]">S512</button>
+                                </div>
                             </div>
                             <div className="space-y-1 w-24">
                                 <label className="text-[9px] font-bold uppercase tracking-widest text-[#666]">Type</label>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IconX, IconUser, IconTrash, IconLogout, IconShieldCheck, IconBrandTelegram, IconRefresh } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
@@ -9,13 +9,11 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
     const { user, login, logout, deleteAccount } = useAdmin();
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const [widgetLoaded, setWidgetLoaded] = useState(false);
-    const [widgetFailed, setWidgetFailed] = useState(false);
+    const [widgetVisible, setWidgetVisible] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const retryCountRef = useRef(0);
 
-    // Register global callback ONCE on mount
+    // Telegram Auth Callback
     useEffect(() => {
         (window as any).onTelegramAuth = async (tgUser: any) => {
             setLoading(true);
@@ -33,74 +31,37 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
         };
     }, [login, onGuestSuccess, onClose]);
 
-    const injectWidget = useCallback(() => {
-        const container = containerRef.current;
-        if (!container || user) return;
-
-        // Clear previous attempts
-        container.innerHTML = '';
-        setWidgetLoaded(false);
-        setWidgetFailed(false);
-
-        const script = document.createElement("script");
-        script.src = "https://telegram.org/js/telegram-widget.js?22";
-        script.setAttribute("data-telegram-login", "PerrichenoBot");
-        script.setAttribute("data-size", "large");
-        script.setAttribute("data-radius", "14");
-        script.setAttribute("data-onauth", "onTelegramAuth(user)");
-        script.setAttribute("data-request-access", "write");
-        script.async = true;
-
-        script.onload = () => {
-            // Widget script loaded; the iframe should appear shortly
-            setTimeout(() => {
-                const iframe = container.querySelector('iframe');
-                if (iframe) {
-                    setWidgetLoaded(true);
-                } else {
-                    // Script loaded but no iframe rendered — retry once
-                    if (retryCountRef.current < 2) {
-                        retryCountRef.current++;
-                        injectWidget();
-                    } else {
-                        setWidgetFailed(true);
-                    }
-                }
-            }, 1500);
-        };
-
-        script.onerror = () => {
-            console.error("Failed to load Telegram widget script");
-            if (retryCountRef.current < 2) {
-                retryCountRef.current++;
-                setTimeout(injectWidget, 1000);
-            } else {
-                setWidgetFailed(true);
-            }
-        };
-
-        container.appendChild(script);
-
-        // Hard timeout: if nothing happened after 6s, show fallback
-        setTimeout(() => {
-            if (!widgetLoaded && container.querySelectorAll('iframe').length === 0) {
-                setWidgetFailed(true);
-            }
-        }, 6000);
-    }, [user, widgetLoaded]);
-
+    // Widget Loading Logic
     useEffect(() => {
-        if (!user) {
-            // Small delay ensures the DOM ref is ready
-            const t = setTimeout(injectWidget, 100);
-            return () => clearTimeout(t);
+        if (!user && containerRef.current) {
+            const script = document.createElement("script");
+            script.src = "https://telegram.org/js/telegram-widget.js?22";
+            script.setAttribute("data-telegram-login", "PerrichenoBot");
+            script.setAttribute("data-size", "large");
+            script.setAttribute("data-radius", "14");
+            script.setAttribute("data-onauth", "onTelegramAuth(user)");
+            script.setAttribute("data-request-access", "write");
+            script.async = true;
+            
+            // Check if widget is blocked after a delay
+            const timeout = setTimeout(() => {
+                if (containerRef.current?.querySelectorAll('iframe').length === 0) {
+                    setWidgetVisible(false);
+                } else {
+                    setWidgetVisible(true);
+                }
+            }, 3000);
+
+            containerRef.current.appendChild(script);
+            return () => {
+                clearTimeout(timeout);
+                if (containerRef.current) containerRef.current.innerHTML = "";
+            };
         }
-    }, [user, injectWidget]);
+    }, [user]);
 
     const handleManualRetry = () => {
-        retryCountRef.current = 0;
-        setWidgetFailed(false);
-        injectWidget();
+        window.location.reload(); // Hard reset for the widget
     };
 
     return (
@@ -207,55 +168,55 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                                     <img src="/newlogo.png" alt="Perricheno" className="w-10 h-10 object-contain" />
                                 </div>
                                 <h2 className="text-2xl font-black text-[#1a1a1a] tracking-tight mb-1">Welcome Back</h2>
-                                <p className="text-sm text-gray-400 font-medium">Sign in with Telegram to continue</p>
+                                <p className="text-sm text-gray-400 font-medium whitespace-nowrap">Sign in with Telegram to continue</p>
                             </div>
 
-                            {/* Telegram Auth */}
+                            {/* Telegram Auth Container */}
                             <div className="bg-gray-50 rounded-2xl p-6 flex flex-col items-center">
-                                <div className="flex items-center gap-2 mb-4">
+                                <div className="flex items-center gap-2 mb-6">
                                     <IconShieldCheck className="w-4 h-4 text-green-500" />
                                     <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Secure One-Click Login</span>
                                 </div>
 
-                                {/* Widget injection point */}
-                                <div ref={containerRef} className="min-h-[48px] flex items-center justify-center" />
+                                {/* The actual Telegram Widget container */}
+                                <div className="min-h-[48px] w-full flex items-center justify-center relative">
+                                    <div ref={containerRef} className="z-10" />
+                                    
+                                    {/* Ghost placeholder while loading */}
+                                    {!loading && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                                             <div className="w-full h-12 bg-gray-200 rounded-xl animate-pulse" />
+                                        </div>
+                                    )}
+                                </div>
 
-                                {/* Loading spinner while widget loads */}
-                                {!widgetLoaded && !widgetFailed && !loading && (
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <div className="w-3 h-3 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
-                                        <p className="text-[10px] text-gray-400">Loading Telegram...</p>
-                                    </div>
-                                )}
-
-                                {/* Auth in progress */}
+                                {/* Loading state */}
                                 {loading && (
-                                    <div className="mt-3 flex items-center gap-2">
-                                        <div className="w-3 h-3 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
-                                        <p className="text-xs text-gray-400 font-medium">Authenticating...</p>
+                                    <div className="mt-4 flex flex-col items-center gap-3">
+                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
+                                        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Authenticating...</p>
                                     </div>
                                 )}
 
-                                {/* Fallback: if widget failed to load */}
-                                {widgetFailed && !loading && (
-                                    <div className="mt-3 flex flex-col items-center gap-3 w-full">
-                                        <p className="text-[10px] text-gray-400 text-center">Widget blocked by browser. Use direct link:</p>
-                                        <a
-                                            href="https://t.me/PerrichenoBot?start=login"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-[#0088cc] text-white rounded-2xl font-bold text-sm hover:bg-[#0077b5] transition-colors"
-                                        >
-                                            <IconBrandTelegram className="w-5 h-5" /> Open in Telegram
-                                        </a>
-                                        <button
-                                            onClick={handleManualRetry}
-                                            className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
-                                        >
-                                            <IconRefresh className="w-3 h-3" /> Retry widget
-                                        </button>
-                                    </div>
-                                )}
+                                {/* Persistent Fallback - Always visible as secondary or if widget fails */}
+                                <div className="mt-8 pt-6 border-t border-gray-200 w-full">
+                                    <p className="text-[10px] text-gray-400 text-center mb-3 font-medium">Alternative: Open direct in Telegram</p>
+                                    <a
+                                        href="https://t.me/PerrichenoBot?start=login"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-[#1A1A1A] text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-black transition-all active:scale-[0.98]"
+                                    >
+                                        <IconBrandTelegram className="w-4 h-4" /> Open in Telegram
+                                    </a>
+                                    
+                                    <button
+                                        onClick={handleManualRetry}
+                                        className="w-full mt-3 flex items-center justify-center gap-1.5 text-[9px] text-gray-400 hover:text-gray-600 transition-colors uppercase font-bold tracking-tighter"
+                                    >
+                                        <IconRefresh className="w-3 h-3" /> Still Loading? Reload Widget
+                                    </button>
+                                </div>
                             </div>
 
                             {error && (
