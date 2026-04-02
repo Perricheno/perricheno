@@ -53,6 +53,10 @@ export default function AgentPage() {
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Mode dropdown
+    const [modeOpen, setModeOpen] = useState(false);
+    const modeRef = useRef<HTMLDivElement>(null);
+
     // Streaming state
     const [streamText, setStreamText] = useState("");
     const [streamChars, setStreamChars] = useState(0);
@@ -269,8 +273,6 @@ export default function AgentPage() {
 
             setMainTex(session.main_tex || "");
             setReferencesBib(session.references_bib || null);
-            setMainTex(session.main_tex || "");
-            setReferencesBib(session.references_bib || null);
             setVisuals(session.visuals_json ? JSON.parse(session.visuals_json) : []);
             setSettings(session.settings_json ? JSON.parse(session.settings_json) : DEFAULT_SETTINGS);
 
@@ -411,137 +413,142 @@ export default function AgentPage() {
         setSettings(s => ({ ...s, referenceLinks: newLinks }));
     };
 
-    // ─── LANDING (ULTRA-MINIMALIST CHAT) ───
+    // Close mode dropdown on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (modeRef.current && !modeRef.current.contains(e.target as Node)) setModeOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    // ─── LANDING ───
     if (phase === "idle") {
+        const activeMode = MODES.find(m => m.id === docType) || MODES[0];
+
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[#FBFBFC] relative p-6 overflow-hidden">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#FBFBFC] relative p-6 overflow-hidden">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-2xl flex flex-col items-center">
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-[640px] flex flex-col items-center">
                     
-                    {/* Minimal Branding */}
-                    <div className="mb-12 text-center select-none flex flex-col items-center">
-                        <img src="/Vector.svg" alt="Perricheno" className="w-12 h-12 mb-5 opacity-90 drop-shadow-sm" />
-                        <h1 className="text-xl md:text-2xl font-semibold text-gray-800 tracking-tight" style={{ fontFamily: "Georgia, serif" }}>
-                            Perricheno Intelligence
-                        </h1>
+                    {/* Branding */}
+                    <div className="mb-10 text-center select-none">
+                        <img src="/Vector.svg" alt="Perricheno" className="w-10 h-10 mx-auto mb-4 opacity-80" />
+                        <h1 className="text-[22px] font-semibold text-[#1a1a1a] tracking-[-0.02em]">Perricheno Intelligence</h1>
                     </div>
 
-                    {/* Chat Input Shell */}
-                    <div className="w-full bg-white border border-gray-100 rounded-[32px] shadow-[0_20px_40px_-12px_rgba(0,0,0,0.05)] focus-within:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] focus-within:border-black transition-all p-3 flex flex-col group relative">
+                    {/* Input Container */}
+                    <div className="w-full bg-white rounded-2xl border border-[#e5e5e5] shadow-sm focus-within:border-[#c0c0c0] focus-within:shadow-md transition-all">
                         
-                        <div className="flex items-start gap-4 px-3 pt-3">
-                             <textarea 
+                        {/* Textarea */}
+                        <div className="px-5 pt-4 pb-2">
+                            <textarea 
                                 value={prompt} 
                                 onChange={e => setPrompt(e.target.value)} 
                                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-                                placeholder="What are we researching today?" 
-                                className="flex-1 text-lg font-bold bg-transparent outline-none placeholder:text-gray-100 resize-none h-24 leading-relaxed" 
+                                placeholder="What would you like to research?" 
+                                className="w-full text-[15px] text-[#1a1a1a] bg-transparent outline-none placeholder:text-[#c0c0c0] resize-none h-[88px] leading-relaxed" 
                                 autoFocus 
                             />
-                            
+                        </div>
+
+                        {/* Bottom toolbar */}
+                        <div className="flex items-center justify-between px-4 pb-3 pt-1">
+                            {/* Left: Mode selector + tools */}
+                            <div className="flex items-center gap-1">
+                                {/* Mode Dropdown */}
+                                <div className="relative" ref={modeRef}>
+                                    <button 
+                                        onClick={() => setModeOpen(!modeOpen)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#666] hover:bg-[#f5f5f5] transition-colors"
+                                    >
+                                        <activeMode.icon className="w-4 h-4" stroke={2} />
+                                        <span>{activeMode.label}</span>
+                                        <svg className={`w-3 h-3 ml-0.5 transition-transform ${modeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {modeOpen && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 4, scale: 0.97 }} 
+                                                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                                                exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl border border-[#e5e5e5] shadow-lg py-1 z-50"
+                                            >
+                                                {MODES.map(m => (
+                                                    <button 
+                                                        key={m.id}
+                                                        onClick={() => { setDocType(m.id); setModeOpen(false); }}
+                                                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${m.id === docType ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
+                                                    >
+                                                        <m.icon className="w-4 h-4 shrink-0" stroke={2} />
+                                                        <span>{m.label}</span>
+                                                        {m.id === docType && (
+                                                            <IconCheck className="w-4 h-4 ml-auto text-[#1a1a1a]" stroke={2.5} />
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                <div className="w-px h-4 bg-[#e5e5e5] mx-1" />
+
+                                <label className="cursor-pointer p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                    <IconPaperclip className="w-4 h-4" stroke={2} />
+                                    <input type="file" className="hidden" multiple accept=".pdf,.txt" onChange={handleFileUpload} />
+                                </label>
+                                <button onClick={handleLinkAdd} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                    <IconLink className="w-4 h-4" stroke={2} />
+                                </button>
+                                <button onClick={() => setSettingsOpen(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                    <IconSettings className="w-4 h-4" stroke={2} />
+                                </button>
+                            </div>
+
+                            {/* Right: Submit */}
                             <button 
                                 onClick={handleGenerate} 
                                 disabled={!prompt.trim()} 
-                                className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center disabled:opacity-5 disabled:bg-gray-100 transition-all hover:bg-[#1A1A1A] active:scale-95 shrink-0 shadow-lg shadow-black/10"
+                                className="w-8 h-8 bg-[#1a1a1a] text-white rounded-lg flex items-center justify-center disabled:opacity-10 disabled:bg-[#e5e5e5] transition-all hover:bg-black active:scale-95"
                             >
-                                <IconArrowRight className="w-6 h-6" />
+                                <IconArrowRight className="w-4 h-4" />
                             </button>
                         </div>
-
-                        {/* Chips & Tools Row */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 px-3 pb-2 pt-2">
-                             <div className="flex flex-wrap gap-1.5">
-                                {MODES.map((m) => {
-                                    const active = docType === m.id;
-                                    return (
-                                        <button 
-                                            key={m.id} 
-                                            onClick={() => setDocType(m.id)} 
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black' : 'bg-white text-gray-400 border-gray-50 hover:border-gray-200 hover:text-black'}`}
-                                        >
-                                            <m.icon className="w-3 h-3" stroke={3} />
-                                            {m.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="flex items-center gap-1">
-                                <label className="cursor-pointer p-2 text-gray-200 hover:text-black rounded-xl hover:bg-gray-50 transition-all">
-                                    <IconPaperclip className="w-4 h-4" />
-                                    <input type="file" className="hidden" multiple accept=".pdf,.txt" onChange={handleFileUpload} />
-                                </label>
-                                <button onClick={handleLinkAdd} className="p-2 text-gray-200 hover:text-black rounded-xl hover:bg-gray-50 transition-all">
-                                    <IconLink className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setSettingsOpen(true)} className="p-2 text-gray-200 hover:text-black rounded-xl hover:bg-gray-50 transition-all">
-                                    <IconSettings className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* File Preview Chips */}
-                        {settings.referenceFileNames.length > 0 && (
-                            <div className="px-3 pb-3 flex flex-wrap gap-2">
-                                {settings.referenceFileNames.map((name, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1 bg-gray-50 rounded-lg text-[9px] font-bold text-black border border-gray-100">
-                                        <IconFileText className="w-3 h-3 text-gray-400" />
-                                        <span>{name}</span>
-                                        <button onClick={() => removeFile(idx)} className="p-1 hover:text-red-500 transition-colors">
-                                            <IconX className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
-                    {/* Metadata Zone (Adaptive & Subtle) */}
-                    <AnimatePresence>
-                         {(docType !== "research" || settings.authorName) && (
-                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full mt-8 flex flex-wrap gap-8 items-start justify-center">
-                                <div className="min-w-[120px] pb-2 border-b border-gray-100 focus-within:border-black transition-colors">
-                                    <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 mb-1">Author</label>
-                                    <input value={settings.authorName} onChange={e => setSettings({...settings, authorName: e.target.value})} placeholder="Your Name" className="bg-transparent outline-none text-[11px] font-bold w-full uppercase tracking-widest placeholder:text-gray-100 placeholder:italic" />
+                    {/* Attached files */}
+                    {settings.referenceFileNames.length > 0 && (
+                        <div className="w-full mt-3 flex flex-wrap gap-2">
+                            {settings.referenceFileNames.map((name, idx) => (
+                                <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-lg text-[12px] font-medium text-[#666] border border-[#e5e5e5]">
+                                    <IconFileText className="w-3.5 h-3.5 text-[#999]" />
+                                    <span>{name}</span>
+                                    <button onClick={() => removeFile(idx)} className="p-0.5 hover:text-red-500 transition-colors">
+                                        <IconX className="w-3 h-3" />
+                                    </button>
                                 </div>
+                            ))}
+                        </div>
+                    )}
 
-                                {docType === "diploma" && (
-                                     <div className="min-w-[120px] pb-2 border-b border-gray-100 focus-within:border-black transition-colors">
-                                        <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 mb-1">Supervisor</label>
-                                        <input value={settings.supervisorName} onChange={e => setSettings({...settings, supervisorName: e.target.value})} placeholder="Full Name" className="bg-transparent outline-none text-[11px] font-bold w-full uppercase tracking-widest placeholder:text-gray-100 placeholder:italic" />
-                                    </div>
-                                )}
-
-                                {docType === "assignment" && (
-                                     <div className="min-w-[120px] pb-2 border-b border-gray-100 focus-within:border-black transition-colors">
-                                        <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-300 mb-1">Course</label>
-                                        <input value={settings.courseName} onChange={e => setSettings({...settings, courseName: e.target.value})} placeholder="Module Code" className="bg-transparent outline-none text-[11px] font-bold w-full uppercase tracking-widest placeholder:text-gray-100 placeholder:italic" />
-                                    </div>
-                                )}
-                            </motion.div>
-                         )}
-                    </AnimatePresence>
-
-                    {/* Links Section */}
+                    {/* Links */}
                     {settings.referenceLinks.length > 0 && (
-                        <div className="w-full max-w-sm mt-8 space-y-2">
+                        <div className="w-full mt-3 space-y-2">
                             {settings.referenceLinks.map((link, idx) => (
-                                <div key={idx} className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-50 shadow-sm">
-                                    <IconLink className="w-3 h-3 text-gray-300 ml-1" />
-                                    <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="flex-1 bg-transparent outline-none text-[10px] font-medium text-gray-500" />
-                                    <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-1 hover:text-black transition-colors"><IconX className="w-3 h-3" /></button>
+                                <div key={idx} className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border border-[#e5e5e5]">
+                                    <IconLink className="w-3.5 h-3.5 text-[#999] shrink-0" />
+                                    <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="flex-1 bg-transparent outline-none text-[13px] text-[#666]" />
+                                    <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-1 text-[#ccc] hover:text-[#1a1a1a] transition-colors"><IconX className="w-3 h-3" /></button>
                                 </div>
                             ))}
                         </div>
                     )}
 
                 </motion.div>
-
-                {/* Technical Footnote */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 opacity-20 pointer-events-none select-none">
-                     <span className="text-[9px] font-black uppercase tracking-[0.4em]">Engine v3.0 // Unified Research Logic</span>
-                </div>
             </div>
         );
     }
