@@ -52,6 +52,19 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         checkAuth();
+        
+        // Security Patch: Strip sensitive Telegram session hashes from LocalStorage
+        try {
+            const tgString = localStorage.getItem('tg_user');
+            if (tgString) {
+                const tgObj = JSON.parse(tgString);
+                if (tgObj.hash || tgObj.auth_date) {
+                    delete tgObj.hash;
+                    delete tgObj.auth_date;
+                    localStorage.setItem('tg_user', JSON.stringify(tgObj));
+                }
+            }
+        } catch (e) {}
     }, []);
 
     const login = async (telegramData: any) => {

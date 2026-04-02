@@ -34,6 +34,37 @@ interface ChatThread {
 }
 
 /* ── Helpers ── */
+// IndexedDB Wrapper for async chat storage to prevent Main Thread blocking
+const initDB = () => {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open("perricheno_chat_db", 1);
+        req.onupgradeneeded = () => req.result.createObjectStore("chats");
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+};
+const getChatsFromIDB = async (key: string): Promise<string | null> => {
+    try {
+        const db = await initDB();
+        return new Promise((resolve) => {
+            const t = db.transaction("chats", "readonly");
+            const req = t.objectStore("chats").get(key);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch { return null; }
+};
+const saveChatsToIDB = async (key: string, data: string) => {
+    try {
+        const db = await initDB();
+        return new Promise((resolve) => {
+            const t = db.transaction("chats", "readwrite");
+            t.objectStore("chats").put(data, key);
+            t.oncomplete = () => resolve(true);
+        });
+    } catch {}
+};
+
 function genId(): string {
     if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
     return "xxxx-xxxx-4xxx-yxxx-xxxx".replace(/[xy]/g, c => {
@@ -85,7 +116,7 @@ export default function ChatPage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Load threads from local storage when user changes
+    // Load threads from IndexedDB (with legacy localStorage migration) when user changes
     useEffect(() => {
         if (!user) {
             setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
@@ -94,37 +125,52 @@ export default function ChatPage() {
         }
         
         const storageKey = `perricheno_chats_${user.telegram_id}`;
-        try {
-            const saved = localStorage.getItem(storageKey);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Convert string dates back to Date objects
-                const restoredThreads: ChatThread[] = parsed.map((t: any) => ({
-                    ...t,
-                    createdAt: new Date(t.createdAt),
-                    messages: t.messages.map((m: any) => ({
-                        ...m,
-                        timestamp: new Date(m.timestamp)
-                    }))
-                }));
-                setThreads(restoredThreads);
-                if (restoredThreads.length > 0) setActiveThreadId(restoredThreads[0].id);
-            } else {
+        
+        const loadChats = async () => {
+            try {
+                // Try IDB first
+                let saved = await getChatsFromIDB(storageKey);
+                
+                // Fallback to localStorage if migration needed
+                if (!saved) {
+                    saved = localStorage.getItem(storageKey);
+                    if (saved) {
+                        await saveChatsToIDB(storageKey, saved); // Automigrate to IDB
+                        localStorage.removeItem(storageKey); // Clean old blocking sync storage
+                    }
+                }
+
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    const restoredThreads: ChatThread[] = parsed.map((t: any) => ({
+                        ...t,
+                        createdAt: new Date(t.createdAt),
+                        messages: t.messages.map((m: any) => ({
+                            ...m,
+                            timestamp: new Date(m.timestamp)
+                        }))
+                    }));
+                    setThreads(restoredThreads);
+                    if (restoredThreads.length > 0) setActiveThreadId(restoredThreads[0].id);
+                } else {
+                    setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
+                    setActiveThreadId(initialChatId);
+                }
+            } catch (e) {
+                console.error("Failed to load chat history:", e);
                 setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
                 setActiveThreadId(initialChatId);
             }
-        } catch (e) {
-            console.error("Failed to load chat history:", e);
-            setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
-            setActiveThreadId(initialChatId);
-        }
+        };
+
+        loadChats();
     }, [user, initialChatId]);
 
-    // Save threads to local storage whenever they change (if user is logged in)
+    // Save threads to IndexedDB whenever they change (non-blocking)
     useEffect(() => {
         if (!user || threads.length === 0) return;
         const storageKey = `perricheno_chats_${user.telegram_id}`;
-        localStorage.setItem(storageKey, JSON.stringify(threads));
+        saveChatsToIDB(storageKey, JSON.stringify(threads));
     }, [threads, user]);
 
     const activeThread = threads.find(t => t.id === activeThreadId) || threads[0];
