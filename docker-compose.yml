@@ -61,9 +61,30 @@ services:
     networks:
       - cloudflare
 
+  telegram-bot:
+    build:
+      context: ./telegram-bot
+      dockerfile: Dockerfile
+    container_name: telegram-bot
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - SITE_INTERNAL_URL=http://perricheno-site:3000
+      - BOT_PORT=3001
+    healthcheck:
+      test: [ "CMD", "pgrep", "-f", "node dist/bot.js" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - cloudflare
+
 volumes:
   db-data:
 
 networks:
   cloudflare:
     external: true
+

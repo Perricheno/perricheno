@@ -84,6 +84,18 @@ try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"
 try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_banned BOOLEAN DEFAULT 0"); } catch (e) {}
 
+// Deep Link Auth requests table
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS auth_requests (
+            token TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'pending',
+            tg_user_data TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
 // Logging tracking tables
 try { 
     db.exec(`

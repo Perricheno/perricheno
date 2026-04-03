@@ -1,68 +1,85 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { IconX, IconUser, IconTrash, IconLogout, IconShieldCheck, IconBrandTelegram, IconRefresh } from "@tabler/icons-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { IconX, IconUser, IconTrash, IconLogout, IconBrandTelegram, IconLoader2, IconQrcode } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
 
 export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: () => void; onGuestSuccess?: (name: string) => void; onClose: () => void }) => {
     const { user, login, logout, deleteAccount } = useAdmin();
     const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [widgetVisible, setWidgetVisible] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
 
-    // Telegram Auth Callback
-    useEffect(() => {
-        (window as any).onTelegramAuth = async (tgUser: any) => {
-            setLoading(true);
-            setError("");
-            try {
-                await login(tgUser);
-                if (onGuestSuccess) onGuestSuccess(tgUser.first_name);
-                onClose();
-            } catch (e: any) {
-                console.error("Telegram Auth Error:", e);
-                setError(e.message || "Authentication failed. Please try again.");
-            } finally {
-                setLoading(false);
+    // Deep Link Auth State
+    const [authToken, setAuthToken] = useState<string | null>(null);
+    const [deepLink, setDeepLink] = useState<string | null>(null);
+    const [authPhase, setAuthPhase] = useState<"idle" | "waiting" | "success">("idle");
+    const pollRef = useRef<NodeJS.Timeout | null>(null);
+    const [qrVisible, setQrVisible] = useState(false);
+
+    // Generate a deep link token on mount (for sign-in view)
+    const generateLink = useCallback(async () => {
+        setError("");
+        setAuthPhase("idle");
+        try {
+            const res = await fetch("/api/auth/link", { method: "POST" });
+            const data = await res.json();
+            if (data.token && data.deepLink) {
+                setAuthToken(data.token);
+                setDeepLink(data.deepLink);
+                setAuthPhase("waiting");
+            } else {
+                setError("Failed to generate login link.");
             }
-        };
-    }, [login, onGuestSuccess, onClose]);
-
-    // Widget Loading Logic
-    useEffect(() => {
-        if (!user && containerRef.current) {
-            const script = document.createElement("script");
-            script.src = "https://telegram.org/js/telegram-widget.js?22";
-            script.setAttribute("data-telegram-login", "PerrichenoBot");
-            script.setAttribute("data-size", "large");
-            script.setAttribute("data-radius", "14");
-            script.setAttribute("data-onauth", "onTelegramAuth(user)");
-            script.setAttribute("data-request-access", "write");
-            script.async = true;
-            
-            // Check if widget is blocked after a delay
-            const timeout = setTimeout(() => {
-                if (containerRef.current?.querySelectorAll('iframe').length === 0) {
-                    setWidgetVisible(false);
-                } else {
-                    setWidgetVisible(true);
-                }
-            }, 3000);
-
-            containerRef.current.appendChild(script);
-            return () => {
-                clearTimeout(timeout);
-                if (containerRef.current) containerRef.current.innerHTML = "";
-            };
+        } catch (err) {
+            setError("Network error. Please try again.");
         }
-    }, [user]);
+    }, []);
 
-    const handleManualRetry = () => {
-        window.location.reload(); // Hard reset for the widget
-    };
+    useEffect(() => {
+        if (!user) {
+            generateLink();
+        }
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, [user, generateLink]);
+
+    // Poll for authentication completion
+    useEffect(() => {
+        if (authPhase !== "waiting" || !authToken) return;
+
+        pollRef.current = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/auth/poll?token=${authToken}`);
+                const data = await res.json();
+
+                if (data.status === "completed") {
+                    setAuthPhase("success");
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    // Small delay for the success animation, then reload
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                } else if (data.status === "expired") {
+                    setError("Link expired. Generating new one...");
+                    if (pollRef.current) clearInterval(pollRef.current);
+                    setTimeout(() => generateLink(), 1000);
+                }
+            } catch {
+                // Silently retry
+            }
+        }, 2000);
+
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, [authPhase, authToken, generateLink]);
+
+    // QR code as inline SVG (simple data matrix — no external deps needed)
+    const qrDataUrl = deepLink
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(deepLink)}&bgcolor=FFFFFF&color=1A1A1A&margin=8`
+        : null;
 
     return (
         <AnimatePresence>
@@ -160,63 +177,109 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                             </div>
                         </div>
                     ) : (
-                        /* ── Sign In View ── */
+                        /* ── Sign In View — Deep Link Auth ── */
                         <div className="p-8 pt-10">
                             {/* Header */}
                             <div className="flex flex-col items-center text-center mb-8">
                                 <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex items-center justify-center mb-5 shadow-lg">
                                     <img src="/newlogo.png" alt="Perricheno" className="w-10 h-10 object-contain" />
                                 </div>
-                                <h2 className="text-2xl font-black text-[#1a1a1a] tracking-tight mb-1">Welcome Back</h2>
-                                <p className="text-sm text-gray-400 font-medium whitespace-nowrap">Sign in with Telegram to continue</p>
+                                <h2 className="text-2xl font-black text-[#1a1a1a] tracking-tight mb-1">Welcome</h2>
+                                <p className="text-sm text-gray-400 font-medium">Sign in instantly via Telegram</p>
                             </div>
 
-                            {/* Telegram Auth Container */}
+                            {/* Auth Card */}
                             <div className="bg-gray-50 rounded-2xl p-6 flex flex-col items-center">
-                                <div className="flex items-center gap-2 mb-6">
-                                    <IconShieldCheck className="w-4 h-4 text-green-500" />
-                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Secure One-Click Login</span>
-                                </div>
-
-                                {/* The actual Telegram Widget container */}
-                                <div className="min-h-[48px] w-full flex items-center justify-center relative">
-                                    <div ref={containerRef} className="z-10" />
-                                    
-                                    {/* Ghost placeholder while loading */}
-                                    {!loading && (
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                                             <div className="w-full h-12 bg-gray-200 rounded-xl animate-pulse" />
+                                {authPhase === "success" ? (
+                                    /* Success State */
+                                    <div className="flex flex-col items-center gap-3 py-4">
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{ type: "spring", damping: 10 }}
+                                            className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center"
+                                        >
+                                            <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </motion.div>
+                                        <p className="text-sm font-bold text-green-600">Authenticated!</p>
+                                        <p className="text-[11px] text-gray-400">Loading your account...</p>
+                                    </div>
+                                ) : authPhase === "waiting" && deepLink ? (
+                                    /* Waiting for Telegram confirmation */
+                                    <>
+                                        {/* Status indicator */}
+                                        <div className="flex items-center gap-2 mb-5">
+                                            <span className="relative flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                                            </span>
+                                            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Waiting for confirmation</span>
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Loading state */}
-                                {loading && (
-                                    <div className="mt-4 flex flex-col items-center gap-3">
-                                        <div className="w-4 h-4 border-2 border-gray-300 border-t-[#1a1a1a] rounded-full animate-spin" />
-                                        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Authenticating...</p>
+                                        {/* QR Code (toggle) */}
+                                        {qrVisible && qrDataUrl && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: "auto" }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="mb-5 bg-white rounded-2xl p-4 border border-gray-200 shadow-sm"
+                                            >
+                                                <img
+                                                    src={qrDataUrl}
+                                                    alt="QR Code"
+                                                    className="w-[180px] h-[180px] mx-auto"
+                                                    loading="eager"
+                                                />
+                                                <p className="text-[10px] text-gray-400 text-center mt-2 font-medium">Scan with your phone camera</p>
+                                            </motion.div>
+                                        )}
+
+                                        {/* Main CTA */}
+                                        <a
+                                            href={deepLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full flex items-center justify-center gap-2.5 py-4 bg-[#1A1A1A] text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-black transition-all active:scale-[0.98] shadow-xl shadow-black/10"
+                                        >
+                                            <IconBrandTelegram className="w-5 h-5" /> Open in Telegram
+                                        </a>
+
+                                        {/* QR Toggle */}
+                                        <button
+                                            onClick={() => setQrVisible(!qrVisible)}
+                                            className="mt-4 flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-gray-600 font-bold uppercase tracking-widest transition-colors"
+                                        >
+                                            <IconQrcode className="w-3.5 h-3.5" />
+                                            {qrVisible ? "Hide QR Code" : "Show QR Code"}
+                                        </button>
+
+                                        {/* Instructions */}
+                                        <div className="mt-5 pt-5 border-t border-gray-200 w-full">
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-start gap-3">
+                                                    <span className="w-5 h-5 rounded-full bg-[#1a1a1a] text-white text-[9px] font-black flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                                    <p className="text-[11px] text-gray-500 font-medium leading-relaxed">Click the button above or scan the QR code</p>
+                                                </div>
+                                                <div className="flex items-start gap-3">
+                                                    <span className="w-5 h-5 rounded-full bg-[#1a1a1a] text-white text-[9px] font-black flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                                    <p className="text-[11px] text-gray-500 font-medium leading-relaxed">Press <strong>"Start"</strong> in the Telegram bot</p>
+                                                </div>
+                                                <div className="flex items-start gap-3">
+                                                    <span className="w-5 h-5 rounded-full bg-[#1a1a1a] text-white text-[9px] font-black flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                                    <p className="text-[11px] text-gray-500 font-medium leading-relaxed">This page will update automatically</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    /* Loading initial link */
+                                    <div className="flex flex-col items-center gap-3 py-6">
+                                        <IconLoader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                                        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Generating secure link...</p>
                                     </div>
                                 )}
-
-                                {/* Persistent Fallback - Always visible as secondary or if widget fails */}
-                                <div className="mt-8 pt-6 border-t border-gray-200 w-full">
-                                    <p className="text-[10px] text-gray-400 text-center mb-3 font-medium">Alternative: Open direct in Telegram</p>
-                                    <a
-                                        href="https://t.me/PerrichenoBot?start=login"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full flex items-center justify-center gap-2 py-3 bg-[#1A1A1A] text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-black transition-all active:scale-[0.98]"
-                                    >
-                                        <IconBrandTelegram className="w-4 h-4" /> Open in Telegram
-                                    </a>
-                                    
-                                    <button
-                                        onClick={handleManualRetry}
-                                        className="w-full mt-3 flex items-center justify-center gap-1.5 text-[9px] text-gray-400 hover:text-gray-600 transition-colors uppercase font-bold tracking-tighter"
-                                    >
-                                        <IconRefresh className="w-3 h-3" /> Still Loading? Reload Widget
-                                    </button>
-                                </div>
                             </div>
 
                             {error && (

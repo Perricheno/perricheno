@@ -20,11 +20,13 @@ jobs:
           CRYPTOCLOUD_SHOP_ID: ${{ secrets.CRYPTOCLOUD_SHOP_ID }}
           CRYPTOCLOUD_SECRET: ${{ secrets.CRYPTOCLOUD_SECRET }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WEBHOOK_DOMAIN: ${{ secrets.WEBHOOK_DOMAIN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN
+          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET
           script: |
             cd ${{ secrets.SERVER_PATH }}
             
@@ -42,7 +44,9 @@ jobs:
             grep -q '^CRYPTOCLOUD_SHOP_ID=' .env && sed -i 's/^CRYPTOCLOUD_SHOP_ID=.*/CRYPTOCLOUD_SHOP_ID='"$CRYPTOCLOUD_SHOP_ID"'/' .env || echo "CRYPTOCLOUD_SHOP_ID=$CRYPTOCLOUD_SHOP_ID" >> .env
             grep -q '^CRYPTOCLOUD_SECRET=' .env && sed -i 's/^CRYPTOCLOUD_SECRET=.*/CRYPTOCLOUD_SECRET='"$CRYPTOCLOUD_SECRET"'/' .env || echo "CRYPTOCLOUD_SECRET=$CRYPTOCLOUD_SECRET" >> .env
             
-            # Telegram Bot
+            # Telegram Bot & Webhook
             grep -q '^TELEGRAM_BOT_TOKEN=' .env && sed -i 's/^TELEGRAM_BOT_TOKEN=.*/TELEGRAM_BOT_TOKEN='"$TELEGRAM_BOT_TOKEN"'/' .env || echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" >> .env
+            grep -q '^WEBHOOK_DOMAIN=' .env && sed -i 's|^WEBHOOK_DOMAIN=.*|WEBHOOK_DOMAIN='"$WEBHOOK_DOMAIN"'|' .env || echo "WEBHOOK_DOMAIN=$WEBHOOK_DOMAIN" >> .env
+            grep -q '^WEBHOOK_SECRET=' .env && sed -i 's/^WEBHOOK_SECRET=.*/WEBHOOK_SECRET='"$WEBHOOK_SECRET"'/' .env || echo "WEBHOOK_SECRET=$WEBHOOK_SECRET" >> .env
             
             bash deploy.sh
