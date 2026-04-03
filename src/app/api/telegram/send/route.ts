@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BOT_TOKEN = "8270333686:AAEaQLlEmewJeVQ2FSZXDHrOFx_0eN4JQfI";
-// Use POST to https://api.telegram.org/bot<token>/sendDocument
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export async function POST(req: NextRequest) {
     try {
+        if (!BOT_TOKEN) {
+            console.error("TELEGRAM_BOT_TOKEN is not defined in environment variables");
+            return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+        }
+
         const formData = await req.formData();
         const file = formData.get("document");
         const chatId = formData.get("chat_id");
