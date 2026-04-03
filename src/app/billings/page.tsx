@@ -82,13 +82,17 @@ export default function BillingsPage() {
                 data = JSON.parse(rawText);
             } catch (parseErr) {
                 console.error("Server crashed and returned HTML instead of JSON:", rawText.slice(0, 500));
-                window.open("https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH", "_blank");
+                window.location.assign("https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH");
                 return;
             }
 
-            if (data.url) window.open(data.url, '_blank');
-            else if (data.fallback_url) window.open(data.fallback_url, '_blank');
-            else alert('Checkout failed: ' + (data.error || 'Unknown error'));
+            if (data.url) {
+                window.location.assign(data.url);
+            } else if (data.fallback_url) {
+                window.location.assign(data.fallback_url);
+            } else {
+                alert('Checkout failed: ' + (data.error || 'Unknown error'));
+            }
         } catch (err: any) {
             console.error("Checkout fetch failed:", err);
             alert(`Checkout error: ${err.message || 'Unknown network error. Check console.'}`);

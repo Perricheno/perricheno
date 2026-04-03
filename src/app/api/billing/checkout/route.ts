@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
+import db from '@/lib/db';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SHOP_ID = process.env.CRYPTOCLOUD_SHOP_ID;
@@ -93,10 +94,28 @@ export async function POST(req: Request) {
         }
 
         if (!CRYPTOCLOUD_API_KEY || !CRYPTOCLOUD_SHOP_ID) {
-            return NextResponse.json({ 
-                error: "Payments not fully configured yet.", 
-                fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH" 
-            }, { status: 501 });
+            console.warn("CryptoCloud Keys not set. Using POS fallback.");
+            const fallbackLink = "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH";
+            
+            // Send fallback to Telegram if token exists
+            if (process.env.TELEGRAM_BOT_TOKEN) {
+                const userRow = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId) as any;
+                if (userRow?.telegram_id) {
+                    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            chat_id: userRow.telegram_id,
+                            text: `⚠️ <b>Payment Notice</b>\n\nDirect invoices are currently unavailable, but you can pay via the Terminal. <i>(Please enter the amount manually: $${selectedPack.amount})</i>`,
+                            parse_mode: "HTML",
+                            reply_markup: {
+                                inline_keyboard: [[{ text: "Open Terminal", url: fallbackLink }]]
+                            }
+                        })
+                    }).catch(console.error);
+                }
+            }
+            return NextResponse.json({ fallback_url: fallbackLink });
         }
 
         const uniqueOrderId = `UID_${userId}_PACK_${packId}_TS_${Date.now()}`;
@@ -104,7 +123,7 @@ export async function POST(req: Request) {
         const res = await fetch("https://api.cryptocloud.plus/v2/invoice/create", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${CRYPTOCLOUD_API_KEY}`,
+                "Authorization": `Token ${CRYPTOCLOUD_API_KEY}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -120,16 +139,33 @@ export async function POST(req: Request) {
         try {
             data = JSON.parse(textResponse);
         } catch (parseError) {
-            console.error("CryptoCloud returned HTML or invalid JSON:", textResponse.substring(0, 200));
-            // Instead of crashing, let's gracefully fallback
-            return NextResponse.json({ 
-                error: "CryptoCloud gateway error. Redirecting to backup link.",
-                fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH"
-            }, { status: 502 });
+            console.error("CryptoCloud returned invalid JSON:", textResponse.substring(0, 200));
+            return NextResponse.json({ error: "Gateway error", fallback_url: "https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH" }, { status: 502 });
         }
 
-        if (data.status === "success" || data.result?.link) {
-            return NextResponse.json({ url: data.result?.link || data.pay_url || data.result?.pay_url });
+        if (data.status === "success" || data.result?.link || data.pay_url) {
+            const payUrl = data.result?.link || data.pay_url || data.result?.pay_url;
+            
+            // Send proper generated invoice via Bot
+            if (process.env.TELEGRAM_BOT_TOKEN) {
+                const userRow = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId) as any;
+                if (userRow?.telegram_id) {
+                    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            chat_id: userRow.telegram_id,
+                            text: `🧾 <b>Invoice Created</b>\n\nPackage: ${selectedPack.name}\nAmount: <b>$${selectedPack.amount}</b>\n\nPlease complete your payment using the secure link below.`,
+                            parse_mode: "HTML",
+                            reply_markup: {
+                                inline_keyboard: [[{ text: "Pay Now", url: payUrl }]]
+                            }
+                        })
+                    }).catch(console.error);
+                }
+            }
+
+            return NextResponse.json({ url: payUrl });
         } else {
             console.error("CryptoCloud Error:", data);
             return NextResponse.json({ 
