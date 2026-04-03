@@ -11,6 +11,8 @@ services:
       - NODE_ENV=production
       - R_COMPILER_URL=http://r-compiler:8000
       - PYTHON_COMPILER_URL=http://python-compiler:8000
+    env_file:
+      - .env
     volumes:
       - db-data:/app/db
     healthcheck:
