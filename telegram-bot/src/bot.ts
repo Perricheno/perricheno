@@ -119,6 +119,8 @@ bot.command("me", async (ctx) => {
     }
 });
 
+import http from "http";
+
 // ── Launch ──
 async function main() {
     if (WEBHOOK_DOMAIN) {
@@ -126,23 +128,27 @@ async function main() {
         const webhookPath = `/webhook/${BOT_TOKEN}`;
         const webhookUrl = `${WEBHOOK_DOMAIN}/api/webhook/telegram`;
 
-        // Set webhook via Telegram API
+        // Set webhook via Telegram API to point to Next.js proxy
         await bot.telegram.setWebhook(webhookUrl, {
             secret_token: WEBHOOK_SECRET,
+            drop_pending_updates: true,
         });
 
-        // Start lightweight HTTP server to receive updates
-        await bot.launch({
-            webhook: {
-                domain: WEBHOOK_DOMAIN,
-                path: webhookPath,
-                port: PORT,
-                secretToken: WEBHOOK_SECRET,
-            },
+        // Start native HTTP server to receive updates safely without redundant API calls
+        const server = http.createServer(bot.webhookCallback(webhookPath, { 
+            secretToken: WEBHOOK_SECRET 
+        }));
+
+        server.listen(PORT, () => {
+            console.log(`🚀 Bot launched in WEBHOOK mode on port ${PORT}`);
+            console.log(`   External URL: ${webhookUrl}`);
+            console.log(`   Internal listening on: ${webhookPath}`);
         });
 
-        console.log(`🚀 Bot launched in WEBHOOK mode on port ${PORT}`);
-        console.log(`   Webhook URL: ${webhookUrl}`);
+        // Graceful shutdown support for native server
+        process.once("SIGINT", () => { server.close(); bot.stop("SIGINT"); });
+        process.once("SIGTERM", () => { server.close(); bot.stop("SIGTERM"); });
+
     } else {
         // Development fallback: Long polling
         await bot.launch();
