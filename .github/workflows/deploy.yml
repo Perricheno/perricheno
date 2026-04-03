@@ -30,23 +30,34 @@ jobs:
           script: |
             cd ${{ secrets.SERVER_PATH }}
             
-            # Update or append OPENAI_API_KEY
-            grep -q '^OPENAI_API_KEY=' .env && sed -i 's/^OPENAI_API_KEY=.*/OPENAI_API_KEY='"$OPENAI_API_KEY"'/' .env || echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> .env
+            # Helper function: Only set or append if the value is not empty
+            update_env() {
+              local key=$1
+              local value=$2
+              if [ -n "$value" ]; then
+                if grep -q "^$key=" .env; then
+                  # Use awk to safely replace the value, avoiding sed delimiter issues
+                  awk -v k="$key" -v v="$value" -F= 'BEGIN{OFS="="} $1==k {$2=v} 1' .env > .env.tmp && mv .env.tmp .env
+                else
+                  echo "$key=$value" >> .env
+                fi
+              fi
+            }
+
+            # Only update if the secrets are actually provided in GitHub
+            update_env "NODE_ENV" "production"
+            update_env "OPENAI_API_KEY" "$OPENAI_API_KEY"
+            update_env "LATEX_COMPILER_URL" "$LATEX_COMPILER_URL"
+            update_env "LATEX_COMPILER_KEY" "$LATEX_COMPILER_KEY"
+            update_env "CRYPTOCLOUD_API_KEY" "$CRYPTOCLOUD_API_KEY"
+            update_env "CRYPTOCLOUD_SHOP_ID" "$CRYPTOCLOUD_SHOP_ID"
+            update_env "CRYPTOCLOUD_SECRET" "$CRYPTOCLOUD_SECRET"
+            update_env "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
+            update_env "WEBHOOK_DOMAIN" "$WEBHOOK_DOMAIN"
+            update_env "WEBHOOK_SECRET" "$WEBHOOK_SECRET"
             
-            # Update or append LATEX_COMPILER_URL
-            grep -q '^LATEX_COMPILER_URL=' .env && sed -i 's/^LATEX_COMPILER_URL=.*/LATEX_COMPILER_URL='"${LATEX_COMPILER_URL//\//\\/}"'/' .env || echo "LATEX_COMPILER_URL=$LATEX_COMPILER_URL" >> .env
-            
-            # Update or append LATEX_COMPILER_KEY
-            grep -q '^LATEX_COMPILER_KEY=' .env && sed -i 's/^LATEX_COMPILER_KEY=.*/LATEX_COMPILER_KEY='"$LATEX_COMPILER_KEY"'/' .env || echo "LATEX_COMPILER_KEY=$LATEX_COMPILER_KEY" >> .env
-            
-            # CryptoCloud Keys
-            grep -q '^CRYPTOCLOUD_API_KEY=' .env && sed -i 's/^CRYPTOCLOUD_API_KEY=.*/CRYPTOCLOUD_API_KEY='"$CRYPTOCLOUD_API_KEY"'/' .env || echo "CRYPTOCLOUD_API_KEY=$CRYPTOCLOUD_API_KEY" >> .env
-            grep -q '^CRYPTOCLOUD_SHOP_ID=' .env && sed -i 's/^CRYPTOCLOUD_SHOP_ID=.*/CRYPTOCLOUD_SHOP_ID='"$CRYPTOCLOUD_SHOP_ID"'/' .env || echo "CRYPTOCLOUD_SHOP_ID=$CRYPTOCLOUD_SHOP_ID" >> .env
-            grep -q '^CRYPTOCLOUD_SECRET=' .env && sed -i 's/^CRYPTOCLOUD_SECRET=.*/CRYPTOCLOUD_SECRET='"$CRYPTOCLOUD_SECRET"'/' .env || echo "CRYPTOCLOUD_SECRET=$CRYPTOCLOUD_SECRET" >> .env
-            
-            # Telegram Bot & Webhook
-            grep -q '^TELEGRAM_BOT_TOKEN=' .env && sed -i 's/^TELEGRAM_BOT_TOKEN=.*/TELEGRAM_BOT_TOKEN='"$TELEGRAM_BOT_TOKEN"'/' .env || echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" >> .env
-            grep -q '^WEBHOOK_DOMAIN=' .env && sed -i 's|^WEBHOOK_DOMAIN=.*|WEBHOOK_DOMAIN='"$WEBHOOK_DOMAIN"'|' .env || echo "WEBHOOK_DOMAIN=$WEBHOOK_DOMAIN" >> .env
-            grep -q '^WEBHOOK_SECRET=' .env && sed -i 's/^WEBHOOK_SECRET=.*/WEBHOOK_SECRET='"$WEBHOOK_SECRET"'/' .env || echo "WEBHOOK_SECRET=$WEBHOOK_SECRET" >> .env
+            # Ensure static internal domains are set
+            update_env "SITE_INTERNAL_URL" "http://perricheno-site:3000"
+            update_env "BOT_CONTAINER_URL" "http://telegram-bot:3001"
             
             bash deploy.sh
