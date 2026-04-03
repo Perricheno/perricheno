@@ -4,8 +4,11 @@ import { handleVisualRequest } from "./handlers/visual";
 import { handleHistory } from "./handlers/history";
 import { getMainMenu, getVisualMenu } from "./keyboards/menu";
 
+import http from "http";
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+const BOT_PORT = process.env.BOT_PORT || 3001;
 
 if (!BOT_TOKEN || !WEBHOOK_SECRET) {
     console.error("FATAL: Environment variables (BOT_TOKEN, WEBHOOK_SECRET) are not set.");
@@ -63,11 +66,17 @@ bot.catch((err: any, ctx: any) => {
 
 // --- Launch ---
 async function main() {
-    // Check if webhook is intended (production)
+    // 1. Setup Internal Webhook Listener (for proxy from Next.js)
+    const server = http.createServer(bot.webhookCallback(`/webhook/${BOT_TOKEN}`));
+    server.listen(BOT_PORT, () => {
+        console.log(`🤖 Internal Bot Server listening on port ${BOT_PORT}`);
+    });
+
+    // 2. Register with Telegram
     if (process.env.WEBHOOK_DOMAIN) {
         const webhookUrl = `${process.env.WEBHOOK_DOMAIN}/api/webhook/telegram`;
         await bot.telegram.setWebhook(webhookUrl, { secret_token: WEBHOOK_SECRET });
-        console.log(`🚀 Bot launched in WEBHOOK mode: ${webhookUrl}`);
+        console.log(`🚀 Bot registered Webhook: ${webhookUrl}`);
     } else {
         await bot.launch();
         console.log("🚀 Bot launched in POLLING mode (dev)");

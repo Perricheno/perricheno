@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BOT_CONTAINER_URL = process.env.BOT_CONTAINER_URL || "http://telegram-bot:3001";
+const BOT_CONTAINER_URL = process.env.BOT_CONTAINER_URL || 
+    (process.env.NODE_ENV === "development" ? "http://localhost:3001" : "http://telegram-bot:3001");
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 // Telegram sends webhook updates to this public endpoint.
