@@ -184,54 +184,6 @@ export default function BillingsPage() {
                             </div>
                         )}
 
-                        {/* ━━ 24h Usage Chart ━━ */}
-                        <div className="bg-white border border-[var(--border)] rounded-[32px] p-6 md:p-10 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-black">
-                                        <IconChartBar className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-black">Consumption <span className="text-gray-400">History</span></h3>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hourly distribution</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    Live Stream
-                                </div>
-                            </div>
-                            
-                            <div className="flex items-end gap-[4px] md:gap-[6px] h-48 md:h-60 overflow-x-auto pb-4 scrollbar-hide group">
-                                {hourlyData.length > 0 ? hourlyData.map((h, i) => {
-                                    const pct = (h.value / maxHourly) * 100;
-                                    const isNow = i === hourlyData.length - 1;
-                                    return (
-                                        <div key={i} className="flex-1 min-w-[14px] md:min-w-[20px] flex flex-col items-center gap-3 relative group/bar">
-                                            {/* Tooltip */}
-                                            <div className="absolute -top-10 opacity-0 group-hover/bar:opacity-100 transition-all duration-300 -translate-y-2 group-hover/bar:translate-y-0 bg-black text-white text-[9px] font-black px-3 py-1.5 rounded-lg whitespace-nowrap z-20 pointer-events-none shadow-2xl">
-                                                {h.value.toLocaleString()} chars
-                                                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45" />
-                                            </div>
-                                            
-                                            <div 
-                                                className={`w-full rounded-full transition-all duration-700 cursor-default
-                                                    ${isNow ? 'bg-black shadow-[0_0_15px_rgba(0,0,0,0.1)]' : 'bg-gray-100 group-hover/bar:bg-gray-300'}
-                                                `} 
-                                                style={{ height: `${Math.max(6, pct)}%` }} 
-                                            />
-                                            {i % 4 === 0 && (
-                                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-tighter shrink-0">{h.label}</span>
-                                            )}
-                                        </div>
-                                    );
-                                }) : (
-                                    <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl">
-                                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">No activity data available</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </div>
 
                     {/* ━━━━ Right Column: Transactions ━━━━ */}
