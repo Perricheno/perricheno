@@ -64,7 +64,7 @@ export async function handleMe(ctx: any) {
             ]);
 
             if (ctx.callbackQuery) {
-                await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard });
+                await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
             } else {
                 await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
             }

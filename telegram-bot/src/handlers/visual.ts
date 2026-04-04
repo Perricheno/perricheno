@@ -10,7 +10,7 @@ export async function handleVisualStart(ctx: any) {
     await ctx.answerCbQuery();
     await ctx.editMessageText(`📂 *Новая визуализация*\n\nПожалуйста, введите название для этого проекта (например: "Отчет по продажам 2024"):`, {
         parse_mode: "Markdown"
-    });
+    }).catch(() => {});
 }
 
 export async function handleVisualName(ctx: any) {
@@ -82,7 +82,7 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
         await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined, 
             `✅ *Код сгенерирован!*\n\n\`\`\`${lang}\n${code.slice(0, 500)}${code.length > 500 ? '...' : ''}\n\`\`\`\n\n🔄 Компилирую и создаю изображение...`, 
             { parse_mode: "Markdown" }
-        );
+        ).catch(() => {});
 
         // 3. Compile
         const compRes = await fetch(`${SITE_URL}/api/internal/bot/visual/compile`, {

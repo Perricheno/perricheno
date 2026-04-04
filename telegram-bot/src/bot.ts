@@ -40,18 +40,24 @@ bot.command("billing", ctx => handleBilling(ctx));
 // --- Actions (Callbacks) ---
 bot.action("main_menu", async (ctx) => {
     await ctx.answerCbQuery();
-    await ctx.editMessageText(`🏠 *Главное меню*`, {
-        parse_mode: "Markdown",
-        ...getMainMenu()
-    });
+    const text = `🏠 *Главное меню*`;
+    const keyboard = getMainMenu();
+    if (ctx.callbackQuery) {
+        await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
+    } else {
+        await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
+    }
 });
 
 bot.action("tool_visual", async (ctx) => {
     await ctx.answerCbQuery();
-    await ctx.editMessageText(`📊 *Визуализация данных*\n\nВыберите тип визуализации или создайте новый проект:`, {
-        parse_mode: "Markdown",
-        ...getVisualSuggestionsKeyboard()
-    });
+    const text = `📊 *Визуализация данных*\n\nВыберите тип визуализации или создайте новый проект:`;
+    const keyboard = getVisualSuggestionsKeyboard();
+    if (ctx.callbackQuery) {
+        await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
+    } else {
+        await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
+    }
 });
 
 bot.action("select_type_auto", ctx => handleVisualStart(ctx));
@@ -88,6 +94,10 @@ bot.on(["text", "photo", "document"], async (ctx: any) => {
 
 // --- Errors ---
 bot.catch((err: any, ctx: any) => {
+    // Specifically ignore "message is not modified" errors as they are harmless (user clicked same button twice)
+    if (err.description && err.description.includes("message is not modified")) {
+        return;
+    }
     console.error(`Bot Error for ${ctx.updateType}`, err);
 });
 

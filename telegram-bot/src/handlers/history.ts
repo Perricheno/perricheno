@@ -42,7 +42,7 @@ export async function handleHistory(ctx: any, page: number = 1) {
             const historyKeyboard = getHistoryMenu(sessions, page, totalPages);
             
             if (ctx.callbackQuery) {
-                await ctx.editMessageText(text, { parse_mode: "Markdown", ...historyKeyboard });
+                await ctx.editMessageText(text, { parse_mode: "Markdown", ...historyKeyboard }).catch(() => {});
             } else {
                 await ctx.reply(text, { parse_mode: "Markdown", ...historyKeyboard });
             }

@@ -30,14 +30,14 @@ export async function handleBilling(ctx: any) {
                          `💰 *Платные ресурсы*:\n` +
                          `• Доступно chars: ${b.purchased.chars.toLocaleString()}\n` +
                          `• Доступно visuals: ${b.purchased.visuals}\n\n` +
-                         `🔗 [Управление биллингом на сайте](https://perricheno.ru/billing)`;
+                         `🔗 [Управление биллингом на сайте](https://perricheno.ru/billings)`;
             
             const keyboard = Markup.inlineKeyboard([
                 [Markup.button.callback("« Назад", "main_menu")]
             ]);
 
             if (ctx.callbackQuery) {
-                await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard });
+                await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
             } else {
                 await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
             }
