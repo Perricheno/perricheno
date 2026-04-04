@@ -101,7 +101,11 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             }),
         });
 
-        if (!genRes.ok) throw new Error("Backend rejected the request.");
+        if (!genRes.ok) {
+            const errBody = await genRes.text().catch(() => 'Unknown error');
+            console.error(`Generate API Error ${genRes.status}:`, errBody);
+            throw new Error(`Сервер вернул ошибку (${genRes.status}): ${errBody.slice(0, 200)}`);
+        }
 
     } catch (err: any) {
         console.error(err);
