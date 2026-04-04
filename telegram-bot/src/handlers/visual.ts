@@ -167,7 +167,13 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             textParts.push(`[${s.images.length} image(s) attached by user for reference]`);
         }
 
-        const fullContext = `TITLE: ${s.title}\nTYPE: ${s.type}\n\n${textParts.join('\n\n---\n\n')}`;
+        let fullContext = `TITLE: ${s.title}\nTYPE: ${s.type}\n\n${textParts.join('\n\n---\n\n')}`;
+        
+        // Cap total context to ~100K chars to avoid token overflow with large files
+        const MAX_CONTEXT = 100_000;
+        if (fullContext.length > MAX_CONTEXT) {
+            fullContext = fullContext.slice(0, MAX_CONTEXT) + "\n\n...[CONTEXT TRUNCATED — too large, only first 100K chars used]";
+        }
         
         // Update status
         if (msg.message_id) {
