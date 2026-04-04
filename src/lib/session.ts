@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const SECRET_KEY = new TextEncoder().encode("super-secret-key-change-this-in-env-938210");
+const SECRET_KEY = new TextEncoder().encode(process.env.SESSION_SECRET || "fallback-secret-key-at-least-thirty-two-chars-long");
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export async function createSession(userId: number) {
@@ -35,15 +35,12 @@ export async function verifySession() {
     
     if (!session) return null;
 
-    // Try HS512 first (new), fall back to HS256 (legacy) for backwards compat
-    for (const alg of ['HS512', 'HS256'] as const) {
-        try {
-            const { payload } = await jwtVerify(session, SECRET_KEY, {
-                algorithms: [alg],
-            });
-            return payload.userId as number;
-        } catch {}
-    }
+    try {
+        const { payload } = await jwtVerify(session, SECRET_KEY, {
+            algorithms: ['HS256'],
+        });
+        return payload.userId as number;
+    } catch {}
 
     // Both failed — stale/corrupt token, clear it
     try { cookieStore.delete('perricheno_session'); } catch {}

@@ -95,6 +95,13 @@ db.exec(`
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY(session_id) REFERENCES chat_sessions(id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS bot_sessions (
+        user_id INTEGER PRIMARY KEY,
+        session_data TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 `);
 
 // Safe migrations for legacy database updates
@@ -466,6 +473,10 @@ if (typeof window === 'undefined') {
         setInterval(async () => {
             try {
                 const now = new Date().toISOString();
+                
+                // --- Cleanup stuck sessions ---
+                cleanupStuckSessions();
+
                 const pending = getPendingTasksToRemind(now);
                 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -682,4 +693,37 @@ export async function deleteTelegramNotification(userId: number, messageId: numb
     } catch (e) {
         // Silent error for delete, might already be deleted or too old
     }
+}
+
+// --- Bot Persistence ---
+
+export function getBotSession(userId: number): any | null {
+    const row = db.prepare('SELECT session_data FROM bot_sessions WHERE user_id = ?').get(userId) as any;
+    if (!row) return null;
+    try {
+        return JSON.parse(row.session_data);
+    } catch {
+        return null;
+    }
+}
+
+export function updateBotSession(userId: number, data: any): void {
+    const sessionJson = JSON.stringify(data);
+    db.prepare(`
+        INSERT INTO bot_sessions (user_id, session_data, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET 
+            session_data = excluded.session_data,
+            updated_at = CURRENT_TIMESTAMP
+    `).run(userId, sessionJson);
+}
+
+export function cleanupStuckSessions(): void {
+    // Reset sessions that have been 'generating' for more than 15 minutes.
+    // This handles server restarts or crashes mid-task.
+    db.prepare(`
+        UPDATE agent_sessions 
+        SET status = 'error', error_msg = 'Session timed out (system restart or crash)' 
+        WHERE status = 'generating' AND updated_at < datetime('now', '-15 minutes')
+    `).run();
 }

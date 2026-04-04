@@ -1,5 +1,5 @@
 import { getMainMenu, getVisualSuggestionsKeyboard, getVisualActionKeyboard, getLangSelectionKeyboard, getPostVisualKeyboard } from "../keyboards/menu";
-import { sessionStore } from "../sessionStore";
+import { getSession, saveSession } from "../sessionStore";
 
 const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -273,11 +273,14 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
     } catch (err: any) {
         console.error("Complete Push Error:", err);
     } finally {
-        for (const [uid, sess] of sessionStore) {
-            if (uid === chatId || sess.visual?.chatId === chatId) {
-                sess.step = 'idle';
-                sess.isProcessing = false;
-            }
+        // Reset processing state for the user
+        try {
+            const userSess = await getSession(chatId);
+            userSess.step = 'idle';
+            userSess.isProcessing = false;
+            await saveSession(chatId, userSess);
+        } catch (e) {
+            console.error("Failed to reset session in complete push:", e);
         }
     }
 }

@@ -1,15 +1,17 @@
+import "dotenv/config";
 import { Telegraf, Context } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
 import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset, handleVisualToggleType, handleCompileStart, handleCompileFile } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling, handleBillingShop, handleBillingCategory, handleBillingBuy, handleBillingConfirm, handleBillingHistory, handleBillingPromoStart, handleBillingPromoApply } from "./handlers/billing";
 import { getMainMenu, getVisualSuggestionsKeyboard, getLangSelectionKeyboard } from "./keyboards/menu";
-import { sessionStore } from "./sessionStore";
+import { getSession, saveSession } from "./sessionStore";
 
 import http from "http";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+const SITE_INTERNAL_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const BOT_PORT = process.env.BOT_PORT || 3001;
 
 if (!BOT_TOKEN || !WEBHOOK_SECRET) {
@@ -20,17 +22,19 @@ if (!BOT_TOKEN || !WEBHOOK_SECRET) {
 const bot = new Telegraf(BOT_TOKEN) as any;
 
 // --- In-Memory Session Middleware ---
-// sessionStore is imported from ./sessionStore to avoid circular deps
 
 bot.use(async (ctx: any, next: () => Promise<void>) => {
     const userId = ctx.from?.id;
     if (!userId) return next();
     
-    if (!sessionStore.has(userId)) {
-        sessionStore.set(userId, { step: 'idle', isProcessing: false, visual: { text: [], images: [], files: [], title: '', lang: 'python' } });
-    }
-    ctx.session = sessionStore.get(userId);
-    return next();
+    // 1. Load session from API
+    ctx.session = await getSession(userId);
+    
+    // 2. Wrap next() to save session back to API after execution
+    await next();
+    
+    // 3. Save session back
+    await saveSession(userId, ctx.session);
 });
 
 
