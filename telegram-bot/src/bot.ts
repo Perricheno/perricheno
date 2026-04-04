@@ -1,10 +1,9 @@
-import "dotenv/config";
 import { Telegraf, Context } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
 import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset, handleVisualToggleType, handleCompileStart, handleCompileFile } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling, handleBillingShop, handleBillingCategory, handleBillingBuy, handleBillingConfirm, handleBillingHistory, handleBillingPromoStart, handleBillingPromoApply } from "./handlers/billing";
-import { getMainMenu, getVisualSuggestionsKeyboard, getLangSelectionKeyboard } from "./keyboards/menu";
+import { getMainMenu, getVisualSuggestionsKeyboard, getLangSelectionKeyboard, getVisualActionKeyboard } from "./keyboards/menu";
 import { getSession, saveSession } from "./sessionStore";
 
 import http from "http";
@@ -46,33 +45,44 @@ bot.command("history", ctx => handleHistory(ctx));
 bot.command("billing", ctx => handleBilling(ctx));
 
 // --- Actions (Callbacks) ---
-bot.action("main_menu", async (ctx) => {
-    await ctx.answerCbQuery();
-    const text = `🏠 *Главное меню*`;
-    const keyboard = getMainMenu();
-    
-    // Reset any active steps
-    ctx.session.step = 'idle';
-    ctx.session.isProcessing = false;
-
-    // Use reply instead of editMessageText to handle transitions from photo/media messages
-    await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
-});
-
-bot.action("tool_visual", ctx => handleVisualStart(ctx));
-bot.action("tool_compile", ctx => handleCompileStart(ctx));
-
 bot.action(/^toggle_type_(.+)$/, ctx => handleVisualToggleType(ctx));
-bot.action("visual_generate_start", async (ctx) => {
+bot.action("main_menu", async (ctx: any) => {
+    ctx.session.step = 'idle';
     await ctx.answerCbQuery();
-    await ctx.editMessageText("⚙️ *Выберите язык программирования для генерации:*", {
+    await ctx.editMessageText(`🏠 *Главное меню*\n\nВыберите нужный инструмент:`, {
         parse_mode: "Markdown",
-        ...getLangSelectionKeyboard()
-    }).catch(() => {});
+        ...getMainMenu()
+    });
 });
 
-bot.action("billing_info", ctx => handleBilling(ctx));
-bot.action("me_info", ctx => handleMe(ctx));
+bot.action("tool_visual", async (ctx: any) => {
+    ctx.session.step = 'idle';
+    await handleVisualStart(ctx);
+});
+
+bot.action("tool_compile", async (ctx: any) => {
+    ctx.session.step = 'idle';
+    await handleCompileStart(ctx);
+});
+
+bot.action("me_info", async (ctx: any) => {
+    ctx.session.step = 'idle';
+    await handleMe(ctx);
+});
+
+bot.action("billing_info", async (ctx: any) => {
+    ctx.session.step = 'idle';
+    await handleBilling(ctx);
+});
+
+bot.action("visual_modify", async (ctx: any) => {
+    ctx.session.step = 'collecting_visual_data';
+    await ctx.answerCbQuery();
+    await ctx.reply(`🔧 *Режим модификации*\n\nКонтекст сохранен. Присылайте дополнительные данные (текст, фото, файлы) или нажмите "Сгенерировать":`, {
+        parse_mode: "Markdown",
+        ...getVisualActionKeyboard()
+    });
+});
 
 // ── Billing Actions ──
 bot.action("billing_shop", ctx => handleBillingShop(ctx));
@@ -93,21 +103,6 @@ bot.action("lang_r", ctx => handleVisualProcess(ctx, 'r'));
 // --- Missing handler: "noop" (used for pagination indicator) ---
 bot.action("noop", async (ctx) => {
     await ctx.answerCbQuery();
-});
-
-// --- Missing handler: "visual_modify" (from getPostVisualKeyboard) ---
-bot.action("visual_modify", async (ctx) => {
-    await ctx.answerCbQuery();
-    ctx.session.step = 'collecting_visual_data';
-    await ctx.reply("🔧 *Режим модификации*\n\nПришлите дополнительные данные или инструкции для коррекции визуализации:", {
-        parse_mode: "Markdown",
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: "🚀 Перегенерировать", callback_data: "visual_generate" }],
-                [{ text: "❌ Отмена", callback_data: "main_menu" }]
-            ]
-        }
-    });
 });
 
 // --- Missing handler: "settings_main" (from getMainMenu) ---

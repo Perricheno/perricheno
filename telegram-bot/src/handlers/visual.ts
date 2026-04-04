@@ -1,8 +1,13 @@
+import { Context, Markup } from "telegraf";
 import { getMainMenu, getVisualSuggestionsKeyboard, getVisualActionKeyboard, getLangSelectionKeyboard, getPostVisualKeyboard } from "../keyboards/menu";
+import { escapeMarkdown } from "../utils/format";
 import { getSession, saveSession } from "../sessionStore";
 
 const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+
+// Debounce timer for album collection
+const collectionTimers = new Map<number, NodeJS.Timeout>();
 
 export async function handleVisualStart(ctx: any) {
     const type = ctx.match?.[1] || 'auto';
@@ -35,7 +40,7 @@ export async function handleVisualName(ctx: any) {
     ctx.session.visual.title = name;
     ctx.session.step = 'collecting_visual_data';
 
-    await ctx.reply(`📂 *Шаг 2: Сбор данных для "${name}"*\n\nПрисылайте ТЕКСТ, ФОТО или ФАЙЛЫ, которые ИИ должен проанализировать.\n\nКогда закончите, нажмите кнопку ниже:`, {
+    await ctx.reply(`✅ *Название установлено!* — \`${escapeMarkdown(name)}\`\n\nТеперь присылайте данные для визуализации (текст, фото или файлы):`, {
         parse_mode: "Markdown",
         ...getVisualActionKeyboard()
     });
@@ -43,6 +48,7 @@ export async function handleVisualName(ctx: any) {
 
 export async function handleVisualCollect(ctx: any) {
     const s = ctx.session.visual;
+    const userId = ctx.from.id;
     
     if (ctx.message.text) {
         s.text.push(ctx.message.text);
@@ -53,10 +59,21 @@ export async function handleVisualCollect(ctx: any) {
         s.files.push({ fileId: ctx.message.document.file_id, fileName: ctx.message.document.file_name });
     }
 
-    const count = s.text.length + s.images.length + s.files.length;
-    await ctx.reply(`➕ Данные добавлены! (Всего элементов: ${count})\nПрисылайте еще или нажмите "Сгенерировать".`, {
-        ...getVisualActionKeyboard()
-    });
+    // --- Logic for Debouncing Album Messages ---
+    if (collectionTimers.has(userId)) {
+        clearTimeout(collectionTimers.get(userId)!);
+    }
+
+    const timer = setTimeout(async () => {
+        collectionTimers.delete(userId);
+        const count = s.text.length + s.images.length + s.files.length;
+        await ctx.reply(`➕ *Данные добавлены!*\n\nВсего элементов в контексте: \`${count}\`\nПрисылайте ещё или нажмите "Сгенерировать":`, {
+            parse_mode: "Markdown",
+            ...getVisualActionKeyboard()
+        });
+    }, 1000); // Wait 1 second for more media entries
+
+    collectionTimers.set(userId, timer);
 }
 
 export async function handleVisualToggleType(ctx: any) {
@@ -124,7 +141,6 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     const res = await fetch(fileUrl);
                     if (!res.ok) continue;
                     
-                    const ext = fileName.split('.').pop()?.toLowerCase();
                     const pdfBuffer = await res.arrayBuffer();
                     
                     // Always try extraction via site API
@@ -136,14 +152,13 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                             "X-File-Name": fileName
                         },
                         body: pdfBuffer,
-                        signal: AbortSignal.timeout(30000),
+                        signal: AbortSignal.timeout(60000),
                     });
                     
                     if (extractRes.ok) {
                         const { text, images: extractedImages } = await extractRes.json() as any;
                         if (text && text.length > 0) {
                             textParts.push(`FILE "${fileName}":\n${text}`);
-                            // Pass the same text (truncated to 10 rows by extract-text) back as a file
                             const fileNameBase = fileName.replace(/\.[^/.]+$/, "");
                             attachedFiles.push({
                                 name: `${fileNameBase}.txt`,
@@ -203,7 +218,7 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     language: lang,
                     telegramId: ctx.from.id,
                     title: s.title,
-                    chartType: currentType, // One by one
+                    chartType: currentType,
                     chatId: ctx.chat.id,
                     messageId: statusMsg.message_id,
                     images: visionImages,

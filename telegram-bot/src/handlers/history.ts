@@ -1,5 +1,6 @@
 import { Context, Markup } from "telegraf";
 import { getMainMenu, getHistoryMenu } from "../keyboards/menu";
+import { escapeMarkdown } from "../utils/format";
 
 const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -35,7 +36,8 @@ export async function handleHistory(ctx: any, page: number = 1) {
                 return;
             }
 
-            const text = `📂 *Ваша история* (${total} сессий)\n` +
+            const escapedTitle = escapeMarkdown(total > 0 ? "Ваша история" : "История пуста");
+            const text = `📂 *${escapedTitle}* (${total} сессий)\n` +
                          `Страница ${page} из ${totalPages}\n\n` +
                          `Выберите отчет для просмотра деталей (на сайте):`;
             
@@ -69,7 +71,7 @@ export async function handleViewSession(ctx: any, sessionId: string) {
 
             const date = new Date(session.created_at).toLocaleString();
             const text = `📄 *Детали сессии*\n\n` +
-                         `📌 Название: *${session.title}*\n` +
+                         `📌 Название: *${escapeMarkdown(session.title)}*\n` +
                          `🆔 ID: \`${session.id}\`\n` +
                          `📅 Дата: \`${date}\`\n` +
                          `🚥 Статус: *${session.status === 'done' ? '✅ Завершено' : '⏳ В процессе'}*\n\n` +
@@ -130,13 +132,18 @@ export async function handleViewImages(ctx: any, sessionId: string) {
             const { visuals } = await res.json() as any;
             if (!visuals || visuals.length === 0) return ctx.reply("❌ В этой сессии нет сохраненных графиков.");
 
-            for (const v of visuals) {
+            // Telegram MediaGroup limit is 10 items
+            const media: any[] = visuals.slice(0, 10).map((v: any, idx: number) => {
                 const base64Data = v.image.replace(/^data:image\/\w+;base64,/, "");
-                await ctx.replyWithPhoto({ source: Buffer.from(base64Data, 'base64') }, {
-                    caption: `📊 Тип: *${v.chart_type}*`,
-                    parse_mode: "Markdown"
-                });
-            }
+                return {
+                    type: 'photo',
+                    media: { source: Buffer.from(base64Data, 'base64') },
+                    caption: idx === 0 ? `📊 Графики сессии \`${sessionId.slice(0, 8)}\`` : undefined,
+                    parse_mode: 'Markdown'
+                };
+            });
+
+            await ctx.replyWithMediaGroup(media);
         }
     } catch (err) {
         console.error(err);

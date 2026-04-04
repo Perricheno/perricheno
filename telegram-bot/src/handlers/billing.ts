@@ -169,7 +169,10 @@ export async function handleBillingBuy(ctx: any, packId: string) {
 // ✅ handleBillingConfirm — Create invoice
 // ═══════════════════════════════════════
 export async function handleBillingConfirm(ctx: any, packId: string) {
+    if (ctx.session?.isProcessing) return ctx.answerCbQuery("⏳ Счёт уже создается...");
+    
     await ctx.answerCbQuery("⏳ Создаю счёт...");
+    if (ctx.session) ctx.session.isProcessing = true;
     
     try {
         const result = await apiFetch("checkout", { 
@@ -192,9 +195,8 @@ export async function handleBillingConfirm(ctx: any, packId: string) {
         } else {
             await ctx.reply(`❌ ${result.error || "Не удалось создать счёт."}`);
         }
-    } catch (err) {
-        console.error("handleBillingConfirm:", err);
-        await ctx.reply("⚠️ Ошибка создания счёта.");
+    } finally {
+        if (ctx.session) ctx.session.isProcessing = false;
     }
 }
 

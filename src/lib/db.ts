@@ -123,6 +123,12 @@ try { db.exec("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'free'"); 
 try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_banned BOOLEAN DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"); } catch (e) {}
+
+// Auto-promote owner to admin
+try {
+    db.prepare("UPDATE users SET is_admin = 1 WHERE telegram_id = '1153844209'").run();
+} catch (e) {}
 
 // Deep Link Auth requests table
 try {
@@ -262,6 +268,7 @@ export interface User {
     last_week_reset: string | null;
     account_tier: string;
     is_banned: number;
+    is_admin: number;
 }
 
 export function getUserByTelegramId(telegramId: string): User | undefined {
