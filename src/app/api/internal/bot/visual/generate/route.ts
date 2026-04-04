@@ -227,58 +227,115 @@ export async function POST(req: NextRequest) {
                     }).catch(() => {});
                 }
 
-                // 4. Compile (same as agent/visualize — direct to compiler, with wrapRCode for R)
-                const finalCode = isPython ? generatedCode : wrapRCode(generatedCode);
+                // 4. Compile with auto-retry on failure (self-correction)
+                const MAX_RETRIES = 1;
+                let currentCode = generatedCode;
+                let compileSuccess = false;
+                let lastError = "";
 
-                const compileRes = await fetch(`${compilerUrl}/compile`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: finalCode }),
-                    signal: AbortSignal.timeout(45000),
-                });
+                for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                    const finalCode = isPython ? currentCode : wrapRCode(currentCode);
 
-                if (!compileRes.ok) {
-                    updateAgentSession(sessionId, { status: "error", error_msg: `${runtime} compiler server error` });
-                    if (chatId && messageId) {
-                        fetch(`${BOT_INTERNAL_URL}/complete-visual`, {
+                    if (chatId && messageId && attempt > 0) {
+                        fetch(`${BOT_INTERNAL_URL}/update-visual`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                            body: JSON.stringify({ chatId, messageId, sessionId })
+                            body: JSON.stringify({ chatId, messageId, text: `🔄 Retry ${attempt}/${MAX_RETRIES} — исправляю ошибку...`, language })
                         }).catch(() => {});
                     }
-                    return;
-                }
 
-                const compileResult = await compileRes.json();
-
-                if (compileResult.success && compileResult.image) {
-                    // Save everything to DB
-                    const visualEntry = JSON.stringify([{
-                        chart_type: chartType,
-                        language: language,
-                        image: `data:image/png;base64,${compileResult.image}`,
-                        source_code: generatedCode
-                    }]);
-
-                    updateAgentSession(sessionId, {
-                        status: "done",
-                        stream_text: generatedCode,
-                        visuals_json: visualEntry,
+                    const compileRes = await fetch(`${compilerUrl}/compile`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: finalCode }),
+                        signal: AbortSignal.timeout(45000),
                     });
 
-                    // Deduct usage
-                    if (telegramId) {
-                        const user = getUserByTelegramId(String(telegramId));
-                        if (user) {
-                            checkAndDeductUsage(user.id, 'chars', generatedCode.length);
-                            checkAndDeductUsage(user.id, 'visuals', 1);
+                    if (!compileRes.ok) {
+                        lastError = `${runtime} compiler server error (HTTP ${compileRes.status})`;
+                        continue;
+                    }
+
+                    const compileResult = await compileRes.json();
+
+                    if (compileResult.success && compileResult.image) {
+                        // ✅ Success — save to DB
+                        const visualEntry = JSON.stringify([{
+                            chart_type: chartType,
+                            language: language,
+                            image: `data:image/png;base64,${compileResult.image}`,
+                            source_code: currentCode
+                        }]);
+
+                        updateAgentSession(sessionId, {
+                            status: "done",
+                            stream_text: currentCode,
+                            visuals_json: visualEntry,
+                        });
+
+                        // Deduct usage
+                        if (telegramId) {
+                            const user = getUserByTelegramId(String(telegramId));
+                            if (user) {
+                                checkAndDeductUsage(user.id, 'chars', currentCode.length);
+                                checkAndDeductUsage(user.id, 'visuals', 1);
+                            }
+                        }
+                        compileSuccess = true;
+                        break;
+                    }
+
+                    // ❌ Compilation failed — try self-correction
+                    lastError = compileResult.log || `${runtime} execution failed`;
+                    console.log(`[Visual] Compile attempt ${attempt + 1} failed: ${lastError.slice(0, 200)}`);
+
+                    if (attempt < MAX_RETRIES) {
+                        // Ask AI to fix the code
+                        const fixRes = await fetch("https://api.openai.com/v1/chat/completions", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${OPENAI_API_KEY}`
+                            },
+                            body: JSON.stringify({
+                                model: "gpt-5-mini-2025-08-07",
+                                stream: false,
+                                messages: [
+                                    { role: "system", content: `You are an expert ${runtime} debugger. Fix the code below so it runs without errors. Output ONLY the fixed ${runtime} code. No markdown fences. No commentary.` },
+                                    { role: "user", content: `This ${runtime} code failed with the following error:\n\n--- ERROR ---\n${lastError}\n--- END ERROR ---\n\n--- CODE ---\n${currentCode}\n--- END CODE ---\n\nFix the code and return ONLY the corrected ${runtime} code.` }
+                                ],
+                            }),
+                            signal: AbortSignal.timeout(60000),
+                        });
+
+                        if (fixRes.ok) {
+                            const fixData = await fixRes.json();
+                            const fixedRaw = fixData.choices?.[0]?.message?.content || "";
+                            const fixedCode = cleanCode(fixedRaw);
+                            if (fixedCode && fixedCode.length > 20) {
+                                currentCode = fixedCode;
+                                updateAgentSession(sessionId, { stream_text: currentCode });
+
+                                // Push fixed code preview
+                                if (chatId && messageId) {
+                                    const preview = currentCode.length > 800 ? currentCode.slice(0, 800) + "..." : currentCode;
+                                    fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                                        body: JSON.stringify({ chatId, messageId, text: preview, language })
+                                    }).catch(() => {});
+                                }
+                            }
                         }
                     }
-                } else {
+                }
+
+                // If all attempts failed
+                if (!compileSuccess) {
                     updateAgentSession(sessionId, {
                         status: "error",
-                        stream_text: generatedCode,
-                        error_msg: compileResult.log || `${runtime} execution failed`,
+                        stream_text: currentCode,
+                        error_msg: lastError,
                     });
                 }
 
