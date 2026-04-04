@@ -7,15 +7,16 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
 echo "⬇️  Pulling latest changes..."
 git pull origin main
 
-echo "🔨 Building new image..."
-docker compose build
-
-echo "🚀 Deploying with zero-downtime..."
-# Recreate only changed services, detached
-docker compose up -d --force-recreate --remove-orphans
+echo "🚀 Building & Deploying with zero-downtime..."
+# --build builds if necessary, using cache. 
+# Removing --force-recreate ensures unchanged services (like compilers) are NOT restarted.
+docker compose up -d --build --remove-orphans
 
 echo "⏳ Waiting for health check..."
 # Wait up to 60s for container to be healthy
