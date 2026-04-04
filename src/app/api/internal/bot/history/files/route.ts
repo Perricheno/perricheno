@@ -87,10 +87,11 @@ export async function POST(req: NextRequest) {
                             const base64Data = v.image.replace(/^data:image\/\w+;base64,/, "");
                             imgFolder?.file(`fig_${i + 1}_${v.chart_type || "chart"}.png`, base64Data, { base64: true });
                         }
-                        if (v.source_code && !visualCode) {
+                        const codeContent = v.source_code || v.code;
+                        if (codeContent && !visualCode) {
                             // Only add if we didn't already add stream_text
-                            const ext = v.language === 'r' ? 'R' : 'py';
-                            zip.file(`code_${i + 1}.${ext}`, v.source_code);
+                            const ext = v.language === 'r' || v.language === 'R' ? 'R' : 'py';
+                            zip.file(`code_${i + 1}.${ext}`, codeContent);
                         }
                     });
                 } catch (e) { /* visuals_json might be invalid */ }
@@ -224,13 +225,16 @@ export async function POST(req: NextRequest) {
             if (session.visuals_json) {
                 try {
                     const visuals = JSON.parse(session.visuals_json);
-                    const visualsWithCode = visuals.filter((v: any) => v.source_code);
+                    // Site uses 'code' field, bot uses 'source_code' — normalize
+                    const visualsWithCode = visuals
+                        .map((v: any) => ({ ...v, _code: v.source_code || v.code }))
+                        .filter((v: any) => v._code);
                     
                     if (visualsWithCode.length === 1) {
                         const v = visualsWithCode[0];
-                        const lang = detectLanguage(v.source_code);
+                        const lang = detectLanguage(v._code);
                         const ext = lang === 'python' ? 'py' : 'R';
-                        return new NextResponse(v.source_code, {
+                        return new NextResponse(v._code, {
                             headers: {
                                 "Content-Type": "text/plain; charset=utf-8",
                                 "Content-Disposition": `attachment; filename="visual_${sessionId.slice(0, 8)}.${ext}"`,
@@ -239,9 +243,9 @@ export async function POST(req: NextRequest) {
                     } else if (visualsWithCode.length > 1) {
                         const zip = new JSZip();
                         visualsWithCode.forEach((v: any, i: number) => {
-                            const lang = detectLanguage(v.source_code);
-                            const name = v.chart_type || `visual_${i + 1}`;
-                            zip.file(`${name}.${lang === 'python' ? 'py' : 'R'}`, v.source_code);
+                            const lang = detectLanguage(v._code);
+                            const name = v.chart_type ? `${v.chart_type}_${i + 1}` : `visual_${i + 1}`;
+                            zip.file(`${name}.${lang === 'python' ? 'py' : 'R'}`, v._code);
                         });
                         const content = await zip.generateAsync({ type: "nodebuffer" });
                         return new NextResponse(content as any, {
