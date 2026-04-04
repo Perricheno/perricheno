@@ -19,6 +19,14 @@ export async function GET(req: Request) {
         `);
         const transactionsRaw = txStmt.all(userId) as any[];
 
+        const receiptStmt = db.prepare(`
+            SELECT id, type, pack_name, amount_text, created_at 
+            FROM receipts 
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        `);
+        const receiptsRaw = receiptStmt.all(userId) as any[];
+
         // Format transactions
         const transactions = transactionsRaw.map(tx => {
             const d = new Date(tx._date + 'Z'); 
@@ -35,7 +43,7 @@ export async function GET(req: Request) {
             };
         }).filter(tx => tx.amount !== '0' && tx.amount !== '0.00');
 
-        return NextResponse.json({ transactions, hourlyData: [] });
+        return NextResponse.json({ transactions, receipts: receiptsRaw, hourlyData: [] });
 
     } catch (err: any) {
         console.error("Billing stats error:", err);

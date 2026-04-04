@@ -30,6 +30,7 @@ export default function BillingsPage() {
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
     const [transactions, setTransactions] = useState<any[]>([]);
+    const [receipts, setReceipts] = useState<any[]>([]);
     const [hourlyData, setHourlyData] = useState<any[]>([]);
 
     useEffect(() => {
@@ -42,12 +43,14 @@ export default function BillingsPage() {
                 .then(r => r.json())
                 .then(d => {
                     if (d.transactions) setTransactions(d.transactions);
+                    if (d.receipts) setReceipts(d.receipts);
                     if (d.hourlyData) setHourlyData(d.hourlyData);
                 });
         }
     }, [user]);
 
     const handleCheckout = async (packId: string) => {
+// ... keeping handleCheckout ...
         setCheckoutLoading(packId);
         try {
             const res = await fetch('/api/billing/checkout', {
@@ -83,6 +86,30 @@ export default function BillingsPage() {
 
     const filteredPacks = PACKS.filter(p => activeFilter === 'all' || p.category === activeFilter);
     const maxHourly = Math.max(...hourlyData.map(h => h?.value || 0), 100);
+
+    const timelineItems = useMemo(() => {
+        const items: any[] = [];
+        receipts.forEach(r => {
+            items.push({
+                ...r,
+                is_receipt: true,
+                _time: new Date(r.created_at + 'Z').getTime(),
+                display_date: new Date(r.created_at + 'Z').toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            });
+        });
+        transactions.forEach(t => {
+            // We unfortunately only have the formatted date from the API, so we parse it loosely,
+            // or just rely on the API. To be safe, we'll put receipts on top of transactions if times match.
+            items.push({
+                ...t,
+                is_receipt: false,
+                _time: new Date(t.date).getTime() || 0,
+                display_date: t.date
+            });
+        });
+        return items.sort((a, b) => b._time - a._time);
+    }, [transactions, receipts]);
+
 
     return (
         <div className="w-full h-full font-sans overflow-auto bg-[var(--background)] selection:bg-black selection:text-white">
@@ -186,35 +213,58 @@ export default function BillingsPage() {
 
                     </div>
 
-                    {/* ━━━━ Right Column: Transactions ━━━━ */}
+                    {/* ━━━━ Right Column: Transactions & Receipts ━━━━ */}
                     <div className="col-span-12 lg:col-span-4 animate-in fade-in slide-in-from-right-4 duration-700 delay-300">
                         <section className="bg-white border border-[var(--border)] rounded-[32px] overflow-hidden shadow-sm h-full flex flex-col">
-                            <div className="p-8 border-b border-gray-50">
+                            <div className="p-6 md:p-8 border-b border-gray-50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-black">
                                         <IconReceipt className="w-5 h-5" />
                                     </div>
-                                    <h3 className="text-lg font-black">Timeline</h3>
+                                    <h3 className="text-lg font-black tracking-tight">Timeline & Invoices</h3>
                                 </div>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto max-h-[500px] lg:max-h-none divide-y divide-gray-50">
-                                {transactions.length > 0 ? transactions.map((tx) => (
-                                    <div key={tx.id} className="flex items-center justify-between px-8 py-5 hover:bg-gray-50/50 transition-colors group">
-                                        <div className="flex items-center gap-4 min-w-0">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${tx.is_positive ? 'bg-green-50 text-green-500' : 'bg-gray-50 text-gray-400'}`}>
-                                                {tx.is_positive ? <IconTrendingUp className="w-4 h-4" /> : <IconClock className="w-4 h-4" />}
+                                {timelineItems.length > 0 ? timelineItems.map((item) => {
+                                    if (item.is_receipt) {
+                                        return (
+                                            <div key={item.id} className="flex flex-col px-6 md:px-8 py-5 hover:bg-gray-50/50 transition-colors group relative overflow-hidden">
+                                                <div className="absolute inset-y-0 left-0 w-1 bg-black opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <IconPackage className="w-4 h-4 text-black" stroke={2.5}/>
+                                                        <p className="text-[14px] font-black tracking-tight text-black">{item.pack_name}</p>
+                                                    </div>
+                                                    <span className="text-[14px] font-black text-black tabular-nums">{item.amount_text}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.display_date}</p>
+                                                    <a href={`/api/billing/receipt/${item.id}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest flex items-center gap-1 transition-colors">
+                                                        <IconFileText className="w-3 h-3" /> PDF Receipt
+                                                    </a>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[13px] font-bold truncate text-black">{tx.type}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{tx.date}</p>
+                                        );
+                                    } else {
+                                        return (
+                                            <div key={item.id} className="flex items-center justify-between px-6 md:px-8 py-5 hover:bg-gray-50/50 transition-colors group">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${item.is_positive ? 'bg-green-50 text-green-500' : 'bg-gray-50 text-gray-400'}`}>
+                                                        {item.is_positive ? <IconTrendingUp className="w-4 h-4" /> : <IconClock className="w-4 h-4" />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[13px] font-bold truncate text-black">{item.type}</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.display_date}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-[13px] font-black tabular-nums whitespace-nowrap px-3 py-1 rounded-lg ${item.is_positive ? 'bg-green-50 text-green-600' : 'text-gray-400'}`}>
+                                                    {item.amount}
+                                                </span>
                                             </div>
-                                        </div>
-                                        <span className={`text-[13px] font-black tabular-nums whitespace-nowrap px-3 py-1 rounded-lg ${tx.is_positive ? 'bg-green-50 text-green-600' : 'text-gray-400'}`}>
-                                            {tx.amount}
-                                        </span>
-                                    </div>
-                                )) : (
+                                        );
+                                    }
+                                }) : (
                                     <div className="p-12 text-center">
                                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Quiet in here...</p>
                                     </div>

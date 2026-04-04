@@ -1,0 +1,72 @@
+\documentclass[10pt,a5paper]{article}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian]{babel}
+\usepackage{geometry}
+\geometry{a5paper, margin=15mm}
+\usepackage{qrcode}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{booktabs}
+
+\definecolor{perriblack}{HTML}{1A1A1A}
+\definecolor{perrigray}{HTML}{F3F4F6}
+\definecolor{perritext}{HTML}{4B5563}
+\definecolor{perriborder}{HTML}{E5E7EB}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+\begin{document}
+\pagestyle{empty}
+
+\begin{center}
+    {\huge\textbf{PERRICHENO}} \\[2mm]
+    {\color{perritext} AI Research \& Analytics Platform} \\[5mm]
+    
+    \vspace{8mm}
+    {\LARGE \textbf{ФИСКАЛЬНЫЙ ЧЕК}} \\[2mm]
+    {\large \textbf{ИНВОЙС \#{{RECEIPT_ID}}}} \\[2mm]
+    {\color{perritext} \textbf{Дата:} {{DATE}}}
+\end{center}
+
+\vspace{10mm}
+
+\begin{tabularx}{\textwidth}{@{} X r @{}}
+    \textbf{Покупатель (UID):} & {{USER_ID}} \\
+    \textbf{Тип операции:} & {{TYPE}} \\
+\end{tabularx}
+
+\vspace{5mm}
+\hrule height 1pt
+\vspace{5mm}
+
+\renewcommand{\arraystretch}{1.8}
+\begin{tabularx}{\textwidth}{@{} X r @{}}
+    \rowcolor{perrigray}
+    \textbf{ Наименование услуги / пакета} & \textbf{Сумма } \\
+    \textbf{ {{PACK_NAME}}} & \textbf{{{AMOUNT}}} \\
+    \bottomrule
+\end{tabularx}
+
+\vspace{5mm}
+
+\begin{flushright}
+    {\Large \textbf{ИТОГО: {{AMOUNT}}}}
+\end{flushright}
+
+\vspace{25mm}
+
+\begin{center}
+    \qrcode[height=3.5cm]{{{VERIFY_URL}}} \\[4mm]
+    {\small Отсканируйте код для проверки подлинности чека.} \\[2mm]
+    {\footnotesize \url{{{VERIFY_URL}}}}
+\end{center}
+
+\vfill
+\begin{center}
+    {\color{perritext}\footnotesize Сгенерировано автоматически системой Perricheno.}
+\end{center}
+
+\end{document}

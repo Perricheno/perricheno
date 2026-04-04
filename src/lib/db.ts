@@ -145,6 +145,21 @@ try {
 
 try {
     db.exec(`
+        CREATE TABLE IF NOT EXISTS receipts (
+            id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            pack_name TEXT NOT NULL,
+            amount_text TEXT NOT NULL,
+            pdf_base64 TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `);
+} catch (e) {}
+
+try {
+    db.exec(`
         CREATE TABLE IF NOT EXISTS usage_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,

@@ -78,6 +78,39 @@ export async function POST(req: Request) {
         if (pack.chars > 0) addPurchasedTokens(userId, 'chars', pack.chars);
         if (pack.reports > 0) addPurchasedTokens(userId, 'reports', pack.reports);
 
+        const packNames: Record<string, string> = {
+            'starter_chars': '⚡ Starter Pack (100K)',
+            'writer': '✍️ Writer Pack (500K)',
+            'data_scientist': '🔬 Data Scientist (2M)',
+            'researcher': '📚 Researcher (5M)',
+            'report_single': '📄 3 Reports',
+            'report_bulk': '⭐ 15 Reports',
+            'combo_lite': '📦 Lite Bundle',
+            'combo_pro': '🔥 Pro Bundle',
+        };
+        const packName = packNames[packId] || packId;
+        const receiptId = `PRN-${Date.now().toString(36).toUpperCase()}-${userId}`;
+
+        // ── Generate and save logical receipt ──
+        try {
+            const { generateAndStoreReceipt } = await import('@/lib/receiptGenerator');
+            const amountText = (parsedData.amount_crypto && parsedData.currency_crypto) 
+                ? `${parsedData.amount_crypto} ${parsedData.currency_crypto}`
+                : `${parsedData.amount} ${parsedData.currency || 'USD'}`;
+            
+            // Fire-and-forget logic for receipt PDF compilation and storage
+            generateAndStoreReceipt({
+                id: receiptId,
+                userId: userId,
+                type: 'crypto_purchase',
+                packName: packName,
+                amountText: amountText,
+                dateISO: new Date().toISOString()
+            }).catch(e => console.error("Receipt background gen failed:", e));
+        } catch (e) {
+            console.error("Failed to trigger receipt generator:", e);
+        }
+
         // ── Send payment confirmation to Telegram ──
         try {
             const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -85,23 +118,11 @@ export async function POST(req: Request) {
             const user = getUserById(userId);
             
             if (botToken && user?.telegram_id) {
-                const packNames: Record<string, string> = {
-                    'starter_chars': '⚡ Starter Pack (100K)',
-                    'writer': '✍️ Writer Pack (500K)',
-                    'data_scientist': '🔬 Data Scientist (2M)',
-                    'researcher': '📚 Researcher (5M)',
-                    'report_single': '📄 3 Reports',
-                    'report_bulk': '⭐ 15 Reports',
-                    'combo_lite': '📦 Lite Bundle',
-                    'combo_pro': '🔥 Pro Bundle',
-                };
-                
-                const packName = packNames[packId] || packId;
                 const lines = [
                     `✅ <b>Оплата подтверждена!</b>`,
                     ``,
                     `━━━━━━━━━━━━━━━━━━`,
-                    `🧾 <b>Чек #PRN-${Date.now().toString(36).toUpperCase()}</b>`,
+                    `🧾 <b>Чек #${receiptId}</b>`,
                     `━━━━━━━━━━━━━━━━━━`,
                     ``,
                     `📦 Пакет: <b>${packName}</b>`,
@@ -119,6 +140,8 @@ export async function POST(req: Request) {
                     `<i>Ресурсы добавлены на ваш баланс.</i>`,
                 );
 
+                const webDomain = process.env.WEBHOOK_DOMAIN || 'https://perricheno.ru';
+
                 await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -128,6 +151,7 @@ export async function POST(req: Request) {
                         parse_mode: "HTML",
                         reply_markup: {
                             inline_keyboard: [
+                                [{ text: "📄 Скачать PDF-чек", url: `${webDomain}/api/billing/receipt/${receiptId}` }],
                                 [{ text: "💳 Мой баланс", callback_data: "billing_info" }],
                                 [{ text: "🛒 Купить ещё", callback_data: "billing_shop" }]
                             ]
