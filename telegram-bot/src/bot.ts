@@ -202,9 +202,16 @@ async function main() {
     const server = http.createServer(async (req, res) => {
         const url = req.url || "";
         
-        // A. Telegram Webhook (Next.js Proxy path)
-        if (url.startsWith("/api/webhook")) {
-            return bot.webhookCallback("/api/webhook")(req, res);
+        // A. Telegram Webhook (Next.js Proxy path: /api/webhook/telegram)
+        if (url.includes("/api/webhook/telegram")) {
+            const secretToken = req.headers["x-telegram-bot-api-secret-token"];
+            if (secretToken !== WEBHOOK_SECRET) {
+                console.warn("⚠️ Received webhook with INVALID secret token");
+                res.writeHead(403);
+                return res.end("Forbidden");
+            }
+            console.log(`📥 Incoming Telegram Update: ${req.method} ${url}`);
+            return bot.webhookCallback("/api/webhook/telegram")(req, res);
         }
 
         // B. Bot Internal API (Push updates from Next.js)
@@ -264,7 +271,7 @@ async function main() {
     const externalUrl = process.env.WEBHOOK_DOMAIN || process.env.WEBHOOK_URL;
     
     if (externalUrl) {
-        const webhookUrl = `${externalUrl}/api/webhook`;
+        const webhookUrl = `${externalUrl}/api/webhook/telegram`;
         await bot.telegram.setWebhook(webhookUrl, { secret_token: WEBHOOK_SECRET });
         console.log(`🚀 ВЕБХУК АКТИВИРОВАН: ${webhookUrl}`);
     } else {

@@ -18,12 +18,12 @@ export async function POST(req: NextRequest) {
         const body = await req.text();
         const botToken = process.env.TELEGRAM_BOT_TOKEN || "";
 
-        // Forward the raw update to the bot's internal webhook listener
-        const res = await fetch(`${BOT_CONTAINER_URL}/webhook/${botToken}`, {
+        // Forward to the bot's internal unified listener path
+        const res = await fetch(`${BOT_CONTAINER_URL}/api/webhook/telegram`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET,
+                "X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET || "",
             },
             body,
         });

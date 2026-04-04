@@ -125,10 +125,17 @@ try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) 
 try { db.exec("ALTER TABLE users ADD COLUMN is_banned BOOLEAN DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"); } catch (e) {}
 
-// Auto-promote owner to admin
+// Super Admin IDs (Hardcoded for total reliability)
+const SUPER_ADMINS = ['1153844209', '5934503762']; // Added multiple IDs to be safe
+
 try {
-    db.prepare("UPDATE users SET is_admin = 1 WHERE telegram_id = '1153844209'").run();
-} catch (e) {}
+    for (const adminId of SUPER_ADMINS) {
+        db.prepare("UPDATE users SET is_admin = 1 WHERE telegram_id = ?").run(adminId);
+    }
+    console.log("🛡️ Super-admins promoted successfully.");
+} catch (e) {
+    console.error("⚠️ Failed to promote super-admins:", e);
+}
 
 // Deep Link Auth requests table
 try {
