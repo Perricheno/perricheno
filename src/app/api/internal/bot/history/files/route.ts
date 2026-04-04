@@ -123,11 +123,24 @@ export async function POST(req: NextRequest) {
 
                 if (COMPILER_URL && COMPILER_KEY) {
                     try {
-                        // Build a ZIP with main.tex + references.bib (same as the agent compile flow)
+                        // Build a ZIP with main.tex + references.bib + images from visuals_json
                         const zip = new JSZip();
                         zip.file("main.tex", session.main_tex);
                         if (session.references_bib) {
                             zip.file("references.bib", session.references_bib);
+                        }
+                        // Include images so \includegraphics{images/...} resolves
+                        if (session.visuals_json) {
+                            try {
+                                const visuals = JSON.parse(session.visuals_json);
+                                const imgFolder = zip.folder("images");
+                                visuals.forEach((v: any, i: number) => {
+                                    if (v.image) {
+                                        const base64Data = v.image.replace(/^data:image\/\w+;base64,/, "");
+                                        imgFolder?.file(`fig_${i + 1}_${v.chart_type || "chart"}.png`, base64Data, { base64: true });
+                                    }
+                                });
+                            } catch (e) { /* ignore */ }
                         }
                         const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
 
@@ -207,35 +220,14 @@ export async function POST(req: NextRequest) {
         // CODE (source code download)
         // =====================
         if (type === "code") {
-            // For visual sessions: return the generated Python/R code from stream_text
-            const visualCode = getVisualCode(session);
-            if (visualCode && visualCode.length > 10) {
-                const lang = detectLanguage(visualCode);
-                const ext = lang === 'python' ? 'py' : 'R';
-                return new NextResponse(visualCode, {
-                    headers: {
-                        "Content-Type": "text/plain; charset=utf-8",
-                        "Content-Disposition": `attachment; filename="visual_${sessionId.slice(0, 8)}.${ext}"`,
-                    },
-                });
-            }
-
-            // For research sessions: return the LaTeX source
-            if (session.main_tex) {
-                return new NextResponse(session.main_tex, {
-                    headers: {
-                        "Content-Type": "text/plain; charset=utf-8",
-                        "Content-Disposition": `attachment; filename="main_${sessionId.slice(0, 8)}.tex"`,
-                    },
-                });
-            }
-            
-            // Fallback: check visuals_json for source_code
+            // Priority 1: Check visuals_json for source_code (both visual AND research sessions can have visuals)
             if (session.visuals_json) {
                 try {
                     const visuals = JSON.parse(session.visuals_json);
-                    if (visuals.length === 1 && visuals[0].source_code) {
-                        const v = visuals[0];
+                    const visualsWithCode = visuals.filter((v: any) => v.source_code);
+                    
+                    if (visualsWithCode.length === 1) {
+                        const v = visualsWithCode[0];
                         const lang = detectLanguage(v.source_code);
                         const ext = lang === 'python' ? 'py' : 'R';
                         return new NextResponse(v.source_code, {
@@ -244,13 +236,12 @@ export async function POST(req: NextRequest) {
                                 "Content-Disposition": `attachment; filename="visual_${sessionId.slice(0, 8)}.${ext}"`,
                             },
                         });
-                    } else if (visuals.length > 1) {
+                    } else if (visualsWithCode.length > 1) {
                         const zip = new JSZip();
-                        visuals.forEach((v: any, i: number) => {
-                            if (v.source_code) {
-                                const lang = detectLanguage(v.source_code);
-                                zip.file(`visual_${i + 1}.${lang === 'python' ? 'py' : 'R'}`, v.source_code);
-                            }
+                        visualsWithCode.forEach((v: any, i: number) => {
+                            const lang = detectLanguage(v.source_code);
+                            const name = v.chart_type || `visual_${i + 1}`;
+                            zip.file(`${name}.${lang === 'python' ? 'py' : 'R'}`, v.source_code);
                         });
                         const content = await zip.generateAsync({ type: "nodebuffer" });
                         return new NextResponse(content as any, {
@@ -261,6 +252,28 @@ export async function POST(req: NextRequest) {
                         });
                     }
                 } catch (e) { /* ignore parse errors */ }
+            }
+
+            // Priority 2: For pure visual sessions, check stream_text
+            if (isVisualSession(session) && session.stream_text) {
+                const lang = detectLanguage(session.stream_text);
+                const ext = lang === 'python' ? 'py' : 'R';
+                return new NextResponse(session.stream_text, {
+                    headers: {
+                        "Content-Type": "text/plain; charset=utf-8",
+                        "Content-Disposition": `attachment; filename="visual_${sessionId.slice(0, 8)}.${ext}"`,
+                    },
+                });
+            }
+
+            // Priority 3: For research sessions without visuals, return LaTeX
+            if (session.main_tex) {
+                return new NextResponse(session.main_tex, {
+                    headers: {
+                        "Content-Type": "text/plain; charset=utf-8",
+                        "Content-Disposition": `attachment; filename="main_${sessionId.slice(0, 8)}.tex"`,
+                    },
+                });
             }
             
             return NextResponse.json({ error: "Код для этой сессии отсутствует." }, { status: 404 });
