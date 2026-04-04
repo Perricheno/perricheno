@@ -9,15 +9,15 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     try {
-        const { code } = await req.json();
-        if (!code || typeof code !== 'string') {
+        const { code, files = [] } = await req.json();
+        if (!code) {
             return NextResponse.json({ error: "Python code is required" }, { status: 400 });
         }
-
+ 
         const res = await fetch(`${PYTHON_COMPILER_URL}/compile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({ code, files }),
             signal: AbortSignal.timeout(35000), // 35s timeout
         });
 

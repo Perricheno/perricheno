@@ -155,7 +155,8 @@ export async function POST(req: NextRequest) {
             chatId, 
             messageId,
             images,
-            instruction 
+            instruction,
+            attachedFiles = [] 
         } = await req.json();
         
         console.log(`[Generate] Request from ${telegramId}: images=${images?.length || 0}, textChars=${context?.text_data?.length || 0}`);
@@ -307,7 +308,7 @@ export async function POST(req: NextRequest) {
                     const compileRes = await fetch(`${compilerUrl}/compile`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code: finalCode }),
+                        body: JSON.stringify({ code: finalCode, files: attachedFiles }),
                         signal: AbortSignal.timeout(45000),
                     });
 
