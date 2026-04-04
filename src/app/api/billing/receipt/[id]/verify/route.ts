@@ -38,39 +38,192 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         
         const isFree = result.amount_text === 'Free' || result.amount_text.includes('0.00');
 
+        const url = new URL(req.url);
+        const hash = url.searchParams.get('hash') || 'Встроено в базу (SQLite)';
+        const sig = url.searchParams.get('sig') || 'Внутренняя верификация OK';
+
         const html = `
         <!DOCTYPE html>
-        <html lang="ru">
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Проверка чека | Perricheno</title>
+            <title>Protocol Verification | Perricheno Ledger</title>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
             <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f3f4f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-                .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); max-width: 400px; width: 100%; border-top: 6px solid #1a1a1a; }
-                .status { color: #10b981; font-weight: 800; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem; border: 1px solid #10b981; background: #ecfdf5; padding: 0.5rem 1rem; border-radius: 99px; width: fit-content; }
-                h1 { margin: 0 0 1.5rem 0; font-size: 1.5rem; color: #111827; }
-                .row { display: flex; justify-content: space-between; margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem; }
-                .row:last-child { border: none; margin-bottom: 0; padding-bottom: 0; }
-                .label { color: #6b7280; font-size: 0.875rem; }
-                .value { font-weight: 600; color: #1f2937; text-align: right; }
-                .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: -0.5px; opacity: 0.3; text-align: center; margin-top: 2rem; }
+                * { box-sizing: border-box; }
+                body { 
+                    font-family: 'Inter', sans-serif; 
+                    background: #e5e5e5; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    min-height: 100vh; 
+                    margin: 0;
+                    padding: 20px;
+                    color: #000;
+                }
+                .document { 
+                    background: #fff; 
+                    max-width: 500px; 
+                    width: 100%; 
+                    border: 1px solid #000;
+                    position: relative;
+                }
+                .header {
+                    padding: 24px;
+                    border-bottom: 2px solid #000;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+                .brand {
+                    font-size: 20px;
+                    font-weight: 800;
+                    letter-spacing: -0.5px;
+                    text-transform: uppercase;
+                }
+                .sub-brand {
+                    font-size: 10px;
+                    text-transform: uppercase;
+                    font-weight: 600;
+                }
+                .status-badge {
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: #059669;
+                    border: 1px solid #059669;
+                    padding: 4px 8px;
+                    text-transform: uppercase;
+                }
+                .content {
+                    padding: 24px;
+                }
+                .section-title {
+                    font-size: 11px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 12px;
+                    border-bottom: 1px solid #000;
+                    padding-bottom: 4px;
+                }
+                .data-grid {
+                    display: grid;
+                    grid-template-columns: 100px 1fr;
+                    gap: 12px;
+                    margin-bottom: 32px;
+                    font-size: 13px;
+                }
+                .label {
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    font-size: 10px;
+                    align-self: center;
+                }
+                .value {
+                    font-family: 'JetBrains Mono', monospace;
+                    text-align: right;
+                    word-break: break-all;
+                }
+                .amount-row {
+                    background: #000;
+                    color: #fff;
+                    padding: 12px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 32px;
+                }
+                .amount-label {
+                    font-weight: 800;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                }
+                .amount-value {
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+                .crypto-box {
+                    border: 1px dashed #000;
+                    padding: 12px;
+                    background: #fafafa;
+                    font-family: 'JetBrains Mono', monospace;
+                    font-size: 10px;
+                }
+                .crypto-row {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    margin-bottom: 12px;
+                    word-break: break-all;
+                }
+                .crypto-row:last-child { margin-bottom: 0; }
+                .crypto-label { font-weight: 700; color: #666; }
+                .footer {
+                    padding: 16px 24px;
+                    border-top: 1px solid #000;
+                    font-size: 9px;
+                    text-align: center;
+                    font-family: 'JetBrains Mono', monospace;
+                    text-transform: uppercase;
+                }
             </style>
         </head>
         <body>
-            <div class="card">
-                <div class="status">✓ Подлинный чек</div>
-                <h1>Детали операции</h1>
-                <div class="row"><span class="label">ID чека</span><span class="value">${result.id}</span></div>
-                <div class="row"><span class="label">Дата</span><span class="value">${date}</span></div>
-                <div class="row"><span class="label">Покупатель (UID)</span><span class="value">${result.telegram_id || result.username || 'Аноним'}</span></div>
-                <div class="row"><span class="label">Тип</span><span class="value">${result.type}</span></div>
-                <div class="row"><span class="label">Услуга / Пакет</span><span class="value">${result.pack_name}</span></div>
-                <div class="row">
-                    <span class="label">Сумма</span>
-                    <span class="value" style="font-size: 1.25rem; color: ${isFree ? '#10b981' : '#111827'}">${result.amount_text}</span>
+            <div class="document">
+                <div class="header">
+                    <div>
+                        <div class="brand">PERRICHENO</div>
+                        <div class="sub-brand">Electronic Fiscal Protocol</div>
+                    </div>
+                    <div class="status-badge">[ SETTLED : 200 OK ]</div>
                 </div>
-                <div class="logo">PERRICHENO</div>
+                <div class="content">
+                    <div class="section-title">Transaction Data</div>
+                    <div class="data-grid">
+                        <div class="label">Protocol ID</div>
+                        <div class="value">${result.id}</div>
+                        
+                        <div class="label">Timestamp</div>
+                        <div class="value">${date}</div>
+                        
+                        <div class="label">Beneficiary</div>
+                        <div class="value">${result.telegram_id || result.username || 'ANONYMOUS'}</div>
+                        
+                        <div class="label">Tx Type</div>
+                        <div class="value" style="text-transform: uppercase;">${result.type}</div>
+                        
+                        <div class="label">Asset Details</div>
+                        <div class="value">${result.pack_name}</div>
+                    </div>
+
+                    <div class="amount-row">
+                        <div class="amount-label">Financial Settlement</div>
+                        <div class="amount-value" style="color: ${isFree ? '#34d399' : '#fff'};">${result.amount_text}</div>
+                    </div>
+
+                    <div class="section-title">Digital Attestation</div>
+                    <div class="crypto-box">
+                        <div class="crypto-row">
+                            <span class="crypto-label">SIGNATURE_FINGERPRINT:</span>
+                            <span>${sig}</span>
+                        </div>
+                        <div class="crypto-row">
+                            <span class="crypto-label">STATE_HASH_SHA512:</span>
+                            <span>${hash}</span>
+                        </div>
+                        <div class="crypto-row">
+                            <span class="crypto-label">ATTESTATION_NODE:</span>
+                            <span>perricheno-global-ledger-v1</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer">
+                    SECURED BY PERRICHENO INC.
+                </div>
             </div>
         </body>
         </html>

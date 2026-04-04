@@ -205,7 +205,7 @@ export async function handleBillingHistory(ctx: any) {
     await ctx.answerCbQuery?.();
     
     try {
-        const { transactions, error } = await apiFetch("transactions", {
+        const { transactions, receipts, error } = await apiFetch("transactions", {
             telegram_id: String(ctx.from.id),
             limit: 10
         });
@@ -215,7 +215,7 @@ export async function handleBillingHistory(ctx: any) {
             return;
         }
 
-        if (!transactions || transactions.length === 0) {
+        if ((!transactions || transactions.length === 0) && (!receipts || receipts.length === 0)) {
             const text = `📜 *История транзакций*\n\n_Транзакций пока нет._`;
             await ctx.editMessageText(text, { 
                 parse_mode: "Markdown", 
@@ -226,20 +226,36 @@ export async function handleBillingHistory(ctx: any) {
 
         const lines = [`📜 *История транзакций*\n`];
 
-        for (const tx of transactions) {
-            const icon = tx.is_positive ? '💚' : '🔸';
-            const d = new Date(tx.date + 'Z');
-            const dateStr = d.toLocaleString('ru-RU', { 
-                day: '2-digit', month: '2-digit', 
-                hour: '2-digit', minute: '2-digit',
-                timeZone: 'Asia/Almaty' 
-            });
-            lines.push(`${icon} \`${dateStr}\` ${tx.topic}`);
-            lines.push(`   └ ${tx.amount}`);
+        if (transactions && transactions.length > 0) {
+            for (const tx of transactions) {
+                const icon = tx.is_positive ? '💚' : '🔸';
+                const d = new Date(tx.date + 'Z');
+                const dateStr = d.toLocaleString('ru-RU', { 
+                    day: '2-digit', month: '2-digit', 
+                    hour: '2-digit', minute: '2-digit',
+                    timeZone: 'Asia/Almaty' 
+                });
+                lines.push(`${icon} \`${dateStr}\` ${tx.topic}`);
+                lines.push(`   └ ${tx.amount}`);
+            }
         }
 
-        const keyboard = getBillingHistoryKeyboard(true);
-        await ctx.editMessageText(lines.join('\n'), { parse_mode: "Markdown", ...keyboard }).catch(() => {});
+        const kb = getBillingHistoryKeyboard(true).reply_markup.inline_keyboard;
+        
+        // Append Receipts
+        if (receipts && receipts.length > 0) {
+            lines.push(`\n📄 *Доступные чеки:*`);
+            kb.unshift([{ text: "─────────────", callback_data: "ignore" }]);
+            
+            for (const r of receipts) {
+                kb.unshift([{ text: `📥 Чек: ${r.title || 'Операция'}`, url: r.url }]);
+            }
+        }
+
+        await ctx.editMessageText(lines.join('\n'), { 
+            parse_mode: "Markdown", 
+            reply_markup: { inline_keyboard: kb } 
+        }).catch(() => {});
     } catch (err) {
         console.error("handleBillingHistory:", err);
         await ctx.reply("⚠️ Ошибка загрузки истории.");

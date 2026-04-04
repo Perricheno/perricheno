@@ -175,7 +175,22 @@ export async function POST(req: NextRequest) {
                 date: tx.created_at
             }));
 
-            return NextResponse.json({ transactions });
+            const receiptsDb = db.prepare(`
+                SELECT id, type, pack_name, amount_text, created_at
+                FROM receipts
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+            `).all(user.id, limit) as any[];
+
+            const receipts = receiptsDb.map(r => ({
+                id: r.id,
+                title: r.pack_name,
+                url: `${process.env.SITE_INTERNAL_URL?.replace('http://perricheno-site:3000', process.env.WEBHOOK_DOMAIN || 'https://perricheno.ru') || 'https://perricheno.ru'}/api/billing/receipt/${r.id}`,
+                date: r.created_at
+            }));
+
+            return NextResponse.json({ transactions, receipts });
         }
 
         // ═══════════════════════════════
