@@ -81,13 +81,14 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { context, language = "python", sessionId: incomingSessionId, telegramId, title, chartType = 'auto' } = await req.json();
+        const { context, language = "python", sessionId: incomingSessionId, telegramId, title, chartType = 'auto', chatId, messageId } = await req.json();
         
         if (!context || !context.text_data) {
             return NextResponse.json({ error: "No context provided" }, { status: 400 });
         }
 
         const sessionId = incomingSessionId || uuidv4();
+        const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
         // Ensure session exists
         if (telegramId) {
@@ -147,10 +148,11 @@ export async function POST(req: NextRequest) {
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         
-        // Start background process for streaming to DB
+        // Start background process for streaming to DB and PUSHING to Bot
         (async () => {
             let accumulated = "";
             let lastUpdate = Date.now();
+            let lastPush = Date.now();
             
             while (true) {
                 const { done, value } = await reader.read();
@@ -169,9 +171,20 @@ export async function POST(req: NextRequest) {
                     }
                 }
                 
-                if (sessionId && Date.now() - lastUpdate > 500) {
+                // DB Update every 2 seconds (slower is fine for DB)
+                if (sessionId && Date.now() - lastUpdate > 2000) {
                     updateAgentSession(sessionId, { stream_text: accumulated });
                     lastUpdate = Date.now();
+                }
+
+                // BOT PUSH every 500ms (faster for UI)
+                if (chatId && messageId && Date.now() - lastPush > 500) {
+                    fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                        body: JSON.stringify({ chatId, messageId, text: accumulated, language: language === 'python' ? 'python' : 'r' })
+                    }).catch(() => {});
+                    lastPush = Date.now();
                 }
             }
             
@@ -180,6 +193,24 @@ export async function POST(req: NextRequest) {
                     status: "done", 
                     stream_text: accumulated.trim() 
                 });
+            }
+
+            // Final Push and Completion Trigger
+            if (chatId && messageId) {
+                await fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                    body: JSON.stringify({ chatId, messageId, text: accumulated, language: language === 'python' ? 'python' : 'r' })
+                }).catch(() => {});
+
+                // Small delay to ensure the last stream update is processed
+                setTimeout(() => {
+                    fetch(`${BOT_INTERNAL_URL}/complete-visual`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                        body: JSON.stringify({ chatId, messageId, sessionId })
+                    }).catch(() => {});
+                }, 1000);
             }
         })();
 

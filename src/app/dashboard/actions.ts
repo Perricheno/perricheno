@@ -55,8 +55,28 @@ export async function manageUserTokens(userId: number, action: string, amount: n
 }
 
 export async function sendDirectMessage(userId: number, message: string) {
-    await verifyAdmin();
+    const admin = await verifyAdmin();
+    const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+    const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
+
+    // 1. Save to DB
     db.prepare(`INSERT INTO system_notifications (user_id, message) VALUES (?, ?)`).run(userId, message);
+
+    // 2. PUSH to Telegram Bot
+    try {
+        const user = getUserById(userId);
+        if (user && user.telegram_id) {
+            const formatted = `📩 *Сообщение от администрации Perricheno*:\n\n${message}`;
+            await fetch(`${BOT_INTERNAL_URL}/send-message`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                body: JSON.stringify({ userId: user.telegram_id, text: formatted })
+            });
+        }
+    } catch (err) {
+        console.error("Failed to push DM to bot:", err);
+    }
+
     revalidatePath("/dashboard");
     return { success: true };
 }

@@ -1,4 +1,4 @@
-import { Telegraf } from "telegraf";
+import { Telegraf, Context } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
 import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
@@ -16,7 +16,7 @@ if (!BOT_TOKEN || !WEBHOOK_SECRET) {
     process.exit(1);
 }
 
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN) as any;
 
 // --- In-Memory Session Middleware ---
 const sessionStore = new Map<number, any>();
@@ -30,6 +30,8 @@ bot.use(async (ctx: any, next: () => Promise<void>) => {
     ctx.session = sessionStore.get(userId);
     return next();
 });
+
+
 
 // --- Commands ---
 bot.start(ctx => handleStart(ctx));
@@ -124,10 +126,67 @@ bot.catch((err: any, ctx: any) => {
 
 // --- Launch ---
 async function main() {
-    // 1. Setup Internal Webhook Listener (for proxy from Next.js)
-    const server = http.createServer(bot.webhookCallback(`/webhook/${BOT_TOKEN}`));
+    // 1. Setup Internal Server (Webhook + Internal Push API)
+    const server = http.createServer(async (req, res) => {
+        const url = req.url || "";
+        
+        // A. Telegram Webhook
+        if (url.startsWith(`/webhook/${BOT_TOKEN}`)) {
+            return bot.webhookCallback(`/webhook/${BOT_TOKEN}`)(req, res);
+        }
+
+        // B. Bot Internal API (Push updates from Next.js)
+        if (url.startsWith("/bot-internal/")) {
+            const secret = req.headers["x-bot-secret"];
+            if (secret !== WEBHOOK_SECRET) {
+                res.writeHead(403);
+                return res.end("Unauthorized");
+            }
+
+            let body = "";
+            req.on("data", chunk => body += chunk);
+            req.on("end", async () => {
+                try {
+                    const data = JSON.parse(body);
+                    const path = url.replace("/bot-internal/", "");
+                    
+                    if (path === "update-visual") {
+                        const { chatId, messageId, text, language } = data;
+                        const displayCode = text.length > 800 ? text.slice(0, 800) + "..." : text;
+                        await bot.telegram.editMessageText(chatId, messageId, undefined, 
+                            `⚙️ *Генерация кода...*\n\n\`\`\`${language}\n${displayCode}\n\`\`\`\n\n🕒 Пожалуйста, подождите...`, 
+                            { parse_mode: "Markdown" }
+                        ).catch(() => {});
+                    }
+
+                    if (path === "send-message") {
+                        const { userId, text } = data;
+                        await bot.telegram.sendMessage(userId, text, { parse_mode: "Markdown" });
+                    }
+
+                    if (path === "complete-visual") {
+                        const { chatId, messageId, sessionId } = data;
+                        // Trigger final compilation in history or visual handler
+                        const { handleVisualCompletePush } = await import("./handlers/visual");
+                        await handleVisualCompletePush(bot, chatId, messageId, sessionId);
+                    }
+
+                    res.writeHead(200, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify({ success: true }));
+                } catch (err: any) {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+            });
+            return;
+        }
+
+        res.writeHead(404);
+        res.end();
+    });
+
     server.listen(BOT_PORT, () => {
-        console.log(`🤖 Internal Bot Server listening on port ${BOT_PORT}`);
+        console.log(`🤖 Internal Bot Server (Webhook + Push) listening on port ${BOT_PORT}`);
     });
 
     // 2. Register with Telegram

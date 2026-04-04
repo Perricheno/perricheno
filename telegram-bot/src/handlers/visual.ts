@@ -4,21 +4,36 @@ const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 export async function handleVisualStart(ctx: any) {
+    const type = ctx.match?.[1] || 'auto';
     ctx.session.step = 'awaiting_visual_name';
-    ctx.session.visual = { text: [], images: [], files: [], title: '', lang: 'python' };
-    
+    ctx.session.visual = {
+        title: '',
+        type: type,
+        text: [],
+        images: [],
+        files: [],
+        lang: 'python'
+    };
+
     await ctx.answerCbQuery();
-    await ctx.editMessageText(`📂 *Новая визуализация*\n\nПожалуйста, введите название для этого проекта (например: "Отчет по продажам 2024"):`, {
-        parse_mode: "Markdown"
-    }).catch(() => {});
+    await ctx.reply(`✍️ *Шаг 1: Название проекта*\n\nПожалуйста, введите название (например: "Анализ рынка 2024").\n\n_Выбранный тип: ${type.toUpperCase()}_`, {
+        parse_mode: "Markdown",
+        reply_markup: {
+            inline_keyboard: [[{ text: "❌ Отмена", callback_data: "visual_reset" }]]
+        }
+    });
 }
 
 export async function handleVisualName(ctx: any) {
     const name = ctx.message.text;
+    if (!name || name.length < 3) {
+        return ctx.reply("⚠️ Слишком короткое название. Попробуйте еще раз:");
+    }
+
     ctx.session.visual.title = name;
     ctx.session.step = 'collecting_visual_data';
-    
-    await ctx.reply(`✅ Название принято: *${name}*\n\nТеперь присылайте контекст для визуализации. Я принимаю:\n• 📝 Текст\n• 🖼 Фотографии (с описанием)\n• 📄 Файлы (CSV, Excel, TXT)\n\nКогда закончите, нажмите кнопку *Сгенерировать*.`, {
+
+    await ctx.reply(`📂 *Шаг 2: Сбор данных для "${name}"*\n\nПрисылайте ТЕКСТ, ФОТО или ФАЙЛЫ, которые ИИ должен проанализировать.\n\nКогда закончите, нажмите кнопку ниже:`, {
         parse_mode: "Markdown",
         ...getVisualActionKeyboard()
     });
@@ -31,44 +46,47 @@ export async function handleVisualCollect(ctx: any) {
         s.text.push(ctx.message.text);
     } else if (ctx.message.photo) {
         const photo = ctx.message.photo.pop();
-        const fileId = photo.file_id;
-        const caption = ctx.message.caption || "";
-        s.images.push({ fileId, caption });
+        s.images.push({ fileId: photo.file_id, caption: ctx.message.caption || "" });
     } else if (ctx.message.document) {
-        const doc = ctx.message.document;
-        s.files.push({ fileId: doc.file_id, fileName: doc.file_name });
+        s.files.push({ fileId: ctx.message.document.file_id, fileName: ctx.message.document.file_name });
     }
 
-    // Quiet acknowledgement (optional)
-    // await ctx.reply("📥 Получено. Продолжайте или нажмите Сгенерировать.");
-}
-
-export async function handleVisualGenerateRequest(ctx: any) {
-    await ctx.answerCbQuery();
-    const s = ctx.session.visual;
-    
-    if (s.text.length === 0 && s.images.length === 0 && s.files.length === 0) {
-        return ctx.reply("❌ Вы не предоставили никаких данных для визуализации. Пришлите текст или файлы!");
-    }
-
-    await ctx.reply(`📊 *Последний шаг*\n\nНа каком языке программирования сгенерировать код и визуализацию?`, {
-        parse_mode: "Markdown",
-        ...getLangSelectionKeyboard()
+    const count = s.text.length + s.images.length + s.files.length;
+    await ctx.reply(`➕ Данные добавлены! (Всего элементов: ${count})\nПрисылайте еще или нажмите "Сгенерировать".`, {
+        ...getVisualActionKeyboard()
     });
 }
 
-export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
+export async function handleVisualGenerateRequest(ctx: any) {
+    if (ctx.session.isProcessing) return ctx.answerCbQuery("⏳ Пожалуйста, дождитесь завершения...");
+    
+    const s = ctx.session.visual;
+    if (!s || (s.text.length === 0 && s.images.length === 0 && s.files.length === 0)) {
+        return ctx.answerCbQuery("⚠️ Сначала добавьте данные!");
+    }
+
     await ctx.answerCbQuery();
+    await ctx.editMessageText("⚙️ *Выберите язык программирования для графиков:*", {
+        parse_mode: "Markdown",
+        ...getLangSelectionKeyboard()
+    }).catch(() => {});
+}
+
+export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
+    if (ctx.session.isProcessing) return ctx.answerCbQuery("⏳ Генерация уже запущена.");
+    
     ctx.session.visual.lang = lang;
     ctx.session.step = 'processing';
+    ctx.session.isProcessing = true;
     
-    const msg = await ctx.reply(`⚙️ *Запуск генерации...* (Язык: ${lang === 'python' ? 'Python' : 'R'})\n\n⏳ Анализирую контекст и пишу код...`, { parse_mode: "Markdown" });
+    const msg = await ctx.reply(`🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\nПожалуйста, подождите, это может занять до 1 минуты.`, {
+        parse_mode: "Markdown"
+    });
 
     try {
         const s = ctx.session.visual;
-        const contextText = `TITLE: ${s.title}\nTEXTS: ${s.text.join('\n---\n')}\nIMAGES: ${s.images.map((i: any) => i.caption).join(', ')}`;
+        const contextText = `TITLE: ${s.title}\nTYPE: ${s.type}\nTEXTS: ${s.text.join('\n---\n')}`;
         
-        // 1. Start Generation
         const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
@@ -76,56 +94,75 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                 context: { text_data: contextText }, 
                 language: lang,
                 telegramId: ctx.from.id,
-                title: s.title
+                title: s.title,
+                chatId: ctx.chat.id,
+                messageId: msg.message_id
             }),
         });
 
-        if (!genRes.ok) throw new Error("AI Generation start failed");
-        const { sessionId } = await genRes.json() as { sessionId: string };
+        if (!genRes.ok) throw new Error("Backend rejected the request.");
 
-        // 2. Polling for stream_text
-        let isDone = false;
-        let finalCode = "";
-        let lastStreamText = "";
-        const startTime = Date.now();
-        const timeout = 120000; // 2 minutes
+    } catch (err: any) {
+        console.error(err);
+        await ctx.reply(`⚠️ Ошибка: ${err.message}`);
+        ctx.session.step = 'idle';
+        ctx.session.isProcessing = false;
+    }
+}
 
-        while (!isDone && (Date.now() - startTime < timeout)) {
-            await new Promise(r => setTimeout(r, 2500)); // Poll every 2.5s to respect TG limits
+export async function handleDownloadFile(ctx: any, sessionId: string, type: "zip" | "pdf" | "code") {
+    if (ctx.session.isProcessing) return ctx.answerCbQuery("⏳ Подождите, другой запрос выполняется...");
+    
+    await ctx.answerCbQuery(`🚀 Подготовка ${type.toUpperCase()}...`);
+    ctx.session.isProcessing = true;
+
+    try {
+        const res = await fetch(`${SITE_URL}/api/internal/bot/history/files`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+            body: JSON.stringify({ sessionId, type }),
+        });
+
+        if (res.ok) {
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
             
-            const pollRes = await fetch(`${SITE_URL}/api/internal/bot/history`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                body: JSON.stringify({ sessionId }),
-            });
-
-            if (pollRes.ok) {
-                const { session } = await pollRes.json() as any;
-                if (!session) break;
-
-                if (session.stream_text && session.stream_text !== lastStreamText) {
-                    lastStreamText = session.stream_text;
-                    const displayCode = lastStreamText.length > 500 ? lastStreamText.slice(0, 500) + "..." : lastStreamText;
-                    
-                    await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined, 
-                        `⚙️ *Генерация кода...*\n\n\`\`\`${lang}\n${displayCode}\n\`\`\`\n\n🕒 Пожалуйста, подождите...`, 
-                        { parse_mode: "Markdown" }
-                    ).catch(() => {});
-                }
-
-                if (session.status === 'done') {
-                    isDone = true;
-                    finalCode = session.stream_text;
-                } else if (session.status === 'error') {
-                    throw new Error("AI Generation reported an error");
-                }
+            let filename = `report_${sessionId.slice(0, 8)}.${type}`;
+            if (type === "zip") filename = `project_${sessionId.slice(0, 8)}.zip`;
+            if (type === "pdf") filename = `report_${sessionId.slice(0, 8)}.pdf`;
+            if (type === "code") {
+                const disp = res.headers.get("Content-Disposition");
+                filename = disp?.split('filename=')[1]?.replace(/"/g, '') || `visual_${sessionId.slice(0, 8)}.py`;
             }
+            
+            await ctx.replyWithDocument({ source: buffer, filename });
+        } else {
+            const data = await res.json() as any;
+            await ctx.reply(`❌ ${data.error || "Не удалось загрузить файл."}`);
         }
+    } catch (err) {
+        console.error(err);
+        await ctx.reply("⚠️ Ошибка при скачивании файла.");
+    } finally {
+        ctx.session.isProcessing = false;
+    }
+}
 
-        if (!finalCode) throw new Error("Generation timed out or failed");
+export async function handleVisualCompletePush(bot: any, chatId: number, messageId: number, sessionId: string) {
+    try {
+        const res = await fetch(`${SITE_URL}/api/internal/bot/history`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+            body: JSON.stringify({ sessionId }),
+        });
 
-        // 3. Compile
-        await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined, 
+        const { session } = await res.json() as any;
+        if (!session) return;
+
+        const lang = session.main_tex?.includes("import ") ? 'python' : 'r';
+        const finalCode = session.stream_text || session.main_tex;
+
+        await bot.telegram.editMessageText(chatId, messageId, undefined, 
             `✅ *Код готов!*\n\n🔄 Запускаю компиляцию в среде ${lang}...`, 
             { parse_mode: "Markdown" }
         ).catch(() => {});
@@ -140,32 +177,35 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
         if (compResult.success && compResult.image) {
             const buffer = Buffer.from(compResult.image, 'base64');
-            await ctx.replyWithPhoto({ source: buffer }, {
-                caption: `✅ *Визуализация готова!*\n\nПроект: *${s.title}*\n\nНиже прикреплен файл с исходным кодом.`,
+            await bot.telegram.sendPhoto(chatId, { source: buffer }, {
+                caption: `✅ *Визуализация готова!*\n\nПроект: *${session.title}*\n\nНиже прикреплен файл с исходным кодом.`,
                 parse_mode: "Markdown",
                 ...getPostVisualKeyboard()
             });
             
             const filename = lang === 'python' ? 'visual.py' : 'visual.R';
-            await ctx.replyWithDocument({ source: Buffer.from(finalCode), filename });
+            await bot.telegram.sendDocument(chatId, { source: Buffer.from(finalCode), filename });
         } else {
             const errorLog = compResult.log || "Неизвестная ошибка среды выполнения.";
-            await ctx.reply(`❌ *Ошибка компиляции:*\n\n\`\`\`\n${errorLog}\n\`\`\``, { 
+            await bot.telegram.sendMessage(chatId, `❌ *Ошибка компиляции:*\n\n\`\`\`\n${errorLog}\n\`\`\``, { 
                 parse_mode: "Markdown",
                 ...getPostVisualKeyboard()
             });
         }
-
     } catch (err: any) {
-        console.error(err);
-        await ctx.reply(`⚠️ Произошла ошибка: ${err.message}`);
+        console.error("Complete Push Error:", err);
     } finally {
-        ctx.session.step = 'idle';
+        for (const [uid, sess] of (global as any).sessionStore || []) {
+            if (uid === chatId || sess.visual?.chatId === chatId) {
+                sess.isProcessing = false;
+            }
+        }
     }
 }
 
 export async function handleVisualReset(ctx: any) {
     ctx.session.step = 'idle';
+    ctx.session.isProcessing = false;
     ctx.session.visual = { text: [], images: [], files: [], title: '', lang: 'python' };
     await ctx.answerCbQuery();
     await ctx.reply("🧹 Контекст очищен. Возвращаюсь в главное меню.", { ...getMainMenu() });

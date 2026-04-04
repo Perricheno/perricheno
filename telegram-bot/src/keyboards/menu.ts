@@ -12,14 +12,6 @@ export function getMainMenu() {
     ]);
 }
 
-export function getVisualMenu() {
-    return Markup.inlineKeyboard([
-        [Markup.button.callback("📉 Линейный график", "gen_line")],
-        [Markup.button.callback("📊 Столбчатая диаграмма", "gen_bar")],
-        [Markup.button.callback("🥧 Круговая диаграмма", "gen_pie")],
-        [Markup.button.callback("« Назад", "main_menu")]
-    ]);
-}
 
 export function getHistoryMenu(chats: any[], page: number, totalPages: number) {
     const buttons = chats.map(c => [Markup.button.callback(c.title || "Без названия", `history_view_${c.id}`)]);
@@ -48,7 +40,7 @@ export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
     ];
 
     if (shareId) {
-        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/shared/${shareId}`)]);
+        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/s/${shareId}`)]);
     }
 
     buttons.push([Markup.button.callback("« Назад к списку", "history_1")]);
@@ -76,7 +68,7 @@ export function getVisualSuggestionsKeyboard() {
     }
     
     buttons.push([Markup.button.callback("🤖 Авто-выбор (ИИ)", "select_type_auto")]);
-    buttons.push([Markup.button.callback("« Назад", "tool_visual")]);
+    buttons.push([Markup.button.callback("« Назад", "main_menu")]);
     
     return Markup.inlineKeyboard(buttons);
 }

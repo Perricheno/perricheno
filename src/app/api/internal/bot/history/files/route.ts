@@ -49,17 +49,33 @@ export async function POST(req: NextRequest) {
         }
 
         if (type === "pdf") {
-            // For PDF, we send the LaTeX or Markdown to the processing service
-            // Since we have LaTeX, we should ideally use a LaTeX compiler.
-            // But the proxy shows 'html-to-pdf' and 'markdown-to-pdf'.
-            // If the service supports LaTeX, great. If not, we might need a workaround.
-            // Let's assume for now we can get a PDF from the site's shared link or similar.
-            // Actually, the simplest is to return the share_id and let the bot/user use that,
-            // OR use the internal proxy if it supports TeX.
-            
-            // For now, let's return a simple message or the ZIP if PDF fails.
-            // TO DO: Implement real LaTeX to PDF if possible.
-            return NextResponse.json({ error: "PDF generation via bot is pending. Use the ZIP or Web link for now." }, { status: 501 });
+            const zip = new JSZip();
+            zip.file("main.tex", session.main_tex || "");
+            if (session.references_bib) zip.file("references.bib", session.references_bib);
+
+            // PDF compilation via internal service
+            try {
+                const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+                // We assume there's a dedicated LaTeX compilation endpoint that takes a ZIP
+                const compRes = await fetch("https://pdf.perricheno.ru/api/v1/compile/latex", {
+                    method: "POST",
+                    headers: { "X-API-KEY": PDF_API_KEY, "Content-Type": "application/octet-stream" },
+                    body: zipBuffer as any
+                });
+
+                if (compRes.ok) {
+                    const pdfBuffer = await compRes.arrayBuffer();
+                    return new NextResponse(pdfBuffer as any, {
+                        headers: {
+                            "Content-Type": "application/pdf",
+                            "Content-Disposition": `attachment; filename="report_${sessionId}.pdf"`,
+                        },
+                    });
+                }
+            } catch (err) {
+                console.error("PDF Comp Error:", err);
+            }
+            return NextResponse.json({ error: "Не удалось скомпилировать PDF. Используйте ZIP." }, { status: 500 });
         }
 
         if (type === "images") {
@@ -69,14 +85,33 @@ export async function POST(req: NextRequest) {
         }
 
         if (type === "code") {
-            const isPython = session.main_tex?.includes("import ") || session.main_tex?.includes("plt.");
-            const filename = isPython ? "visual.py" : "visual.R";
-            return new NextResponse(session.main_tex || "", {
-                headers: {
-                    "Content-Type": "text/plain",
-                    "Content-Disposition": `attachment; filename="${filename}"`,
-                },
-            });
+            if (!session.visuals_json) return NextResponse.json({ error: "Код для этой сессии отсутствует." }, { status: 404 });
+            const visuals = JSON.parse(session.visuals_json);
+            
+            if (visuals.length === 1) {
+                const v = visuals[0];
+                const lang = v.chart_type === 'python' ? 'py' : 'R';
+                return new NextResponse(v.source_code || "", {
+                    headers: {
+                        "Content-Type": "text/plain",
+                        "Content-Disposition": `attachment; filename="visual_${sessionId.slice(0, 4)}.${lang}"`,
+                    },
+                });
+            } else {
+                // If multiple, zip them
+                const zip = new JSZip();
+                visuals.forEach((v: any, i: number) => {
+                    const lang = v.chart_type === 'python' ? 'py' : 'R';
+                    zip.file(`visual_${i + 1}_${v.chart_type}.${lang}`, v.source_code || "");
+                });
+                const content = await zip.generateAsync({ type: "nodebuffer" });
+                return new NextResponse(content as any, {
+                    headers: {
+                        "Content-Type": "application/zip",
+                        "Content-Disposition": `attachment; filename="source_codes_${sessionId}.zip"`,
+                    },
+                });
+            }
         }
 
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });

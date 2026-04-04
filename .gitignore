@@ -42,3 +42,7 @@ next-env.d.ts
 
 # logs
 build_error.log
+
+# Telegram Bot
+/telegram-bot/node_modules/
+/telegram-bot/dist/
