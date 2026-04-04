@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
 
-// @ts-ignore
-import { read, utils } from "xlsx";
-
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const PDF_API_BASE = "https://pdf.perricheno.ru/api/v1";
 const PDF_API_KEY = "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
@@ -25,9 +22,8 @@ export async function POST(req: NextRequest) {
         let currentBuffer = buffer;
         let currentExt = ext;
 
-        // 0. Support Office formats (Docx/Pptx) by converting them to PDF first via Stirling
-        // NOTE: We EXCLUDE 'xlsx' and 'xls' here to process them natively for better accuracy.
-        if (['docx', 'doc', 'pptx', 'ppt'].includes(ext || '')) {
+        // 0. Support Office formats by converting them to PDF first via Stirling
+        if (['xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt'].includes(ext || '')) {
             try {
                 console.log(`[ExtractText] Converting ${ext} to PDF via Stirling...`);
                 const convFormData = new FormData();
@@ -36,7 +32,7 @@ export async function POST(req: NextRequest) {
                     method: "POST",
                     headers: { "X-API-KEY": PDF_API_KEY },
                     body: convFormData,
-                    signal: AbortSignal.timeout(30000),
+                    signal: AbortSignal.timeout(45000),
                 });
                 if (convRes.ok) {
                     currentBuffer = Buffer.from(await convRes.arrayBuffer());
@@ -78,7 +74,7 @@ export async function POST(req: NextRequest) {
                     method: "POST",
                     headers: { "X-API-KEY": PDF_API_KEY },
                     body: imgFormData,
-                    signal: AbortSignal.timeout(45000), // Extended for large files
+                    signal: AbortSignal.timeout(45000),
                 });
 
                 if (imgRes.ok) {
@@ -86,7 +82,7 @@ export async function POST(req: NextRequest) {
                     const zip = await JSZip.loadAsync(zipBuffer);
                     const files = Object.keys(zip.files).sort();
                     
-                    // Take first 50 pages to prevent context window crash for huge documents
+                    // Take first 50 pages to prevent context window crash
                     const limitedFiles = files.slice(0, 50);
                     for (const fName of limitedFiles) {
                         if (fName.match(/\.(png|jpg|jpeg)$/i)) {
@@ -100,52 +96,25 @@ export async function POST(req: NextRequest) {
                 console.error("[ExtractText] PDF Image conversion failed:", e);
                 if (!text) text = "[File processing failed]";
             }
-        } else if (['xlsx', 'xls', 'txt', 'csv', 'tsv', 'json', 'md', 'xml'].includes(ext || '')) {
-            // NATIVE SPREADSHEET & TEXT HANDLER
-            if (ext === 'xlsx' || ext === 'xls') {
-                try {
-                    const workbook = read(buffer, { type: 'buffer' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const data = utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
-                    
-                    const rowCount = data.length;
-                    const headers = (data[0] || []).map(h => String(h).trim());
-                    const sample = data.slice(0, 25); // First 25 rows for structural insight
-                    
-                    text = `[DATASET SCHEMA DETECTED]\n`;
-                    text += `FILE TYPE: EXCEL (${ext.toUpperCase()})\n`;
-                    text += `ACTIVE SHEET: "${sheetName}"\n`;
-                    text += `TOTAL ROWS: ${rowCount}\n`;
-                    text += `COLUMNS: ${headers.join(' | ')}\n\n`;
-                    text += `[STRUCTURAL SAMPLE (First 25 rows)]:\n`;
-                    text += sample.map(row => row.join(' | ')).join('\n');
-                    text += `\n\n[LOGIC INSTRUCTION]: This is a dataset with ${rowCount} rows. Analyze columns "${headers.join(', ')}". Load data using pandas directly from the provided strings.`;
-                    
-                    console.log(`[ExtractText] Parsed EXCEL: ${rowCount} rows, ${headers.length} cols.`);
-                } catch (e) {
-                    text = `[ERROR Parsing Excel: ${e}]`;
-                }
+        } else if (['txt', 'csv', 'tsv', 'json', 'md', 'xml'].includes(ext || '')) {
+            const raw = buffer.toString('utf-8');
+            if (ext === 'csv' || raw.includes(',')) {
+                // Intelligent CSV Schema Extraction
+                const allLines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                const header = allLines[0];
+                const sample = allLines.slice(0, 25);
+                const rowCount = allLines.length;
+                
+                text = `[DATASET SCHEMA DETECTED]\n`;
+                text += `TOTAL ROWS: ${rowCount}\n`;
+                text += `COLUMNS: ${header.split(',').join(' | ')}\n\n`;
+                text += `[STRUCTURAL SAMPLE (First 25 rows)]:\n${sample.join('\n')}\n\n`;
+                text += `[LOGIC INSTRUCTION]: Analyze this dataset. Read it via io.StringIO in your Python code.`;
             } else {
-                const raw = buffer.toString('utf-8');
-                if (ext === 'csv' || raw.includes(',')) {
-                    // Intelligent CSV Schema Extraction
-                    const allLines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                    const header = allLines[0];
-                    const sample = allLines.slice(0, 25);
-                    const rowCount = allLines.length;
-                    
-                    text = `[DATASET SCHEMA DETECTED]\n`;
-                    text += `TOTAL ROWS: ${rowCount}\n`;
-                    text += `COLUMNS: ${header.split(',').join(' | ')}\n\n`;
-                    text += `[STRUCTURAL SAMPLE (First 25 rows)]:\n${sample.join('\n')}\n\n`;
-                    text += `[LOGIC INSTRUCTION]: Analyze this dataset. Read it via io.StringIO in your Python code.`;
-                } else {
-                    const lines = raw.split('\n');
-                    text = lines.length > 100 
-                        ? `[TRUNCATED TEXT: Showing 100 of ${lines.length} lines]\n\n` + lines.slice(0, 100).join('\n')
-                        : raw;
-                }
+                const lines = raw.split('\n');
+                text = lines.length > 100 
+                    ? `[TRUNCATED TEXT: Showing 100 of ${lines.length} lines]\n\n` + lines.slice(0, 100).join('\n')
+                    : raw;
             }
         } else {
             return NextResponse.json({ text: "", error: "Unsupported file type" }, { status: 200 });
