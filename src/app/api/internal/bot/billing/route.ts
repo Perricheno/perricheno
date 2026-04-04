@@ -198,10 +198,31 @@ export async function POST(req: NextRequest) {
             // Increment uses
             db.prepare("UPDATE promo_codes SET uses = uses + 1 WHERE id = ?").run(promo.id);
 
+            const receiptId = `PRN-PROMO-${Date.now().toString(36).toUpperCase()}-${user.id}`;
+            const amountText = `${promo.amount.toLocaleString()} ${type} (Promo)`;
+            
+            // Fire-and-forget receipt generation
+            try {
+                const { generateAndStoreReceipt } = await import('@/lib/receiptGenerator');
+                generateAndStoreReceipt({
+                    id: receiptId,
+                    userId: user.id,
+                    type: 'promo_code',
+                    packName: `Promo: ${code}`,
+                    amountText: amountText,
+                    dateISO: new Date().toISOString()
+                }).catch(e => console.error(e));
+            } catch(e) {
+                console.error("Receipt gen failed", e);
+            }
+
+            const webDomain = process.env.WEBHOOK_DOMAIN || 'https://perricheno.ru';
+
             return NextResponse.json({
                 success: true,
                 type,
                 amount: promo.amount,
+                receipt_url: `${webDomain}/api/billing/receipt/${receiptId}`,
                 message: `Промокод применён! +${promo.amount.toLocaleString()} ${type}.`
             });
         }

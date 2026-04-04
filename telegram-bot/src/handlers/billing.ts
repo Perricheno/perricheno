@@ -271,9 +271,15 @@ export async function handleBillingPromoApply(ctx: any, code: string) {
         });
 
         if (result.success) {
+            const kbText = getBillingDashboardKeyboard().reply_markup.inline_keyboard;
+            
+            if (result.receipt_url) {
+                kbText.unshift([{ text: "📄 Скачать PDF-чек", url: result.receipt_url }]);
+            }
+            
             await ctx.reply(
                 `✅ *Промокод активирован!*\n\n${result.message}`,
-                { parse_mode: "Markdown", ...getBillingDashboardKeyboard() }
+                { parse_mode: "Markdown", reply_markup: { inline_keyboard: kbText } }
             );
         } else {
             await ctx.reply(
