@@ -42,7 +42,12 @@ compile_r_code <- function(code) {
     
     list(
       success = (exit_code == 0) && file.exists(output_path),
-      log = paste(output, collapse = "\n"),
+      log = if (exit_code == 0 && !file.exists(output_path)) 
+              paste0(paste(output, collapse = "\n"), "\n[Error] R script finished with exit_code 0 but NO output.png was found.")
+            else if (exit_code != 0)
+              paste0(paste(output, collapse = "\n"), "\n[Error] R script exited with code ", exit_code)
+            else 
+              paste(output, collapse = "\n"),
       exit_code = exit_code
     )
   }, error = function(e) {

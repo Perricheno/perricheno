@@ -33,6 +33,13 @@ async def compile_python_code(req: CompileRequest):
 import os
 import sys
 
+# Force non-interactive backend for server environments
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+except Exception:
+    pass
+
 # Change to temp dir
 os.chdir(r"{tmp_dir}")
 
@@ -87,6 +94,10 @@ except Exception as e:
             success = True
             with open(output_path, "rb") as img_f:
                 image_b64 = base64.b64encode(img_f.read()).decode("utf-8")
+        elif exit_code == 0:
+            log += "\n[Error] Python script finished with exit_code 0 but NO output.png was found. Ensure your code either uses plt.show(), plt.savefig(), or simple matplotlib/plotly plot logic."
+        else:
+            log += f"\n[Error] Python script exited with code {exit_code}."
 
     except subprocess.TimeoutExpired as e:
         log = "Execution timed out after 30 seconds."

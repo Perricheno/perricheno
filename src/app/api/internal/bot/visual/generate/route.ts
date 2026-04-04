@@ -18,17 +18,18 @@ export async function POST(req: NextRequest) {
 
         const systemPrompt = `You are "Perricheno Visual Agent".
 Your task is to generate high-quality ${language} code for data visualization.
-The user will provide context (text descriptions, file contents, etc.).
+The user will provide context. Use the BEST libraries available to create professional, premium, and aesthetically pleasing visuals.
+
+AVAILABLE LIBRARIES (${language === 'python' ? 'Python' : 'R'}):
+${language === 'python' ? '- Data: pandas, numpy, scipy, statsmodels, scikit-learn\n- Plotting: matplotlib, seaborn, plotly, squarify (for treemaps), SciencePlots (use plt.style.use(\'science\') for better look)\n- Conversion: Kaleido, CairoSVG' : '- ggplot2, Cairo, Plotly, Lattice, Highcharter'}
 
 CODE RULES:
 1. Output ONLY RAW ${language === 'python' ? 'Python' : 'R'} code.
-2. No markdown fences.
-3. No commentary or explanations.
-4. If Python: Use matplotlib or plotly. Ensure you create a figure named 'fig' (for plotly) or simply use plt.plot (for matplotlib).
-5. If R: Use ggplot2 or base R.
-6. The compiler will automatically save the output as 'output.png'.
-7. Do not include any code to 'show' the plot, just the 'save' or the figure object creation.
-8. Assume all necessary data is in the script (mock it or extract from context).
+2. No markdown fences. No commentary.
+3. If Python/Matplotlib: Use 'Seaborn' or 'SciencePlots' styles if appropriate. 
+4. The compiler automatically saves the figure as 'output.png'. 
+5. For Plotly (Python): Ensure you create a figure object named 'fig'. The compiler will handle saving it.
+6. For Matplotlib (Python): You can use plt.savefig('output.png') or just let the compiler handle it.
 
 CONTEXT:
 ${context.text_data}

@@ -104,7 +104,8 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             const filename = lang === 'python' ? 'visual.py' : 'visual.R';
             await ctx.replyWithDocument({ source: Buffer.from(code), filename });
         } else {
-            await ctx.reply(`❌ *Ошибка компиляции:*\n\n\`\`\`\n${compResult.log || "Неизвестная ошибка"}\n\`\`\``, { 
+            const errorLog = compResult.log || "Неизвестная ошибка среды выполнения. Попробуйте другой тип графика или другое описание.";
+            await ctx.reply(`❌ *Ошибка компиляции:*\n\n\`\`\`\n${errorLog}\n\`\`\``, { 
                 parse_mode: "Markdown",
                 ...getPostVisualKeyboard()
             });
