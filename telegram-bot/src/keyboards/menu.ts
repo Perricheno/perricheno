@@ -49,26 +49,35 @@ export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
     return Markup.inlineKeyboard(buttons);
 }
 
-export function getVisualSuggestionsKeyboard() {
+export function getVisualSuggestionsKeyboard(selectedTypes: string[] = []) {
     const types = [
         "Line", "Bar", "Pie", "Scatter", "Histogram", "Boxplot", "Violin", "Area",
         "Heatmap", "Bubble", "Donut", "Radar", "Treemap", "Sunburst", "Waterfall",
         "Sankey", "Funnel", "Gauge", "Bullet", "Candlestick", "OHLC", "Polar",
-        "Error Bar", "Stack Bar", "Stack Area", "Percent Stack", "Dendrogram",
-        "Surface 3D", "Mesh 3D", "Contour", "Streamtube", "Cone 3D", "Quiver",
-        "Windrose", "Hexbin", "Density 2D", "Parallel Coord", "Parallel Categories",
-        "Sunburst", "Icicle", "Network", "Tree", "Chord", "Map"
+        "Map", "Network", "Tree", "Chord", "Density", "Surface"
     ];
     
-    // Group into rows of 2
     const buttons = [];
-    for (let i = 0; i < types.length; i += 2) {
-        const row = [Markup.button.callback(types[i], `select_type_${types[i].toLowerCase()}`)];
-        if (types[i+1]) row.push(Markup.button.callback(types[i+1], `select_type_${types[i+1].toLowerCase()}`));
+    // 3 columns for better mobile fit
+    for (let i = 0; i < types.length; i += 3) {
+        const row = [];
+        for (let j = 0; j < 3; j++) {
+            const type = types[i + j];
+            if (type) {
+                const isSelected = selectedTypes.includes(type.toLowerCase());
+                row.push(Markup.button.callback(`${isSelected ? '✅ ' : ''}${type}`, `toggle_type_${type.toLowerCase()}`));
+            }
+        }
         buttons.push(row);
     }
     
-    buttons.push([Markup.button.callback("🤖 Авто-выбор (ИИ)", "select_type_auto")]);
+    const isAuto = selectedTypes.includes('auto');
+    buttons.push([Markup.button.callback(`${isAuto ? '✅ ' : '🤖 '}Авто-выбор (ИИ)`, "toggle_type_auto")]);
+    
+    if (selectedTypes.length > 0) {
+        buttons.push([Markup.button.callback(`🚀 Сгенерировать (${selectedTypes.length})`, "visual_generate_start")]);
+    }
+    
     buttons.push([Markup.button.callback("« Назад", "main_menu")]);
     
     return Markup.inlineKeyboard(buttons);

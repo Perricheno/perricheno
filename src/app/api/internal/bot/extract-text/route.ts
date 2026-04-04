@@ -92,15 +92,26 @@ export async function POST(req: NextRequest) {
                 if (!text) text = "[File processing totally failed]";
             }
         } else if (['txt', 'csv', 'tsv', 'json', 'md', 'tex', 'log', 'xml', 'r', 'py', 'js', 'ts', 'html'].includes(ext || '')) {
-            const fullText = buffer.toString('utf-8');
-            const lines = fullText.split('\n');
-            const lineCount = lines.length;
-            
-            if (lineCount > 50) {
-                // Return only first 50 lines to show columns and structure
-                text = `[LARGE DATASET: Showing first 50 lines of ${lineCount} total lines]\n\n` + lines.slice(0, 50).join('\n');
+            const raw = buffer.toString('utf-8');
+            if (ext === 'csv' || raw.includes(',')) {
+                // Intelligent CSV Schema Extraction
+                const allLines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                const header = allLines[0];
+                const sample = allLines.slice(1, 10); // First 9 data rows (total 10 lines with header)
+                const rowCount = allLines.length;
+                
+                // Build a schema insights block
+                const columns = header.split(',').map(c => c.trim().replace(/"/g, ''));
+                text = `[DATASET SCHEMA DETECTED]\n`;
+                text += `TOTAL ROWS: ${rowCount}\n`;
+                text += `COLUMNS: ${columns.join(' | ')}\n\n`;
+                text += `[STRUCTURAL SAMPLE (First 10 rows)]:\n${header}\n${sample.join('\n')}\n\n`;
+                text += `[LOGIC INSTRUCTION]: This is a dataset with ${rowCount} rows. Analyze the types of metrics in "${columns.join(', ')}". Write code that handles the entire distribution correctly (simulation of patterns).`;
             } else {
-                text = fullText;
+                const lines = raw.split('\n');
+                text = lines.length > 50 
+                    ? `[TRUNCATED TEXT: Showing 50 of ${lines.length} lines]\n\n` + lines.slice(0, 50).join('\n')
+                    : raw;
             }
         } else {
             return NextResponse.json({ text: "", error: "Unsupported file type" }, { status: 200 });

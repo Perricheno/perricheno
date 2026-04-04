@@ -16,6 +16,18 @@ compile_r_code <- function(code) {
   script_path <- file.path(tmp_dir, "script.R")
   output_path <- file.path(tmp_dir, "output.png")
   
+  # ── Write auxiliary files ──
+  if (!is.null(files) && is.list(files)) {
+    for (f_info in files) {
+      try({
+        # Security: Simple sanitization for filename
+        clean_name <- basename(f_info$name)
+        f_path <- file.path(tmp_dir, clean_name)
+        writeBin(base64enc::base64decode(f_info$content_b64), f_path)
+      }, silent = TRUE)
+    }
+  }
+
   # Wrap code: set working directory, auto-install missing packages, and output to output.png
   wrapped_code <- paste0(
     'setwd("', gsub("\\\\", "/", tmp_dir), '")\n',
@@ -106,6 +118,7 @@ app <- list(
     tryCatch({
       payload <- fromJSON(body_text)
       code <- payload$code
+      files <- payload$files  # Get files from payload
       
       if (is.null(code) || nchar(trimws(code)) == 0) {
         return(list(
@@ -116,7 +129,7 @@ app <- list(
       }
       
       cat("📊 Compiling R code (", nchar(code), " chars)...\n")
-      result <- compile_r_code(code)
+      result <- compile_r_code(code, files)
       
       response <- toJSON(result, auto_unbox = TRUE)
       

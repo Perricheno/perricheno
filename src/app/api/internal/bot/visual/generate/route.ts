@@ -37,42 +37,70 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
     const chartDesc = prompts[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
     
-    const hasRealData = (dataContext && dataContext.length > 50) || hasImages;
-    
+    // Logic: Identify if we are dealing with a large dataset schema
+    const isDatasetSchema = dataContext.includes('[DATASET SCHEMA DETECTED]');
+
     if (isPython) {
-        return `You are a Python data visualization expert (Matplotlib/Seaborn/Pandas). Generate a SINGLE, complete, self-contained Python script.
-        
-        GOAL: Create ${chartDesc} about "${topic}"
-        USER SPECIFIC INSTRUCTION: "${instruction || 'Visualize the data'}"
-        
-        ${hasImages ? `SOURCE DATA (IMAGES): I have attached images of document pages. You MUST extract numbers, metrics, and categories directly from these images. This is your PRIMARY source of truth.` : ''}
-        ${dataContext ? `SOURCE DATA (TEXT/FILES):\n${dataContext}\n` : ''}
-        
-        REQUIREMENTS:
-        1. **CRITICAL**: Use REAL DATA from the sources above. DO NOT analyze the user's instruction "${instruction}" as data itself. The instruction just tells you WHAT to find in the documents.
-        2. If the user instruction is "выручка" (revenue), locate revenue tables in the IMAGES/TEXT and visualize them.
-        3. If there are multiple pages, aggregate data across them.
-        4. Use the "${palette}" palette and professional ${isRu ? 'Russian' : 'English'} styling.
-        ${!hasRealData ? '5. If NO data found in images or text, only then use synthetic data.' : '5. DO NOT use synthetic data if images or text are provided.'}
-        6. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
-        7. Figure MUST be stored in the \`fig\` variable.
-        
-        OUTPUT: Only output pure Python code. NO markdown fences. NO commentary.`;
+        return `### MASTER DATA SCIENTIST ROLE: VISUALIZATION ENGINEER
+You are a Senior Data Scientist at Perricheno, specialized in high-impact ${runtime} visualizations.
+Your task: Transform raw business/scientific data into a PREMIUM visualization script.
+
+### 1. USER OBJECTIVE & GOAL
+- PROJECT TITLE: "${topic}"
+- TARGET GOAL: Create ${chartDesc} about "${topic}"
+- USER SPECIFIC INSTRUCTION: "${instruction || 'Analyze and visualize these patterns'}"
+
+### 2. DATA SOURCE INVESTIGATION (EQUAL PRIORITY)
+Treat all provided data below as a single, unified dataset of equal importance. 
+
+${hasImages ? `- SOURCE DATA (IMAGES): Extract metrics, numbers, and categories from these images.` : ''}
+${dataContext ? `- SOURCE DATA (TEXT/SCHEMA):\n${dataContext}\n` : ''}
+${isDatasetSchema ? `- NOTE ON SCALE: This is a sample of a large-scale dataset (millions of rows). Your code MUST be robust and handle patterns that represent the entire volume correctly.` : ''}
+
+### 3. TECHNICAL LOGIC & DATA CLEANING (MANDATORY)
+- **Data Load**: Convert types properly (strings to numeric where appropriate).
+- **Missing Values**: Handle NaNs using interpolation, mean, or drops. DO NOT let NaNs break the plot.
+- **Outliers**: Detect and handle outliers to prevent scale distortion.
+- **Labels**: Use ${isRu ? 'Russian' : 'English'} for all titles, legends, and axes. 
+- **Readability**: Wrap long labels. If dates are used, format them nicely.
+
+### 4. AESTHETIC GUIDELINES (PERRICHENO PREMIUM)
+- **Colors**: Use the "${palette}" colormap. Use gradients or consistent hex colors.
+- **Grids**: Add subtle grids (\`grid(TRUE, alpha=0.3)\` in R, \`plt.grid(alpha=0.3)\` in Python).
+- **Fonts**: Ensure titles are prominent. Use bold weights for emphasis.
+- **Layout**: Use \`plt.tight_layout()\` or equivalent to prevent cut-offs.
+
+### 5. EXECUTION PLAN (PYTHON)
+- Import: plt, sns, pd, np.
+- Data Processing: Use Pandas to create a DataFrame \`df\` representing the REAL document data.
+- Plotting: Use Seaborn/Matplotlib for the main task.
+- Result: The final figure MUST be assigned to the variable \`fig\`.
+
+### 6. NO-HALLUCINATION POLICY
+- If the document contains REAL metrics, use them. 
+- If the instruction is "Revenue", find REVENUE in the source.
+- DO NOT invent data if "${instruction}" is the only text present; analyze it as an instruction for the file.
+
+OUTPUT: Pure, executable Python code only. NO markdown, NO explanations.`;
     }
 
-    return `You are an R visualization expert. Generate a SINGLE, complete, self-contained R script.
+    return `### MASTER DATA SCIENTIST ROLE: R VISUALIZATION ENGINEER
+You are a Senior R Developer using \`ggplot2\`.
 
-GOAL: Create ${chartDesc} about "${topic}"
-USER SPECIFIC INSTRUCTION: "${instruction || 'Visualize the data'}"
+GOAL: Create ${chartDesc} for "${topic}"
+INSTRUCTION: "${instruction}"
 
-${hasImages ? `SOURCE DATA (IMAGES): Extract data from the provided images.` : ''}
-${dataContext ? `SOURCE DATA (TEXT/FILES):\n${dataContext}\n` : ''}
+${hasImages ? `VISION DATA: Priority data extracted from images.` : ''}
+${dataContext ? `DATA CONTEXT:\n${dataContext}\n` : ''}
 
-REQUIREMENTS:
-1. Use ACTUAL DATA from images/text. The instruction "${instruction}" is NOT the data.
-2. The last expression MUST be the plot object.
+### REQUIREMENTS:
+1. Load data into \`df\`.
+2. Handle factors and dates correctly.
+3. Use \`theme_minimal()\` or custom Perricheno styling.
+4. Scale color/fill with "${palette}".
+5. Ensure the final expression is the ggplot object.
 
-OUTPUT: Only output the pure R code. NO markdown.`;
+OUTPUT: Pure R code only.`;
 }
 
 // ── Helpers (from working agent/visualize/route.ts) ──

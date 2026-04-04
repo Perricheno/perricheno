@@ -9,7 +9,8 @@ export async function handleVisualStart(ctx: any) {
     ctx.session.step = 'awaiting_visual_name';
     ctx.session.visual = {
         title: '',
-        type: type,
+        type: type === 'auto' ? ['auto'] : [type], 
+        selectedTypes: type === 'auto' ? ['auto'] : [type],
         text: [],
         images: [],
         files: [],
@@ -58,6 +59,26 @@ export async function handleVisualCollect(ctx: any) {
     });
 }
 
+export async function handleVisualToggleType(ctx: any) {
+    const type = ctx.match[1].toLowerCase();
+    const s = ctx.session.visual;
+    
+    if (!s.selectedTypes) s.selectedTypes = [];
+    
+    if (s.selectedTypes.includes(type)) {
+        s.selectedTypes = s.selectedTypes.filter((t: string) => t !== type);
+    } else {
+        s.selectedTypes.push(type);
+    }
+    
+    const text = `📊 *Выбор визуализаций (Мульти-режим)*\n\nВыбрано: *${s.selectedTypes.length}*\n_${s.selectedTypes.map((t: string) => t.toUpperCase()).join(', ') || 'пусто'}_`;
+    
+    await ctx.editMessageText(text, {
+        parse_mode: "Markdown",
+        ...getVisualSuggestionsKeyboard(s.selectedTypes)
+    }).catch(() => {});
+}
+
 export async function handleVisualGenerateRequest(ctx: any) {
     if (ctx.session.isProcessing) return ctx.answerCbQuery("⏳ Пожалуйста, дождитесь завершения...");
     
@@ -67,26 +88,29 @@ export async function handleVisualGenerateRequest(ctx: any) {
     }
 
     await ctx.answerCbQuery();
-    await ctx.editMessageText("⚙️ *Выберите язык программирования для графиков:*", {
+    await ctx.editMessageText(`📊 *Выберите типы графиков:*\n\nВыбрано: *${s.selectedTypes?.length || 0}*`, {
         parse_mode: "Markdown",
-        ...getLangSelectionKeyboard()
+        ...getVisualSuggestionsKeyboard(s.selectedTypes || [])
     }).catch(() => {});
 }
 
 export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
     if (ctx.session.isProcessing) return ctx.answerCbQuery("⏳ Генерация уже запущена.");
     
+    const s = ctx.session.visual;
+    const types = s.selectedTypes?.length > 0 ? s.selectedTypes : ['auto'];
+    
     ctx.session.visual.lang = lang;
     ctx.session.step = 'processing';
     ctx.session.isProcessing = true;
     
-    const msg = await ctx.reply(`🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\n📂 Обрабатываю загруженные файлы...`, {
+    const statusMsg = await ctx.reply(`🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\nКоличество графиков: *${types.length}*\n🕒 Обрабатываю...`, {
         parse_mode: "Markdown"
     });
 
     try {
-        const s = ctx.session.visual;
         const textParts: string[] = [];
+        const attachedFiles: { name: string, content_b64: string }[] = [];
 
         // ── 1. Download and extract text from files ──
         if (s.files && s.files.length > 0) {
@@ -100,34 +124,34 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     if (!res.ok) continue;
                     
                     const ext = fileName.split('.').pop()?.toLowerCase();
+                    const pdfBuffer = await res.arrayBuffer();
                     
-                    if (ext === 'pdf') {
-                        const pdfBuffer = await res.arrayBuffer();
-                        const extractRes = await fetch(`${SITE_URL}/api/internal/bot/extract-text`, {
-                            method: "POST",
-                            headers: { 
-                                "Content-Type": "application/octet-stream",
-                                "X-Bot-Secret": WEBHOOK_SECRET!,
-                                "X-File-Name": fileName
-                            },
-                            body: pdfBuffer,
-                            signal: AbortSignal.timeout(30000),
-                        });
-                        
-                        if (extractRes.ok) {
-                            const { text, images: extractedImages } = await extractRes.json() as any;
-                            if (text && text.length > 0) {
-                                textParts.push(`FILE "${fileName}":\n${text}`);
-                            }
-                            if (extractedImages && extractedImages.length > 0) {
-                                ctx.session.visual.images.push(...extractedImages.map((img: string) => ({ base64: img })));
-                            }
-                        } else {
-                            textParts.push(`FILE "${fileName}": [PDF uploaded but text extraction failed]`);
+                    // Always try extraction via site API
+                    const extractRes = await fetch(`${SITE_URL}/api/internal/bot/extract-text`, {
+                        method: "POST",
+                        headers: { 
+                            "Content-Type": "application/octet-stream",
+                            "X-Bot-Secret": WEBHOOK_SECRET!,
+                            "X-File-Name": fileName
+                        },
+                        body: pdfBuffer,
+                        signal: AbortSignal.timeout(30000),
+                    });
+                    
+                    if (extractRes.ok) {
+                        const { text, images: extractedImages } = await extractRes.json() as any;
+                        if (text && text.length > 0) {
+                            textParts.push(`FILE "${fileName}":\n${text}`);
+                            // Pass the same text (truncated to 10 rows by extract-text) back as a file
+                            const fileNameBase = fileName.replace(/\.[^/.]+$/, "");
+                            attachedFiles.push({
+                                name: `${fileNameBase}.txt`,
+                                content_b64: Buffer.from(text).toString('base64')
+                            });
                         }
-                    } else if (['txt', 'csv', 'tsv', 'json', 'md', 'tex', 'log', 'xml', 'r', 'py'].includes(ext || '')) {
-                        const fileText = await res.text();
-                        textParts.push(`FILE "${fileName}":\n${fileText}`);
+                        if (extractedImages && extractedImages.length > 0) {
+                            ctx.session.visual.images.push(...extractedImages.map((img: string) => ({ base64: img })));
+                        }
                     }
                 } catch (e) {
                     console.error(`Failed to process file ${file.fileName}:`, e);
@@ -156,42 +180,46 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             }
         }
 
-        // ── 3. Final Context Separation ──
+        // ── 3. Sequential Generation for all selected types ──
         const userPrompt = s.text.join('\n') || s.title;
         const fileDataContext = textParts.join('\n\n---\n\n');
         const visionImages = s.images.filter((img: any) => img.base64).map((img: any) => img.base64);
-        
-        if (msg.message_id) {
-            await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined,
-                `🚀 *Запуск ИИ-анализа (${lang.toUpperCase()})...*\n\n📊 Визуальный контекст: ${visionImages.length} стр.\n📝 Текстовый контекст: ${fileDataContext.length} симв.\n\n🕒 Обрабатываю...`,
+
+        for (let i = 0; i < types.length; i++) {
+            const currentType = types[i];
+            
+            await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined,
+                `🚀 *Генерация (${i + 1}/${types.length}): ${currentType.toUpperCase()}*\n\n📊 Визуальный контекст: ${visionImages.length} стр.\n\n🕒 Обрабатываю...`,
                 { parse_mode: "Markdown" }
             ).catch(() => {});
-        }
 
-        const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-            body: JSON.stringify({ 
-                context: { text_data: fileDataContext }, 
-                instruction: userPrompt,
-                language: lang,
-                telegramId: ctx.from.id,
-                title: s.title,
-                chartType: s.type || 'auto',
-                chatId: ctx.chat.id,
-                messageId: msg.message_id,
-                images: visionImages
-            }),
-        });
+            const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                body: JSON.stringify({ 
+                    context: { text_data: fileDataContext }, 
+                    instruction: userPrompt,
+                    language: lang,
+                    telegramId: ctx.from.id,
+                    title: s.title,
+                    chartType: currentType, // One by one
+                    chatId: ctx.chat.id,
+                    messageId: statusMsg.message_id,
+                    images: visionImages,
+                    attachedFiles: attachedFiles // Passes actual data files to compiler
+                }),
+            });
 
-        if (!genRes.ok) {
-            const errBody = await genRes.text().catch(() => 'Unknown error');
-            throw new Error(`Сервер (${genRes.status}): ${errBody.slice(0, 100)}`);
+            if (!genRes.ok) {
+                const errBody = await genRes.text().catch(() => 'Unknown error');
+                console.error(`Error for type ${currentType}:`, errBody);
+                // Continue with next instead of failing entire session if one fails?
+            }
         }
 
     } catch (err: any) {
         console.error("Visual Error:", err);
-        await ctx.reply(`⚠️ Ошибка: ${err.message}`);
+        await ctx.reply(`⚠️ Критическая ошибка: ${err.message}`);
         ctx.session.step = 'idle';
         ctx.session.isProcessing = false;
     }

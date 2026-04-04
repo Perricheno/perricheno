@@ -9,8 +9,13 @@ import uvicorn
 
 app = FastAPI()
 
+class FileModel(BaseModel):
+    name: str
+    content_b64: str
+
 class CompileRequest(BaseModel):
     code: str
+    files: list[FileModel] = []
 
 MAX_EXEC_TIME = 30  # seconds
 
@@ -26,6 +31,19 @@ async def compile_python_code(req: CompileRequest):
         return JSONResponse(status_code=400, content={"error": "No code provided"})
 
     tmp_dir = tempfile.mkdtemp(prefix="pythoncompile_")
+    
+    # ── Write auxiliary files ──
+    for f_info in req.files:
+        try:
+            f_path = os.path.join(tmp_dir, f_info.name)
+            # Prevent directory traversal
+            if os.path.commonpath([tmp_dir, f_path]) != tmp_dir:
+                continue
+            with open(f_path, "wb") as f:
+                f.write(base64.b64decode(f_info.content_b64))
+        except Exception as e:
+            print(f"Error writing file {f_info.name}: {e}")
+
     script_path = os.path.join(tmp_dir, "script.py")
     output_path = os.path.join(tmp_dir, "output.png")
 

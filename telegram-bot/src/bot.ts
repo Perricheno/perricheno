@@ -1,9 +1,9 @@
 import { Telegraf, Context } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
-import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset } from "./handlers/visual";
+import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset, handleVisualToggleType } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling, handleBillingShop, handleBillingCategory, handleBillingBuy, handleBillingConfirm, handleBillingHistory, handleBillingPromoStart, handleBillingPromoApply } from "./handlers/billing";
-import { getMainMenu, getVisualSuggestionsKeyboard } from "./keyboards/menu";
+import { getMainMenu, getVisualSuggestionsKeyboard, getLangSelectionKeyboard } from "./keyboards/menu";
 import { sessionStore } from "./sessionStore";
 
 import http from "http";
@@ -55,8 +55,8 @@ bot.action("main_menu", async (ctx) => {
 
 bot.action("tool_visual", async (ctx) => {
     await ctx.answerCbQuery();
-    const text = `📊 *Визуализация данных*\n\nВыберите тип визуализации или создайте новый проект:`;
-    const keyboard = getVisualSuggestionsKeyboard();
+    const text = `📊 *Визуализация данных*\n\nВыберите один или несколько типов графиков:`;
+    const keyboard = getVisualSuggestionsKeyboard(ctx.session.visual?.selectedTypes || []);
     if (ctx.callbackQuery) {
         await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
     } else {
@@ -64,8 +64,14 @@ bot.action("tool_visual", async (ctx) => {
     }
 });
 
-bot.action("select_type_auto", ctx => handleVisualStart(ctx));
-bot.action(/^select_type_(.+)$/, ctx => handleVisualStart(ctx));
+bot.action(/^toggle_type_(.+)$/, ctx => handleVisualToggleType(ctx));
+bot.action("visual_generate_start", async (ctx) => {
+    await ctx.answerCbQuery();
+    await ctx.editMessageText("⚙️ *Выберите язык программирования для генерации:*", {
+        parse_mode: "Markdown",
+        ...getLangSelectionKeyboard()
+    }).catch(() => {});
+});
 
 bot.action("billing_info", ctx => handleBilling(ctx));
 bot.action("me_info", ctx => handleMe(ctx));
