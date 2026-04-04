@@ -33,17 +33,39 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         let pdfBuffer = Buffer.from(base64Data, 'base64');
 
         // Some compilers return 'application/zip' which got stored incorrectly if not parsed.
-        // PDF magic number is %PDF (0x25, 0x50, 0x44, 0x46). ZIP magic number is PK (0x50, 0x4B)
+        // ZIP magic number is PK (0x50, 0x4B)
         if (pdfBuffer.length > 4 && pdfBuffer[0] === 0x50 && pdfBuffer[1] === 0x4B) {
-            // It's a ZIP archive! We must extract the PDF.
-            const JSZip = require('jszip');
-            const unzipped = await JSZip.loadAsync(pdfBuffer);
-            
-            // Find any pdf file in the zip
-            const pdfFile = Object.values(unzipped.files).find((f: any) => f.name.endsWith('.pdf'));
-            if (pdfFile) {
-                pdfBuffer = await (pdfFile as any).async('nodebuffer');
+            try {
+                const JSZip = require('jszip');
+                const unzipped = await JSZip.loadAsync(pdfBuffer);
+                
+                // Find any pdf file in the zip
+                const pdfFile = Object.values(unzipped.files).find((f: any) => f.name.endsWith('.pdf'));
+                if (pdfFile) {
+                    pdfBuffer = await (pdfFile as any).async('nodebuffer');
+                }
+            } catch (err) {
+                console.error("ZIP extract error:", err);
             }
+        }
+
+        // --- EXTREME DIAGNOSTICS: Check if it's a real PDF ---
+        // A real PDF MUST start with `%PDF` (0x25, 0x50, 0x44, 0x46)
+        if (pdfBuffer.length < 4 || pdfBuffer[0] !== 0x25 || pdfBuffer[1] !== 0x50 || pdfBuffer[2] !== 0x44 || pdfBuffer[3] !== 0x46) {
+            // It is NOT a PDF. It is likely a raw LaTeX compilation error log!
+            // Let's decode it as UTF-8 so the user can see what the LaTeX compiler crashed on!
+            const errorLogText = pdfBuffer.toString('utf-8');
+            return new Response(`[Perricheno System] Ошибка Фискального Модуля!
+Вместо PDF-файла компилятор LaTeX вернул лог ошибки:
+
+--------------------------------------------------
+${errorLogText}
+--------------------------------------------------
+
+Пожалуйста, проверьте синтаксис шаблона 'receipt.tex' (возможно, неэкранированные спецсимволы в промокодах или отсутствуют пакеты).`, {
+                status: 500,
+                headers: { "Content-Type": "text/plain; charset=utf-8" }
+            });
         }
 
         return new Response(pdfBuffer, {
