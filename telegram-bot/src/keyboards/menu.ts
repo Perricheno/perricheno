@@ -22,15 +22,36 @@ export function getVisualMenu() {
 }
 
 export function getHistoryMenu(chats: any[], page: number, totalPages: number) {
-    const buttons = chats.map(c => [Markup.button.callback(c.title || "Без названия", `chat_${c.id}`)]);
+    const buttons = chats.map(c => [Markup.button.callback(c.title || "Без названия", `history_view_${c.id}`)]);
     
     const nav = [];
-    if (page > 1) nav.push(Markup.button.callback("« Назад", `history_${page - 1}`));
+    if (page > 1) nav.push(Markup.button.callback("«", `history_${page - 1}`));
     nav.push(Markup.button.callback(`${page} / ${totalPages}`, "noop"));
-    if (page < totalPages) nav.push(Markup.button.callback("Вперед »", `history_${page + 1}`));
+    if (page < totalPages) nav.push(Markup.button.callback("»", `history_${page + 1}`));
     
     buttons.push(nav);
-    buttons.push([Markup.button.callback("« В главное меню", "main_menu")]);
+    buttons.push([Markup.button.callback("🏠 В главное меню", "main_menu")]);
+    
+    return Markup.inlineKeyboard(buttons);
+}
+
+export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
+    const buttons = [
+        [
+            Markup.button.callback("📄 PDF", `dl_pdf_${sessionId}`),
+            Markup.button.callback("📦 ZIP", `dl_zip_${sessionId}`)
+        ],
+        [
+            Markup.button.callback("🖼 Фото", `view_images_${sessionId}`),
+            Markup.button.callback("💻 Код", `dl_code_${sessionId}`)
+        ]
+    ];
+
+    if (shareId) {
+        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/shared/${shareId}`)]);
+    }
+
+    buttons.push([Markup.button.callback("« Назад к списку", "history_1")]);
     
     return Markup.inlineKeyboard(buttons);
 }

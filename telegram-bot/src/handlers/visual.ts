@@ -68,27 +68,72 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
         const s = ctx.session.visual;
         const contextText = `TITLE: ${s.title}\nTEXTS: ${s.text.join('\n---\n')}\nIMAGES: ${s.images.map((i: any) => i.caption).join(', ')}`;
         
-        // 1. Generate Code
+        // 1. Start Generation
         const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-            body: JSON.stringify({ context: { text_data: contextText }, language: lang }),
+            body: JSON.stringify({ 
+                context: { text_data: contextText }, 
+                language: lang,
+                telegramId: ctx.from.id,
+                title: s.title
+            }),
         });
 
-        if (!genRes.ok) throw new Error("AI Generation failed");
-        const { code } = await genRes.json() as { code: string };
+        if (!genRes.ok) throw new Error("AI Generation start failed");
+        const { sessionId } = await genRes.json() as { sessionId: string };
 
-        // 2. Stream code (simulation/update)
+        // 2. Polling for stream_text
+        let isDone = false;
+        let finalCode = "";
+        let lastStreamText = "";
+        const startTime = Date.now();
+        const timeout = 120000; // 2 minutes
+
+        while (!isDone && (Date.now() - startTime < timeout)) {
+            await new Promise(r => setTimeout(r, 2500)); // Poll every 2.5s to respect TG limits
+            
+            const pollRes = await fetch(`${SITE_URL}/api/internal/bot/history`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                body: JSON.stringify({ sessionId }),
+            });
+
+            if (pollRes.ok) {
+                const { session } = await pollRes.json() as any;
+                if (!session) break;
+
+                if (session.stream_text && session.stream_text !== lastStreamText) {
+                    lastStreamText = session.stream_text;
+                    const displayCode = lastStreamText.length > 500 ? lastStreamText.slice(0, 500) + "..." : lastStreamText;
+                    
+                    await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined, 
+                        `⚙️ *Генерация кода...*\n\n\`\`\`${lang}\n${displayCode}\n\`\`\`\n\n🕒 Пожалуйста, подождите...`, 
+                        { parse_mode: "Markdown" }
+                    ).catch(() => {});
+                }
+
+                if (session.status === 'done') {
+                    isDone = true;
+                    finalCode = session.stream_text;
+                } else if (session.status === 'error') {
+                    throw new Error("AI Generation reported an error");
+                }
+            }
+        }
+
+        if (!finalCode) throw new Error("Generation timed out or failed");
+
+        // 3. Compile
         await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined, 
-            `✅ *Код сгенерирован!*\n\n\`\`\`${lang}\n${code.slice(0, 500)}${code.length > 500 ? '...' : ''}\n\`\`\`\n\n🔄 Компилирую и создаю изображение...`, 
+            `✅ *Код готов!*\n\n🔄 Запускаю компиляцию в среде ${lang}...`, 
             { parse_mode: "Markdown" }
         ).catch(() => {});
 
-        // 3. Compile
         const compRes = await fetch(`${SITE_URL}/api/internal/bot/visual/compile`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-            body: JSON.stringify({ code, language: lang }),
+            body: JSON.stringify({ code: finalCode, language: lang }),
         });
 
         const compResult = await compRes.json() as any;
@@ -102,9 +147,9 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             });
             
             const filename = lang === 'python' ? 'visual.py' : 'visual.R';
-            await ctx.replyWithDocument({ source: Buffer.from(code), filename });
+            await ctx.replyWithDocument({ source: Buffer.from(finalCode), filename });
         } else {
-            const errorLog = compResult.log || "Неизвестная ошибка среды выполнения. Попробуйте другой тип графика или другое описание.";
+            const errorLog = compResult.log || "Неизвестная ошибка среды выполнения.";
             await ctx.reply(`❌ *Ошибка компиляции:*\n\n\`\`\`\n${errorLog}\n\`\`\``, { 
                 parse_mode: "Markdown",
                 ...getPostVisualKeyboard()

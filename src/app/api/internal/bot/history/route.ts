@@ -10,7 +10,18 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { telegram_id, page = 1, limit = 5 } = await req.json();
+        const { telegram_id, sessionId, page = 1, limit = 5 } = await req.json();
+
+        // Single Session View
+        if (sessionId) {
+            const session = db.prepare(`
+                SELECT id, title, status, share_id, created_at, updated_at 
+                FROM agent_sessions 
+                WHERE id = ?
+            `).get(sessionId) as any;
+            return NextResponse.json({ session });
+        }
+
         if (!telegram_id) return NextResponse.json({ error: "Missing telegram_id" }, { status: 400 });
 
         const user = db.prepare("SELECT id FROM users WHERE telegram_id = ?").get(telegram_id) as any;

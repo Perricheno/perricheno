@@ -1,7 +1,7 @@
 import { Telegraf } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
 import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset } from "./handlers/visual";
-import { handleHistory } from "./handlers/history";
+import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling } from "./handlers/billing";
 import { getMainMenu, getVisualSuggestionsKeyboard } from "./keyboards/menu";
 
@@ -75,6 +75,27 @@ bot.action(/^history_(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const page = parseInt(ctx.match[1]);
     await handleHistory(ctx, page);
+});
+
+bot.action(/^history_view_(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    await handleViewSession(ctx, ctx.match[1]);
+});
+
+bot.action(/^dl_pdf_(.+)$/, async (ctx) => {
+    await handleDownloadFile(ctx, ctx.match[1], "pdf");
+});
+
+bot.action(/^dl_zip_(.+)$/, async (ctx) => {
+    await handleDownloadFile(ctx, ctx.match[1], "zip");
+});
+
+bot.action(/^dl_code_(.+)$/, async (ctx) => {
+    await handleDownloadFile(ctx, ctx.match[1], "code");
+});
+
+bot.action(/^view_images_(.+)$/, async (ctx) => {
+    await handleViewImages(ctx, ctx.match[1]);
 });
 
 // --- Message Handling (Converational Flow) ---
