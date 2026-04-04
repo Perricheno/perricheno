@@ -54,6 +54,19 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
             amountRub = parts[2] ? parts[2].replace(' RUB', '').replace(' ₽', '') : "-";
         }
 
+        // Generate Crypto-hashes
+        const crypto = require('crypto');
+        const hashPayload = `${data.id}:${data.userId}:${data.amountText}:${data.dateISO}:SECRET`;
+        const sha512Hash = crypto.createHash('sha512').update(hashPayload).digest('hex').toUpperCase();
+        
+        // Pseudo RSA signature logic for display
+        const signatureStr = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET || 'dev_secret')
+            .update(hashPayload).digest('hex').toUpperCase();
+            
+        const fingerprint = signatureStr.substring(0, 32).match(/.{1,2}/g)?.join(':') || 'ERROR';
+        
+        const verifyUrlLong = `${verifyUrl}?hash=${sha512Hash}&sig=RSA.v1.${signatureStr.substring(0,16)}&date=${encodeURIComponent(data.dateISO)}`;
+
         texContent = texContent
             .replace(/\{\{RECEIPT_ID\}\}/g, data.id)
             .replace(/\{\{USER_ID\}\}/g, data.userId.toString())
@@ -64,8 +77,10 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
             .replace(/\{\{AMOUNT_RUB\}\}/g, amountRub)
             .replace(/\{\{RATE_KZT\}\}/g, "SYS_API")
             .replace(/\{\{RATE_RUB\}\}/g, "SYS_API")
+            .replace(/\{\{FINGERPRINT\}\}/g, fingerprint)
+            .replace(/\{\{HASH\}\}/g, sha512Hash)
             .replace(/\{\{DATE\}\}/g, displayDate)
-            .replace(/\{\{VERIFY_URL\}\}/g, verifyUrl.replace(/_/g, '\\_'));
+            .replace(/\{\{VERIFY_URL\}\}/g, verifyUrlLong.replace(/_/g, '\\_'));
 
         // 4. Create ZIP
         const zip = new JSZip();

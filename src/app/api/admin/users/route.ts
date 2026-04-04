@@ -56,7 +56,9 @@ export async function PUT(req: Request) {
             db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(targetUserId, "Admin Bonus", `+${amount.toLocaleString()} ${resourceName}`, 1);
 
             // Trigger receipt generation
-            const receiptId = `PRN-BONUS-${Date.now().toString(36).toUpperCase()}-${targetUserId}`;
+            const crypto = require('crypto');
+            const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
+            const receiptId = `PRN-BONUS-${uniqueId}-${targetUserId}`;
             const amountText = `${amount.toLocaleString()} ${resourceName} (Bonus)`;
             
             try {

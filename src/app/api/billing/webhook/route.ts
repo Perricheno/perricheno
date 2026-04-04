@@ -89,7 +89,8 @@ export async function POST(req: Request) {
             'combo_pro': '🔥 Pro Bundle',
         };
         const packName = packNames[packId] || packId;
-        const receiptId = `PRN-${Date.now().toString(36).toUpperCase()}-${userId}`;
+        const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
+        const receiptId = `PRN-${uniqueId}-${userId}`;
 
         // ── Generate and save logical receipt ──
         try {

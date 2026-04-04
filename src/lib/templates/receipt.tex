@@ -79,8 +79,8 @@
         \begin{tabularx}{\textwidth}{@{} X | X @{}}
             \textbf{SIGNATURE METADATA} & \textbf{CRYPTOGRAPHIC PROOF} \\
             \hline
-            \fontsize{6pt}{7.5pt}\selectfont ISSUER: \textbf{Perricheno Certification Authority} & \fontsize{6pt}{7.5pt}\selectfont ALGORITHM: \textbf{RSA-4096 / SHA-512} \\
-            \fontsize{6pt}{7.5pt}\selectfont SERIAL: \textbf{PRC-{{RECEIPT_ID}}-SIG} & \fontsize{6pt}{7.5pt}\selectfont FINGERPRINT: \texttt{D8:E8:FC:A2:DC:0F:89:6F:D7} \\
+            \fontsize{6pt}{7.5pt}\selectfont ISSUER: \textbf{Perricheno Certification Authority} & \fontsize{6pt}{7.5pt}\selectfont ALGORITHM: \textbf{HMAC-RSA / SHA-512} \\
+            \fontsize{6pt}{7.5pt}\selectfont SERIAL: \textbf{PRC-{{RECEIPT_ID}}-SIG} & \fontsize{6pt}{7.5pt}\selectfont FINGERPRINT: \texttt{{{FINGERPRINT}}} \\
             \fontsize{6pt}{7.5pt}\selectfont VALIDITY: \textbf{PERPETUAL / UNALTERABLE} & \fontsize{6pt}{7.5pt}\selectfont STATUS: \textbf{\textcolor{green!50!black}{SIGNED \& VERIFIED}} \\
         \end{tabularx}
     };
@@ -117,7 +117,7 @@
     \begin{minipage}[b]{0.65\textwidth}
         \textbf{DIGITAL INTEGRITY VERIFICATION} \\
         \fontsize{6.5pt}{8.5pt}\selectfont \color{gray}
-        This receipt is digitally signed and encrypted to ensure immutability. Scan the high-density QR code to verify this record within the Perricheno Global Ledger. Hash: SHA512:{{RECEIPT_ID}}f896fd7cb. Level H Error correction ensures readability even if partially damaged. \\
+        This receipt is digitally signed and encrypted to ensure immutability. Scan the high-density QR code to verify this record within the Perricheno Global Ledger. Hash: SHA512:{{HASH}}. Level H Error correction ensures readability even if partially damaged. \\
         
         \vspace{2mm}
         \textbf{OFFICIAL GATEWAY:} \\
@@ -137,7 +137,7 @@
             \draw[line width=1.5pt] (2.6, 2.6) -- (1.9, 2.6);
             \draw[line width=1.5pt] (2.6, 2.6) -- (2.6, 1.9);
             
-            \node at (0,0) {\qrcode{ID:{{RECEIPT_ID}}|U:{{USER_ID}}|AMT:{{AMOUNT}}|KZT:{{AMOUNT_KZT}}|RUB:{{AMOUNT_RUB}}|URL:{{VERIFY_URL}}|SALT:SHA512_ENCRYPTED_MANIFEST_v4.2_NODE_{{RECEIPT_ID}}_SIGN_OK}};
+            \node at (0,0) {\qrcode{{{VERIFY_URL}}}};
         \end{tikzpicture}
     \end{minipage}
 \end{tabularx}

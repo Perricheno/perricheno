@@ -212,7 +212,9 @@ export async function POST(req: NextRequest) {
             // Increment uses
             db.prepare("UPDATE promo_codes SET uses = uses + 1 WHERE id = ?").run(promo.id);
 
-            const receiptId = `PRN-PROMO-${Date.now().toString(36).toUpperCase()}-${user.id}`;
+            const crypto = require('crypto');
+            const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
+            const receiptId = `PRN-PROMO-${uniqueId}-${user.id}`;
             const amountText = `${promo.amount.toLocaleString()} ${type} (Promo)`;
             
             // Fire-and-forget receipt generation
