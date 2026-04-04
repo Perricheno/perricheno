@@ -1,6 +1,6 @@
 import { Telegraf, Context } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
-import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset, handleVisualToggleType } from "./handlers/visual";
+import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset, handleVisualToggleType, handleCompileStart, handleCompileFile } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling, handleBillingShop, handleBillingCategory, handleBillingBuy, handleBillingConfirm, handleBillingHistory, handleBillingPromoStart, handleBillingPromoApply } from "./handlers/billing";
 import { getMainMenu, getVisualSuggestionsKeyboard, getLangSelectionKeyboard } from "./keyboards/menu";
@@ -46,23 +46,17 @@ bot.action("main_menu", async (ctx) => {
     await ctx.answerCbQuery();
     const text = `🏠 *Главное меню*`;
     const keyboard = getMainMenu();
-    if (ctx.callbackQuery) {
-        await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
-    } else {
-        await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
-    }
+    
+    // Reset any active steps
+    ctx.session.step = 'idle';
+    ctx.session.isProcessing = false;
+
+    // Use reply instead of editMessageText to handle transitions from photo/media messages
+    await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
 });
 
-bot.action("tool_visual", async (ctx) => {
-    await ctx.answerCbQuery();
-    const text = `📊 *Визуализация данных*\n\nВыберите один или несколько типов графиков:`;
-    const keyboard = getVisualSuggestionsKeyboard(ctx.session.visual?.selectedTypes || []);
-    if (ctx.callbackQuery) {
-        await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard }).catch(() => {});
-    } else {
-        await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
-    }
-});
+bot.action("tool_visual", ctx => handleVisualStart(ctx));
+bot.action("tool_compile", ctx => handleCompileStart(ctx));
 
 bot.action(/^toggle_type_(.+)$/, ctx => handleVisualToggleType(ctx));
 bot.action("visual_generate_start", async (ctx) => {
@@ -161,6 +155,8 @@ bot.on(["text", "photo", "document"], async (ctx: any) => {
         return handleVisualName(ctx);
     } else if (step === 'collecting_visual_data') {
         return handleVisualCollect(ctx);
+    } else if (step === 'awaiting_compile_file') {
+        return handleCompileFile(ctx);
     } else if (step === 'promo_input' && ctx.message?.text) {
         return handleBillingPromoApply(ctx, ctx.message.text.trim());
     } else if (step === 'idle') {

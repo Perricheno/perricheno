@@ -4,6 +4,7 @@ import { InlineKeyboardButton } from "telegraf/types";
 export function getMainMenu() {
     return Markup.inlineKeyboard([
         [Markup.button.callback("📊 Визуализация", "tool_visual")],
+        [Markup.button.callback("🚀 Компиляция", "tool_compile")],
         [Markup.button.callback("📂 История", "history_1")],
         [
             Markup.button.callback("👤 Профиль", "me_info"),

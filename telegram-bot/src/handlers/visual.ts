@@ -84,11 +84,12 @@ export async function handleVisualGenerateRequest(ctx: any) {
     
     const s = ctx.session.visual;
     if (!s || (s.text.length === 0 && s.images.length === 0 && s.files.length === 0)) {
-        return ctx.answerCbQuery("⚠️ Сначала добавьте данные!");
+        await ctx.answerCbQuery("⚠️ Сначала добавьте данные!");
+        return;
     }
 
     await ctx.answerCbQuery();
-    await ctx.editMessageText(`📊 *Выберите типы графиков:*\n\nВыбрано: *${s.selectedTypes?.length || 0}*`, {
+    await ctx.editMessageText(`📊 *Шаг 3: Выбор визуализаций*\n\nВыберите один или несколько типов графиков:`, {
         parse_mode: "Markdown",
         ...getVisualSuggestionsKeyboard(s.selectedTypes || [])
     }).catch(() => {});
@@ -287,4 +288,91 @@ export async function handleVisualReset(ctx: any) {
     ctx.session.visual = { text: [], images: [], files: [], title: '', lang: 'python' };
     await ctx.answerCbQuery();
     await ctx.reply("🧹 Контекст очищен. Возвращаюсь в главное меню.", { ...getMainMenu() });
+}
+
+export async function handleCompileStart(ctx: any) {
+    ctx.session.step = 'awaiting_compile_file';
+    await ctx.answerCbQuery();
+    await ctx.reply("🚀 *Режим прямой компиляции*\n\nПришлите файл `.py` или `.r` для выполнения кода.\n\n_Бот автоматически распознает язык и вернет результат (график или логи)._", {
+        parse_mode: "Markdown",
+        reply_markup: {
+            inline_keyboard: [[{ text: "« Отмена", callback_data: "main_menu" }]]
+        }
+    });
+}
+
+export async function handleCompileFile(ctx: any) {
+    const doc = ctx.message.document;
+    if (!doc) return;
+
+    const fileName = doc.file_name || "";
+    const ext = fileName.split('.').pop()?.toLowerCase();
+
+    if (ext !== 'py' && ext !== 'r') {
+        return ctx.reply("⚠️ Пожалуйста, пришлите файл с расширением `.py` (Python) или `.r` (R).");
+    }
+
+    const statusMsg = await ctx.reply(`⏳ Обработка ${fileName}...`, { parse_mode: "Markdown" });
+    ctx.session.isProcessing = true;
+
+    try {
+        const fileLink = await ctx.telegram.getFileLink(doc.file_id);
+        const fileRes = await fetch(fileLink.href);
+        const code = await fileRes.text();
+
+        if (!code) throw new Error("Не удалось прочитать содержимое файла.");
+
+        const isPython = ext === 'py';
+        const runtime = isPython ? 'python' : 'r';
+        const apiUrl = `${SITE_URL}/api/agent/${runtime}-compile`;
+
+        const compileRes = await fetch(apiUrl, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "X-Bot-Secret": WEBHOOK_SECRET! 
+            },
+            body: JSON.stringify({ code }),
+            signal: AbortSignal.timeout(45000)
+        });
+
+        if (!compileRes.ok) {
+            const errBody = await compileRes.json().catch(() => ({ error: "Ошибка компилятора" })) as any;
+            throw new Error(errBody.error || "Ошибка соединения с компилятором.");
+        }
+
+        const result = await compileRes.json() as any;
+
+        if (result.success) {
+            if (result.image) {
+                const buffer = Buffer.from(result.image, 'base64');
+                await ctx.replyWithPhoto({ source: buffer }, {
+                    caption: `✅ *Выполнение завершено!*\n\nФайл: \`${fileName}\`\nЯзык: *${runtime.toUpperCase()}*`,
+                    parse_mode: "Markdown",
+                    reply_markup: { inline_keyboard: [[{ text: "🏠 Меню", callback_data: "main_menu" }]] }
+                });
+            } else {
+                const log = result.log || "Код выполнен успешно (нет вывода).";
+                const cleanLog = log.length > 2000 ? log.slice(0, 2000) + "..." : log;
+                await ctx.reply(`✅ *Выполнение завершено!*\n\n*Лог:* \n\`\`\`\n${cleanLog}\n\`\`\``, {
+                    parse_mode: "Markdown",
+                    reply_markup: { inline_keyboard: [[{ text: "🏠 Меню", callback_data: "main_menu" }]] }
+                });
+            }
+        } else {
+            const errorLog = result.log || "Неизвестная ошибка компиляции.";
+            const cleanError = errorLog.length > 2000 ? errorLog.slice(0, 2000) + "..." : errorLog;
+            await ctx.reply(`❌ *Ошибка выполнения:* \n\n\`\`\`\n${cleanError}\n\`\`\``, {
+                parse_mode: "Markdown",
+                reply_markup: { inline_keyboard: [[{ text: "🏠 Назад", callback_data: "tool_compile" }]] }
+            });
+        }
+    } catch (err: any) {
+        console.error("Compile handler error:", err);
+        await ctx.reply(`⚠️ Ошибка: ${err.message}`);
+    } finally {
+        ctx.session.isProcessing = false;
+        ctx.session.step = 'idle';
+        await ctx.telegram.deleteMessage(ctx.chat.id, statusMsg.message_id).catch(() => {});
+    }
 }
