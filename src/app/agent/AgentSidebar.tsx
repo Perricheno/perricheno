@@ -1,4 +1,4 @@
-import { IconClock, IconTrash, IconShare, IconFileText, IconMenu2, IconX } from "@tabler/icons-react";
+import { IconClock, IconTrash, IconShare, IconFileText, IconMenu2, IconX, IconLoader2 } from "@tabler/icons-react";
 import { AgentSession } from "./types";
 
 interface Props {
@@ -59,12 +59,21 @@ export function AgentSidebar({
                                 <div className="flex items-start gap-2">
                                     <IconFileText className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'opacity-80' : 'text-gray-400'}`} />
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-medium truncate ${isActive ? 'text-[var(--card)]' : 'text-[var(--foreground)]'}`}>
-                                            {s.title}
-                                        </p>
+                                        <div className="flex items-center justify-between gap-1">
+                                            <p className={`text-sm font-medium truncate ${isActive ? 'text-[var(--card)]' : 'text-[var(--foreground)]'}`}>
+                                                {s.title}
+                                            </p>
+                                            {s.status === 'generating' && (
+                                                <IconLoader2 className={`w-3.5 h-3.5 animate-spin ${isActive ? 'text-[var(--card)]' : 'text-emerald-500'}`} />
+                                            )}
+                                        </div>
                                         <div className={`flex items-center gap-2 text-[11px] mt-1 ${isActive ? 'text-[var(--card)] opacity-70' : 'text-gray-400'}`}>
                                             <IconClock className="w-3 h-3" />
-                                            {new Date(s.updated_at).toLocaleDateString()}
+                                            {s.status === 'generating' ? (
+                                                <span className="animate-pulse">Generating...</span>
+                                            ) : (
+                                                new Date(s.updated_at).toLocaleDateString()
+                                            )}
                                             {s.share_id && <span className="px-1.5 py-0.5 rounded-sm bg-blue-500/20 text-blue-100 uppercase text-[9px] font-bold tracking-wider">Shared</span>}
                                         </div>
                                     </div>

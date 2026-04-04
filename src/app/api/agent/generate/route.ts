@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage } from '@/lib/db';
+import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getActiveAgentSessionsCount, sendTelegramNotification } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Increase body size limit — rImages base64 payloads can be very large
@@ -203,6 +203,11 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
             const errBody = await response.text();
             console.error("OpenAI API Error:", errBody);
             updateAgentSession(sessionId, { status: "error", error_msg: `API error: ${errBody.slice(0, 200)}` });
+            
+            const session = getAgentSession(sessionId);
+            if (session) {
+                await sendTelegramNotification(userId, `❌ *Ошибка генерации*: ${session.title}\n\nПроизошла ошибка API. Пожалуйста, обратитесь в поддержку или попробуйте позже.`);
+            }
             return;
         }
 
@@ -235,8 +240,8 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
                 } catch {}
             }
 
-            // Sync stream progress to db every 1 second max
-            if (Date.now() - lastDbUpdate > 1000) {
+            // Sync stream progress to db every 150ms max for a smoother UI experience
+            if (Date.now() - lastDbUpdate > 150) {
                 updateAgentSession(sessionId, { stream_text: accumulated });
                 lastDbUpdate = Date.now();
             }
@@ -256,14 +261,28 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
             if (!finalData.main_tex) throw new Error("Invalid output — missing main_tex");
         } catch (e: any) {
             updateAgentSession(sessionId, { status: "error", error_msg: "AI generated invalid JSON: " + e.message });
+            
+            const session = getAgentSession(sessionId);
+            if (session) {
+                await sendTelegramNotification(userId, `❌ *Ошибка генерации*: ${session.title}\n\nНейросеть вернула некорректный формат данных. Пожалуйста, попробуйте изменить запрос.`);
+            }
             return;
         }
 
+        // Success Update
         updateAgentSession(sessionId, {
             status: "done",
             main_tex: finalData.main_tex,
             references_bib: finalData.references_bib || null,
+            stream_text: null,
+            error_msg: null
         });
+
+        // Notify telegram
+        const session = getAgentSession(sessionId);
+        if (session) {
+            await sendTelegramNotification(userId, `✅ *Генерация завершена*: ${session.title}\n\nВаш документ готов и доступен для скачивания на сайте.`);
+        }
 
         // Exact Character Billing Mapping (Prompt + Completion)
         const promptChars = JSON.stringify(messages).length;
@@ -323,6 +342,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Prompt or error log is required." }, { status: 400 });
         }
 
+        // --- CONCURRENCY LIMIT ---
+        const activeCount = getActiveAgentSessionsCount(userId);
+        if (activeCount >= 3) {
+            return NextResponse.json({ 
+                error: `Достигнут лимит одновременных генераций (макс. 3). Дождитесь завершения текущих задач.` 
+            }, { status: 429 });
+        }
+        // -------------------------
+
         let sessionId = body.sessionId;
 
         // If useDbImages, load visuals from the database instead of from the request body
@@ -348,19 +376,23 @@ export async function POST(req: Request) {
                 user_id: userId,
                 title: shortTitle + (settings.prompt.length > 50 ? '...' : ''),
                 doc_type: settings.type,
-                settings_json: JSON.stringify({
-                    useTemplate: settings.useTemplate, style: settings.style,
-                    wordCount: settings.wordCount, columns: settings.columns,
-                    useReferences: settings.useReferences, language: settings.language,
-                    authorName: settings.authorName, courseName: settings.courseName,
-                    dateStr: settings.dateStr, groupName: settings.groupName,
-                    supervisorName: settings.supervisorName
-                }),
                 status: 'generating',
                 stream_text: '',
+                settings_json: JSON.stringify(settings), // Critical for session persistence
             });
+
+            // Notify Telegram Start
+            await sendTelegramNotification(userId, `🚀 *Начало генерации*: ${shortTitle}\n\nВаш документ обрабатывается. Это может занять до 2 минут.`);
         } else {
-            updateAgentSession(sessionId, { status: 'generating', stream_text: '', error_msg: null });
+            updateAgentSession(sessionId, { 
+                status: 'generating', 
+                stream_text: '', 
+                error_msg: null,
+                settings_json: JSON.stringify(settings) // Update settings if re-generating
+            });
+
+            // Notify Telegram Re-Start
+            await sendTelegramNotification(userId, `🔄 *Перегенерация документа*: ${shortTitle}\n\nПрименяем ваши изменения...`);
         }
 
         // Fire and forget

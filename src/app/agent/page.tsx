@@ -198,7 +198,7 @@ export default function AgentPage() {
                         setPhase("done");
                         loadSessions(); // refresh history list
                     } else if (session.status === 'generating') {
-                        pollRef.current = setTimeout(pollStatus, 1500);
+                        pollRef.current = setTimeout(pollStatus, 400); // More frequent polling for smoother streaming
                     }
                 } catch (e: any) {
                     stopTimer();

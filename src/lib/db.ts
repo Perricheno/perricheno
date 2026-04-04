@@ -575,3 +575,30 @@ export function toggleAgentSessionShare(id: string, userId: number): string | nu
         return shareId;
     }
 }
+
+export function getActiveAgentSessionsCount(userId: number): number {
+    const stmt = db.prepare("SELECT COUNT(*) as count FROM agent_sessions WHERE user_id = ? AND status = 'generating'");
+    const res = stmt.get(userId) as { count: number };
+    return res.count;
+}
+
+export async function sendTelegramNotification(userId: number, message: string): Promise<void> {
+    try {
+        const user = getUserById(userId);
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        
+        if (!user || !user.telegram_id || !botToken) return;
+
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: user.telegram_id,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+    } catch (e) {
+        console.error("Failed to send Telegram notification:", e);
+    }
+}
