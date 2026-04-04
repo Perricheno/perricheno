@@ -260,18 +260,23 @@ async function main() {
         console.log(`🤖 Internal Bot Server (Webhook + Push) listening on port ${BOT_PORT}`);
     });
 
-    // 2. Register with Telegram
-    if (process.env.NODE_ENV === 'production') {
-        const webhookUrl = `${process.env.WEBHOOK_URL}/api/webhook`;
+    // 2. Register with Telegram (Always prioritize Fast Webhooks)
+    const externalUrl = process.env.WEBHOOK_DOMAIN || process.env.WEBHOOK_URL;
+    
+    if (externalUrl) {
+        const webhookUrl = `${externalUrl}/api/webhook`;
         await bot.telegram.setWebhook(webhookUrl, { secret_token: WEBHOOK_SECRET });
-        console.log(`🚀 Bot registered Webhook: ${webhookUrl}`);
+        console.log(`🚀 ВЕБХУК АКТИВИРОВАН: ${webhookUrl}`);
     } else {
         await bot.launch();
-        console.log("🚀 Bot launched in POLLING mode (dev)");
+        console.log("🚀 Поллинг активирован (WEBHOOK_DOMAIN не найден)");
     }
 }
 
-main().catch(err => console.error(err));
+main().catch(err => {
+    console.error("🔴 ОШИБКА ЗАПУСКА БОТА:", err);
+});
 
+// Graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
