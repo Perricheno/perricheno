@@ -71,15 +71,17 @@ ${isDatasetSchema ? `- NOTE ON SCALE: This is a sample of a large-scale dataset 
 - **Layout**: Use \`plt.tight_layout()\` or equivalent to prevent cut-offs.
 
 ### 5. EXECUTION PLAN (PYTHON)
-- Import: plt, sns, pd, np.
-- Data Processing: Use Pandas to create a DataFrame \`df\` representing the REAL document data.
-- Plotting: Use Seaborn/Matplotlib for the main task.
+- Import: plt, sns, pd, np, io.
+- Data Processing: Use Pandas to create a DataFrame \`df\`. 
+- **CRITICAL**: Read data directly from the text provided in "DATA CONTEXT". If it's a table-like string, use \`io.StringIO\` or manual dict-to-df creation. 
+- **NO EXTERNAL FILES**: Do NOT try to read from a folder called "images" or use OCR (pytesseract).
+- Plotting: Use Seaborn/Matplotlib.
 - Result: The final figure MUST be assigned to the variable \`fig\`.
 
 ### 6. NO-HALLUCINATION POLICY
 - If the document contains REAL metrics, use them. 
 - If the instruction is "Revenue", find REVENUE in the source.
-- DO NOT invent data if "${instruction}" is the only text present; analyze it as an instruction for the file.
+- DO NOT invent data. If no numbers are found, create a placeholder plot with a clear "No data found" title instead of failing.
 
 OUTPUT: Pure, executable Python code only. NO markdown, NO explanations.`;
     }
@@ -246,6 +248,10 @@ export async function POST(req: NextRequest) {
                     });
                 }
 
+                const systemRole = hasImages 
+                    ? `You are an expert ${runtime} visualization engineer and OCR analyst. Your task is to extract REAL statistics from the IMAGES of documents provided and visualize them. Use the user instruction as a guide on WHICH metrics to find.`
+                    : `You are an expert ${runtime} data scientist. Your task is to analyze the provided TEXT context, extract quantitative metrics, and create a premium visualization. No images are provided, so focus entirely on the text data.`;
+
                 const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
                     method: "POST",
                     headers: {
@@ -256,7 +262,7 @@ export async function POST(req: NextRequest) {
                         model: "gpt-5-mini-2025-08-07",
                         stream: false,
                         messages: [
-                            { role: "system", content: `You are an expert ${runtime} visualization engineer. Your task is to extract REAL statistics from the IMAGES of documents provided and visualize them. Use the user instruction only as a guide on WHICH metrics to find in the documents.` },
+                            { role: "system", content: systemRole },
                             { role: "user", content: userContent }
                         ],
                     }),
