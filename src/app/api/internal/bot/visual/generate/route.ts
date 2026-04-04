@@ -187,7 +187,6 @@ export async function POST(req: NextRequest) {
                             { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. No commentary. Ensure proper syntax.` },
                             { role: "user", content: prompt }
                         ],
-                        temperature: 0.1,
                     }),
                     signal: AbortSignal.timeout(60000),
                 });

@@ -2,7 +2,7 @@ import { Telegraf, Context } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
 import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
-import { handleBilling } from "./handlers/billing";
+import { handleBilling, handleBillingShop, handleBillingCategory, handleBillingBuy, handleBillingConfirm, handleBillingHistory, handleBillingPromoStart, handleBillingPromoApply } from "./handlers/billing";
 import { getMainMenu, getVisualSuggestionsKeyboard } from "./keyboards/menu";
 import { sessionStore } from "./sessionStore";
 
@@ -69,6 +69,17 @@ bot.action(/^select_type_(.+)$/, ctx => handleVisualStart(ctx));
 
 bot.action("billing_info", ctx => handleBilling(ctx));
 bot.action("me_info", ctx => handleMe(ctx));
+
+// ── Billing Actions ──
+bot.action("billing_shop", ctx => handleBillingShop(ctx));
+bot.action("billing_cat_chars", ctx => handleBillingCategory(ctx, 'chars'));
+bot.action("billing_cat_reports", ctx => handleBillingCategory(ctx, 'reports'));
+bot.action("billing_cat_combo", ctx => handleBillingCategory(ctx, 'combo'));
+bot.action("billing_cat_all", ctx => handleBillingCategory(ctx, 'all'));
+bot.action(/^billing_buy_(.+)$/, ctx => handleBillingBuy(ctx, ctx.match[1]));
+bot.action(/^billing_confirm_(.+)$/, ctx => handleBillingConfirm(ctx, ctx.match[1]));
+bot.action("billing_history", ctx => handleBillingHistory(ctx));
+bot.action("billing_promo", ctx => handleBillingPromoStart(ctx));
 
 bot.action("visual_generate", ctx => handleVisualGenerateRequest(ctx));
 bot.action("visual_reset", ctx => handleVisualReset(ctx));
@@ -144,6 +155,8 @@ bot.on(["text", "photo", "document"], async (ctx: any) => {
         return handleVisualName(ctx);
     } else if (step === 'collecting_visual_data') {
         return handleVisualCollect(ctx);
+    } else if (step === 'promo_input' && ctx.message?.text) {
+        return handleBillingPromoApply(ctx, ctx.message.text.trim());
     } else if (step === 'idle') {
         // Default behavior if not in a flow
         if (ctx.message.text?.startsWith('/')) return; // Ignore other commands

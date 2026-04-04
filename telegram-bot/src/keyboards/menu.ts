@@ -95,3 +95,46 @@ export function getPostVisualKeyboard() {
         [Markup.button.callback("✅ Завершить", "main_menu")]
     ]);
 }
+
+// ── Billing Keyboards ──
+
+export function getBillingDashboardKeyboard() {
+    return Markup.inlineKeyboard([
+        [Markup.button.callback("🛒 Магазин пакетов", "billing_shop")],
+        [Markup.button.callback("📜 История транзакций", "billing_history")],
+        [Markup.button.callback("🎟 Ввести промокод", "billing_promo")],
+        [Markup.button.callback("« Назад", "main_menu")]
+    ]);
+}
+
+export function getBillingShopKeyboard() {
+    return Markup.inlineKeyboard([
+        [Markup.button.callback("🔤 Символы", "billing_cat_chars"), Markup.button.callback("📄 Отчёты", "billing_cat_reports")],
+        [Markup.button.callback("📦 Бандлы", "billing_cat_combo"), Markup.button.callback("🏷 Все", "billing_cat_all")],
+        [Markup.button.callback("« Назад к биллингу", "billing_info")]
+    ]);
+}
+
+export function getBillingPackListKeyboard(packs: { id: string; emoji: string; name: string; amount: number }[]) {
+    const buttons = packs.map(p => [
+        Markup.button.callback(`${p.emoji} ${p.name} — $${p.amount}`, `billing_buy_${p.id}`)
+    ]);
+    buttons.push([Markup.button.callback("« Назад к категориям", "billing_shop")]);
+    return Markup.inlineKeyboard(buttons);
+}
+
+export function getBillingConfirmKeyboard(packId: string) {
+    return Markup.inlineKeyboard([
+        [Markup.button.callback("✅ Подтвердить покупку", `billing_confirm_${packId}`)],
+        [Markup.button.callback("« Назад", "billing_shop")]
+    ]);
+}
+
+export function getBillingHistoryKeyboard(hasTxs: boolean) {
+    const buttons: any[][] = [];
+    if (hasTxs) {
+        buttons.push([Markup.button.callback("🔄 Обновить", "billing_history")]);
+    }
+    buttons.push([Markup.button.callback("« Назад к биллингу", "billing_info")]);
+    return Markup.inlineKeyboard(buttons);
+}

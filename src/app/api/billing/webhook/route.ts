@@ -78,6 +78,67 @@ export async function POST(req: Request) {
         if (pack.chars > 0) addPurchasedTokens(userId, 'chars', pack.chars);
         if (pack.reports > 0) addPurchasedTokens(userId, 'reports', pack.reports);
 
+        // ── Send payment confirmation to Telegram ──
+        try {
+            const botToken = process.env.TELEGRAM_BOT_TOKEN;
+            const { getUserById } = await import('@/lib/db');
+            const user = getUserById(userId);
+            
+            if (botToken && user?.telegram_id) {
+                const packNames: Record<string, string> = {
+                    'starter_chars': '⚡ Starter Pack (100K)',
+                    'writer': '✍️ Writer Pack (500K)',
+                    'data_scientist': '🔬 Data Scientist (2M)',
+                    'researcher': '📚 Researcher (5M)',
+                    'report_single': '📄 3 Reports',
+                    'report_bulk': '⭐ 15 Reports',
+                    'combo_lite': '📦 Lite Bundle',
+                    'combo_pro': '🔥 Pro Bundle',
+                };
+                
+                const packName = packNames[packId] || packId;
+                const lines = [
+                    `✅ <b>Оплата подтверждена!</b>`,
+                    ``,
+                    `━━━━━━━━━━━━━━━━━━`,
+                    `🧾 <b>Чек #PRN-${Date.now().toString(36).toUpperCase()}</b>`,
+                    `━━━━━━━━━━━━━━━━━━`,
+                    ``,
+                    `📦 Пакет: <b>${packName}</b>`,
+                ];
+                
+                if (pack.chars > 0) lines.push(`🔤 Символов: <b>+${pack.chars.toLocaleString()}</b>`);
+                if (pack.reports > 0) lines.push(`📄 Отчётов: <b>+${pack.reports}</b>`);
+                
+                lines.push(
+                    ``,
+                    `💳 Метод: CryptoCloud (Crypto)`,
+                    `📅 Дата: ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })}`,
+                    ``,
+                    `━━━━━━━━━━━━━━━━━━`,
+                    `<i>Ресурсы добавлены на ваш баланс.</i>`,
+                );
+
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: user.telegram_id,
+                        text: lines.join('\n'),
+                        parse_mode: "HTML",
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "💳 Мой баланс", callback_data: "billing_info" }],
+                                [{ text: "🛒 Купить ещё", callback_data: "billing_shop" }]
+                            ]
+                        }
+                    })
+                });
+            }
+        } catch (e) {
+            console.error("Failed to send payment notification:", e);
+        }
+
         return new NextResponse('OK', { status: 200 });
     } catch (err: any) {
         console.error("Webhook processing error:", err);
