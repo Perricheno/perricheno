@@ -189,7 +189,21 @@ export async function POST(req: NextRequest) {
 
             const promo = db.prepare("SELECT * FROM promo_codes WHERE code = ?").get(code.toUpperCase()) as any;
             if (!promo) return NextResponse.json({ error: "Промокод не найден." }, { status: 404 });
-            if (promo.uses >= promo.max_uses) return NextResponse.json({ error: "Промокод исчерпан." }, { status: 410 });
+            if (promo.uses >= promo.max_uses) return NextResponse.json({ error: "Лимит активаций исчерпан." }, { status: 410 });
+
+            // Check if user already used this promo
+            const alreadyUsed = db.prepare("SELECT id FROM promo_usages WHERE promo_id = ? AND user_id = ?").get(promo.id, user.id);
+            if (alreadyUsed) return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
+
+            // Record usage
+            try {
+                db.prepare("INSERT INTO promo_usages (promo_id, user_id) VALUES (?, ?)").run(promo.id, user.id);
+            } catch (err: any) {
+                if (err.message.includes("UNIQUE constraint failed")) {
+                    return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
+                }
+                throw err;
+            }
 
             // Apply promo
             const type = promo.type as 'chars' | 'visuals' | 'reports';

@@ -186,6 +186,18 @@ try {
 
 try {
     db.exec(`
+        CREATE TABLE IF NOT EXISTS promo_usages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            promo_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(promo_id, user_id)
+        )
+    `);
+} catch (e) {}
+
+try {
+    db.exec(`
         CREATE TABLE IF NOT EXISTS system_config (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL,

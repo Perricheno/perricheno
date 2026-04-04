@@ -24,7 +24,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             );
         }
 
-        const date = new Date(result.created_at + 'Z').toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' });
+        // Fix SQLite space-delimited datetimes
+        let rawDate = result.created_at;
+        if (rawDate && !rawDate.includes('T')) {
+            rawDate = rawDate.replace(' ', 'T');
+        }
+        if (rawDate && !rawDate.endsWith('Z')) {
+            rawDate += 'Z';
+        }
+
+        const dateObj = new Date(rawDate);
+        const date = isNaN(dateObj.getTime()) ? result.created_at : dateObj.toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' });
+        
         const isFree = result.amount_text === 'Free' || result.amount_text.includes('0.00');
 
         const html = `

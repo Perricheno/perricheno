@@ -94,9 +94,34 @@ export async function POST(req: Request) {
         // ── Generate and save logical receipt ──
         try {
             const { generateAndStoreReceipt } = await import('@/lib/receiptGenerator');
-            const amountText = (parsedData.amount_crypto && parsedData.currency_crypto) 
-                ? `${parsedData.amount_crypto} ${parsedData.currency_crypto}`
-                : `${parsedData.amount} ${parsedData.currency || 'USD'}`;
+            const usdAmount = parseFloat(parsedData.amount) || 0;
+            let kztRate = 480;
+            let rubRate = 95;
+
+            // Fetch live rates
+            try {
+                const fxRes = await fetch("https://open.er-api.com/v6/latest/USD", { next: { revalidate: 3600 } });
+                const fxData = await fxRes.json();
+                if (fxData && fxData.rates) {
+                    if (fxData.rates.KZT) kztRate = fxData.rates.KZT;
+                    if (fxData.rates.RUB) rubRate = fxData.rates.RUB;
+                }
+            } catch (fxErr) {
+                console.error("Failed to fetch live FX rates:", fxErr);
+            }
+
+            const kztAmount = Math.round(usdAmount * kztRate).toLocaleString('ru-RU');
+            const rubAmount = Math.round(usdAmount * rubRate).toLocaleString('ru-RU');
+
+            let amountText = "";
+            if (parsedData.amount_crypto && parsedData.currency_crypto) {
+                amountText = `${parsedData.amount_crypto} ${parsedData.currency_crypto}`;
+                if (usdAmount > 0) {
+                    amountText += ` / ~${kztAmount} KZT / ~${rubAmount} RUB`;
+                }
+            } else {
+                amountText = `${parsedData.amount} USD / ~${kztAmount} KZT / ~${rubAmount} RUB`;
+            }
             
             // Fire-and-forget logic for receipt PDF compilation and storage
             generateAndStoreReceipt({

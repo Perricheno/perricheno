@@ -42,12 +42,28 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
             'admin_bonus': 'Бонус от администрации'
         };
 
+        // Parse custom currency fields from webhook's amount text
+        let baseAmount = data.amountText;
+        let amountKzt = "-";
+        let amountRub = "-";
+        
+        if (data.amountText.includes(' / ~')) {
+            const parts = data.amountText.split(' / ~');
+            baseAmount = parts[0] || "-";
+            amountKzt = parts[1] ? parts[1].replace(' KZT', '').replace(' ₸', '') : "-";
+            amountRub = parts[2] ? parts[2].replace(' RUB', '').replace(' ₽', '') : "-";
+        }
+
         texContent = texContent
             .replace(/\{\{RECEIPT_ID\}\}/g, data.id)
             .replace(/\{\{USER_ID\}\}/g, data.userId.toString())
             .replace(/\{\{TYPE\}\}/g, typeLabels[data.type] || 'Операция')
             .replace(/\{\{PACK_NAME\}\}/g, data.packName.replace(/_/g, '\\_'))
-            .replace(/\{\{AMOUNT\}\}/g, data.amountText.replace(/\$/g, '\\$'))
+            .replace(/\{\{AMOUNT\}\}/g, baseAmount.replace(/\$/g, '\\$'))
+            .replace(/\{\{AMOUNT_KZT\}\}/g, amountKzt)
+            .replace(/\{\{AMOUNT_RUB\}\}/g, amountRub)
+            .replace(/\{\{RATE_KZT\}\}/g, "SYS_API")
+            .replace(/\{\{RATE_RUB\}\}/g, "SYS_API")
             .replace(/\{\{DATE\}\}/g, displayDate)
             .replace(/\{\{VERIFY_URL\}\}/g, verifyUrl.replace(/_/g, '\\_'));
 
