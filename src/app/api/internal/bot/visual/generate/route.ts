@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateAgentSession, createAgentSession } from "@/lib/db";
+import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getUserByTelegramId } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const R_COMPILER_URL = process.env.R_COMPILER_URL || 'http://r-compiler:8000';
+const PYTHON_COMPILER_URL = process.env.PYTHON_COMPILER_URL || 'http://python-compiler:8000';
+
+// ── Prompts (copied from working agent/visualize/route.ts) ──
 
 const CHART_PROMPTS: Record<string, string> = {
     bar: 'a bar chart showing comparative data across categories using ggplot2 with geom_bar',
@@ -49,7 +53,7 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
         6. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
         7. The script must be completely self-contained.
         8. DO NOT include \`plt.show()\`. 
-        9. Save the figure as 'output.png' using \`plt.savefig('output.png', dpi=150, bbox_inches='tight')\`.
+        9. The figure MUST be stored in the global \`fig\` variable or just use the functional plt interface. The compiler will capture the output.
         
         OUTPUT: Only output pure Python code. NO markdown fences (\`\`\`python). NO commentary.`;
     }
@@ -74,143 +78,223 @@ REQUIREMENTS:
 OUTPUT: Only output the pure R code. NO markdown fences (\`\`\`R). NO commentary. Just executable R code.`;
 }
 
+// ── Helpers (from working agent/visualize/route.ts) ──
+
+function wrapRCode(rawCode: string) {
+    return `
+# Fail-safe auto-installer
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
+.orig_lib <- base::library
+library <- function(package, ...) {
+  pkg_name <- as.character(substitute(package))
+  if (length(pkg_name) == 1 && pkg_name != "package") {
+    if (!requireNamespace(pkg_name, quietly = TRUE)) {
+        suppressMessages(suppressWarnings(install.packages(pkg_name, quiet = TRUE)))
+    }
+    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))))
+  } else {
+    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(...))))
+  }
+}
+
+# AI Code below
+` + rawCode;
+}
+
+function cleanCode(raw: string): string {
+    let c = raw.trim();
+    if (c.startsWith("```")) c = c.replace(/^```(?:r|R|python|py)?\s*\n?/, "");
+    if (c.endsWith("```")) c = c.replace(/\n?```\s*$/, "");
+    return c.trim();
+}
+
+// ── Main Route ──
+
 export async function POST(req: NextRequest) {
     const secret = req.headers.get("x-bot-secret");
     if (secret !== WEBHOOK_SECRET) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    if (!OPENAI_API_KEY) {
+        return NextResponse.json({ error: "OpenAI API Key not configured" }, { status: 500 });
+    }
+
     try {
-        const { context, language = "python", sessionId: incomingSessionId, telegramId, title, chartType = 'auto', chatId, messageId } = await req.json();
+        const { context, language = "python", telegramId, title, chartType = 'auto', chatId, messageId } = await req.json();
         
         if (!context || !context.text_data) {
             return NextResponse.json({ error: "No context provided" }, { status: 400 });
         }
 
-        const sessionId = incomingSessionId || uuidv4();
+        const isPython = language === 'python';
+        const runtime = isPython ? 'Python' : 'R';
+        const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
         const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
-        // Ensure session exists
+        // ── Create DB session ──
+        const sessionId = uuidv4();
         if (telegramId) {
-            const { getUserByTelegramId } = await import("@/lib/db");
-            const user = getUserByTelegramId(String(telegramId)) as any;
+            const user = getUserByTelegramId(String(telegramId));
             if (user) {
                 try {
-                    const existing = await import("@/lib/db").then(m => m.getAgentSession(sessionId));
-                    if (!existing) {
-                        createAgentSession({
-                            id: sessionId,
-                            user_id: user.id,
-                            title: title || "New Visual",
-                            status: "generating",
-                            doc_type: "visual",
-                            share_id: uuidv4().split('-')[0],
-                        });
-                    } else {
-                        updateAgentSession(sessionId, { status: "generating", stream_text: "" });
-                    }
-                } catch (e) {}
+                    createAgentSession({
+                        id: sessionId,
+                        user_id: user.id,
+                        title: title || "Telegram Visual",
+                        status: "generating",
+                        doc_type: "visual",
+                        share_id: uuidv4().split('-')[0],
+                    });
+                } catch (e) {
+                    console.error("Failed to create session:", e);
+                }
             }
         }
 
-        const prompt = buildVisualizationPrompt(
-            title || "Data Visualization", 
-            chartType, 
-            'viridis', 
-            'ru', 
-            `${context.text_data}\n${context.files_text || ''}`,
-            language === 'python' ? 'Python' : 'R'
-        );
-
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
-                messages: [
-                    { role: "system", content: `You are an expert ${language === 'python' ? 'Python' : 'R'} programmer. Output ONLY raw executable ${language === 'python' ? 'Python' : 'R'} code. No markdown fences. No commentary. Ensure proper syntax.` },
-                    { role: "user", content: prompt }
-                ],
-                stream: true,
-                temperature: 0.1,
-            })
-        });
-
-        if (!response.ok) {
-            const err = await response.text();
-            return NextResponse.json({ error: `AI Error: ${err}` }, { status: 502 });
-        }
-
-        // --- STREAMING LOGIC ---
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        
-        // Start background process for streaming to DB and PUSHING to Bot
+        // ── Background: Generate + Compile (fire-and-forget, same as agent/visualize) ──
         (async () => {
-            let accumulated = "";
-            let lastUpdate = Date.now();
-            let lastPush = Date.now();
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split("\n");
-                
-                for (const line of lines) {
-                    if (line.startsWith("data: ") && line !== "data: [DONE]") {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            const content = data.choices[0]?.delta?.content;
-                            if (content) accumulated += content;
-                        } catch (e) {}
-                    }
-                }
-                
-                // DB Update every 2 seconds (slower is fine for DB)
-                if (sessionId && Date.now() - lastUpdate > 2000) {
-                    updateAgentSession(sessionId, { stream_text: accumulated });
-                    lastUpdate = Date.now();
-                }
-
-                // BOT PUSH every 500ms (faster for UI)
-                if (chatId && messageId && Date.now() - lastPush > 500) {
+            try {
+                // 1. Push status to bot
+                if (chatId && messageId) {
                     fetch(`${BOT_INTERNAL_URL}/update-visual`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                        body: JSON.stringify({ chatId, messageId, text: accumulated, language: language === 'python' ? 'python' : 'r' })
+                        body: JSON.stringify({ chatId, messageId, text: "⏳ Генерация кода...", language })
                     }).catch(() => {});
-                    lastPush = Date.now();
                 }
-            }
-            
-            if (sessionId) {
-                updateAgentSession(sessionId, { 
-                    status: "done", 
-                    stream_text: accumulated.trim() 
-                });
-            }
 
-            // Final Push and Completion Trigger
-            if (chatId && messageId) {
-                await fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                // 2. Generate code via OpenAI (NON-streaming for reliability, same as agent/visualize)
+                const prompt = buildVisualizationPrompt(
+                    title || "Data Visualization",
+                    chartType,
+                    'viridis',
+                    'ru',
+                    context.text_data + (context.files_text ? `\n${context.files_text}` : ''),
+                    runtime
+                );
+
+                const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                    body: JSON.stringify({ chatId, messageId, text: accumulated, language: language === 'python' ? 'python' : 'r' })
-                }).catch(() => {});
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-5-mini-2025-08-07",
+                        stream: false,
+                        messages: [
+                            { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. No commentary. Ensure proper syntax.` },
+                            { role: "user", content: prompt }
+                        ],
+                        temperature: 0.1,
+                    }),
+                    signal: AbortSignal.timeout(60000),
+                });
 
-                // Small delay to ensure the last stream update is processed
-                setTimeout(() => {
+                if (!aiRes.ok) {
+                    const err = await aiRes.text();
+                    console.error("OpenAI Error:", err);
+                    updateAgentSession(sessionId, { status: "error", error_msg: `AI Error: ${err.slice(0, 200)}` });
+                    if (chatId && messageId) {
+                        fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                            body: JSON.stringify({ chatId, messageId, text: `❌ AI Error: ${err.slice(0, 100)}`, language })
+                        }).catch(() => {});
+                    }
+                    return;
+                }
+
+                const aiData = await aiRes.json();
+                const rawCode = aiData.choices?.[0]?.message?.content || "";
+                const generatedCode = cleanCode(rawCode);
+
+                if (!generatedCode) {
+                    updateAgentSession(sessionId, { status: "error", error_msg: "AI returned empty code" });
+                    return;
+                }
+
+                // Save generated code to DB
+                updateAgentSession(sessionId, { stream_text: generatedCode });
+
+                // 3. Push code preview to bot
+                if (chatId && messageId) {
+                    const preview = generatedCode.length > 800 ? generatedCode.slice(0, 800) + "..." : generatedCode;
+                    fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                        body: JSON.stringify({ chatId, messageId, text: preview, language })
+                    }).catch(() => {});
+                }
+
+                // 4. Compile (same as agent/visualize — direct to compiler, with wrapRCode for R)
+                const finalCode = isPython ? generatedCode : wrapRCode(generatedCode);
+
+                const compileRes = await fetch(`${compilerUrl}/compile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: finalCode }),
+                    signal: AbortSignal.timeout(45000),
+                });
+
+                if (!compileRes.ok) {
+                    updateAgentSession(sessionId, { status: "error", error_msg: `${runtime} compiler server error` });
+                    if (chatId && messageId) {
+                        fetch(`${BOT_INTERNAL_URL}/complete-visual`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                            body: JSON.stringify({ chatId, messageId, sessionId })
+                        }).catch(() => {});
+                    }
+                    return;
+                }
+
+                const compileResult = await compileRes.json();
+
+                if (compileResult.success && compileResult.image) {
+                    // Save everything to DB
+                    const visualEntry = JSON.stringify([{
+                        chart_type: chartType,
+                        language: language,
+                        image: `data:image/png;base64,${compileResult.image}`,
+                        source_code: generatedCode
+                    }]);
+
+                    updateAgentSession(sessionId, {
+                        status: "done",
+                        stream_text: generatedCode,
+                        visuals_json: visualEntry,
+                    });
+
+                    // Deduct usage
+                    if (telegramId) {
+                        const user = getUserByTelegramId(String(telegramId));
+                        if (user) {
+                            checkAndDeductUsage(user.id, 'chars', generatedCode.length);
+                            checkAndDeductUsage(user.id, 'visuals', 1);
+                        }
+                    }
+                } else {
+                    updateAgentSession(sessionId, {
+                        status: "error",
+                        stream_text: generatedCode,
+                        error_msg: compileResult.log || `${runtime} execution failed`,
+                    });
+                }
+
+                // 5. Notify bot that generation is complete
+                if (chatId && messageId) {
                     fetch(`${BOT_INTERNAL_URL}/complete-visual`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
                         body: JSON.stringify({ chatId, messageId, sessionId })
                     }).catch(() => {});
-                }, 1000);
+                }
+
+            } catch (err: any) {
+                console.error("Bot visual background error:", err);
+                updateAgentSession(sessionId, { status: "error", error_msg: err.message });
             }
         })();
 

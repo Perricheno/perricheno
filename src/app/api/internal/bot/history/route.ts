@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
         // Single Session View
         if (sessionId && !updateVisuals) {
             const session = db.prepare(`
-                SELECT id, title, status, share_id, created_at, updated_at 
+                SELECT id, title, status, doc_type, error_msg, share_id, created_at, updated_at 
                 FROM agent_sessions 
                 WHERE id = ?
             `).get(sessionId) as any;

@@ -117,70 +117,67 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
 export async function handleVisualCompletePush(bot: any, chatId: number, messageId: number, sessionId: string) {
     try {
-        const res = await fetch(`${SITE_URL}/api/internal/bot/history`, {
+        // The generate route already compiled and saved everything to DB.
+        // We just read the result and send it to Telegram.
+        const res = await fetch(`${SITE_URL}/api/internal/bot/history/files`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+            body: JSON.stringify({ sessionId, type: "images" }),
+        });
+
+        const historyRes = await fetch(`${SITE_URL}/api/internal/bot/history`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
             body: JSON.stringify({ sessionId }),
         });
+        const { session } = await historyRes.json() as any;
 
-        const { session } = await res.json() as any;
-        if (!session) return;
-
-        const finalCode = session.stream_text || session.main_tex;
-        if (!finalCode) return;
-        
-        // Detect language from the actual code, not main_tex
-        const lang = finalCode.includes("import ") || finalCode.includes("plt.") ? 'python' : 'r';
-
-        await bot.telegram.editMessageText(chatId, messageId, undefined, 
-            `✅ *Код готов!*\n\n🔄 Запускаю компиляцию в среде ${lang}...`, 
-            { parse_mode: "Markdown" }
-        ).catch(() => {});
-
-        const compRes = await fetch(`${SITE_URL}/api/internal/bot/visual/compile`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-            body: JSON.stringify({ code: finalCode, language: lang }),
-        });
-
-        const compResult = await compRes.json() as any;
-
-        if (compResult.success && compResult.image) {
-            // Save compiled results back to the session DB so history/files can serve them
-            try {
-                const visualEntry = JSON.stringify([{
-                    chart_type: "auto",
-                    language: lang,
-                    image: `data:image/png;base64,${compResult.image}`,
-                    source_code: finalCode
-                }]);
-                await fetch(`${SITE_URL}/api/internal/bot/history`, {
+        if (res.ok) {
+            const { visuals } = await res.json() as any;
+            
+            if (visuals && visuals.length > 0) {
+                // Send compiled image
+                for (const v of visuals) {
+                    if (v.image) {
+                        const base64Data = v.image.replace(/^data:image\/\w+;base64,/, "");
+                        const buffer = Buffer.from(base64Data, 'base64');
+                        await bot.telegram.sendPhoto(chatId, { source: buffer }, {
+                            caption: `✅ *Визуализация готова!*\n\nПроект: *${session?.title || 'Visual'}*\n\nНиже прикреплен файл с исходным кодом.`,
+                            parse_mode: "Markdown",
+                            ...getPostVisualKeyboard()
+                        });
+                    }
+                }
+                
+                // Send source code file
+                const codeRes = await fetch(`${SITE_URL}/api/internal/bot/history/files`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                    body: JSON.stringify({ sessionId, updateVisuals: visualEntry }),
-                }).catch(() => {});
-            } catch (e) { console.error("Failed to save visuals back to DB:", e); }
-            
-            const buffer = Buffer.from(compResult.image, 'base64');
-            await bot.telegram.sendPhoto(chatId, { source: buffer }, {
-                caption: `✅ *Визуализация готова!*\n\nПроект: *${session.title}*\n\nНиже прикреплен файл с исходным кодом.`,
-                parse_mode: "Markdown",
-                ...getPostVisualKeyboard()
-            });
-            
-            const filename = lang === 'python' ? 'visual.py' : 'visual.R';
-            await bot.telegram.sendDocument(chatId, { source: Buffer.from(finalCode), filename });
+                    body: JSON.stringify({ sessionId, type: "code" }),
+                });
+                if (codeRes.ok) {
+                    const codeBuffer = await codeRes.arrayBuffer();
+                    const disp = codeRes.headers.get("Content-Disposition");
+                    const filename = disp?.split('filename=')[1]?.replace(/"/g, '') || 'visual.py';
+                    await bot.telegram.sendDocument(chatId, { source: Buffer.from(codeBuffer), filename });
+                }
+            } else {
+                // No visuals = compilation failed, check session error
+                const errMsg = session?.error_msg || "Неизвестная ошибка среды выполнения.";
+                await bot.telegram.sendMessage(chatId, `❌ *Ошибка компиляции:*\n\n\`\`\`\n${errMsg}\n\`\`\``, { 
+                    parse_mode: "Markdown",
+                    ...getPostVisualKeyboard()
+                });
+            }
         } else {
-            const errorLog = compResult.log || "Неизвестная ошибка среды выполнения.";
-            await bot.telegram.sendMessage(chatId, `❌ *Ошибка компиляции:*\n\n\`\`\`\n${errorLog}\n\`\`\``, { 
-                parse_mode: "Markdown",
+            await bot.telegram.sendMessage(chatId, `❌ Не удалось получить результат визуализации.`, {
                 ...getPostVisualKeyboard()
             });
         }
     } catch (err: any) {
         console.error("Complete Push Error:", err);
+        await bot.telegram.sendMessage(chatId, `⚠️ Ошибка при отправке результатов.`).catch(() => {});
     } finally {
-        // FIX: Use the actual exported sessionStore instead of (global as any).sessionStore
         for (const [uid, sess] of sessionStore) {
             if (uid === chatId || sess.visual?.chatId === chatId) {
                 sess.step = 'idle';

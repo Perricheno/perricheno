@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
-const PYTHON_COMPILER_URL = process.env.PYTHON_COMPILER_URL || "http://python-compiler:8000/compile";
-const R_COMPILER_URL = process.env.R_COMPILER_URL || "http://r-compiler:8000/compile";
+const PYTHON_COMPILER_URL = process.env.PYTHON_COMPILER_URL || "http://python-compiler:8000";
+const R_COMPILER_URL = process.env.R_COMPILER_URL || "http://r-compiler:8000";
+
+// R auto-installer wrapper (same as agent/visualize)
+function wrapRCode(rawCode: string) {
+    return `
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
+.orig_lib <- base::library
+library <- function(package, ...) {
+  pkg_name <- as.character(substitute(package))
+  if (length(pkg_name) == 1 && pkg_name != "package") {
+    if (!requireNamespace(pkg_name, quietly = TRUE)) {
+        suppressMessages(suppressWarnings(install.packages(pkg_name, quiet = TRUE)))
+    }
+    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))))
+  } else {
+    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(...))))
+  }
+}
+` + rawCode;
+}
 
 export async function POST(req: NextRequest) {
     const secret = req.headers.get("x-bot-secret");
@@ -17,12 +36,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No code provided" }, { status: 400 });
         }
 
-        const compilerUrl = language === "python" ? PYTHON_COMPILER_URL : R_COMPILER_URL;
+        const isPython = language === "python";
+        const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
+        const finalCode = isPython ? code : wrapRCode(code);
 
-        const response = await fetch(compilerUrl, {
+        const response = await fetch(`${compilerUrl}/compile`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code })
+            body: JSON.stringify({ code: finalCode }),
+            signal: AbortSignal.timeout(45000),
         });
 
         if (!response.ok) {
