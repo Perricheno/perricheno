@@ -49,13 +49,25 @@ export async function handleMe(ctx: any) {
 
         if (res.ok) {
             const { user: u } = await res.json() as any;
-            const text = `👤 *${u.first_name}* (@${u.username || "—"})\n\n` +
-                         `📊 Тариф: \`${u.account_tier || "free"}\`\n` +
-                         `📝 Символы: ${(u.daily_chars_used || 0).toLocaleString()}\n` +
-                         `📑 Отчёты: ${u.daily_reports_used || 0}\n` +
-                         `💰 Баланс: ${(u.purchased_chars || 0).toLocaleString()} chars`;
+            const createdDate = new Date(u.created_at).toLocaleDateString();
             
-            await ctx.editMessageText(text, { parse_mode: "Markdown", ...getMainMenu() });
+            const text = `👤 *Профиль пользователя*\n\n` +
+                         `🆔 ID: \`${u.id}\`\n` +
+                         `👤 Имя: *${u.first_name || (tgUser.first_name)}*\n` +
+                         `🔗 Username: @${u.username || tgUser.username || "—"}\n` +
+                         `🌟 Тариф: \`${u.account_tier || "free"}\`\n` +
+                         `📅 Дата регистрации: \`${createdDate}\`\n\n` +
+                         `Статистику по лимитам вы можете найти в разделе [Биллинг].`;
+            
+            const keyboard = Markup.inlineKeyboard([
+                [Markup.button.callback("« Назад", "main_menu")]
+            ]);
+
+            if (ctx.callbackQuery) {
+                await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard });
+            } else {
+                await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
+            }
         }
     } catch {
         await ctx.reply("⚠️ Ошибка связи с сервером.");

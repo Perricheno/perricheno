@@ -1,8 +1,9 @@
 import { Telegraf } from "telegraf";
 import { handleStart, handleMe } from "./handlers/auth";
-import { handleVisualRequest } from "./handlers/visual";
+import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset } from "./handlers/visual";
 import { handleHistory } from "./handlers/history";
-import { getMainMenu, getVisualMenu } from "./keyboards/menu";
+import { handleBilling } from "./handlers/billing";
+import { getMainMenu, getVisualSuggestionsKeyboard } from "./keyboards/menu";
 
 import http from "http";
 
@@ -17,12 +18,26 @@ if (!BOT_TOKEN || !WEBHOOK_SECRET) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
+// --- In-Memory Session Middleware ---
+const sessionStore = new Map<number, any>();
+bot.use(async (ctx: any, next: () => Promise<void>) => {
+    const userId = ctx.from?.id;
+    if (!userId) return next();
+    
+    if (!sessionStore.has(userId)) {
+        sessionStore.set(userId, { step: 'idle', visual: { text: [], images: [], files: [], title: '', lang: 'python' } });
+    }
+    ctx.session = sessionStore.get(userId);
+    return next();
+});
+
 // --- Commands ---
 bot.start(ctx => handleStart(ctx));
 bot.command("me", ctx => handleMe(ctx));
 bot.command("history", ctx => handleHistory(ctx));
+bot.command("billing", ctx => handleBilling(ctx));
 
-// --- Callbacks (Inline Logic) ---
+// --- Actions (Callbacks) ---
 bot.action("main_menu", async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.editMessageText(`🏠 *Главное меню*`, {
@@ -33,16 +48,22 @@ bot.action("main_menu", async (ctx) => {
 
 bot.action("tool_visual", async (ctx) => {
     await ctx.answerCbQuery();
-    await ctx.editMessageText(`📊 *Визуализация данных*\n\nНапишите запрос текстом (например: "сделай график доходов") или выберите тип:`, {
+    await ctx.editMessageText(`📊 *Визуализация данных*\n\nВыберите тип визуализации или создайте новый проект:`, {
         parse_mode: "Markdown",
-        ...getVisualMenu()
+        ...getVisualSuggestionsKeyboard()
     });
 });
 
-bot.action("me_info", async (ctx) => {
-    await ctx.answerCbQuery();
-    await handleMe(ctx);
-});
+bot.action("select_type_auto", ctx => handleVisualStart(ctx));
+bot.action(/^select_type_(.+)$/, ctx => handleVisualStart(ctx));
+
+bot.action("billing_info", ctx => handleBilling(ctx));
+bot.action("me_info", ctx => handleMe(ctx));
+
+bot.action("visual_generate", ctx => handleVisualGenerateRequest(ctx));
+bot.action("visual_reset", ctx => handleVisualReset(ctx));
+bot.action("lang_python", ctx => handleVisualProcess(ctx, 'python'));
+bot.action("lang_r", ctx => handleVisualProcess(ctx, 'r'));
 
 bot.action(/^history_(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
@@ -50,12 +71,18 @@ bot.action(/^history_(\d+)$/, async (ctx) => {
     await handleHistory(ctx, page);
 });
 
-// --- Text Handling (AI Visuals) ---
-bot.on("text", async (ctx) => {
-    const text = ctx.message.text;
-    // If it looks like a visualization request or is in "visual mode"
-    if (text.toLowerCase().includes("график") || text.toLowerCase().includes("диаграмм") || text.length > 10) {
-        return handleVisualRequest(ctx);
+// --- Message Handling (Converational Flow) ---
+bot.on(["text", "photo", "document"], async (ctx: any) => {
+    const step = ctx.session.step;
+    
+    if (step === 'awaiting_visual_name') {
+        return handleVisualName(ctx);
+    } else if (step === 'collecting_visual_data') {
+        return handleVisualCollect(ctx);
+    } else if (step === 'idle') {
+        // Default behavior if not in a flow
+        if (ctx.message.text?.startsWith('/')) return; // Ignore other commands
+        await ctx.reply("👋 Чтобы начать, выберите *Визуализация* в меню.", { parse_mode: "Markdown", ...getMainMenu() });
     }
 });
 

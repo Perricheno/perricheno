@@ -4,8 +4,9 @@ declare module "telegraf" {
         start(handler: (ctx: any) => Promise<void>): void;
         help(handler: (ctx: any) => Promise<void>): void;
         command(name: string, handler: (ctx: any) => Promise<void>): void;
+        use(handler: (ctx: any, next: () => Promise<void>) => Promise<void>): void;
         action(trigger: string | RegExp, handler: (ctx: any) => Promise<void>): void;
-        on(updateType: string, handler: (ctx: any) => Promise<void>): void;
+        on(updateType: string | string[], handler: (ctx: any) => Promise<void>): void;
         webhookCallback(path: string, options?: any): any;
         launch(options?: any): Promise<void>;
         stop(reason?: string): void;
@@ -29,6 +30,7 @@ declare module "telegraf" {
         callbackQuery: any;
         updateType: string;
         match: any;
+        session: any;
         reply(text: string, extra?: any): Promise<any>;
         replyWithPhoto(photo: any, extra?: any): Promise<any>;
         replyWithDocument(doc: any, extra?: any): Promise<any>;
