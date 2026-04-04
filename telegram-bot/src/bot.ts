@@ -3,6 +3,8 @@ import { handleStart, handleMe } from "./handlers/auth";
 import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualGenerateRequest, handleVisualProcess, handleVisualReset, handleVisualToggleType, handleCompileStart, handleCompileFile } from "./handlers/visual";
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling, handleBillingShop, handleBillingCategory, handleBillingBuy, handleBillingConfirm, handleBillingHistory, handleBillingPromoStart, handleBillingPromoApply } from "./handlers/billing";
+import { handleReferral } from "./handlers/referral";
+import { handleActiveTasks, handleTaskReset } from "./handlers/tasks";
 import { getMainMenu, getVisualSuggestionsKeyboard, getLangSelectionKeyboard, getVisualActionKeyboard } from "./keyboards/menu";
 import { getSession, saveSession } from "./sessionStore";
 
@@ -95,6 +97,21 @@ bot.action(/^billing_confirm_(.+)$/, ctx => handleBillingConfirm(ctx, ctx.match[
 bot.action("billing_history", ctx => handleBillingHistory(ctx));
 bot.action("billing_promo", ctx => handleBillingPromoStart(ctx));
 
+bot.action("referral_main", async (ctx: any) => {
+    ctx.session.step = 'idle';
+    await handleReferral(ctx);
+});
+
+bot.action("tasks_active", async (ctx: any) => {
+    ctx.session.step = 'idle';
+    await handleActiveTasks(ctx);
+});
+
+bot.action(/^task_reset_(.+)$/, async (ctx: any) => {
+    const sessionId = ctx.match[1];
+    await handleTaskReset(ctx, sessionId);
+});
+
 bot.action("visual_generate", ctx => handleVisualGenerateRequest(ctx));
 bot.action("visual_reset", ctx => handleVisualReset(ctx));
 bot.action("lang_python", ctx => handleVisualProcess(ctx, 'python'));
@@ -165,13 +182,18 @@ bot.on(["text", "photo", "document"], async (ctx: any) => {
     }
 });
 
-// --- Errors ---
+// --- Global Error Handler (The "Immortal" Guard) ---
 bot.catch((err: any, ctx: any) => {
-    // Specifically ignore "message is not modified" errors as they are harmless (user clicked same button twice)
-    if (err.description && err.description.includes("message is not modified")) {
-        return;
-    }
-    console.error(`Bot Error for ${ctx.updateType}`, err);
+    // Ignore common harmless Telegram errors
+    const desc = err.description || "";
+    if (desc.includes("message is not modified")) return;
+    if (desc.includes("query is too old")) return;
+    if (desc.includes("message to edit not found")) return;
+    
+    console.error(`🔴 CRITICAL_BOT_ERROR [${ctx.updateType}]:`, err);
+    
+    // Attempt to notify user without crashing
+    ctx.reply("⚠️ Временная заминка. Пожалуйста, попробуйте еще раз через минуту.").catch(() => {});
 });
 
 // --- Launch ---
@@ -180,9 +202,9 @@ async function main() {
     const server = http.createServer(async (req, res) => {
         const url = req.url || "";
         
-        // A. Telegram Webhook
-        if (url.startsWith(`/webhook/${BOT_TOKEN}`)) {
-            return bot.webhookCallback(`/webhook/${BOT_TOKEN}`)(req, res);
+        // A. Telegram Webhook (Next.js Proxy path)
+        if (url.startsWith("/api/webhook")) {
+            return bot.webhookCallback("/api/webhook")(req, res);
         }
 
         // B. Bot Internal API (Push updates from Next.js)
@@ -239,10 +261,8 @@ async function main() {
     });
 
     // 2. Register with Telegram
-    if (process.env.WEBHOOK_DOMAIN) {
-        // Register webhook through Next.js proxy at /api/webhook/telegram
-        // Next.js forwards requests to bot container at /webhook/<token>
-        const webhookUrl = `${process.env.WEBHOOK_DOMAIN}/api/webhook/telegram`;
+    if (process.env.NODE_ENV === 'production') {
+        const webhookUrl = `${process.env.WEBHOOK_URL}/api/webhook`;
         await bot.telegram.setWebhook(webhookUrl, { secret_token: WEBHOOK_SECRET });
         console.log(`🚀 Bot registered Webhook: ${webhookUrl}`);
     } else {

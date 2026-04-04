@@ -8,8 +8,34 @@ export async function handleStart(ctx: any) {
     const payload = ctx.startPayload;
     const tgUser = ctx.from;
 
-    if (payload && payload.length > 10) {
+    if (payload && payload.length > 3) {
         try {
+            // 1. Check for Referral Link (e.g. start=ref_12345)
+            if (payload.startsWith("ref_")) {
+                const referrerId = payload.replace("ref_", "");
+                const res = await fetch(`${SITE_URL}/api/internal/bot/referral/apply`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                    body: JSON.stringify({ invitee: tgUser, referrerId })
+                });
+                
+                const data = await res.json() as any;
+                if (data.success && data.awarded) {
+                    await ctx.reply(`🎉 *Добро пожаловать в Perricheno!*\n\nВы перешли по реферальной ссылке. Ваш друг получил бонус, а вам доступны все функции ИИ-аналитики.\n\nИспользуйте меню ниже для начала:`, {
+                        parse_mode: "Markdown",
+                        ...getMainMenu()
+                    });
+                } else {
+                    // Fallback to normal welcome if already registered or error
+                    await ctx.reply(`👋 Привет, *${tgUser.first_name}*!\n\nРады снова видеть вас в *Perricheno*. Выберите действие:`, {
+                        parse_mode: "Markdown",
+                        ...getMainMenu()
+                    });
+                }
+                return;
+            }
+
+            // 2. Standard Auth Link (Session token)
             const res = await fetch(`${SITE_URL}/api/internal/bot/verify`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },

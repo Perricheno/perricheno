@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
 const SECRET_KEY = new TextEncoder().encode(process.env.SESSION_SECRET || "fallback-secret-key-at-least-thirty-two-chars-long");
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_DURATION = 3650 * 24 * 60 * 60 * 1000; // 10 years (immortal)
 
 export async function createSession(userId: number) {
     const expires = new Date(Date.now() + SESSION_DURATION);
@@ -10,7 +10,7 @@ export async function createSession(userId: number) {
     const session = await new SignJWT({ userId })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setExpirationTime('7d')
+        .setExpirationTime('3650d')
         .sign(SECRET_KEY);
 
     const cookieStore = await cookies();

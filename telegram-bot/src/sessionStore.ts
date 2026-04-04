@@ -1,4 +1,3 @@
-import "dotenv/config";
 // Shared Session Store — Persistence Layer
 // Communicates with Perricheno Site API to store/retrieve sessions in SQLite.
 
@@ -20,57 +19,40 @@ const DEFAULT_SESSION = {
 };
 
 export async function getSession(userId: number): Promise<any> {
-    if (localCache.has(userId)) return localCache.get(userId);
-
     try {
         const res = await fetch(`${SITE_INTERNAL_URL}/api/internal/bot/session?userId=${userId}`, {
             headers: { "X-Bot-Secret": WEBHOOK_SECRET }
         });
         
-        let sessionData: any;
-        if (!res.ok) {
-            sessionData = JSON.parse(JSON.stringify(DEFAULT_SESSION));
-        } else {
-            const data = await res.json();
-            const session = data.session || {};
-            // Ensure all nested fields exist by merging with DEFAULT_SESSION
-            sessionData = {
-                ...JSON.parse(JSON.stringify(DEFAULT_SESSION)),
-                ...session,
-                visual: {
-                    ...JSON.parse(JSON.stringify(DEFAULT_SESSION.visual)),
-                    ...(session.visual || {})
-                }
-            };
+        if (res.ok) {
+            const data = await res.json() as any;
+            if (data.session) return data.session;
         }
-        
-        localCache.set(userId, sessionData);
-        return sessionData;
-    } catch (e) {
-        console.error("Failed to fetch session from API:", e);
-        const fallback = JSON.parse(JSON.stringify(DEFAULT_SESSION));
-        localCache.set(userId, fallback);
-        return fallback;
+    } catch (err) {
+        console.error(`⚠️ Session Load Error [User ${userId}]: Site unreachable. Using default session.`);
     }
+    
+    // Return a safe default session if site is down or not found
+    return {
+        step: 'idle',
+        visual: { title: "", text: [], images: [], files: [], type: 'auto' },
+        compile: { title: "", file: null }
+    };
 }
 
 export async function saveSession(userId: number, session: any): Promise<void> {
-    // Update cache immediately
-    localCache.set(userId, session);
-
+    if (!session) return;
+    
     try {
-        // Deep copy to avoid circular references and ensure clean JSON for API
-        const cleanSession = JSON.parse(JSON.stringify(session));
-        
         await fetch(`${SITE_INTERNAL_URL}/api/internal/bot/session`, {
             method: "POST",
             headers: { 
-                "Content-Type": "application/json", 
+                "Content-Type": "application/json",
                 "X-Bot-Secret": WEBHOOK_SECRET 
             },
-            body: JSON.stringify({ userId, session: cleanSession })
+            body: JSON.stringify({ userId, session })
         });
-    } catch (e) {
-        console.error("Failed to save session to API:", e);
+    } catch (err) {
+        console.error(`⚠️ Session Save Error [User ${userId}]: Site unreachable. Data might be lost.`);
     }
 }

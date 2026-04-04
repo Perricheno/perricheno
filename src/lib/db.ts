@@ -246,6 +246,17 @@ try {
 // Referral Tracking
 try { db.exec("ALTER TABLE users ADD COLUMN referred_by INTEGER"); } catch (e) {}
 
+export function getReferralStats(userId: number) {
+    const row = db.prepare('SELECT COUNT(*) as count FROM users WHERE referred_by = ?').get(userId) as any;
+    const invitedCount = row ? row.count : 0;
+    
+    // Sum tokens from transaction history for "Referral Bonus"
+    const bonusRow = db.prepare(`SELECT SUM(CAST(REPLACE(REPLACE(amount_text, '+', ''), ' chars', '') AS INTEGER)) as total FROM transactions WHERE user_id = ? AND topic = 'Referral Bonus'`).get(userId) as any;
+    const totalBonus = bonusRow ? (bonusRow.total || 0) : 0;
+    
+    return { invitedCount, totalBonus };
+}
+
 export default db;
 
 export interface User {
@@ -266,9 +277,9 @@ export interface User {
     purchased_reports: number;
     last_reset_date: string | null;
     last_week_reset: string | null;
-    account_tier: string;
     is_banned: number;
     is_admin: number;
+    referred_by: number | null;
 }
 
 export function getUserByTelegramId(telegramId: string): User | undefined {
