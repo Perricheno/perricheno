@@ -67,6 +67,12 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
         
         const verifyUrlLong = `${verifyUrl}?hash=${sha512Hash}&sig=RSA.v1.${signatureStr.substring(0,16)}&date=${encodeURIComponent(data.dateISO)}`;
 
+        const verifyUrlDisplay = verifyUrlLong
+            .replace(/&/g, '\\&')
+            .replace(/_/g, '\\_')
+            .replace(/%/g, '\\%')
+            .replace(/#/g, '\\#');
+
         texContent = texContent
             .replace(/\{\{RECEIPT_ID\}\}/g, data.id)
             .replace(/\{\{USER_ID\}\}/g, data.userId.toString())
@@ -80,7 +86,8 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
             .replace(/\{\{FINGERPRINT\}\}/g, fingerprint)
             .replace(/\{\{HASH\}\}/g, sha512Hash)
             .replace(/\{\{DATE\}\}/g, displayDate)
-            .replace(/\{\{VERIFY_URL\}\}/g, verifyUrlLong.replace(/_/g, '\\_'));
+            .replace(/\{\{VERIFY_URL_DISPLAY\}\}/g, verifyUrlDisplay)
+            .replace(/\{\{VERIFY_URL_QR\}\}/g, verifyUrlLong);
 
         // 4. Create ZIP
         const zip = new JSZip();

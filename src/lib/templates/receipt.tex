@@ -113,34 +113,32 @@
 
 % --- QR и Футер ---
 \noindent
-\begin{tabularx}{\textwidth}{@{} X c @{}}
-    \begin{minipage}[b]{0.65\textwidth}
-        \textbf{DIGITAL INTEGRITY VERIFICATION} \\
-        \fontsize{6.5pt}{8.5pt}\selectfont \color{gray}
-        This receipt is digitally signed and encrypted to ensure immutability. Scan the high-density QR code to verify this record within the Perricheno Global Ledger. Hash: SHA512:{{HASH}}. Level H Error correction ensures readability even if partially damaged. \\
+\begin{minipage}[b]{0.65\textwidth}
+    \textbf{DIGITAL INTEGRITY VERIFICATION} \\
+    \fontsize{6.5pt}{8.5pt}\selectfont \color{gray}
+    This receipt is digitally signed and encrypted to ensure immutability. Scan the high-density QR code to verify this record within the Perricheno Global Ledger. Hash: SHA512:{{HASH}}. Level H Error correction ensures readability even if partially damaged. \\
+    
+    \vspace{2mm}
+    \textbf{OFFICIAL GATEWAY:} \\
+    \texttt{\fontsize{9pt}{9pt}\selectfont \color{black} {{VERIFY_URL_DISPLAY}}}
+\end{minipage}%
+\hfill
+\begin{minipage}[b]{52mm}
+    \centering
+    \begin{tikzpicture}
+        % Техническая рамка
+        \draw[line width=1.5pt] (-2.6, -2.6) -- (-1.9, -2.6);
+        \draw[line width=1.5pt] (-2.6, -2.6) -- (-2.6, -1.9);
+        \draw[line width=1.5pt] (2.6, -2.6) -- (1.9, -2.6);
+        \draw[line width=1.5pt] (2.6, -2.6) -- (2.6, -1.9);
+        \draw[line width=1.5pt] (-2.6, 2.6) -- (-1.9, 2.6);
+        \draw[line width=1.5pt] (-2.6, 2.6) -- (-2.6, 1.9);
+        \draw[line width=1.5pt] (2.6, 2.6) -- (1.9, 2.6);
+        \draw[line width=1.5pt] (2.6, 2.6) -- (2.6, 1.9);
         
-        \vspace{2mm}
-        \textbf{OFFICIAL GATEWAY:} \\
-        \texttt{\fontsize{9pt}{9pt}\selectfont \color{black} {{VERIFY_URL}}}
-    \end{minipage}
-    & 
-    \begin{minipage}[b]{52mm}
-        \centering
-        \begin{tikzpicture}
-            % Техническая рамка
-            \draw[line width=1.5pt] (-2.6, -2.6) -- (-1.9, -2.6);
-            \draw[line width=1.5pt] (-2.6, -2.6) -- (-2.6, -1.9);
-            \draw[line width=1.5pt] (2.6, -2.6) -- (1.9, -2.6);
-            \draw[line width=1.5pt] (2.6, -2.6) -- (2.6, -1.9);
-            \draw[line width=1.5pt] (-2.6, 2.6) -- (-1.9, 2.6);
-            \draw[line width=1.5pt] (-2.6, 2.6) -- (-2.6, 1.9);
-            \draw[line width=1.5pt] (2.6, 2.6) -- (1.9, 2.6);
-            \draw[line width=1.5pt] (2.6, 2.6) -- (2.6, 1.9);
-            
-            \node at (0,0) {\qrcode{{{VERIFY_URL}}}};
-        \end{tikzpicture}
-    \end{minipage}
-\end{tabularx}
+        \node at (0,0) {\qrcode{{{VERIFY_URL_QR}}}};
+    \end{tikzpicture}
+\end{minipage}
 \vspace{2mm}
 
 \noindent\hrule\vspace{1mm}
