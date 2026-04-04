@@ -116,62 +116,61 @@ export default function ChatPage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Load threads from IndexedDB (with legacy localStorage migration) when user changes
-    useEffect(() => {
-        if (!user) {
-            setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
-            setActiveThreadId(initialChatId);
-            return;
-        }
-        
-        const storageKey = `perricheno_chats_${user.telegram_id}`;
-        
-        const loadChats = async () => {
-            try {
-                // Try IDB first
-                let saved = await getChatsFromIDB(storageKey);
-                
-                // Fallback to localStorage if migration needed
-                if (!saved) {
-                    saved = localStorage.getItem(storageKey);
-                    if (saved) {
-                        await saveChatsToIDB(storageKey, saved); // Automigrate to IDB
-                        localStorage.removeItem(storageKey); // Clean old blocking sync storage
-                    }
-                }
-
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    const restoredThreads: ChatThread[] = parsed.map((t: any) => ({
-                        ...t,
-                        createdAt: new Date(t.createdAt),
-                        messages: t.messages.map((m: any) => ({
-                            ...m,
-                            timestamp: new Date(m.timestamp)
-                        }))
+    // Sync with Server API
+    const loadSessionHistory = async () => {
+        try {
+            const res = await fetch("/api/chat/history");
+            if (res.ok) {
+                const { sessions } = await res.json();
+                if (sessions.length > 0) {
+                    const restoredThreads = sessions.map((s: any) => ({
+                        ...s,
+                        createdAt: new Date(s.createdAt),
+                        messages: [] // Load messages individually when active
                     }));
                     setThreads(restoredThreads);
-                    if (restoredThreads.length > 0) setActiveThreadId(restoredThreads[0].id);
-                } else {
-                    setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
-                    setActiveThreadId(initialChatId);
+                    setActiveThreadId(restoredThreads[0].id);
                 }
-            } catch (e) {
-                console.error("Failed to load chat history:", e);
-                setThreads([{ id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }]);
-                setActiveThreadId(initialChatId);
             }
-        };
+        } catch (e) {
+            console.error("Failed to load sessions:", e);
+        }
+    };
 
-        loadChats();
-    }, [user, initialChatId]);
+    const loadMessagesForSession = async (sid: string) => {
+        try {
+            const res = await fetch(`/api/chat/history?sessionId=${sid}`);
+            if (res.ok) {
+                const { messages } = await res.json();
+                const restoredMsgs: ChatMessage[] = messages.map((m: any) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp)
+                }));
+                setThreads(prev => prev.map(t => t.id === sid ? { ...t, messages: restoredMsgs } : t));
+            }
+        } catch (e) {
+            console.error("Failed to load messages:", e);
+        }
+    };
 
-    // Save threads to IndexedDB whenever they change (non-blocking)
+    // Load sessions on mount
     useEffect(() => {
-        if (!user || threads.length === 0) return;
-        const storageKey = `perricheno_chats_${user.telegram_id}`;
-        saveChatsToIDB(storageKey, JSON.stringify(threads));
-    }, [threads, user]);
+        if (user) {
+            loadSessionHistory();
+        }
+    }, [user]);
+
+    // Load messages when active thread changes
+    useEffect(() => {
+        if (activeThreadId && user) {
+            const current = threads.find(t => t.id === activeThreadId);
+            if (current && current.messages.length === 0) {
+                loadMessagesForSession(activeThreadId);
+            }
+        }
+    }, [activeThreadId, user]);
+
+    // (Session sync handled in UI actions for better control)
 
     const activeThread = threads.find(t => t.id === activeThreadId) || threads[0];
     const messages = activeThread?.messages || [];
@@ -192,11 +191,20 @@ export default function ChatPage() {
     }, [input]);
 
     /* ── Thread management ── */
-    const createThread = () => {
+    const createThread = async () => {
         const id = genId();
-        setThreads(prev => [{ id, title: "New Chat", messages: [], createdAt: new Date() }, ...prev]);
+        const newThread = { id, title: "New Chat", messages: [], createdAt: new Date() };
+        setThreads(prev => [newThread, ...prev]);
         setActiveThreadId(id);
         setMobileMenuOpen(false);
+
+        // Persistent save
+        if (user) {
+            await fetch("/api/chat/history", {
+                method: "POST",
+                body: JSON.stringify({ action: "create_session", sessionId: id, title: "New Chat" })
+            });
+        }
     };
 
     const deleteThread = (id: string) => {
@@ -244,6 +252,18 @@ export default function ChatPage() {
 
         const updatedMessages = [...messages, userMsg];
         updateThreadMessages(activeThreadId, updatedMessages);
+        
+        // Sync User Message to DB
+        fetch("/api/chat/history", {
+            method: "POST",
+            body: JSON.stringify({ 
+                action: "save_message", 
+                sessionId: activeThreadId, 
+                title: activeThread.title,
+                message: { id: userMsg.id, role: "user", text: userMsg.text } 
+            })
+        });
+
         const msgText = input.trim();
         setInput("");
         setFiles([]);
@@ -326,22 +346,35 @@ export default function ChatPage() {
                 // If parsing fails, it's just a raw string from n8n (e.g. "Привет..."). Keep responseText as is.
             }
 
-            updateThreadMessages(activeThreadId, [...updatedMessages, { 
+            const assistantMsg: ChatMessage = { 
                 id: String(Date.now()), 
                 role: "assistant", 
                 text: responseText, 
                 timestamp: new Date() 
-            }]);
+            };
+            updateThreadMessages(activeThreadId, [...updatedMessages, assistantMsg]);
+
+            // Sync Assistant Message to DB
+            fetch("/api/chat/history", {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: "save_message", 
+                    sessionId: activeThreadId, 
+                    title: activeThread.title,
+                    message: { id: assistantMsg.id, role: "assistant", text: assistantMsg.text } 
+                })
+            });
 
         } catch (err: unknown) {
             const detail = err instanceof Error ? err.message : "Network error";
-            updateThreadMessages(activeThreadId, [...updatedMessages, { 
+            const errorMsg: ChatMessage = { 
                 id: String(Date.now()), 
                 role: "assistant", 
                 text: `❌ Error: ${detail}. Please check connection or settings.`, 
                 timestamp: new Date(),
                 error: true
-            }]);
+            };
+            updateThreadMessages(activeThreadId, [...updatedMessages, errorMsg]);
             showToast("Failed to send message", "error");
         } finally {
             setIsLoading(false);
