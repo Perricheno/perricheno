@@ -122,8 +122,11 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
         const { session } = await res.json() as any;
         if (!session) return;
 
-        const lang = session.main_tex?.includes("import ") ? 'python' : 'r';
         const finalCode = session.stream_text || session.main_tex;
+        if (!finalCode) return;
+        
+        // Detect language from the actual code, not main_tex
+        const lang = finalCode.includes("import ") || finalCode.includes("plt.") ? 'python' : 'r';
 
         await bot.telegram.editMessageText(chatId, messageId, undefined, 
             `✅ *Код готов!*\n\n🔄 Запускаю компиляцию в среде ${lang}...`, 
@@ -139,6 +142,21 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
         const compResult = await compRes.json() as any;
 
         if (compResult.success && compResult.image) {
+            // Save compiled results back to the session DB so history/files can serve them
+            try {
+                const visualEntry = JSON.stringify([{
+                    chart_type: "auto",
+                    language: lang,
+                    image: `data:image/png;base64,${compResult.image}`,
+                    source_code: finalCode
+                }]);
+                await fetch(`${SITE_URL}/api/internal/bot/history`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                    body: JSON.stringify({ sessionId, updateVisuals: visualEntry }),
+                }).catch(() => {});
+            } catch (e) { console.error("Failed to save visuals back to DB:", e); }
+            
             const buffer = Buffer.from(compResult.image, 'base64');
             await bot.telegram.sendPhoto(chatId, { source: buffer }, {
                 caption: `✅ *Визуализация готова!*\n\nПроект: *${session.title}*\n\nНиже прикреплен файл с исходным кодом.`,

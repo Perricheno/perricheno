@@ -10,16 +10,22 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { telegram_id, sessionId, page = 1, limit = 5 } = await req.json();
+        const { telegram_id, sessionId, updateVisuals, page = 1, limit = 5 } = await req.json();
 
         // Single Session View
-        if (sessionId) {
+        if (sessionId && !updateVisuals) {
             const session = db.prepare(`
                 SELECT id, title, status, share_id, created_at, updated_at 
                 FROM agent_sessions 
                 WHERE id = ?
             `).get(sessionId) as any;
             return NextResponse.json({ session });
+        }
+
+        // Update visuals_json for a session (called after compilation)
+        if (sessionId && updateVisuals) {
+            db.prepare(`UPDATE agent_sessions SET visuals_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(updateVisuals, sessionId);
+            return NextResponse.json({ success: true });
         }
 
         if (!telegram_id) return NextResponse.json({ error: "Missing telegram_id" }, { status: 400 });
