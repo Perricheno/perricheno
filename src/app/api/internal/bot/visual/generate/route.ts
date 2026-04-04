@@ -31,60 +31,58 @@ const PYTHON_CHART_PROMPTS: Record<string, string> = {
     violin: 'a violin plot visualizing probability density with seaborn.violinplot',
 };
 
-function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string, runtime: 'R' | 'Python' = 'Python') {
+function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string, hasImages: boolean, runtime: 'R' | 'Python' = 'Python') {
     const isPython = runtime === 'Python';
     const prompts = isPython ? PYTHON_CHART_PROMPTS : CHART_PROMPTS;
     const chartDesc = prompts[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
-    const hasRealData = dataContext && dataContext.length > 100 && (dataContext.includes('FILE "') || dataContext.includes('csv') || dataContext.includes('data'));
+    
+    // Improved detection: Real data is present if we have text context OR Vision images
+    const hasRealData = (dataContext && dataContext.length > 50) || hasImages;
     
     if (isPython) {
         return `You are a Python data visualization expert (Matplotlib/Seaborn/Pandas). Generate a SINGLE, complete, self-contained Python script.
         
-        TASK: Create ${chartDesc} related to this research topic: "${topic}"
+        TASK: Create ${chartDesc} related to the topic: "${topic}"
         
-        ${dataContext ? `USER PROVIDED DATA & CONTEXT:\n${dataContext}\n` : ''}
+        ${hasImages ? `DOCUMENT IMAGES: I have provided images of document pages. You MUST carefully analyze these images to extract REAL numbers, categories, and metrics for the chart.` : ''}
+        ${dataContext ? `USER PROVIDED TEXT CONTEXT:\n${dataContext}\n` : ''}
         
         REQUIREMENTS:
         ${hasRealData 
-            ? `1. **CRITICAL**: The user has provided REAL DATA above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data. If the data is in text form (e.g. a financial report, CSV, or table), parse the relevant numbers and categories from it.`
-            : `1. Create REALISTIC synthetic data matching the topic using Pandas (at least 20-50 rows for depth).`
+            ? `1. **CRITICAL (REAL DATA MODE)**: You MUST extract, parse, and use ACTUAL DATA from the provided images or text. DO NOT invent synthetic data. If the prompt topic is "${topic}" but the document covers different data (like a 10-K report), visualize the DOCUMENT DATA. The title "${topic}" might just be a label.`
+            : `1. **SYNTHETIC MODE**: No real data found. Create REALISTIC synthetic data matching the topic "${topic}" using Pandas (at least 20-50 rows for depth).`
         }
         2. Use the "${palette}" style color palette (if using Seaborn, use \`sns.set_palette\`).
-        3. The plot must be professional with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
+        3. The plot must be professional with proper ${isRu ? 'Russian' : 'English'} titles and axis labels based on the EXTRACTED data.
         4. CRUCIAL: Use \`plt.tight_layout()\` to prevent text overlap. Ensure high readability.
-        5. Ensure a clean visual style with \`sns.set_style("whitegrid")\` or similar.
-        6. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
-        7. The script must be completely self-contained.
-        8. DO NOT include \`plt.show()\`. 
-        9. The figure MUST be stored in the global \`fig\` variable or just use the functional plt interface. The compiler will capture the output.
-        ${hasRealData ? `10. If the provided data is a financial report (10-K, annual report, etc.), extract KEY METRICS like revenue, net income, expenses, etc. and visualize them.` : ''}
+        5. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
+        6. The script must be completely self-contained. No external files.
+        7. The figure MUST be stored in the global \`fig\` variable.
+        8. If you see charts in the documents, try to recreate or aggregate their data into a new impactful visualization.
         
         OUTPUT: Only output pure Python code. NO markdown fences (\`\`\`python). NO commentary.`;
     }
 
     return `You are an R visualization expert. Generate a SINGLE, complete, self-contained R script.
 
-TASK: Create ${chartDesc} related to this research topic: "${topic}"
+TASK: Create ${chartDesc} related to the topic: "${topic}"
 
-${dataContext ? `USER PROVIDED DATA & CONTEXT:\n${dataContext}\n` : ''}
+${hasImages ? `DOCUMENT IMAGES: I have provided images of document pages. You MUST carefully analyze these images to extract REAL numbers, categories, and metrics for the chart.` : ''}
+${dataContext ? `USER PROVIDED TEXT CONTEXT:\n${dataContext}\n` : ''}
 
 REQUIREMENTS:
 ${hasRealData 
-    ? `1. **CRITICAL**: The user has provided REAL DATA above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data. If the data is in text form (e.g. a financial report, CSV, or table), parse the relevant numbers and categories from it.`
-    : `1. Create REALISTIC synthetic data matching the topic.`
+    ? `1. **CRITICAL (REAL DATA MODE)**: You MUST extract, parse, and use ACTUAL DATA from the provided images or text. DO NOT invent synthetic data. Prioritize information from images.`
+    : `1. **SYNTHETIC MODE**: Create REALISTIC synthetic data matching the topic "${topic}".`
 }
-2. Use the "${palette}" color palette (from viridis, RColorBrewer, etc).
-3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
-4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
-5. Ensure a clean visual layout using \`theme_minimal()\` or similar.
-6. The script must be completely self-contained — NO external files.
-7. If you use a package (e.g., ggplot2, plotly, ggrepel), use simple \`library(pkgName)\`.
-8. DO NOT include Cairo() or png() calls. 
-9. The last expression MUST be the plot object itself so it renders.
-${hasRealData ? `10. If the provided data is a financial report (10-K, annual report, etc.), extract KEY METRICS like revenue, net income, expenses, etc. and visualize them.` : ''}
+2. Use the "${palette}" color palette.
+3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and labels.
+4. CRUCIAL: Prevent text overlap! use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
+5. The script must be completely self-contained.
+6. The last expression MUST be the plot object itself so it renders.
 
-OUTPUT: Only output the pure R code. NO markdown fences (\`\`\`R). NO commentary. Just executable R code.`;
+OUTPUT: Only output the pure R code. NO markdown fences. NO commentary.`;
 }
 
 // ── Helpers (from working agent/visualize/route.ts) ──
@@ -177,6 +175,7 @@ export async function POST(req: NextRequest) {
                 const runtime = isPython ? 'Python' : 'R';
                 const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
                 const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
+                const hasImages = images && Array.isArray(images) && images.length > 0;
 
                 // 1. Push status to bot
                 if (chatId && messageId) {
@@ -194,6 +193,7 @@ export async function POST(req: NextRequest) {
                     'viridis',
                     'ru',
                     context.text_data + (context.files_text ? `\n${context.files_text}` : ''),
+                    hasImages,
                     runtime
                 );
 
