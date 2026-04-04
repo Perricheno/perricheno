@@ -4,6 +4,7 @@ declare module 'telegraf' {
     interface Context {
         session: {
             step: string;
+            isProcessing: boolean;
             visual: {
                 text: string[];
                 images: { fileId: string; caption: string }[];
@@ -11,6 +12,7 @@ declare module 'telegraf' {
                 title: string;
                 lang: 'python' | 'r';
                 type?: string;
+                chatId?: number;
             };
         };
     }

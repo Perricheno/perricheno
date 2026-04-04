@@ -1,4 +1,5 @@
 import { getMainMenu, getVisualSuggestionsKeyboard, getVisualActionKeyboard, getLangSelectionKeyboard, getPostVisualKeyboard } from "../keyboards/menu";
+import { sessionStore } from "../bot";
 
 const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -45,7 +46,7 @@ export async function handleVisualCollect(ctx: any) {
     if (ctx.message.text) {
         s.text.push(ctx.message.text);
     } else if (ctx.message.photo) {
-        const photo = ctx.message.photo.pop();
+        const photo = ctx.message.photo[ctx.message.photo.length - 1]; // Use last element (highest resolution) without mutating array
         s.images.push({ fileId: photo.file_id, caption: ctx.message.caption || "" });
     } else if (ctx.message.document) {
         s.files.push({ fileId: ctx.message.document.file_id, fileName: ctx.message.document.file_name });
@@ -110,44 +111,6 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
     }
 }
 
-export async function handleDownloadFile(ctx: any, sessionId: string, type: "zip" | "pdf" | "code") {
-    if (ctx.session.isProcessing) return ctx.answerCbQuery("⏳ Подождите, другой запрос выполняется...");
-    
-    await ctx.answerCbQuery(`🚀 Подготовка ${type.toUpperCase()}...`);
-    ctx.session.isProcessing = true;
-
-    try {
-        const res = await fetch(`${SITE_URL}/api/internal/bot/history/files`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-            body: JSON.stringify({ sessionId, type }),
-        });
-
-        if (res.ok) {
-            const arrayBuffer = await res.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            
-            let filename = `report_${sessionId.slice(0, 8)}.${type}`;
-            if (type === "zip") filename = `project_${sessionId.slice(0, 8)}.zip`;
-            if (type === "pdf") filename = `report_${sessionId.slice(0, 8)}.pdf`;
-            if (type === "code") {
-                const disp = res.headers.get("Content-Disposition");
-                filename = disp?.split('filename=')[1]?.replace(/"/g, '') || `visual_${sessionId.slice(0, 8)}.py`;
-            }
-            
-            await ctx.replyWithDocument({ source: buffer, filename });
-        } else {
-            const data = await res.json() as any;
-            await ctx.reply(`❌ ${data.error || "Не удалось загрузить файл."}`);
-        }
-    } catch (err) {
-        console.error(err);
-        await ctx.reply("⚠️ Ошибка при скачивании файла.");
-    } finally {
-        ctx.session.isProcessing = false;
-    }
-}
-
 export async function handleVisualCompletePush(bot: any, chatId: number, messageId: number, sessionId: string) {
     try {
         const res = await fetch(`${SITE_URL}/api/internal/bot/history`, {
@@ -195,8 +158,10 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
     } catch (err: any) {
         console.error("Complete Push Error:", err);
     } finally {
-        for (const [uid, sess] of (global as any).sessionStore || []) {
+        // FIX: Use the actual exported sessionStore instead of (global as any).sessionStore
+        for (const [uid, sess] of sessionStore) {
             if (uid === chatId || sess.visual?.chatId === chatId) {
+                sess.step = 'idle';
                 sess.isProcessing = false;
             }
         }

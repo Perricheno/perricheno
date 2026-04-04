@@ -38,6 +38,9 @@
   ],
   "exclude": [
     "node_modules",
-    "src/scripts"
+    "src/scripts",
+    "telegram-bot",
+    "python-compiler",
+    "r-compiler"
   ]
 }

@@ -19,13 +19,15 @@ if (!BOT_TOKEN || !WEBHOOK_SECRET) {
 const bot = new Telegraf(BOT_TOKEN) as any;
 
 // --- In-Memory Session Middleware ---
-const sessionStore = new Map<number, any>();
+// Exported so handlers (e.g. handleVisualCompletePush) can access it
+export const sessionStore = new Map<number, any>();
+
 bot.use(async (ctx: any, next: () => Promise<void>) => {
     const userId = ctx.from?.id;
     if (!userId) return next();
     
     if (!sessionStore.has(userId)) {
-        sessionStore.set(userId, { step: 'idle', visual: { text: [], images: [], files: [], title: '', lang: 'python' } });
+        sessionStore.set(userId, { step: 'idle', isProcessing: false, visual: { text: [], images: [], files: [], title: '', lang: 'python' } });
     }
     ctx.session = sessionStore.get(userId);
     return next();
@@ -73,6 +75,40 @@ bot.action("visual_reset", ctx => handleVisualReset(ctx));
 bot.action("lang_python", ctx => handleVisualProcess(ctx, 'python'));
 bot.action("lang_r", ctx => handleVisualProcess(ctx, 'r'));
 
+// --- Missing handler: "noop" (used for pagination indicator) ---
+bot.action("noop", async (ctx) => {
+    await ctx.answerCbQuery();
+});
+
+// --- Missing handler: "visual_modify" (from getPostVisualKeyboard) ---
+bot.action("visual_modify", async (ctx) => {
+    await ctx.answerCbQuery();
+    ctx.session.step = 'collecting_visual_data';
+    await ctx.reply("🔧 *Режим модификации*\n\nПришлите дополнительные данные или инструкции для коррекции визуализации:", {
+        parse_mode: "Markdown",
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "🚀 Перегенерировать", callback_data: "visual_generate" }],
+                [{ text: "❌ Отмена", callback_data: "main_menu" }]
+            ]
+        }
+    });
+});
+
+// --- Missing handler: "settings_main" (from getMainMenu) ---
+bot.action("settings_main", async (ctx) => {
+    await ctx.answerCbQuery();
+    const text = `⚙️ *Настройки*\n\nНастройки пока в разработке. Следите за обновлениями!`;
+    if (ctx.callbackQuery) {
+        await ctx.editMessageText(text, {
+            parse_mode: "Markdown",
+            reply_markup: {
+                inline_keyboard: [[{ text: "« Назад", callback_data: "main_menu" }]]
+            }
+        }).catch(() => {});
+    }
+});
+
 bot.action(/^history_(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const page = parseInt(ctx.match[1]);
@@ -100,7 +136,7 @@ bot.action(/^view_images_(.+)$/, async (ctx) => {
     await handleViewImages(ctx, ctx.match[1]);
 });
 
-// --- Message Handling (Converational Flow) ---
+// --- Message Handling (Conversational Flow) ---
 bot.on(["text", "photo", "document"], async (ctx: any) => {
     const step = ctx.session.step;
     
@@ -166,7 +202,6 @@ async function main() {
 
                     if (path === "complete-visual") {
                         const { chatId, messageId, sessionId } = data;
-                        // Trigger final compilation in history or visual handler
                         const { handleVisualCompletePush } = await import("./handlers/visual");
                         await handleVisualCompletePush(bot, chatId, messageId, sessionId);
                     }
@@ -191,7 +226,8 @@ async function main() {
 
     // 2. Register with Telegram
     if (process.env.WEBHOOK_DOMAIN) {
-        const webhookUrl = `${process.env.WEBHOOK_DOMAIN}/api/webhook/telegram`;
+        // Use /webhook/<token> path that matches the server listener above
+        const webhookUrl = `${process.env.WEBHOOK_DOMAIN}/webhook/${BOT_TOKEN}`;
         await bot.telegram.setWebhook(webhookUrl, { secret_token: WEBHOOK_SECRET });
         console.log(`🚀 Bot registered Webhook: ${webhookUrl}`);
     } else {
