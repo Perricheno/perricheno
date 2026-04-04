@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
+import ReactMarkdown from "react-markdown";
 import { useAdmin } from "@/components/AdminContext";
 
 import { DocType, AgentSettings, DEFAULT_SETTINGS, CodeImage, AgentSession } from "./types";
@@ -93,6 +94,8 @@ export default function AgentPage() {
     // Streaming state
     const [streamText, setStreamText] = useState("");
     const [streamChars, setStreamChars] = useState(0);
+    const [displayStreamText, setDisplayStreamText] = useState("");
+    const targetStreamText = useRef("");
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -112,7 +115,20 @@ export default function AgentPage() {
 
     useEffect(() => {
         if (streamBoxRef.current) streamBoxRef.current.scrollTop = streamBoxRef.current.scrollHeight;
-    }, [streamText]);
+    }, [displayStreamText]);
+
+    // Typing effect for "Ideal Stream"
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (displayStreamText.length < targetStreamText.current.length) {
+                // Add next character
+                const nextChar = targetStreamText.current[displayStreamText.length];
+                setDisplayStreamText(prev => prev + nextChar);
+                setStreamChars(prev => prev + 1);
+            }
+        }, 15); // Adjust for speed
+        return () => clearInterval(interval);
+    }, [displayStreamText]);
 
     const loadSessions = async () => {
         try {
@@ -147,6 +163,8 @@ export default function AgentPage() {
         setPhase("streaming");
         setTopic(topicText);
         setStreamText("");
+        setDisplayStreamText("");
+        targetStreamText.current = "";
         setStreamChars(0);
         setIsEditing(false);
         setIsFixingErrors(false);
@@ -186,8 +204,7 @@ export default function AgentPage() {
                     }
 
                     if (session.stream_text) {
-                        setStreamText(session.stream_text);
-                        setStreamChars(session.stream_text.length);
+                        targetStreamText.current = session.stream_text;
                     }
 
                     if (session.status === 'done') {
@@ -700,8 +717,13 @@ export default function AgentPage() {
                             <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">Agent Logic Stream</span>
                             <span className="text-[10px] font-black text-[#D4D4D8] ml-auto truncate uppercase tracking-widest max-w-[150px] sm:max-w-xs">{topic}</span>
                         </div>
-                        <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 font-mono text-[11px] leading-[1.8] text-[#52525B] bg-[#FAFAFA]">
-                            <pre className="m-0 whitespace-pre-wrap break-all">{streamText}<span className="animate-pulse text-black font-black">|</span></pre>
+                        <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 bg-[#FAFAFA]">
+                            <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 font-sans text-[#52525B]">
+                                <ReactMarkdown>{displayStreamText}</ReactMarkdown>
+                                {displayStreamText.length < targetStreamText.current.length && (
+                                    <span className="inline-block w-1 h-4 bg-black ml-1 animate-pulse" />
+                                )}
+                            </div>
                         </div>
                     </div>
                 </motion.div>

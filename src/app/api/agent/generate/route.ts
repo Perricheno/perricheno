@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getActiveAgentSessionsCount, sendTelegramNotification } from '@/lib/db';
+import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getActiveAgentSessionsCount, sendTelegramNotification, updateTelegramNotification, toggleAgentSessionShare, getUserById } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
 // Increase body size limit — rImages base64 payloads can be very large
@@ -205,8 +205,8 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
             updateAgentSession(sessionId, { status: "error", error_msg: `API error: ${errBody.slice(0, 200)}` });
             
             const session = getAgentSession(sessionId);
-            if (session) {
-                await sendTelegramNotification(userId, `❌ *Ошибка генерации*: ${session.title}\n\nПроизошла ошибка API. Пожалуйста, обратитесь в поддержку или попробуйте позже.`);
+            if (session && session.tg_message_id) {
+                await updateTelegramNotification(userId, session.tg_message_id, `❌ *Ошибка генерации*: ${session.title}\n\nПроизошла ошибка API (${errBody.slice(0, 50)}...). Попробуйте еще раз.`);
             }
             return;
         }
@@ -243,6 +243,18 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
             // Sync stream progress to db every 150ms max for a smoother UI experience
             if (Date.now() - lastDbUpdate > 150) {
                 updateAgentSession(sessionId, { stream_text: accumulated });
+                
+                // Also update Telegram every 2.5 seconds (to avoid rate limits)
+                if (Date.now() - lastDbUpdate > 2500) {
+                    const session = getAgentSession(sessionId);
+                    if (session && session.tg_message_id) {
+                        await updateTelegramNotification(userId, session.tg_message_id, 
+                            `⚡ *Процесс генерации*: ${session.title}\n\n` +
+                            `✍️ Обработано: ~${accumulated.length} символов\n` +
+                            `⏳ Пожалуйста, подождите...`
+                        );
+                    }
+                }
                 lastDbUpdate = Date.now();
             }
         }
@@ -278,10 +290,22 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
             error_msg: null
         });
 
-        // Notify telegram
+        // Notify telegram with final stats and links
         const session = getAgentSession(sessionId);
-        if (session) {
-            await sendTelegramNotification(userId, `✅ *Генерация завершена*: ${session.title}\n\nВаш документ готов и доступен для скачивания на сайте.`);
+        if (session && session.tg_message_id) {
+            const user = getUserById(userId);
+            const remaining = user ? (user.purchased_chars + 15000 - user.daily_chars_used) : 0;
+            const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://perricheno.ru'}/agent/shared/${session.share_id}`;
+            
+            await updateTelegramNotification(userId, session.tg_message_id, 
+                `✅ *Генерация завершена*: ${session.title}\n\n` +
+                `📊 *Статистика*:\n` +
+                `• Использовано: ~${clean.length} символов\n` +
+                `• Остаток на балансе: ${remaining} символов\n\n` +
+                `🔗 *Ссылки для скачивания*:\n` +
+                `• [Посмотреть PDF и ZIP](${pdfUrl})\n\n` +
+                `Ваш отчет доступен в истории сессий.`
+            );
         }
 
         // Exact Character Billing Mapping (Prompt + Completion)
@@ -371,6 +395,12 @@ export async function POST(req: Request) {
 
         if (!sessionId) {
             sessionId = uuidv4();
+            // Automatically generate a share_id for links
+            const tempShareId = uuidv4().split('-')[0];
+
+            // Notify Telegram Start
+            const msgId = await sendTelegramNotification(userId, `🚀 *Начало генерации*: ${shortTitle}\n\nВаш документ обрабатывается. Это может занять до 2 минут.`);
+
             createAgentSession({
                 id: sessionId,
                 user_id: userId,
@@ -378,21 +408,25 @@ export async function POST(req: Request) {
                 doc_type: settings.type,
                 status: 'generating',
                 stream_text: '',
-                settings_json: JSON.stringify(settings), // Critical for session persistence
+                share_id: tempShareId,
+                tg_message_id: msgId || undefined,
+                settings_json: JSON.stringify(settings),
             });
-
-            // Notify Telegram Start
-            await sendTelegramNotification(userId, `🚀 *Начало генерации*: ${shortTitle}\n\nВаш документ обрабатывается. Это может занять до 2 минут.`);
         } else {
+            const existing = getAgentSession(sessionId);
+            const shareId = existing?.share_id || uuidv4().split('-')[0];
+
+            // Notify Telegram Re-Start
+            const msgId = await sendTelegramNotification(userId, `🔄 *Перегенерация документа*: ${shortTitle}\n\nПрименяем ваши изменения...`);
+
             updateAgentSession(sessionId, { 
                 status: 'generating', 
                 stream_text: '', 
                 error_msg: null,
-                settings_json: JSON.stringify(settings) // Update settings if re-generating
+                share_id: shareId,
+                tg_message_id: msgId || undefined,
+                settings_json: JSON.stringify(settings) 
             });
-
-            // Notify Telegram Re-Start
-            await sendTelegramNotification(userId, `🔄 *Перегенерация документа*: ${shortTitle}\n\nПрименяем ваши изменения...`);
         }
 
         // Fire and forget

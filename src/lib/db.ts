@@ -102,6 +102,7 @@ try { db.exec("ALTER TABLE agent_sessions ADD COLUMN status TEXT DEFAULT 'done'"
 try { db.exec("ALTER TABLE agent_sessions ADD COLUMN error_msg TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE agent_sessions ADD COLUMN stream_text TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE agent_sessions RENAME COLUMN r_images_json TO visuals_json"); } catch (e) {}
+try { db.exec("ALTER TABLE agent_sessions ADD COLUMN tg_message_id INTEGER"); } catch (e) {}
 
 // Strict Limits Migrations
 try { db.exec("ALTER TABLE users ADD COLUMN daily_chars_used INTEGER DEFAULT 0"); } catch (e) {}
@@ -489,6 +490,7 @@ export interface AgentSession {
     status: string;
     error_msg: string | null;
     stream_text: string | null;
+    tg_message_id: number | null;
     created_at: string;
     updated_at: string;
 }
@@ -504,12 +506,14 @@ export function createAgentSession(data: {
     visuals_json?: string;
     status?: string;
     stream_text?: string;
-}): AgentSession {
+    tg_message_id?: number;
+    share_id?: string;
+} | any): AgentSession {
     const stmt = db.prepare(`
-        INSERT INTO agent_sessions (id, user_id, title, doc_type, settings_json, main_tex, references_bib, visuals_json, status, stream_text)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO agent_sessions (id, user_id, title, doc_type, settings_json, main_tex, references_bib, visuals_json, status, stream_text, tg_message_id, share_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(data.id, data.user_id, data.title, data.doc_type, data.settings_json || null, data.main_tex || null, data.references_bib || null, data.visuals_json || null, data.status || 'done', data.stream_text || null);
+    stmt.run(data.id, data.user_id, data.title, data.doc_type, data.settings_json || null, data.main_tex || null, data.references_bib || null, data.visuals_json || null, data.status || 'done', data.stream_text || null, data.tg_message_id || null, data.share_id || null);
     return db.prepare('SELECT * FROM agent_sessions WHERE id = ?').get(data.id) as AgentSession;
 }
 
@@ -534,6 +538,8 @@ export function updateAgentSession(id: string, data: {
     status?: string;
     error_msg?: string | null;
     stream_text?: string | null;
+    tg_message_id?: number | null;
+    share_id?: string | null;
 }): void {
     const fields: string[] = [];
     const values: any[] = [];
@@ -546,6 +552,8 @@ export function updateAgentSession(id: string, data: {
     if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
     if (data.error_msg !== undefined) { fields.push('error_msg = ?'); values.push(data.error_msg); }
     if (data.stream_text !== undefined) { fields.push('stream_text = ?'); values.push(data.stream_text); }
+    if (data.tg_message_id !== undefined) { fields.push('tg_message_id = ?'); values.push(data.tg_message_id); }
+    if (data.share_id !== undefined) { fields.push('share_id = ?'); values.push(data.share_id); }
 
     if (fields.length === 0) return;
 
@@ -582,14 +590,14 @@ export function getActiveAgentSessionsCount(userId: number): number {
     return res.count;
 }
 
-export async function sendTelegramNotification(userId: number, message: string): Promise<void> {
+export async function sendTelegramNotification(userId: number, message: string): Promise<number | null> {
     try {
         const user = getUserById(userId);
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
         
-        if (!user || !user.telegram_id || !botToken) return;
+        if (!user || !user.telegram_id || !botToken) return null;
 
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -598,7 +606,53 @@ export async function sendTelegramNotification(userId: number, message: string):
                 parse_mode: 'Markdown'
             })
         });
+        if (res.ok) {
+            const data = await res.json();
+            return data.result.message_id;
+        }
+        return null;
     } catch (e) {
         console.error("Failed to send Telegram notification:", e);
+        return null;
+    }
+}
+
+export async function updateTelegramNotification(userId: number, messageId: number, message: string): Promise<void> {
+    try {
+        const user = getUserById(userId);
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (!user || !user.telegram_id || !botToken) return;
+
+        await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: user.telegram_id,
+                message_id: messageId,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+    } catch (e) {
+        console.error("Failed to update Telegram notification:", e);
+    }
+}
+
+export async function deleteTelegramNotification(userId: number, messageId: number): Promise<void> {
+    try {
+        const user = getUserById(userId);
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (!user || !user.telegram_id || !botToken) return;
+
+        await fetch(`https://api.telegram.org/bot${botToken}/deleteMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: user.telegram_id,
+                message_id: messageId
+            })
+        });
+    } catch (e) {
+        // Silent error for delete, might already be deleted or too old
     }
 }
