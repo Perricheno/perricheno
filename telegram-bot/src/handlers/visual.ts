@@ -292,6 +292,8 @@ export async function handleVisualReset(ctx: any) {
 
 export async function handleCompileStart(ctx: any) {
     ctx.session.step = 'awaiting_compile_file';
+    // Clear visual context to avoid state contamination
+    ctx.session.visual = { text: [], images: [], files: [], title: '', lang: 'python' };
     await ctx.answerCbQuery();
     await ctx.reply("🚀 *Режим прямой компиляции*\n\nПришлите файл `.py` или `.r` для выполнения кода.\n\n_Бот автоматически распознает язык и вернет результат (график или логи)._", {
         parse_mode: "Markdown",
@@ -302,6 +304,7 @@ export async function handleCompileStart(ctx: any) {
 }
 
 export async function handleCompileFile(ctx: any) {
+    if (ctx.session.isProcessing) return;
     const doc = ctx.message.document;
     if (!doc) return;
 
