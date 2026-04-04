@@ -30,12 +30,28 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         // pdf_base64 format is usually: data:application/pdf;base64,JVBERi0...
         const base64Data = result.pdf_base64.replace(/^data:application\/pdf;base64,/, "");
-        const pdfBuffer = Buffer.from(base64Data, 'base64');
+        let pdfBuffer = Buffer.from(base64Data, 'base64');
+
+        // Some compilers return 'application/zip' which got stored incorrectly if not parsed.
+        // PDF magic number is %PDF (0x25, 0x50, 0x44, 0x46). ZIP magic number is PK (0x50, 0x4B)
+        if (pdfBuffer.length > 4 && pdfBuffer[0] === 0x50 && pdfBuffer[1] === 0x4B) {
+            // It's a ZIP archive! We must extract the PDF.
+            const JSZip = require('jszip');
+            const unzipped = await JSZip.loadAsync(pdfBuffer);
+            
+            // Find any pdf file in the zip
+            const pdfFile = Object.values(unzipped.files).find((f: any) => f.name.endsWith('.pdf'));
+            if (pdfFile) {
+                pdfBuffer = await (pdfFile as any).async('nodebuffer');
+            }
+        }
 
         return new Response(pdfBuffer, {
             status: 200,
             headers: {
                 "Content-Type": "application/pdf",
+                "Content-Length": pdfBuffer.length.toString(),
+                "Accept-Ranges": "bytes",
                 "Content-Disposition": `inline; filename="receipt_${id}.pdf"`,
             }
         });
