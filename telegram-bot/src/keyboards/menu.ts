@@ -2,55 +2,51 @@ import { Markup } from "telegraf";
 import { InlineKeyboardButton } from "telegraf/types";
 
 export function getMainMenu() {
-    return {
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: "📊 Визуализация", callback_data: "tool_visual", style: 'Primary' } as any],
-                [{ text: "📂 История", callback_data: "history_1" } as any],
-                [
-                    { text: "👤 Профиль", callback_data: "me_info" } as any,
-                    { text: "💳 Биллинг", callback_data: "billing_info" } as any
-                ],
-                [{ text: "⚙️ Настройки", callback_data: "settings_main", style: 'Secondary' } as any]
-            ]
-        }
-    };
+    return Markup.inlineKeyboard([
+        [Markup.button.callback("📊 Визуализация", "tool_visual")],
+        [Markup.button.callback("📂 История", "history_1")],
+        [
+            Markup.button.callback("👤 Профиль", "me_info"),
+            Markup.button.callback("💳 Биллинг", "billing_info")
+        ],
+        [Markup.button.callback("⚙️ Настройки", "settings_main")]
+    ]);
 }
 
 
 export function getHistoryMenu(chats: any[], page: number, totalPages: number) {
-    const buttons = chats.map(c => [{ text: c.title || "Без названия", callback_data: `history_view_${c.id}` } as any]);
+    const buttons = chats.map(c => [Markup.button.callback(c.title || "Без названия", `history_view_${c.id}`)]);
     
     const nav = [];
-    if (page > 1) nav.push({ text: "«", callback_data: `history_${page - 1}` } as any);
-    nav.push({ text: `${page} / ${totalPages}`, callback_data: "noop" } as any);
-    if (page < totalPages) nav.push({ text: "»", callback_data: `history_${page + 1}` } as any);
+    if (page > 1) nav.push(Markup.button.callback("«", `history_${page - 1}`));
+    nav.push(Markup.button.callback(`${page} / ${totalPages}`, "noop"));
+    if (page < totalPages) nav.push(Markup.button.callback("»", `history_${page + 1}`));
     
     buttons.push(nav);
-    buttons.push([{ text: "🏠 В главное меню", callback_data: "main_menu", style: 'Secondary' } as any]);
+    buttons.push([Markup.button.callback("🏠 В главное меню", "main_menu")]);
     
-    return { reply_markup: { inline_keyboard: buttons } };
+    return Markup.inlineKeyboard(buttons);
 }
 
 export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
     const buttons: any[][] = [
         [
-            { text: "📄 PDF", callback_data: `dl_pdf_${sessionId}`, style: 'Primary' } as any,
-            { text: "📦 ZIP", callback_data: `dl_zip_${sessionId}`, style: 'Primary' } as any
+            Markup.button.callback("📄 PDF", `dl_pdf_${sessionId}`),
+            Markup.button.callback("📦 ZIP", `dl_zip_${sessionId}`)
         ],
         [
-            { text: "🖼 Фото", callback_data: `view_images_${sessionId}` } as any,
-            { text: "💻 Код", callback_data: `dl_code_${sessionId}` } as any
+            Markup.button.callback("🖼 Фото", `view_images_${sessionId}`),
+            Markup.button.callback("💻 Код", `dl_code_${sessionId}`)
         ]
     ];
 
     if (shareId) {
-        buttons.push([{ text: "🔗 Открыть на сайте", url: `https://perricheno.ru/agent/shared/${shareId}` } as any]);
+        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/shared/${shareId}`)]);
     }
 
-    buttons.push([{ text: "« Назад к списку", callback_data: "history_1", style: 'Secondary' } as any]);
+    buttons.push([Markup.button.callback("« Назад к списку", "history_1")]);
     
-    return { reply_markup: { inline_keyboard: buttons } };
+    return Markup.inlineKeyboard(buttons);
 }
 
 export function getVisualSuggestionsKeyboard(selectedTypes: string[] = []) {
@@ -68,46 +64,30 @@ export function getVisualSuggestionsKeyboard(selectedTypes: string[] = []) {
             const type = types[i + j];
             if (type) {
                 const isSelected = selectedTypes.includes(type.toLowerCase());
-                row.push({
-                    text: `${isSelected ? '✅ ' : ''}${type}`,
-                    callback_data: `toggle_type_${type.toLowerCase()}`,
-                    style: isSelected ? 'Primary' : undefined
-                } as any);
+                row.push(Markup.button.callback(`${isSelected ? '✅ ' : ''}${type}`, `toggle_type_${type.toLowerCase()}`));
             }
         }
         buttons.push(row);
     }
     
     const isAuto = selectedTypes.includes('auto');
-    buttons.push([{
-        text: `${isAuto ? '✅ ' : '🤖 '}Авто-выбор (ИИ)`,
-        callback_data: "toggle_type_auto",
-        style: isAuto ? 'Primary' : undefined
-    } as any]);
+    buttons.push([Markup.button.callback(`${isAuto ? '✅ ' : '🤖 '}Авто-выбор (ИИ)`, "toggle_type_auto")]);
     
     if (selectedTypes.length > 0) {
-        buttons.push([{
-            text: `🚀 Сгенерировать (${selectedTypes.length})`,
-            callback_data: "visual_generate_start",
-            style: 'Primary'
-        } as any]);
+        buttons.push([Markup.button.callback(`🚀 Сгенерировать (${selectedTypes.length})`, "visual_generate_start")]);
     }
     
-    buttons.push([{ text: "« Назад", callback_data: "main_menu", style: 'Secondary' } as any]);
+    buttons.push([Markup.button.callback("« Назад", "main_menu")]);
     
-    return { reply_markup: { inline_keyboard: buttons } };
+    return Markup.inlineKeyboard(buttons);
 }
 
 export function getVisualActionKeyboard() {
-    return {
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: "🚀 Сгенерировать", callback_data: "visual_generate", style: 'Primary' } as any],
-                [{ text: "❌ Очистить и заново", callback_data: "visual_reset", style: 'Destructive' } as any],
-                [{ text: "« Отмена", callback_data: "main_menu", style: 'Secondary' } as any]
-            ]
-        }
-    };
+    return Markup.inlineKeyboard([
+        [Markup.button.callback("🚀 Сгенерировать", "visual_generate")],
+        [Markup.button.callback("❌ Очистить и заново", "visual_reset")],
+        [Markup.button.callback("« Отмена", "main_menu")]
+    ]);
 }
 
 
