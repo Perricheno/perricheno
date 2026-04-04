@@ -226,8 +226,9 @@ async function main() {
 
     // 2. Register with Telegram
     if (process.env.WEBHOOK_DOMAIN) {
-        // Use /webhook/<token> path that matches the server listener above
-        const webhookUrl = `${process.env.WEBHOOK_DOMAIN}/webhook/${BOT_TOKEN}`;
+        // Register webhook through Next.js proxy at /api/webhook/telegram
+        // Next.js forwards requests to bot container at /webhook/<token>
+        const webhookUrl = `${process.env.WEBHOOK_DOMAIN}/api/webhook/telegram`;
         await bot.telegram.setWebhook(webhookUrl, { secret_token: WEBHOOK_SECRET });
         console.log(`🚀 Bot registered Webhook: ${webhookUrl}`);
     } else {
