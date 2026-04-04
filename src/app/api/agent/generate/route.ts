@@ -134,6 +134,17 @@ CRITICAL LATEX RULES
 ${templateSection}
 
 ══════════════════════════
+VISUALS / IMAGES
+══════════════════════════
+
+When integrating figures:
+1. Use the [images/] directory: \\includegraphics[width=0.9\\linewidth]{images/filename.png}.
+2. Always use the provided filenames from the message context (e.g., images/fig_1_bar.png).
+3. Place figures inside a [figure] environment with [H] or [ht] placement.
+4. Provide a descriptive \\caption and a unique \\label.
+5. Ensure the preamble contains \\usepackage{graphicx} and optionally \\graphicspath{{images/}}.
+
+══════════════════════════
 EDITING & ERROR FIXING
 ══════════════════════════
 
@@ -157,8 +168,9 @@ function buildMessages(s: GenerateSettings) {
         messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
         messages.push({ role: "user", content: `Fix ALL compilation errors:\n\n${s.errorLog}\n\nReturn FULL corrected JSON.` });
     } else if (s.visuals && s.visuals.length > 0 && s.currentTex) {
+        const figureList = s.visuals.map((v, i) => `- images/fig_${i + 1}_${v.chart_type}.png (${v.chart_type} chart)`).join('\n');
         messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
-        messages.push({ role: "user", content: `Integrate the attached figures. User instructions: ${s.prompt}\n\nReturn FULL updated JSON.` });
+        messages.push({ role: "user", content: `Integrate the following figures into the report:\n${figureList}\n\nUser instructions: ${s.prompt}\n\nReturn FULL updated JSON with correct \\includegraphics paths.` });
     } else if (s.currentTex) {
         messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
         messages.push({ role: "user", content: `Edit the document. Changes: ${s.prompt}\n\nReturn FULL updated JSON.` });

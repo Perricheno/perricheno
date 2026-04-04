@@ -33,13 +33,22 @@ export default function SharedSessionView({ title, docType, mainTex, referencesB
         const zip = new JSZip();
         zip.file("main.tex", mainTex);
         if (referencesBib) zip.file("references.bib", referencesBib);
+        
         visuals.forEach((img, i) => {
-            const binary = atob(img.image);
-            const bytes = new Uint8Array(binary.length);
-            for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
-            const ext = img.language === 'Python' ? 'py' : 'R';
-            zip.file(`figures/fig_${i + 1}_${img.chart_type}.png`, bytes);
-            if (img.code) zip.file(`figures/fig_${i + 1}_${img.chart_type}.${ext}`, img.code);
+            // Remove data:image/png;base64, prefix if present
+            const cleanBase64 = img.image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+            try {
+                const binary = atob(cleanBase64);
+                const bytes = new Uint8Array(binary.length);
+                for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+                const ext = img.language === 'Python' ? 'py' : 'R';
+                
+                // Align with LaTeX template (images/ folder)
+                zip.file(`images/fig_${i + 1}_${img.chart_type}.png`, bytes);
+                if (img.code) zip.file(`images/fig_${i + 1}_${img.chart_type}.${ext}`, img.code);
+            } catch (e) {
+                console.error("Failed to decode visual image base64:", e);
+            }
         });
         const blob = await zip.generateAsync({ type: "blob" });
         const url = URL.createObjectURL(blob);
