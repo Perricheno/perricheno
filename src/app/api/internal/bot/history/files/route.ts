@@ -225,10 +225,18 @@ export async function POST(req: NextRequest) {
             if (session.visuals_json) {
                 try {
                     const visuals = JSON.parse(session.visuals_json);
-                    // Site uses 'code' field, bot uses 'source_code' — normalize
+                    
+                    // DEBUG: log actual field names in visuals
+                    if (visuals.length > 0) {
+                        console.log(`[CODE] Session ${sessionId}: visuals_json has ${visuals.length} entries. Fields in first entry: ${Object.keys(visuals[0]).join(', ')}`);
+                    }
+                    
+                    // Site CodeImage uses 'code', bot uses 'source_code' — check all possible field names
                     const visualsWithCode = visuals
-                        .map((v: any) => ({ ...v, _code: v.source_code || v.code }))
-                        .filter((v: any) => v._code);
+                        .map((v: any) => ({ ...v, _code: v.source_code || v.code || v.sourceCode || v.src }))
+                        .filter((v: any) => v._code && typeof v._code === 'string' && v._code.length > 5);
+                    
+                    console.log(`[CODE] Session ${sessionId}: ${visualsWithCode.length} visuals have code`);
                     
                     if (visualsWithCode.length === 1) {
                         const v = visualsWithCode[0];
@@ -255,7 +263,11 @@ export async function POST(req: NextRequest) {
                             },
                         });
                     }
-                } catch (e) { /* ignore parse errors */ }
+                } catch (e) {
+                    console.error(`[CODE] Failed to parse visuals_json for ${sessionId}:`, e);
+                }
+            } else {
+                console.log(`[CODE] Session ${sessionId}: no visuals_json field`);
             }
 
             // Priority 2: For pure visual sessions, check stream_text
