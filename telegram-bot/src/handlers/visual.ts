@@ -1,5 +1,5 @@
 import { getMainMenu, getVisualSuggestionsKeyboard, getVisualActionKeyboard, getLangSelectionKeyboard, getPostVisualKeyboard } from "../keyboards/menu";
-import { sessionStore } from "../bot";
+import { sessionStore } from "../sessionStore";
 
 const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;

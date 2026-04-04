@@ -4,6 +4,7 @@ import { handleVisualStart, handleVisualName, handleVisualCollect, handleVisualG
 import { handleHistory, handleViewSession, handleDownloadFile, handleViewImages } from "./handlers/history";
 import { handleBilling } from "./handlers/billing";
 import { getMainMenu, getVisualSuggestionsKeyboard } from "./keyboards/menu";
+import { sessionStore } from "./sessionStore";
 
 import http from "http";
 
@@ -19,8 +20,7 @@ if (!BOT_TOKEN || !WEBHOOK_SECRET) {
 const bot = new Telegraf(BOT_TOKEN) as any;
 
 // --- In-Memory Session Middleware ---
-// Exported so handlers (e.g. handleVisualCompletePush) can access it
-export const sessionStore = new Map<number, any>();
+// sessionStore is imported from ./sessionStore to avoid circular deps
 
 bot.use(async (ctx: any, next: () => Promise<void>) => {
     const userId = ctx.from?.id;
