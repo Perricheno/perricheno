@@ -46,7 +46,7 @@ export async function handleVisualCollect(ctx: any) {
     if (ctx.message.text) {
         s.text.push(ctx.message.text);
     } else if (ctx.message.photo) {
-        const photo = ctx.message.photo[ctx.message.photo.length - 1]; // Use last element (highest resolution) without mutating array
+        const photo = ctx.message.photo[ctx.message.photo.length - 1]; 
         s.images.push({ fileId: photo.file_id, caption: ctx.message.caption || "" });
     } else if (ctx.message.document) {
         s.files.push({ fileId: ctx.message.document.file_id, fileName: ctx.message.document.file_name });
@@ -86,14 +86,9 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
     try {
         const s = ctx.session.visual;
-        
-        // ── 1. Build text context from messages ──
         const textParts: string[] = [];
-        if (s.text.length > 0) {
-            textParts.push(`USER TEXT:\n${s.text.join('\n---\n')}`);
-        }
 
-        // ── 2. Download and extract text from files ──
+        // ── 1. Download and extract text from files ──
         if (s.files && s.files.length > 0) {
             for (const file of s.files) {
                 try {
@@ -107,75 +102,68 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     const ext = fileName.split('.').pop()?.toLowerCase();
                     
                     if (ext === 'pdf') {
-                        // Send PDF to the site's extraction endpoint or read as buffer
                         const pdfBuffer = await res.arrayBuffer();
+                        const extractRes = await fetch(`${SITE_URL}/api/internal/bot/extract-text`, {
+                            method: "POST",
+                            headers: { 
+                                "Content-Type": "application/octet-stream",
+                                "X-Bot-Secret": WEBHOOK_SECRET!,
+                                "X-File-Name": fileName
+                            },
+                            body: pdfBuffer,
+                            signal: AbortSignal.timeout(30000),
+                        });
                         
-                        // Try PDF text extraction via site API
-                        try {
-                            const extractRes = await fetch(`${SITE_URL}/api/internal/bot/extract-text`, {
-                                method: "POST",
-                                headers: { 
-                                    "Content-Type": "application/octet-stream",
-                                    "X-Bot-Secret": WEBHOOK_SECRET!,
-                                    "X-File-Name": fileName
-                                },
-                                body: pdfBuffer,
-                                signal: AbortSignal.timeout(30000),
-                            });
-                            
-                            if (extractRes.ok) {
-                                const { text, images: extractedImages } = await extractRes.json() as any;
-                                if (text && text.length > 0) {
-                                    textParts.push(`FILE "${fileName}":\n${text}`);
-                                }
-                                if (extractedImages && extractedImages.length > 0) {
-                                    ctx.session.visual.images.push(...extractedImages.map((img: string) => ({ base64: img })));
-                                }
-                            } else {
-                                // Fallback: just note the file was attached
-                                textParts.push(`FILE "${fileName}": [PDF uploaded but text extraction failed — please generate based on available context]`);
+                        if (extractRes.ok) {
+                            const { text, images: extractedImages } = await extractRes.json() as any;
+                            if (text && text.length > 0) {
+                                textParts.push(`FILE "${fileName}":\n${text}`);
                             }
-                        } catch (e) {
-                            textParts.push(`FILE "${fileName}": [PDF uploaded but extraction unavailable]`);
+                            if (extractedImages && extractedImages.length > 0) {
+                                ctx.session.visual.images.push(...extractedImages.map((img: string) => ({ base64: img })));
+                            }
+                        } else {
+                            textParts.push(`FILE "${fileName}": [PDF uploaded but text extraction failed]`);
                         }
                     } else if (['txt', 'csv', 'tsv', 'json', 'md', 'tex', 'log', 'xml', 'r', 'py'].includes(ext || '')) {
-                        // Text-based files: read directly
                         const fileText = await res.text();
                         textParts.push(`FILE "${fileName}":\n${fileText}`);
-                    } else {
-                        textParts.push(`FILE "${fileName}": [Binary file attached, type: ${ext}]`);
                     }
                 } catch (e) {
-                    console.error(`Failed to download file ${file.fileName}:`, e);
+                    console.error(`Failed to process file ${file.fileName}:`, e);
                 }
             }
         }
 
-        // ── 3. Download images and add captions ──
-        const imageDescriptions: string[] = [];
+        // ── 2. Download direct photos ──
         if (s.images && s.images.length > 0) {
-            for (const img of s.images) {
-                if (img.caption) {
-                    imageDescriptions.push(`IMAGE CAPTION: ${img.caption}`);
+            for (const imgObj of s.images) {
+                if (imgObj.fileId && !imgObj.base64) {
+                    try {
+                        const fileLink = await ctx.telegram.getFileLink(imgObj.fileId);
+                        const res = await fetch(fileLink.href);
+                        if (res.ok) {
+                            const buf = await res.arrayBuffer();
+                            imgObj.base64 = `data:image/png;base64,${Buffer.from(buf).toString('base64')}`;
+                        }
+                    } catch (e) {
+                        console.error("Failed to download direct photo:", e);
+                    }
                 }
-                // Note: we don't send actual image data to the code generator, 
-                // but captions give context about what data the user wants visualized
+                if (imgObj.caption) {
+                    textParts.push(`IMAGE CAPTION: ${imgObj.caption}`);
+                }
             }
-            if (imageDescriptions.length > 0) {
-                textParts.push(imageDescriptions.join('\n'));
-            }
-            textParts.push(`[${s.images.length} image(s) attached by user for reference]`);
         }
 
-        let fullContext = `TITLE: ${s.title}\nTYPE: ${s.type}\n\n${textParts.join('\n\n---\n\n')}`;
-        
-        // Pass collected base64 images directly to generation endpoint
+        // ── 3. Final Context Separation ──
+        const userPrompt = s.text.join('\n') || s.title;
+        const fileDataContext = textParts.join('\n\n---\n\n');
         const visionImages = s.images.filter((img: any) => img.base64).map((img: any) => img.base64);
         
-        // Update status
         if (msg.message_id) {
             await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined,
-                `🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\n📊 Контекст: ${s.text.length} сообщ., ${s.files?.length || 0} файлов, ${s.images?.length || 0} изображений\n\n🕒 Пожалуйста, подождите...`,
+                `🚀 *Запуск ИИ-анализа (${lang.toUpperCase()})...*\n\n📊 Визуальный контекст: ${visionImages.length} стр.\n📝 Текстовый контекст: ${fileDataContext.length} симв.\n\n🕒 Обрабатываю...`,
                 { parse_mode: "Markdown" }
             ).catch(() => {});
         }
@@ -184,7 +172,8 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
             body: JSON.stringify({ 
-                context: { text_data: fullContext }, 
+                context: { text_data: fileDataContext }, 
+                instruction: userPrompt,
                 language: lang,
                 telegramId: ctx.from.id,
                 title: s.title,
@@ -197,12 +186,11 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
         if (!genRes.ok) {
             const errBody = await genRes.text().catch(() => 'Unknown error');
-            console.error(`Generate API Error ${genRes.status}:`, errBody);
-            throw new Error(`Сервер вернул ошибку (${genRes.status}): ${errBody.slice(0, 200)}`);
+            throw new Error(`Сервер (${genRes.status}): ${errBody.slice(0, 100)}`);
         }
 
     } catch (err: any) {
-        console.error(err);
+        console.error("Visual Error:", err);
         await ctx.reply(`⚠️ Ошибка: ${err.message}`);
         ctx.session.step = 'idle';
         ctx.session.isProcessing = false;
@@ -211,8 +199,6 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
 export async function handleVisualCompletePush(bot: any, chatId: number, messageId: number, sessionId: string) {
     try {
-        // The generate route already compiled and saved everything to DB.
-        // We just read the result and send it to Telegram.
         const res = await fetch(`${SITE_URL}/api/internal/bot/history/files`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
@@ -228,9 +214,7 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
 
         if (res.ok) {
             const { visuals } = await res.json() as any;
-            
             if (visuals && visuals.length > 0) {
-                // Send compiled image
                 for (const v of visuals) {
                     if (v.image) {
                         const base64Data = v.image.replace(/^data:image\/\w+;base64,/, "");
@@ -242,11 +226,8 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
                         });
                     }
                 }
-                
-                // Send source code file
                 const codeRes = await fetch(`${SITE_URL}/api/internal/bot/history/files`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                    method: "POST", headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
                     body: JSON.stringify({ sessionId, type: "code" }),
                 });
                 if (codeRes.ok) {
@@ -256,21 +237,12 @@ export async function handleVisualCompletePush(bot: any, chatId: number, message
                     await bot.telegram.sendDocument(chatId, { source: Buffer.from(codeBuffer), filename });
                 }
             } else {
-                // No visuals = compilation failed, check session error
-                const errMsg = session?.error_msg || "Неизвестная ошибка среды выполнения.";
-                await bot.telegram.sendMessage(chatId, `❌ *Ошибка компиляции:*\n\n\`\`\`\n${errMsg}\n\`\`\``, { 
-                    parse_mode: "Markdown",
-                    ...getPostVisualKeyboard()
-                });
+                const errMsg = session?.error_msg || "Сбой компиляции.";
+                await bot.telegram.sendMessage(chatId, `❌ *Ошибка:* \n\`${errMsg}\``, { parse_mode: "Markdown", ...getPostVisualKeyboard() });
             }
-        } else {
-            await bot.telegram.sendMessage(chatId, `❌ Не удалось получить результат визуализации.`, {
-                ...getPostVisualKeyboard()
-            });
         }
     } catch (err: any) {
         console.error("Complete Push Error:", err);
-        await bot.telegram.sendMessage(chatId, `⚠️ Ошибка при отправке результатов.`).catch(() => {});
     } finally {
         for (const [uid, sess] of sessionStore) {
             if (uid === chatId || sess.visual?.chatId === chatId) {

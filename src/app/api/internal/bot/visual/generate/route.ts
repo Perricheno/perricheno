@@ -31,58 +31,48 @@ const PYTHON_CHART_PROMPTS: Record<string, string> = {
     violin: 'a violin plot visualizing probability density with seaborn.violinplot',
 };
 
-function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, dataContext: string, hasImages: boolean, runtime: 'R' | 'Python' = 'Python') {
+function buildVisualizationPrompt(topic: string, chartType: string, palette: string, language: string, instruction: string, dataContext: string, hasImages: boolean, runtime: 'R' | 'Python' = 'Python') {
     const isPython = runtime === 'Python';
     const prompts = isPython ? PYTHON_CHART_PROMPTS : CHART_PROMPTS;
     const chartDesc = prompts[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
     
-    // Improved detection: Real data is present if we have text context OR Vision images
     const hasRealData = (dataContext && dataContext.length > 50) || hasImages;
     
     if (isPython) {
         return `You are a Python data visualization expert (Matplotlib/Seaborn/Pandas). Generate a SINGLE, complete, self-contained Python script.
         
-        TASK: Create ${chartDesc} related to the topic: "${topic}"
+        GOAL: Create ${chartDesc} about "${topic}"
+        USER SPECIFIC INSTRUCTION: "${instruction || 'Visualize the data'}"
         
-        ${hasImages ? `DOCUMENT IMAGES: I have provided images of document pages. You MUST carefully analyze these images to extract REAL numbers, categories, and metrics for the chart.` : ''}
-        ${dataContext ? `USER PROVIDED TEXT CONTEXT:\n${dataContext}\n` : ''}
+        ${hasImages ? `SOURCE DATA (IMAGES): I have attached images of document pages. You MUST extract numbers, metrics, and categories directly from these images. This is your PRIMARY source of truth.` : ''}
+        ${dataContext ? `SOURCE DATA (TEXT/FILES):\n${dataContext}\n` : ''}
         
         REQUIREMENTS:
-        ${hasRealData 
-            ? `1. **CRITICAL (REAL DATA MODE)**: You MUST extract, parse, and use ACTUAL DATA from the provided images or text. DO NOT invent synthetic data. If the prompt topic is "${topic}" but the document covers different data (like a 10-K report), visualize the DOCUMENT DATA. The title "${topic}" might just be a label.`
-            : `1. **SYNTHETIC MODE**: No real data found. Create REALISTIC synthetic data matching the topic "${topic}" using Pandas (at least 20-50 rows for depth).`
-        }
-        2. Use the "${palette}" style color palette (if using Seaborn, use \`sns.set_palette\`).
-        3. The plot must be professional with proper ${isRu ? 'Russian' : 'English'} titles and axis labels based on the EXTRACTED data.
-        4. CRUCIAL: Use \`plt.tight_layout()\` to prevent text overlap. Ensure high readability.
-        5. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
-        6. The script must be completely self-contained. No external files.
-        7. The figure MUST be stored in the global \`fig\` variable.
-        8. If you see charts in the documents, try to recreate or aggregate their data into a new impactful visualization.
+        1. **CRITICAL**: Use REAL DATA from the sources above. DO NOT analyze the user's instruction "${instruction}" as data itself. The instruction just tells you WHAT to find in the documents.
+        2. If the user instruction is "выручка" (revenue), locate revenue tables in the IMAGES/TEXT and visualize them.
+        3. If there are multiple pages, aggregate data across them.
+        4. Use the "${palette}" palette and professional ${isRu ? 'Russian' : 'English'} styling.
+        ${!hasRealData ? '5. If NO data found in images or text, only then use synthetic data.' : '5. DO NOT use synthetic data if images or text are provided.'}
+        6. Essential libraries: \`import matplotlib.pyplot as plt\`, \`import seaborn as sns\`, \`import pandas as pd\`, \`import numpy as np\`.
+        7. Figure MUST be stored in the \`fig\` variable.
         
-        OUTPUT: Only output pure Python code. NO markdown fences (\`\`\`python). NO commentary.`;
+        OUTPUT: Only output pure Python code. NO markdown fences. NO commentary.`;
     }
 
     return `You are an R visualization expert. Generate a SINGLE, complete, self-contained R script.
 
-TASK: Create ${chartDesc} related to the topic: "${topic}"
+GOAL: Create ${chartDesc} about "${topic}"
+USER SPECIFIC INSTRUCTION: "${instruction || 'Visualize the data'}"
 
-${hasImages ? `DOCUMENT IMAGES: I have provided images of document pages. You MUST carefully analyze these images to extract REAL numbers, categories, and metrics for the chart.` : ''}
-${dataContext ? `USER PROVIDED TEXT CONTEXT:\n${dataContext}\n` : ''}
+${hasImages ? `SOURCE DATA (IMAGES): Extract data from the provided images.` : ''}
+${dataContext ? `SOURCE DATA (TEXT/FILES):\n${dataContext}\n` : ''}
 
 REQUIREMENTS:
-${hasRealData 
-    ? `1. **CRITICAL (REAL DATA MODE)**: You MUST extract, parse, and use ACTUAL DATA from the provided images or text. DO NOT invent synthetic data. Prioritize information from images.`
-    : `1. **SYNTHETIC MODE**: Create REALISTIC synthetic data matching the topic "${topic}".`
-}
-2. Use the "${palette}" color palette.
-3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and labels.
-4. CRUCIAL: Prevent text overlap! use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
-5. The script must be completely self-contained.
-6. The last expression MUST be the plot object itself so it renders.
+1. Use ACTUAL DATA from images/text. The instruction "${instruction}" is NOT the data.
+2. The last expression MUST be the plot object.
 
-OUTPUT: Only output the pure R code. NO markdown fences. NO commentary.`;
+OUTPUT: Only output the pure R code. NO markdown.`;
 }
 
 // ── Helpers (from working agent/visualize/route.ts) ──
@@ -136,20 +126,23 @@ export async function POST(req: NextRequest) {
             chartType = 'auto', 
             chatId, 
             messageId,
-            images 
+            images,
+            instruction 
         } = await req.json();
         
-        if (!context || !context.text_data) {
+        console.log(`[Generate] Request from ${telegramId}: images=${images?.length || 0}, textChars=${context?.text_data?.length || 0}`);
+
+        if (!context) {
             return NextResponse.json({ error: "No context provided" }, { status: 400 });
         }
 
-        const isPython = language === 'python';
+        const isPython = language !== 'r';
         const runtime = isPython ? 'Python' : 'R';
         const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
         const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
-        // ── Create DB session ──
         const sessionId = uuidv4();
+        // ── Create DB session ──
         if (telegramId) {
             const user = getUserByTelegramId(String(telegramId));
             if (user) {
@@ -175,7 +168,8 @@ export async function POST(req: NextRequest) {
                 const runtime = isPython ? 'Python' : 'R';
                 const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
                 const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
-                const hasImages = images && Array.isArray(images) && images.length > 0;
+                
+                const hasImages = Array.isArray(images) && images.length > 0;
 
                 // 1. Push status to bot
                 if (chatId && messageId) {
@@ -187,20 +181,24 @@ export async function POST(req: NextRequest) {
                 }
 
                 // 2. Generate code via OpenAI
+                // SIGNATURE: topic, chartType, palette, language, instruction, dataContext, hasImages, runtime
                 const prompt = buildVisualizationPrompt(
                     title || "Data Visualization",
-                    chartType || 'auto',
+                    chartType,
                     'viridis',
                     'ru',
-                    context.text_data + (context.files_text ? `\n${context.files_text}` : ''),
-                    hasImages,
-                    runtime
+                    instruction || "", // 5. instruction
+                    context.text_data || "", // 6. dataContext
+                    hasImages, // 7. hasImages (boolean)
+                    runtime // 8. runtime
                 );
+
+                console.log(`[Generate] Built prompt for ${runtime}. Mode: ${hasImages ? 'VISION' : 'TEXT'}`);
 
                 // Build multimodal content if images are present
                 const userContent: any[] = [{ type: "text", text: prompt }];
-                if (images && Array.isArray(images)) {
-                    images.forEach(img => {
+                if (hasImages) {
+                    images.forEach((img: string, idx: number) => {
                         userContent.push({
                             type: "image_url",
                             image_url: { url: img }
@@ -218,11 +216,11 @@ export async function POST(req: NextRequest) {
                         model: "gpt-5-mini-2025-08-07",
                         stream: false,
                         messages: [
-                            { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. No commentary. Ensure proper syntax.` },
+                            { role: "system", content: `You are an expert ${runtime} visualization engineer. Your task is to extract REAL statistics from the IMAGES of documents provided and visualize them. Use the user instruction only as a guide on WHICH metrics to find in the documents.` },
                             { role: "user", content: userContent }
                         ],
                     }),
-                    signal: AbortSignal.timeout(90000), // Increased timeout for Vision
+                    signal: AbortSignal.timeout(120000), 
                 });
 
                 if (!aiRes.ok) {
