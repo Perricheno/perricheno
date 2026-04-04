@@ -7,7 +7,10 @@ import {
     IconServer, IconChartLine, IconCrown,
     IconMessageForward, IconSnowflake, IconCoin, IconCurrencyDollar
 } from '@tabler/icons-react';
-import { createPromoCode, setSystemConfig, manageUserTokens, generateSecurePromoCode, sendDirectMessage } from './actions';
+import { 
+    createPromoCode, setSystemConfig, manageUserTokens, 
+    generateSecurePromoCode, sendDirectMessage, checkServiceHealth 
+} from './actions';
 
 export default function OverseerClient({ initialStats, initialUsers, initialPromos, initialConfig, inferenceLatencies }: any) {
     const [tab, setTab] = useState('Overview');
@@ -34,7 +37,34 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
         { name: 'Promo & Referrals', icon: IconGift },
         { name: 'Telemetry (Logs)', icon: IconBug },
         { name: 'System Config', icon: IconSettings },
+        { name: 'Service Health', icon: IconServer },
     ];
+
+    const [healthLogs, setHealthLogs] = useState('Welcome to System Matrix. Select a service to begin diagnostic.');
+    const [serviceStates, setServiceStates] = useState<any>({});
+    const [checkingId, setCheckingId] = useState<string | null>(null);
+
+    const runHealthCheck = async (id: string, action: any) => {
+        setCheckingId(id);
+        setHealthLogs(prev => `\n[DRV] Initializing ${id.toUpperCase()} check...\n` + prev);
+        try {
+            const res = await action(id);
+            setHealthLogs(prev => `${res.log}\n------------------\n` + prev);
+            setServiceStates((prev: any) => ({ ...prev, [id]: res.status }));
+        } catch (err: any) {
+            setHealthLogs(prev => `CRITICAL: ${err.message}\n` + prev);
+            setServiceStates((prev: any) => ({ ...prev, [id]: 'offline' }));
+        } finally {
+            setCheckingId(null);
+        }
+    };
+
+    const getStatusColor = (s: string) => {
+        if (s === 'online') return 'text-green-500';
+        if (s === 'error') return 'text-orange-500';
+        if (s === 'offline') return 'text-red-500';
+        return 'text-gray-400';
+    };
 
     const generatePromo = async () => {
         setIsSaving(true);
@@ -390,29 +420,50 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                     </div>
                 )}
                 
-                {tab === 'Telemetry (Logs)' && (
-                    <div className="space-y-6 max-w-4xl">
-                        <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2">Diagnostics & Telemetry</h2>
+                {tab === 'Service Health' && (
+                    <div className="space-y-6 max-w-5xl h-full flex flex-col">
+                        <h2 className="text-[13px] font-bold uppercase tracking-widest border-b border-[#e5e5e5] pb-2 shrink-0">Global Service Health Matrix</h2>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="text-[11px] text-[#999] p-6 border border-dashed border-[#ccc] rounded-lg bg-white flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
-                                <IconBug className="w-6 h-6 mb-2 opacity-30 text-red-500" />
-                                <p className="font-bold text-[#666]">LaTeX Crash Reports</p>
-                                <p className="mt-1">0 fatal compile errors intercepted in the last 24h.</p>
-                            </div>
-                            
-                            <div className="text-[11px] text-[#999] p-6 border border-[#e5e5e5] rounded-lg bg-white">
-                                <div className="flex items-center gap-2 text-[#333] mb-4 border-b pb-2">
-                                    <IconServer className="w-4 h-4 text-blue-500" />
-                                    <p className="font-bold uppercase tracking-widest text-[9px]">Python Sandbox Matrix</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+                            {[
+                                { id: 'openai', name: 'OpenAI LLM', icon: IconActivity },
+                                { id: 'latex', name: 'LaTeX Node', icon: IconServer },
+                                { id: 'python', name: 'Python Matrix', icon: IconBug },
+                                { id: 'r', name: 'R-Compiler', icon: IconChartLine },
+                                { id: 'fx', name: 'Exchange Rates', icon: IconCurrencyDollar },
+                                { id: 'db', name: 'SQLite V-Base', icon: IconDatabase }
+                            ].map(s => (
+                                <div key={s.id} className="p-3 border border-[#e5e5e5] bg-white rounded-lg shadow-sm flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <s.icon className={`w-4 h-4 ${getStatusColor(serviceStates[s.id])}`} />
+                                        <span className={`text-[8px] font-bold uppercase ${getStatusColor(serviceStates[s.id])}`}>
+                                            {serviceStates[s.id] || 'UNTIDY'}
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-black">{s.name}</span>
+                                    <button 
+                                        disabled={checkingId !== null}
+                                        onClick={() => runHealthCheck(s.id, checkServiceHealth)}
+                                        className="w-full py-1 bg-gray-100 hover:bg-black hover:text-white transition-colors text-[9px] font-bold uppercase rounded"
+                                    >
+                                        {checkingId === s.id ? 'TESTING...' : 'RUN TEST'}
+                                    </button>
                                 </div>
-                                <div className="space-y-2 font-mono">
-                                    <div className="flex justify-between items-center"><span className="text-black">pandas</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">2,931 vols</span></div>
-                                    <div className="flex justify-between items-center"><span className="text-black">numpy</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">1,502 vols</span></div>
-                                    <div className="flex justify-between items-center"><span className="text-black">matplotlib</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">899 vols</span></div>
-                                    <div className="flex justify-between items-center"><span className="text-black">scipy</span> <span className="bg-blue-100 text-blue-700 px-1 rounded">401 vols</span></div>
+                            ))}
+                        </div>
+
+                        <div className="flex-1 min-h-[300px] bg-[#1a1a1a] rounded-lg border border-black p-4 overflow-hidden flex flex-col">
+                            <div className="flex items-center justify-between mb-3 border-b border-[#333] pb-2 shrink-0">
+                                <span className="text-[9px] font-bold uppercase tracking-[2px] text-[#666]">Diagnostic Console v4.0</span>
+                                <div className="flex gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-red-500/50" />
+                                    <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
+                                    <div className="w-2 h-2 rounded-full bg-green-500/50" />
                                 </div>
                             </div>
+                            <pre className="flex-1 overflow-y-auto text-[10px] font-mono text-green-500 leading-relaxed scrollbar-thin scrollbar-thumb-[#333]">
+                                {healthLogs}
+                            </pre>
                         </div>
                     </div>
                 )}
