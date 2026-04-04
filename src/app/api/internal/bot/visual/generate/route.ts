@@ -36,16 +36,20 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
     const prompts = isPython ? PYTHON_CHART_PROMPTS : CHART_PROMPTS;
     const chartDesc = prompts[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
+    const hasRealData = dataContext && dataContext.length > 100 && (dataContext.includes('FILE "') || dataContext.includes('csv') || dataContext.includes('data'));
     
     if (isPython) {
         return `You are a Python data visualization expert (Matplotlib/Seaborn/Pandas). Generate a SINGLE, complete, self-contained Python script.
         
         TASK: Create ${chartDesc} related to this research topic: "${topic}"
         
-        ${dataContext ? `USER INSTRUCTIONS & DATA CONTEXT:\n${dataContext}\n` : ''}
+        ${dataContext ? `USER PROVIDED DATA & CONTEXT:\n${dataContext}\n` : ''}
         
         REQUIREMENTS:
-        1. Create REALISTIC synthetic data matching the topic using Pandas (at least 20-50 rows for depth).
+        ${hasRealData 
+            ? `1. **CRITICAL**: The user has provided REAL DATA above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data. If the data is in text form (e.g. a financial report, CSV, or table), parse the relevant numbers and categories from it.`
+            : `1. Create REALISTIC synthetic data matching the topic using Pandas (at least 20-50 rows for depth).`
+        }
         2. Use the "${palette}" style color palette (if using Seaborn, use \`sns.set_palette\`).
         3. The plot must be professional with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
         4. CRUCIAL: Use \`plt.tight_layout()\` to prevent text overlap. Ensure high readability.
@@ -54,6 +58,7 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
         7. The script must be completely self-contained.
         8. DO NOT include \`plt.show()\`. 
         9. The figure MUST be stored in the global \`fig\` variable or just use the functional plt interface. The compiler will capture the output.
+        ${hasRealData ? `10. If the provided data is a financial report (10-K, annual report, etc.), extract KEY METRICS like revenue, net income, expenses, etc. and visualize them.` : ''}
         
         OUTPUT: Only output pure Python code. NO markdown fences (\`\`\`python). NO commentary.`;
     }
@@ -62,10 +67,13 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
 
 TASK: Create ${chartDesc} related to this research topic: "${topic}"
 
-${dataContext ? `USER INSTRUCTIONS & DATA CONTEXT:\n${dataContext}\n` : ''}
+${dataContext ? `USER PROVIDED DATA & CONTEXT:\n${dataContext}\n` : ''}
 
 REQUIREMENTS:
-1. Create REALISTIC synthetic data matching the topic.
+${hasRealData 
+    ? `1. **CRITICAL**: The user has provided REAL DATA above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data. If the data is in text form (e.g. a financial report, CSV, or table), parse the relevant numbers and categories from it.`
+    : `1. Create REALISTIC synthetic data matching the topic.`
+}
 2. Use the "${palette}" color palette (from viridis, RColorBrewer, etc).
 3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
 4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
@@ -74,6 +82,7 @@ REQUIREMENTS:
 7. If you use a package (e.g., ggplot2, plotly, ggrepel), use simple \`library(pkgName)\`.
 8. DO NOT include Cairo() or png() calls. 
 9. The last expression MUST be the plot object itself so it renders.
+${hasRealData ? `10. If the provided data is a financial report (10-K, annual report, etc.), extract KEY METRICS like revenue, net income, expenses, etc. and visualize them.` : ''}
 
 OUTPUT: Only output the pure R code. NO markdown fences (\`\`\`R). NO commentary. Just executable R code.`;
 }

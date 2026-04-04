@@ -80,22 +80,112 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
     ctx.session.step = 'processing';
     ctx.session.isProcessing = true;
     
-    const msg = await ctx.reply(`🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\nПожалуйста, подождите, это может занять до 1 минуты.`, {
+    const msg = await ctx.reply(`🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\n📂 Обрабатываю загруженные файлы...`, {
         parse_mode: "Markdown"
     });
 
     try {
         const s = ctx.session.visual;
-        const contextText = `TITLE: ${s.title}\nTYPE: ${s.type}\nTEXTS: ${s.text.join('\n---\n')}`;
         
+        // ── 1. Build text context from messages ──
+        const textParts: string[] = [];
+        if (s.text.length > 0) {
+            textParts.push(`USER TEXT:\n${s.text.join('\n---\n')}`);
+        }
+
+        // ── 2. Download and extract text from files ──
+        if (s.files && s.files.length > 0) {
+            for (const file of s.files) {
+                try {
+                    const fileLink = await ctx.telegram.getFileLink(file.fileId);
+                    const fileUrl = fileLink.href || fileLink.toString();
+                    const fileName = file.fileName || 'unknown';
+                    
+                    const res = await fetch(fileUrl);
+                    if (!res.ok) continue;
+                    
+                    const ext = fileName.split('.').pop()?.toLowerCase();
+                    
+                    if (ext === 'pdf') {
+                        // Send PDF to the site's extraction endpoint or read as buffer
+                        const pdfBuffer = await res.arrayBuffer();
+                        
+                        // Try PDF text extraction via site API
+                        try {
+                            const extractRes = await fetch(`${SITE_URL}/api/internal/bot/extract-text`, {
+                                method: "POST",
+                                headers: { 
+                                    "Content-Type": "application/octet-stream",
+                                    "X-Bot-Secret": WEBHOOK_SECRET!,
+                                    "X-File-Name": fileName
+                                },
+                                body: pdfBuffer,
+                                signal: AbortSignal.timeout(30000),
+                            });
+                            
+                            if (extractRes.ok) {
+                                const { text } = await extractRes.json() as any;
+                                if (text && text.length > 0) {
+                                    // Limit to ~50K chars to avoid token overflow
+                                    const trimmed = text.length > 50000 ? text.slice(0, 50000) + "\n...[TRUNCATED]" : text;
+                                    textParts.push(`FILE "${fileName}":\n${trimmed}`);
+                                }
+                            } else {
+                                // Fallback: just note the file was attached
+                                textParts.push(`FILE "${fileName}": [PDF uploaded but text extraction failed — please generate based on available context]`);
+                            }
+                        } catch (e) {
+                            textParts.push(`FILE "${fileName}": [PDF uploaded but extraction unavailable]`);
+                        }
+                    } else if (['txt', 'csv', 'tsv', 'json', 'md', 'tex', 'log', 'xml', 'r', 'py'].includes(ext || '')) {
+                        // Text-based files: read directly
+                        const fileText = await res.text();
+                        const trimmed = fileText.length > 50000 ? fileText.slice(0, 50000) + "\n...[TRUNCATED]" : fileText;
+                        textParts.push(`FILE "${fileName}":\n${trimmed}`);
+                    } else {
+                        textParts.push(`FILE "${fileName}": [Binary file attached, type: ${ext}]`);
+                    }
+                } catch (e) {
+                    console.error(`Failed to download file ${file.fileName}:`, e);
+                }
+            }
+        }
+
+        // ── 3. Download images and add captions ──
+        const imageDescriptions: string[] = [];
+        if (s.images && s.images.length > 0) {
+            for (const img of s.images) {
+                if (img.caption) {
+                    imageDescriptions.push(`IMAGE CAPTION: ${img.caption}`);
+                }
+                // Note: we don't send actual image data to the code generator, 
+                // but captions give context about what data the user wants visualized
+            }
+            if (imageDescriptions.length > 0) {
+                textParts.push(imageDescriptions.join('\n'));
+            }
+            textParts.push(`[${s.images.length} image(s) attached by user for reference]`);
+        }
+
+        const fullContext = `TITLE: ${s.title}\nTYPE: ${s.type}\n\n${textParts.join('\n\n---\n\n')}`;
+        
+        // Update status
+        if (msg.message_id) {
+            await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, undefined,
+                `🚀 *Запуск ИИ-генерации (${lang.toUpperCase()})...*\n\n📊 Контекст: ${s.text.length} сообщ., ${s.files?.length || 0} файлов, ${s.images?.length || 0} изображений\n\n🕒 Пожалуйста, подождите...`,
+                { parse_mode: "Markdown" }
+            ).catch(() => {});
+        }
+
         const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
             body: JSON.stringify({ 
-                context: { text_data: contextText }, 
+                context: { text_data: fullContext, files_text: '' }, 
                 language: lang,
                 telegramId: ctx.from.id,
                 title: s.title,
+                chartType: s.type || 'auto',
                 chatId: ctx.chat.id,
                 messageId: msg.message_id
             }),

@@ -33,16 +33,20 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
     const prompts = isPython ? PYTHON_CHART_PROMPTS : CHART_PROMPTS;
     const chartDesc = prompts[chartType] || `a ${chartType} visualization`;
     const isRu = language === 'ru';
+    const hasRealData = dataContext && dataContext.length > 100;
     
     if (isPython) {
         return `You are a Python data visualization expert (Matplotlib/Seaborn/Pandas). Generate a SINGLE, complete, self-contained Python script.
         
         TASK: Create ${chartDesc} related to this research topic: "${topic}"
         
-        ${dataContext ? `USER INSTRUCTIONS & DATA CONTEXT:\n${dataContext}\n` : ''}
+        ${dataContext ? `USER PROVIDED DATA & CONTEXT:\n${dataContext}\n` : ''}
         
         REQUIREMENTS:
-        1. Create REALISTIC synthetic data matching the topic using Pandas.
+        ${hasRealData 
+            ? `1. **CRITICAL**: The user has provided REAL DATA/CONTEXT above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data. If the data is in text form, parse the relevant numbers and categories from it.`
+            : `1. Create REALISTIC synthetic data matching the topic using Pandas.`
+        }
         2. Use the "${palette}" style color palette (if using Seaborn, use \`sns.set_palette\`).
         3. The plot must be professional with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
         4. CRUCIAL: Use \`plt.tight_layout()\` to prevent text overlap. Ensure high readability.
@@ -59,10 +63,13 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
 
 TASK: Create ${chartDesc} related to this research topic: "${topic}"
 
-${dataContext ? `USER INSTRUCTIONS & DATA CONTEXT:\n${dataContext}\n` : ''}
+${dataContext ? `USER PROVIDED DATA & CONTEXT:\n${dataContext}\n` : ''}
 
 REQUIREMENTS:
-1. Create REALISTIC synthetic data matching the topic.
+${hasRealData 
+    ? `1. **CRITICAL**: The user has provided REAL DATA/CONTEXT above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data.`
+    : `1. Create REALISTIC synthetic data matching the topic.`
+}
 2. Use the "${palette}" color palette (from viridis, RColorBrewer, etc).
 3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
 4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
