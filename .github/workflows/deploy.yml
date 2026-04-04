@@ -60,4 +60,9 @@ jobs:
             update_env "SITE_INTERNAL_URL" "http://perricheno-site:3000"
             update_env "BOT_CONTAINER_URL" "http://telegram-bot:3001"
             
+            # Wipe any local manual changes on the server to prevent merge conflicts during pull
+            echo "🧹 Cleaning up local server changes..."
+            git reset --hard HEAD
+            git clean -fd
+            
             bash deploy.sh
