@@ -1,4 +1,5 @@
 import { Markup } from "telegraf";
+import { InlineKeyboardButton } from "telegraf/types";
 
 export function getMainMenu() {
     return Markup.inlineKeyboard([
@@ -28,7 +29,7 @@ export function getHistoryMenu(chats: any[], page: number, totalPages: number) {
 }
 
 export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
-    const buttons = [
+    const buttons: InlineKeyboardButton[][] = [
         [
             Markup.button.callback("📄 PDF", `dl_pdf_${sessionId}`),
             Markup.button.callback("📦 ZIP", `dl_zip_${sessionId}`)
@@ -40,7 +41,7 @@ export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
     ];
 
     if (shareId) {
-        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/s/${shareId}`)]);
+        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/shared/${shareId}`)]);
     }
 
     buttons.push([Markup.button.callback("« Назад к списку", "history_1")]);

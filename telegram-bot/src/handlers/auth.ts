@@ -1,5 +1,5 @@
 import { Context, Markup } from "telegraf";
-import { getMainMenu, getVisualMenu } from "../keyboards/menu";
+import { getMainMenu } from "../keyboards/menu";
 
 const SITE_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
