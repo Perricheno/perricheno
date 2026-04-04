@@ -42,48 +42,43 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
 
     if (isPython) {
         return `### MASTER DATA SCIENTIST ROLE: VISUALIZATION ENGINEER
-You are a Senior Data Scientist at Perricheno, specialized in high-impact ${runtime} visualizations.
-Your task: Transform raw business/scientific data into a PREMIUM visualization script.
+You are a Senior Data Scientist at Perricheno. 
+Your task: Create a PREMIUM visualization from the provided context.
 
-### 1. USER OBJECTIVE & GOAL
-- PROJECT TITLE: "${topic}"
-- TARGET GOAL: Create ${chartDesc} about "${topic}"
-- USER SPECIFIC INSTRUCTION: "${instruction || 'Analyze and visualize these patterns'}"
+### 1. TARGET GOAL
+- PROJECT: "${topic}"
+- VISUAL: ${chartDesc}
+- INSTRUCTION: "${instruction || 'Visualize the key patterns'}"
 
-### 2. DATA SOURCE INVESTIGATION (EQUAL PRIORITY)
-Treat all provided data below as a single, unified dataset of equal importance. 
+### 2. DATA SOURCE INVESTIGATION (THE SOURCE OF TRUTH)
+The data is provided below. You MUST use this data.
 
-${hasImages ? `- SOURCE DATA (IMAGES): Extract metrics, numbers, and categories from these images.` : ''}
-${dataContext ? `- SOURCE DATA (TEXT/SCHEMA):\n${dataContext}\n` : ''}
-${isDatasetSchema ? `- NOTE ON SCALE: This is a sample of a large-scale dataset (millions of rows). Your code MUST be robust and handle patterns that represent the entire volume correctly.` : ''}
+[DATA CONTEXT]
+${dataContext}
+[/DATA CONTEXT]
 
-### 3. TECHNICAL LOGIC & DATA CLEANING (MANDATORY)
-- **Data Load**: Convert types properly (strings to numeric where appropriate).
-- **Missing Values**: Handle NaNs using interpolation, mean, or drops. DO NOT let NaNs break the plot.
-- **Outliers**: Detect and handle outliers to prevent scale distortion.
-- **Labels**: Use ${isRu ? 'Russian' : 'English'} for all titles, legends, and axes. 
-- **Readability**: Wrap long labels. If dates are used, format them nicely.
+${hasImages ? `- VISION ASSETS: Images of the document are also provided for visual context.` : ''}
 
-### 4. AESTHETIC GUIDELINES (PERRICHENO PREMIUM)
-- **Colors**: Use the "${palette}" colormap. Use gradients or consistent hex colors.
-- **Grids**: Add subtle grids (\`grid(TRUE, alpha=0.3)\` in R, \`plt.grid(alpha=0.3)\` in Python).
-- **Fonts**: Ensure titles are prominent. Use bold weights for emphasis.
-- **Layout**: Use \`plt.tight_layout()\` or equivalent to prevent cut-offs.
+### 3. TECHNICAL SPECIFICATION (MANDATORY)
+- **DATA LOADING**: You do NOT have local files. The text between [DATA CONTEXT] tags IS your dataset.
+- **PYTHON SNIPPET**:
+  \`\`\`python
+  import pandas as pd
+  import io
+  
+  # Load data from the provided context string
+  data_str = """${dataContext.replace(/"/g, "'")}"""
+  df = pd.read_csv(io.StringIO(data_str), sep="|") # or use manual dict if schema is detected
+  \`\`\`
+- **Outliers/Cleaning**: Handle NaNs and convert types.
+- **Labels**: Use ${isRu ? 'Russian' : 'English'} for all text in the plot. 
 
-### 5. EXECUTION PLAN (PYTHON)
+### 4. EXECUTION PLAN
 - Import: plt, sns, pd, np, io.
-- Data Processing: Use Pandas to create a DataFrame \`df\`. 
-- **CRITICAL**: Read data directly from the text provided in "DATA CONTEXT". If it's a table-like string, use \`io.StringIO\` or manual dict-to-df creation. 
-- **NO EXTERNAL FILES**: Do NOT try to read from a folder called "images" or use OCR (pytesseract).
-- Plotting: Use Seaborn/Matplotlib.
 - Result: The final figure MUST be assigned to the variable \`fig\`.
+- **NO EXTERNAL FILES**: Do NOT try to read from "images/" or use "pytesseract".
 
-### 6. NO-HALLUCINATION POLICY
-- If the document contains REAL metrics, use them. 
-- If the instruction is "Revenue", find REVENUE in the source.
-- DO NOT invent data. If no numbers are found, create a placeholder plot with a clear "No data found" title instead of failing.
-
-OUTPUT: Pure, executable Python code only. NO markdown, NO explanations.`;
+OUTPUT: Pure Python code only.`;
     }
 
     return `### MASTER DATA SCIENTIST ROLE: R VISUALIZATION ENGINEER
