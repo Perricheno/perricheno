@@ -19,11 +19,36 @@ export async function POST(req: NextRequest) {
         let text = "";
         let images: string[] = [];
 
-        if (ext === 'pdf') {
+        let currentBuffer = buffer;
+        let currentExt = ext;
+
+        // 0. Support Office formats by converting them to PDF first via Stirling
+        if (['xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt'].includes(ext || '')) {
+            try {
+                console.log(`[ExtractText] Converting ${ext} to PDF via Stirling...`);
+                const convFormData = new FormData();
+                convFormData.append("fileInput", new Blob([buffer]), fileName);
+                const convRes = await fetch(`${PDF_API_BASE}/convert/file/pdf`, {
+                    method: "POST",
+                    headers: { "X-API-KEY": PDF_API_KEY },
+                    body: convFormData,
+                    signal: AbortSignal.timeout(30000),
+                });
+                if (convRes.ok) {
+                    currentBuffer = Buffer.from(await convRes.arrayBuffer());
+                    currentExt = 'pdf';
+                    console.log(`[ExtractText] Successfully converted ${ext} to PDF.`);
+                }
+            } catch (e) {
+                console.error(`[ExtractText] Conversion of ${ext} failed:`, e);
+            }
+        }
+
+        if (currentExt === 'pdf') {
             // 1. Try Text Extraction first (as metadata/fallback)
             try {
                 const formData = new FormData();
-                formData.append("fileInput", new Blob([buffer], { type: "application/pdf" }), fileName);
+                formData.append("fileInput", new Blob([currentBuffer], { type: "application/pdf" }), fileName);
                 const pdfRes = await fetch(`${PDF_API_BASE}/convert/pdf/text`, {
                     method: "POST",
                     headers: { "X-API-KEY": PDF_API_KEY },
@@ -40,7 +65,7 @@ export async function POST(req: NextRequest) {
             // 2. PRIMARY: Convert PDF to Images for Vision analysis
             try {
                 const imgFormData = new FormData();
-                imgFormData.append("fileInput", new Blob([buffer], { type: "application/pdf" }), fileName);
+                imgFormData.append("fileInput", new Blob([currentBuffer], { type: "application/pdf" }), fileName);
                 
                 const imgRes = await fetch(`${PDF_API_BASE}/convert/pdf/img`, {
                     method: "POST",
@@ -55,20 +80,28 @@ export async function POST(req: NextRequest) {
                     const files = Object.keys(zip.files).sort();
                     
                     // Take ALL pages as requested by user
-                    for (const fileName of files) {
-                        if (fileName.match(/\.(png|jpg|jpeg)$/i)) {
-                            const imgData = await zip.file(fileName)?.async("base64");
+                    for (const fName of files) {
+                        if (fName.match(/\.(png|jpg|jpeg)$/i)) {
+                            const imgData = await zip.file(fName)?.async("base64");
                             if (imgData) images.push(`data:image/png;base64,${imgData}`);
                         }
                     }
-                    console.log(`[ExtractText] Successfully converted ${images.length} pages of ${fileName} to base64`);
                 }
             } catch (e) {
                 console.error("[ExtractText] PDF Image conversion failed:", e);
-                if (!text) text = "[PDF processing totally failed]";
+                if (!text) text = "[File processing totally failed]";
             }
         } else if (['txt', 'csv', 'tsv', 'json', 'md', 'tex', 'log', 'xml', 'r', 'py', 'js', 'ts', 'html'].includes(ext || '')) {
-            text = buffer.toString('utf-8');
+            const fullText = buffer.toString('utf-8');
+            const lines = fullText.split('\n');
+            const lineCount = lines.length;
+            
+            if (lineCount > 50) {
+                // Return only first 50 lines to show columns and structure
+                text = `[LARGE DATASET: Showing first 50 lines of ${lineCount} total lines]\n\n` + lines.slice(0, 50).join('\n');
+            } else {
+                text = fullText;
+            }
         } else {
             return NextResponse.json({ text: "", error: "Unsupported file type" }, { status: 200 });
         }
