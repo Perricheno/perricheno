@@ -327,15 +327,20 @@ export async function handleCompileFile(ctx: any) {
 
         const isPython = ext === 'py';
         const runtime = isPython ? 'python' : 'r';
-        const apiUrl = `${SITE_URL}/api/agent/${runtime}-compile`;
+        const apiUrl = `${SITE_URL}/api/internal/bot/compile`;
 
+        // 2. Call the internal billing-aware compiler proxy
         const compileRes = await fetch(apiUrl, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",
                 "X-Bot-Secret": WEBHOOK_SECRET! 
             },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({ 
+                code, 
+                type: runtime, 
+                telegramId: ctx.from.id 
+            }),
             signal: AbortSignal.timeout(45000)
         });
 

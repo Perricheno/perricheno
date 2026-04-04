@@ -171,10 +171,21 @@ export async function POST(req: NextRequest) {
         const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
         const sessionId = uuidv4();
-        // ── Create DB session ──
+        // ── Create DB session & Deduct Input Usage ──
         if (telegramId) {
             const user = getUserByTelegramId(String(telegramId));
             if (user) {
+                // Identify Input Data Length
+                const inputChars = (context.text_data || "").length;
+                if (inputChars > 0) {
+                    const deduction = checkAndDeductUsage(user.id, 'chars', inputChars);
+                    if (!deduction.success) {
+                        return NextResponse.json({ 
+                            error: `Insufficient balance to analyze data. Need ${inputChars} symbols, but you only have ${Math.floor(deduction.remaining)}.` 
+                        }, { status: 402 });
+                    }
+                }
+
                 try {
                     createAgentSession({
                         id: sessionId,
