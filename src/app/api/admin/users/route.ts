@@ -48,12 +48,31 @@ export async function PUT(req: Request) {
         const targetUser = getUserById(targetUserId);
         if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-        if (action === 'grant_chars') {
-            db.prepare('UPDATE users SET purchased_chars = purchased_chars + ? WHERE id = ?').run(amount, targetUserId);
-            db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(targetUserId, "Admin Bonus", `+${amount} chars`, 1);
-        } else if (action === 'grant_reports') {
-            db.prepare('UPDATE users SET purchased_reports = purchased_reports + ? WHERE id = ?').run(amount, targetUserId);
-            db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(targetUserId, "Admin Bonus", `+${amount} reports`, 1);
+        if (action === 'grant_chars' || action === 'grant_reports') {
+            const isChars = action === 'grant_chars';
+            const resourceName = isChars ? 'chars' : 'reports';
+            
+            db.prepare(`UPDATE users SET purchased_${resourceName} = purchased_${resourceName} + ? WHERE id = ?`).run(amount, targetUserId);
+            db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(targetUserId, "Admin Bonus", `+${amount.toLocaleString()} ${resourceName}`, 1);
+
+            // Trigger receipt generation
+            const receiptId = `PRN-BONUS-${Date.now().toString(36).toUpperCase()}-${targetUserId}`;
+            const amountText = `${amount.toLocaleString()} ${resourceName} (Bonus)`;
+            
+            try {
+                const { generateAndStoreReceipt } = await import('@/lib/receiptGenerator');
+                generateAndStoreReceipt({
+                    id: receiptId,
+                    userId: targetUserId,
+                    type: 'admin_bonus',
+                    packName: `Admin Bonus`,
+                    amountText: amountText,
+                    dateISO: new Date().toISOString()
+                }).catch(e => console.error("Receipt background gen failed:", e));
+            } catch (e) {
+                console.error("Failed to trigger receipt generator:", e);
+            }
+
         } else if (action === 'set_tier') {
             db.prepare('UPDATE users SET account_tier = ? WHERE id = ?').run(tier, targetUserId);
         } else if (action === 'toggle_ban') {
