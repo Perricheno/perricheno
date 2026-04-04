@@ -130,7 +130,16 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { context, language = "python", telegramId, title, chartType = 'auto', chatId, messageId } = await req.json();
+        const { 
+            context, 
+            language = "python", 
+            telegramId, 
+            title, 
+            chartType = 'auto', 
+            chatId, 
+            messageId,
+            images 
+        } = await req.json();
         
         if (!context || !context.text_data) {
             return NextResponse.json({ error: "No context provided" }, { status: 400 });
@@ -164,6 +173,11 @@ export async function POST(req: NextRequest) {
         // ── Background: Generate + Compile (fire-and-forget, same as agent/visualize) ──
         (async () => {
             try {
+                const isPython = language !== 'r';
+                const runtime = isPython ? 'Python' : 'R';
+                const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
+                const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
+
                 // 1. Push status to bot
                 if (chatId && messageId) {
                     fetch(`${BOT_INTERNAL_URL}/update-visual`, {
@@ -173,15 +187,26 @@ export async function POST(req: NextRequest) {
                     }).catch(() => {});
                 }
 
-                // 2. Generate code via OpenAI (NON-streaming for reliability, same as agent/visualize)
+                // 2. Generate code via OpenAI
                 const prompt = buildVisualizationPrompt(
                     title || "Data Visualization",
-                    chartType,
+                    chartType || 'auto',
                     'viridis',
                     'ru',
                     context.text_data + (context.files_text ? `\n${context.files_text}` : ''),
                     runtime
                 );
+
+                // Build multimodal content if images are present
+                const userContent: any[] = [{ type: "text", text: prompt }];
+                if (images && Array.isArray(images)) {
+                    images.forEach(img => {
+                        userContent.push({
+                            type: "image_url",
+                            image_url: { url: img }
+                        });
+                    });
+                }
 
                 const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
                     method: "POST",
@@ -194,10 +219,10 @@ export async function POST(req: NextRequest) {
                         stream: false,
                         messages: [
                             { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. No commentary. Ensure proper syntax.` },
-                            { role: "user", content: prompt }
+                            { role: "user", content: userContent }
                         ],
                     }),
-                    signal: AbortSignal.timeout(60000),
+                    signal: AbortSignal.timeout(90000), // Increased timeout for Vision
                 });
 
                 if (!aiRes.ok) {

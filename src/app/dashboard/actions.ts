@@ -163,6 +163,23 @@ export async function checkServiceHealth(serviceId: string) {
                 log.push(`SUCCESS: ${users.count} user records indexed. Latency: ${end - start}ms`);
                 break;
             }
+            case 'stirling': {
+                const url = "https://pdf.perricheno.ru/api/v1/info/is-alive";
+                const apiKey = "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
+                log.push(`Checking Stirling PDF at ${url}...`);
+                const res = await fetch(url, { 
+                    headers: { "X-API-KEY": apiKey },
+                    signal: AbortSignal.timeout(5000) 
+                });
+                if (res.ok) {
+                    log.push("SUCCESS: Stirling PDF API is alive and authenticated.");
+                } else {
+                    const txt = await res.text().catch(() => '');
+                    status = 'error';
+                    log.push(`ERROR ${res.status}: ${txt.slice(0, 100)}`);
+                }
+                break;
+            }
             default:
                 log.push(`Unknown service ID: ${serviceId}`);
                 status = 'error';

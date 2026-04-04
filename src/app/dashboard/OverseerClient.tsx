@@ -431,6 +431,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                                 { id: 'python', name: 'Python Matrix', icon: IconBug },
                                 { id: 'r', name: 'R-Compiler', icon: IconChartLine },
                                 { id: 'fx', name: 'Exchange Rates', icon: IconCurrencyDollar },
+                                { id: 'stirling', name: 'Stirling PDF', icon: IconDatabase },
                                 { id: 'db', name: 'SQLite V-Base', icon: IconDatabase }
                             ].map(s => (
                                 <div key={s.id} className="p-3 border border-[#e5e5e5] bg-white rounded-lg shadow-sm flex flex-col gap-2">

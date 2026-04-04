@@ -124,11 +124,12 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                             });
                             
                             if (extractRes.ok) {
-                                const { text } = await extractRes.json() as any;
+                                const { text, images: extractedImages } = await extractRes.json() as any;
                                 if (text && text.length > 0) {
-                                    // Limit to ~50K chars to avoid token overflow
-                                    const trimmed = text.length > 50000 ? text.slice(0, 50000) + "\n...[TRUNCATED]" : text;
-                                    textParts.push(`FILE "${fileName}":\n${trimmed}`);
+                                    textParts.push(`FILE "${fileName}":\n${text}`);
+                                }
+                                if (extractedImages && extractedImages.length > 0) {
+                                    ctx.session.visual.images.push(...extractedImages.map((img: string) => ({ base64: img })));
                                 }
                             } else {
                                 // Fallback: just note the file was attached
@@ -140,8 +141,7 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     } else if (['txt', 'csv', 'tsv', 'json', 'md', 'tex', 'log', 'xml', 'r', 'py'].includes(ext || '')) {
                         // Text-based files: read directly
                         const fileText = await res.text();
-                        const trimmed = fileText.length > 50000 ? fileText.slice(0, 50000) + "\n...[TRUNCATED]" : fileText;
-                        textParts.push(`FILE "${fileName}":\n${trimmed}`);
+                        textParts.push(`FILE "${fileName}":\n${fileText}`);
                     } else {
                         textParts.push(`FILE "${fileName}": [Binary file attached, type: ${ext}]`);
                     }
@@ -169,11 +169,8 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
         let fullContext = `TITLE: ${s.title}\nTYPE: ${s.type}\n\n${textParts.join('\n\n---\n\n')}`;
         
-        // Cap total context to ~100K chars to avoid token overflow with large files
-        const MAX_CONTEXT = 100_000;
-        if (fullContext.length > MAX_CONTEXT) {
-            fullContext = fullContext.slice(0, MAX_CONTEXT) + "\n\n...[CONTEXT TRUNCATED — too large, only first 100K chars used]";
-        }
+        // Pass collected base64 images directly to generation endpoint
+        const visionImages = s.images.filter((img: any) => img.base64).map((img: any) => img.base64);
         
         // Update status
         if (msg.message_id) {
@@ -187,13 +184,14 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
             body: JSON.stringify({ 
-                context: { text_data: fullContext, files_text: '' }, 
+                context: { text_data: fullContext }, 
                 language: lang,
                 telegramId: ctx.from.id,
                 title: s.title,
                 chartType: s.type || 'auto',
                 chatId: ctx.chat.id,
-                messageId: msg.message_id
+                messageId: msg.message_id,
+                images: visionImages
             }),
         });
 
