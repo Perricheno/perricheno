@@ -23,8 +23,7 @@ function buildVisualizationPrompt(prompt: string, dataContext: string, chartType
     
     const dataGuard = `
 **DATA QUALITY CHECK** (MANDATORY):
-- If the provided context below looks like binary garbage, garbled text, base64, hex, or unreadable characters, DO NOT attempt to parse it.
-- In that case, create a simple visualization with REALISTIC synthetic data that matches the user's topic/request.
+- If the provided context below looks like binary garbage, garbled text, base64, hex, or unreadable characters, DO NOT attempt to parse it. It means extraction failed.
 - NEVER try to parse file paths, filenames, or metadata markers like "[Failed" as actual data.
 - If context is plain readable text (not tabular), extract key facts/numbers and build a dataframe manually.`;
     
@@ -38,7 +37,7 @@ function buildVisualizationPrompt(prompt: string, dataContext: string, chartType
         REQUIREMENTS:
         ${hasRealData && !isGarbageData
             ? `1. **CRITICAL**: The user has provided REAL DATA/CONTEXT above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization or analysis. DO NOT invent synthetic data. If the data is text, construct a Pandas dataframe manually containing the relevant facts.`
-            : `1. Create REALISTIC synthetic data matching the topic using Pandas if needed.`
+            : `1. The user didn't provide sufficient extractable data. Focus on creating generic or empty placeholders if actual data isn't available, but try to use the user's prompt as the sole context.`
         }
         2. Chart type to generate: **${chartType.replace("_", " ")}**.
         3. Ensure a clean visual style with \`sns.set_style("whitegrid")\` or similar. Use high-contrast colors (e.g., Seaborn's "husl" or "viridis").
@@ -55,8 +54,7 @@ function buildVisualizationPrompt(prompt: string, dataContext: string, chartType
 
     const dataGuardR = `
 **DATA QUALITY CHECK** (MANDATORY):
-- If the provided context below looks like binary garbage, garbled text, base64, hex, or unreadable characters, DO NOT attempt to parse it.
-- In that case, create a simple visualization with REALISTIC synthetic data.
+- If the provided context below looks like binary garbage, garbled text, base64, hex, or unreadable characters, DO NOT attempt to parse it. Extraction failed.
 - NEVER try to parse filenames or metadata markers as actual data.
 - If context is plain readable text (not tabular), extract key facts/numbers and build a data.frame manually.`;
 
@@ -69,7 +67,7 @@ ${dataContext && !isGarbageData ? `USER PROVIDED DATASET/CONTEXT:\n${dataContext
 REQUIREMENTS:
 ${hasRealData && !isGarbageData
     ? `1. **CRITICAL**: The user has provided REAL DATA/CONTEXT above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data.`
-    : `1. Create REALISTIC synthetic data matching the topic if necessary.`
+    : `1. The user didn't provide sufficient extractable data. Use the user prompt info to build simple data, do NOT hallucinate complex datasets.`
 }
 2. Chart type to generate: **${chartType.replace("_", " ")}**.
 3. Prevent text overlap! Ensure a clean visual layout using \`theme_minimal()\`. Use viridis for color scales if needed.
@@ -115,6 +113,10 @@ async function handleSuggest(userId: number, body: any) {
     
     // Build combined context from all uploaded files
     const combinedContext = contextFiles.map((f: any) => `--- ${f.name} ---\n${f.content.slice(0, 15000)}`).join('\n\n');
+    
+    if (contextFiles.length > 0 && (combinedContext.includes('Failed to extract') || combinedContext.includes('[Failed'))) {
+        throw new Error("Hard Stop: Document data extraction failed. Please ensure the document is readable text or data.");
+    }
     
     const systemPrompt = `You are an expert Data Scientist and Visualization Architect. The user wants to visualize data. Based on their request and uploaded data, recommend the best chart types.
 
@@ -184,6 +186,10 @@ async function handleGenerate(userId: number, body: any) {
             };
 
             try {
+                if (contextFiles.length > 0 && (combinedContext.includes('Failed to extract') || combinedContext.includes('[Failed'))) {
+                    throw new Error("Document data extraction completely failed. Please check your uploaded files. Generating synthetic plots matches is turned off.");
+                }
+
                 sendEvent('status', { 
                     id: 'init', 
                     label: 'Initializing Analytics Pipeline', 
@@ -197,7 +203,7 @@ async function handleGenerate(userId: number, body: any) {
                     status: 'done', 
                     log: combinedContext.length > 50 
                         ? `Loaded ${contextFiles.length} file(s), ${combinedContext.length} chars total.` 
-                        : 'No extensive data. Proceeding with synthetic generation.' 
+                        : 'No extensive data. Proceeding with text context.' 
                 });
 
                 // Generate each chart sequentially

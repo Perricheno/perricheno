@@ -473,6 +473,8 @@ export default function AgentPage() {
         setCurrentSessionId(s.id);
         setTopic(s.title);
         setDocType(s.doc_type as DocType);
+        setIsAnalyticsSession(s.doc_type === 'data_analytics');
+        setIsAgentMode(s.doc_type !== 'data_analytics');
         setError(null);
         setSidebarOpen(false);
 
