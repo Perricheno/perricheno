@@ -48,10 +48,15 @@ export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
     ];
 
     if (shareId) {
-        buttons.push([Markup.button.url("🔗 Открыть на сайте", `https://perricheno.ru/agent/shared/${shareId}`)]);
+        const domain = process.env.WEBHOOK_DOMAIN || "perricheno.ru";
+        const protocol = domain.includes("localhost") ? "http" : "https";
+        buttons.push([Markup.button.url("🔗 Открыть на сайте", `${protocol}://${domain}/agent/shared/${shareId}`)]);
     }
 
-    buttons.push([Markup.button.callback("« Назад к списку", "history_1")]);
+    buttons.push([
+        Markup.button.callback("« Назад к списку", "history_1"),
+        Markup.button.callback("🗑 Удалить", `history_delete_${sessionId}`)
+    ]);
     
     return Markup.inlineKeyboard(buttons);
 }

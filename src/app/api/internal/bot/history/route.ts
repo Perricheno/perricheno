@@ -55,3 +55,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
+
+export async function DELETE(req: NextRequest) {
+    const secret = req.headers.get("x-bot-secret");
+    if (secret !== WEBHOOK_SECRET) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    try {
+        const { searchParams } = new URL(req.url);
+        const sessionId = searchParams.get("sessionId");
+
+        if (!sessionId) {
+            return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
+        }
+
+        db.prepare(`DELETE FROM agent_sessions WHERE id = ?`).run(sessionId);
+        
+        return NextResponse.json({ success: true });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}

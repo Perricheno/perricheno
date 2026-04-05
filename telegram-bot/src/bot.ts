@@ -193,6 +193,12 @@ bot.action(/^history_view_(.+)$/, async (ctx) => {
     await handleViewSession(ctx, ctx.match[1]);
 });
 
+bot.action(/^history_delete_(.+)$/, async (ctx) => {
+    const sessionId = ctx.match[1];
+    const { handleDeleteSession } = await import("./handlers/history");
+    await handleDeleteSession(ctx, sessionId);
+});
+
 bot.action(/^dl_pdf_(.+)$/, async (ctx) => {
     await handleDownloadFile(ctx, ctx.match[1], "pdf");
 });

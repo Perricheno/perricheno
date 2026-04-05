@@ -57,49 +57,54 @@ export default function SharedSessionView({ title, docType, mainTex, referencesB
     };
 
     return (
-        <div className="w-full h-full flex flex-col font-sans bg-[var(--background)] overflow-hidden">
+        <div className="w-full min-h-screen h-screen flex flex-col font-sans bg-[#FBFBFC] overflow-hidden text-[#1a1a1a]">
             {/* Header */}
-            <div className="h-16 border-b border-[var(--border)] flex items-center px-6 bg-[var(--card)] shrink-0 justify-between">
+            <div className="h-16 border-b border-gray-100 flex items-center px-6 bg-white shrink-0 justify-between shadow-sm">
                 <div>
-                    <h1 className="text-sm font-bold">{title}</h1>
-                    <p className="text-xs text-gray-400">{docType.replace("_", " ")} • shared • {new Date(createdAt).toLocaleDateString()}</p>
+                    <h1 className="text-sm font-bold text-black tracking-tight">{title}</h1>
+                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{docType.replace("_", " ")} • shared • {new Date(createdAt).toLocaleDateString()}</p>
                 </div>
-                <button onClick={downloadZip} className="flex items-center gap-2 px-4 py-2 bg-[var(--foreground)] text-[var(--card)] rounded-full text-xs font-semibold hover:opacity-90 transition-opacity">
-                    <IconPackage className="w-3.5 h-3.5" /> Download ZIP
+                <button onClick={downloadZip} className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-xl active:scale-95">
+                    <IconPackage className="w-4 h-4" /> Download ZIP
                 </button>
             </div>
 
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                 {/* Code viewer */}
-                <div className="flex-1 flex flex-col overflow-hidden border-r border-[var(--border)]">
-                    <div className="h-10 bg-white border-b border-[var(--border)] flex items-center px-4 gap-3 shrink-0">
-                        <button onClick={() => setActiveTab("tex")} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[12px] font-semibold transition-colors ${activeTab === "tex" ? "bg-emerald-50 text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}>
+                <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-50 bg-white">
+                    <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-4 shrink-0">
+                        <button onClick={() => setActiveTab("tex")} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === "tex" ? "bg-black text-white shadow-lg" : "text-gray-300 hover:text-black"}`}>
                             <IconFileText className="w-3.5 h-3.5" /> main.tex
                         </button>
                         {referencesBib && (
-                            <button onClick={() => setActiveTab("bib")} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[12px] font-semibold transition-colors ${activeTab === "bib" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
+                            <button onClick={() => setActiveTab("bib")} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === "bib" ? "bg-black text-white shadow-lg" : "text-gray-300 hover:text-black"}`}>
                                 <IconBook className="w-3.5 h-3.5" /> references.bib
                             </button>
                         )}
-                        <button onClick={() => downloadFile(displayedCode, displayedFilename)} className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
-                            <IconDownload className="w-3.5 h-3.5" />
+                        <button onClick={() => downloadFile(displayedCode, displayedFilename)} className="ml-auto text-gray-300 hover:text-black transition-colors p-2">
+                            <IconDownload className="w-4 h-4" />
                         </button>
                     </div>
-                    <div className="flex-1 overflow-auto p-6 font-mono text-[13px] leading-relaxed text-gray-700 bg-gray-50/50">
+                    <div className="flex-1 overflow-auto p-8 font-mono text-[13px] leading-relaxed text-[#52525B] bg-[#FAFAFA]">
                         <pre className="m-0 whitespace-pre-wrap"><code>{displayedCode}</code></pre>
                     </div>
                 </div>
 
                 {/* Images panel */}
                 {visuals.length > 0 && (
-                    <div className="w-full lg:w-80 overflow-y-auto p-4 space-y-3 bg-[var(--background)]">
-                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">Visualizations</h3>
-                        {visuals.map((img, i) => (
-                            <div key={i} onClick={() => setSelectedImage(i)} className="cursor-pointer rounded-xl overflow-hidden border border-[var(--border)] hover:border-gray-400 transition-colors bg-white">
-                                <img src={`data:image/png;base64,${img.image}`} alt={img.chart_type} className="w-full" />
-                                <div className="px-3 py-2 text-xs text-gray-500 font-medium">{img.chart_type.replace("_", " ")}</div>
-                            </div>
-                        ))}
+                    <div className="w-full lg:w-80 overflow-y-auto p-6 space-y-4 bg-[#FBFBFC] border-t lg:border-t-0 lg:border-l border-gray-50">
+                        <h3 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.25em] px-1 mb-2">Visualizations</h3>
+                        {visuals.map((img, i) => {
+                            const isBase64Ready = img.image.startsWith('data:image');
+                            const imgSrc = isBase64Ready ? img.image : `data:image/png;base64,${img.image}`;
+                            
+                            return (
+                                <div key={i} onClick={() => setSelectedImage(i)} className="group cursor-pointer rounded-2xl overflow-hidden border border-gray-100 hover:border-black transition-all bg-white shadow-sm hover:shadow-xl">
+                                    <img src={imgSrc} alt={img.chart_type} className="w-full" />
+                                    <div className="px-4 py-3 text-[10px] text-gray-400 font-black uppercase tracking-widest group-hover:text-black transition-colors">{img.chart_type.replace("_", " ")}</div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

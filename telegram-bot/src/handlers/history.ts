@@ -150,3 +150,23 @@ export async function handleViewImages(ctx: any, sessionId: string) {
         await ctx.reply("⚠️ Ошибка при загрузке изображений.");
     }
 }
+
+export async function handleDeleteSession(ctx: any, sessionId: string) {
+    try {
+        const res = await fetch(`${SITE_URL}/api/internal/bot/history?sessionId=${sessionId}`, {
+            method: "DELETE",
+            headers: { "X-Bot-Secret": WEBHOOK_SECRET! },
+        });
+
+        if (res.ok) {
+            await ctx.answerCbQuery("🗑 Сессия успешно удалена!");
+            // Return to history page 1
+            await handleHistory(ctx, 1);
+        } else {
+            await ctx.answerCbQuery("❌ Ошибка при удалении.");
+        }
+    } catch (err) {
+        console.error(err);
+        await ctx.reply("⚠️ Ошибка связи с сервером при удалении.");
+    }
+}
