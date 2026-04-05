@@ -7,7 +7,8 @@ import {
     IconX, IconPencil, IconCheck, IconEye, IconBug,
     IconClock, IconLetterCase, IconSettings,
     IconSchool, IconSearch, IconCertificate, IconChartPie,
-    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2
+    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
+    IconPlus
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
@@ -57,7 +58,7 @@ export default function AgentPage() {
 
     const [prompt, setPrompt] = useState("");
     const [docType, setDocType] = useState<DocType>("research");
-    const [phase, setPhase] = useState<"idle" | "streaming" | "done">("idle");
+    const [phase, setPhase] = useState<"idle" | "suggesting" | "streaming" | "done">("idle");
     const [settings, setSettings] = useState<AgentSettings>(DEFAULT_SETTINGS);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [detailsOpen, setDetailsOpen] = useState(false);
@@ -71,6 +72,13 @@ export default function AgentPage() {
 
     // Output state
     const [viewerOpen, setViewerOpen] = useState(false);
+
+    // Suggestion step state (Data Analytics)
+    const [suggestedCharts, setSuggestedCharts] = useState<string[]>([]);
+    const [suggestReasoning, setSuggestReasoning] = useState("");
+    const [isSuggesting, setIsSuggesting] = useState(false);
+    const [analyticsPrompt, setAnalyticsPrompt] = useState("");
+    const [isAnalyticsSession, setIsAnalyticsSession] = useState(false);
     const [isCompiling, setIsCompiling] = useState(false);
     const [activeTab, setActiveTab] = useState<"tex" | "bib">("tex");
     const [mainTex, setMainTex] = useState("");
@@ -100,8 +108,8 @@ export default function AgentPage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Agent Mode States
-    const [isAgentMode, setIsAgentMode] = useState(false);
-    const [agentSubMode, setAgentSubMode] = useState<"chat" | "data_analytics">("data_analytics");
+    const [isAgentMode, setIsAgentMode] = useState(true);
+    const [agentSubMode, setAgentSubMode] = useState<"data_analytics">("data_analytics");
     const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string}[]>([]);
     const [agentLogs, setAgentLogs] = useState<{type: string, message: string}[]>([]);
     const [agentSteps, setAgentSteps] = useState<{label: string, status: "pending" | "running" | "done" | "error"}[]>([]);
@@ -241,33 +249,77 @@ export default function AgentPage() {
         }
     }, [user, setShowLogin, currentSessionId, settings, visuals]);
 
+    // ─── STEP 1: Ask AI to suggest chart types ───
     const handleAgentGenerate = async () => {
-        setPhase("streaming");
+        setIsSuggesting(true);
+        setAnalyticsPrompt(prompt);
         setTopic(prompt);
-        setAgentLogs([]);
-        setAgentSteps([
-           { label: "Initializing analytics session", status: "pending" },
-           { label: "Processing context & datasets", status: "pending" },
-           { label: "Generating AI execution code", status: "pending" },
-           { label: "Executing in secure compiler environment", status: "pending" },
-           { label: "Finalizing outputs", status: "pending" }
-        ]);
-        setIsEditing(false);
-        setIsFixingErrors(false);
-        startTimer();
-
-        const payload = { prompt: prompt, contextFiles: agentDataFiles, sessionId: currentSessionId };
+        setIsAnalyticsSession(true);
+        setError(null);
         setPrompt("");
 
         try {
             const res = await fetch('/api/agent/data-analytics', {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ 
+                    action: 'suggest',
+                    prompt, 
+                    contextFiles: agentDataFiles 
+                })
             });
 
             if (!res.ok) {
-                if (res.status === 402) { setBillingOpen(true); throw new Error("Quota exceeded! Please buy tokens to continue."); }
+                if (res.status === 402) { setBillingOpen(true); throw new Error("Quota exceeded!"); }
+                const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
+                throw new Error(errData.error || `HTTP ${res.status}`);
+            }
+
+            const data = await res.json();
+            setSuggestedCharts(data.charts || ["bar", "scatter", "line"]);
+            setSuggestReasoning(data.reasoning || "");
+            setPhase("suggesting");
+        } catch (e: any) {
+            setError(e.message);
+            setPhase("idle");
+        } finally {
+            setIsSuggesting(false);
+        }
+    };
+
+    // ─── STEP 2: Start generation with confirmed chart types ───
+    const startAnalyticsGenerate = async (charts: string[]) => {
+        setPhase("streaming");
+        setAgentLogs([]);
+        setVisuals([]);
+        const steps = charts.map((c, i) => ({ 
+            label: `${c.replace("_", " ")} (${i+1}/${charts.length})`, 
+            status: "pending" as const 
+        }));
+        setAgentSteps([
+            { label: "Initializing analytics pipeline", status: "done" as const },
+            { label: "Processing data context", status: "done" as const },
+            ...steps
+        ]);
+        setIsEditing(false);
+        setIsFixingErrors(false);
+        startTimer();
+
+        try {
+            const res = await fetch('/api/agent/data-analytics', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    action: 'generate',
+                    prompt: analyticsPrompt, 
+                    contextFiles: agentDataFiles,
+                    charts,
+                    runtime: settings.runtime
+                })
+            });
+
+            if (!res.ok) {
+                if (res.status === 402) { setBillingOpen(true); throw new Error("Quota exceeded!"); }
                 const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
                 throw new Error(errData.error || `HTTP ${res.status}`);
             }
@@ -298,24 +350,52 @@ export default function AgentPage() {
                             
                             try {
                                 const data = JSON.parse(dataText);
-                                if (eventName === 'progress') {
+                                if (eventName === 'status') {
                                     setAgentSteps(prev => {
                                         const next = [...prev];
-                                        if (data.step >= 0 && data.step < next.length) { next[data.step].status = data.status; }
+                                        const idx = next.findIndex(s => s.label.includes(data.id?.replace('chart_', '') || '___'));
+                                        if (data.id?.startsWith('chart_')) {
+                                            const chartIdx = parseInt(data.id.split('_')[1]) + 2; // offset by 2 init steps
+                                            if (chartIdx < next.length) {
+                                                next[chartIdx] = { ...next[chartIdx], status: data.status };
+                                            }
+                                        }
                                         return next;
                                     });
-                                } else if (eventName === 'log') {
-                                    setAgentLogs(prev => [...prev, { type: data.level, message: data.message }]);
-                                } else if (eventName === 'done') {
-                                    setCurrentSessionId(data.sessionId);
-                                    if (data.results && data.results.length > 0) {
-                                        setVisuals(prev => [...prev, ...data.results]);
-                                        setActiveTab("tex");
+                                    if (data.log) {
+                                        setAgentLogs(prev => [...prev, { type: data.status === 'error' ? 'error' : data.status === 'done' ? 'success' : 'info', message: data.log }]);
                                     }
+                                } else if (eventName === 'code_chunk') {
+                                    setAgentLogs(prev => {
+                                        const last = prev[prev.length - 1];
+                                        if (last && last.type === 'code') {
+                                            const updated = [...prev];
+                                            updated[updated.length - 1] = { type: 'code', message: last.message + data.delta };
+                                            return updated;
+                                        }
+                                        return [...prev, { type: 'code', message: data.delta }];
+                                    });
+                                } else if (eventName === 'chart_done') {
+                                    setVisuals(prev => [...prev, {
+                                        image: data.image,
+                                        chart_type: data.chartType,
+                                        code: data.code,
+                                        language: data.runtime || settings.runtime
+                                    }]);
+                                    // Clear code log for next chart
+                                    setAgentLogs(prev => [...prev, { type: 'success', message: `✓ ${data.chartType} generated successfully` }]);
+                                } else if (eventName === 'chart_error') {
+                                    setAgentLogs(prev => [...prev, { type: 'error', message: `✗ ${data.chartType} failed: ${data.error}` }]);
+                                } else if (eventName === 'all_done') {
+                                    // All charts processed
                                 } else if (eventName === 'error') {
                                     throw new Error(data.message);
                                 }
-                            } catch (e) {}
+                            } catch (e: any) {
+                                if (e.message && e.message !== 'Unexpected end of JSON input') {
+                                    setError(e.message);
+                                }
+                            }
                         }
                     }
                 }
@@ -333,7 +413,7 @@ export default function AgentPage() {
     const handleGenerate = () => {
         if (!user) { setShowLogin(true); return; }
         if (!prompt.trim()) return;
-        if (isAgentMode) { handleAgentGenerate(); return; }
+        if (!isAgentMode) { handleAgentGenerate(); return; }
         setDocType(docType);
         streamGenerate({ prompt, type: docType, ...settings }, prompt);
         setPrompt("");
@@ -448,10 +528,13 @@ export default function AgentPage() {
         setPrompt("");
         setPhase("idle");
         setSidebarOpen(false);
-        setIsAgentMode(false);
+        setIsAgentMode(true);
         setAgentDataFiles([]);
         setAgentLogs([]);
         setAgentSteps([]);
+        setSuggestedCharts([]);
+        setSuggestReasoning("");
+        setIsAnalyticsSession(false);
     };
 
     const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
@@ -548,8 +631,7 @@ export default function AgentPage() {
         { id: "report", label: "Report", icon: IconChartPie },
     ];
 
-    const AGENT_MODES: { id: "chat" | "data_analytics"; label: string; icon: any }[] = [
-        { id: "chat", label: "Chat", icon: IconMessageCircle },
+    const AGENT_MODES: { id: "data_analytics"; label: string; icon: any }[] = [
         { id: "data_analytics", label: "Data Analytics", icon: IconDatabase },
     ];
 
@@ -557,7 +639,7 @@ export default function AgentPage() {
         const files = Array.from(e.target.files || []);
         for (const file of files) {
             const text = await file.text();
-            if (isAgentMode) {
+            if (!isAgentMode) {
                 setAgentDataFiles(prev => [...prev, { name: file.name, content: text }]);
             } else {
                 setSettings(s => ({ 
@@ -570,7 +652,7 @@ export default function AgentPage() {
     };
 
     const removeFile = (idx: number) => {
-        if (isAgentMode) {
+        if (!isAgentMode) {
             setAgentDataFiles(prev => prev.filter((_, i) => i !== idx));
         } else {
             setSettings(s => ({
@@ -604,7 +686,7 @@ export default function AgentPage() {
 
     // ─── LANDING ───
     if (phase === "idle") {
-        const activeMode = isAgentMode 
+        const activeMode = !isAgentMode 
             ? AGENT_MODES.find(m => m.id === agentSubMode) || AGENT_MODES[0]
             : MODES.find(m => m.id === docType) || MODES[0];
 
@@ -697,15 +779,15 @@ export default function AgentPage() {
                                                 transition={{ duration: 0.15 }}
                                                 className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl border border-[#e5e5e5] shadow-lg py-1 z-50"
                                             >
-                                                {(isAgentMode ? AGENT_MODES : MODES).map((m: any) => (
+                                                {(!isAgentMode ? AGENT_MODES : MODES).map((m: any) => (
                                                     <button 
                                                         key={m.id}
-                                                        onClick={() => { if(isAgentMode) { setAgentSubMode(m.id); } else { setDocType(m.id); } setModeOpen(false); }}
-                                                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${(isAgentMode ? m.id === agentSubMode : m.id === docType) ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
+                                                        onClick={() => { if(!isAgentMode) { setAgentSubMode(m.id); } else { setDocType(m.id); } setModeOpen(false); }}
+                                                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${(!isAgentMode ? m.id === agentSubMode : m.id === docType) ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
                                                     >
                                                         <m.icon className="w-4 h-4 shrink-0" stroke={2} />
                                                         <span>{m.label}</span>
-                                                        {(isAgentMode ? m.id === agentSubMode : m.id === docType) && (
+                                                        {(!isAgentMode ? m.id === agentSubMode : m.id === docType) && (
                                                             <IconCheck className="w-4 h-4 ml-auto text-[#1a1a1a]" stroke={2.5} />
                                                         )}
                                                     </button>
@@ -748,21 +830,21 @@ export default function AgentPage() {
                             {/* Right: Submit */}
                             <button 
                                 onClick={handleGenerate} 
-                                disabled={!prompt.trim()} 
+                                disabled={!prompt.trim() || isSuggesting} 
                                 className="w-8 h-8 bg-[#1a1a1a] text-white rounded-lg flex items-center justify-center disabled:opacity-10 disabled:bg-[#e5e5e5] transition-all hover:bg-black active:scale-95"
                             >
-                                <IconArrowRight className="w-4 h-4" />
+                                {isSuggesting ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
                             </button>
                         </div>
                     </div>
 
                     {/* Attached files */}
-                    {(isAgentMode ? agentDataFiles.length > 0 : settings.referenceFileNames.length > 0) && (
+                    {(!isAgentMode ? agentDataFiles.length > 0 : settings.referenceFileNames.length > 0) && (
                         <div className="w-full mt-3 flex flex-wrap gap-2">
-                            {(isAgentMode ? agentDataFiles : settings.referenceFileNames).map((file, idx) => (
+                            {(!isAgentMode ? agentDataFiles : settings.referenceFileNames).map((file, idx) => (
                                 <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-lg text-[12px] font-medium text-[#666] border border-[#e5e5e5]">
-                                    {isAgentMode ? <IconDatabase className="w-3.5 h-3.5 text-[#999]" /> : <IconFileText className="w-3.5 h-3.5 text-[#999]" />}
-                                    <span>{isAgentMode ? (file as any).name : file}</span>
+                                    {!isAgentMode ? <IconDatabase className="w-3.5 h-3.5 text-[#999]" /> : <IconFileText className="w-3.5 h-3.5 text-[#999]" />}
+                                    <span>{!isAgentMode ? (file as any).name : file}</span>
                                     <button onClick={() => removeFile(idx)} className="p-0.5 hover:text-red-500 transition-colors">
                                         <IconX className="w-3 h-3" />
                                     </button>
@@ -813,6 +895,63 @@ export default function AgentPage() {
         );
     }
 
+    // ─── SUGGESTING (Data Analytics - Chart Selection) ───
+    if (phase === "suggesting") {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#FBFBFC] relative p-6 overflow-hidden">
+                <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
+
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-xl flex flex-col items-center">
+                    
+                    <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
+                        <IconChartPie className="w-10 h-10 text-black" stroke={2} />
+                    </div>
+                    
+                    <h2 className="text-2xl font-black text-black tracking-tight mb-2 text-center">Recommended Charts</h2>
+                    <p className="text-xs text-[#A1A1AA] font-bold mb-8 text-center max-w-md">{suggestReasoning}</p>
+
+                    {/* Chart toggles */}
+                    <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+                        {suggestedCharts.map((chart) => (
+                            <motion.button
+                                key={chart}
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => {
+                                    setSuggestedCharts(prev => 
+                                        prev.includes(chart) && prev.length > 1
+                                            ? prev.filter(c => c !== chart) 
+                                            : prev.includes(chart) ? prev : [...prev, chart]
+                                    );
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-gray-100 bg-white text-black font-black text-[10px] uppercase tracking-widest shadow-sm hover:border-black transition-all"
+                            >
+                                <IconCheck className="w-3.5 h-3.5 text-black" stroke={3} />
+                                {chart.replace("_", " ")}
+                            </motion.button>
+                        ))}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => { setPhase("idle"); setSuggestedCharts([]); setIsAnalyticsSession(false); }} 
+                            className="px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all active:scale-95"
+                        >
+                            Back
+                        </button>
+                        <button 
+                            onClick={() => startAnalyticsGenerate(suggestedCharts)} 
+                            disabled={suggestedCharts.length === 0}
+                            className="px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-20 flex items-center gap-2"
+                        >
+                            <IconArrowRight className="w-4 h-4" /> Generate {suggestedCharts.length} Chart{suggestedCharts.length !== 1 ? 's' : ''}
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
+
     // ─── STREAMING ───
     if (phase === "streaming") {
         const estimatedProgress = Math.min(95, Math.round((streamChars / EXPECTED_CHARS) * 100));
@@ -826,11 +965,11 @@ export default function AgentPage() {
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
                                 <IconClock className="w-3.5 h-3.5" stroke={2.5} /> <span className="tabular-nums">{elapsedTime.toFixed(1)}s</span>
                             </div>
-                            {!isAgentMode && <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
+                            {isAgentMode && <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
                                 <IconLetterCase className="w-4 h-4" stroke={2.5} /> <span className="tabular-nums">{streamChars.toLocaleString()} chars</span>
                             </div>}
                         </div>
-                        {!isAgentMode && <div className="flex items-center gap-4">
+                        {isAgentMode && <div className="flex items-center gap-4">
                             <span className="text-[10px] font-black text-black tabular-nums tracking-widest">{estimatedProgress}%</span>
                             <div className="w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
                                 <motion.div className="h-full bg-black" animate={{ width: `${estimatedProgress}%` }} transition={{ duration: 0.3 }} />
@@ -842,11 +981,11 @@ export default function AgentPage() {
                         <div className="flex-1 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col">
                             <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-3 shrink-0">
                                 <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                                <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">{isAgentMode ? "Agent Analytics Console" : "Agent Logic Stream"}</span>
+                                <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">{!isAgentMode ? "Agent Analytics Console" : "Agent Logic Stream"}</span>
                                 <span className="text-[10px] font-black text-[#D4D4D8] ml-auto truncate uppercase tracking-widest max-w-[150px] sm:max-w-xs">{topic}</span>
                             </div>
                             <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 bg-[#FAFAFA]">
-                                {!isAgentMode ? (
+                                {isAgentMode ? (
                                     <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 font-sans text-[#52525B]">
                                         <ReactMarkdown>{displayStreamText}</ReactMarkdown>
                                         {displayStreamText.length < targetStreamText.current.length && (
@@ -872,7 +1011,7 @@ export default function AgentPage() {
                             </div>
                         </div>
                         {/* Checklist Sidebar */}
-                        {isAgentMode && (
+                        {!isAgentMode && (
                             <div className="hidden md:flex w-72 shrink-0 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex-col">
                                 <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-2 shrink-0">
                                     <IconCheck className="w-4 h-4 text-black" stroke={2.5} />
@@ -930,30 +1069,42 @@ export default function AgentPage() {
                         </>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
-                        <button onClick={() => setViewerOpen(true)} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
-                            <IconEye className="w-4 h-4" /> View LaTeX
-                        </button>
-                        <button onClick={downloadZip} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-black rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-xl active:scale-95">
-                            <IconPackage className="w-4 h-4" /> Project ZIP
-                        </button>
-                        <button onClick={compilePdf} disabled={isCompiling} className="flex items-center gap-2 px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-5">
-                            {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconFileText className="w-4 h-4" />}
-                            {isCompiling ? "Compiling..." : "Generate PDF"}
-                        </button>
-                    </div>
+                    {/* Actions — conditionally hide LaTeX when in analytics mode */}
+                    {isAnalyticsSession ? (
+                        <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+                            <button onClick={handleNewSession} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
+                                <IconPlus className="w-4 h-4" /> New Analysis
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+                                <button onClick={() => setViewerOpen(true)} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
+                                    <IconEye className="w-4 h-4" /> View LaTeX
+                                </button>
+                                <button onClick={downloadZip} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-black rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-xl active:scale-95">
+                                    <IconPackage className="w-4 h-4" /> Project ZIP
+                                </button>
+                                <button onClick={compilePdf} disabled={isCompiling} className="flex items-center gap-2 px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-5">
+                                    {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconFileText className="w-4 h-4" />}
+                                    {isCompiling ? "Compiling..." : "Generate PDF"}
+                                </button>
+                            </div>
+                        </>
+                    )}
 
                     {/* Edit / Fix */}
-                    <div className="flex items-center justify-center gap-6">
-                        <button onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isEditing ? 'text-black' : 'text-gray-300 hover:text-black'}`}>
-                            <IconPencil className="w-3.5 h-3.5" stroke={2.5} /> Modify
-                        </button>
-                        <div className="w-1 h-1 rounded-full bg-gray-100" />
-                        <button onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isFixingErrors ? 'text-black underline' : 'text-gray-300 hover:text-black'}`}>
-                            <IconBug className="w-3.5 h-3.5" stroke={2.5} /> Fix Errors
-                        </button>
-                    </div>
+                    {!isAnalyticsSession && (
+                        <div className="flex items-center justify-center gap-6">
+                            <button onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isEditing ? 'text-black' : 'text-gray-300 hover:text-black'}`}>
+                                <IconPencil className="w-3.5 h-3.5" stroke={2.5} /> Modify
+                            </button>
+                            <div className="w-1 h-1 rounded-full bg-gray-100" />
+                            <button onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isFixingErrors ? 'text-black underline' : 'text-gray-300 hover:text-black'}`}>
+                                <IconBug className="w-3.5 h-3.5" stroke={2.5} /> Fix Errors
+                            </button>
+                        </div>
+                    )}
 
                     {/* Inputs */}
                     <AnimatePresence>

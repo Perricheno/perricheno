@@ -1,4 +1,4 @@
-export type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study";
+export type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study" | "data_analytics";
 export type Style = "simple" | "medium" | "phd";
 export type Language = "en" | "ru";
 
