@@ -97,23 +97,26 @@ export async function POST(req: NextRequest) {
                 if (!text) text = "[File processing failed]";
             }
         } else if (['txt', 'csv', 'tsv', 'json', 'md', 'xml'].includes(ext || '')) {
-            const raw = buffer.toString('utf-8');
+            // SAFE BUFFER READING: Only read up to 5MB to prevent memory exhaustion on 1M+ row files
+            const MAX_BYTES = 5 * 1024 * 1024; 
+            const safeBuffer = buffer.length > MAX_BYTES ? buffer.subarray(0, MAX_BYTES) : buffer;
+            const raw = safeBuffer.toString('utf-8');
+            
             if (ext === 'csv' || raw.includes(',')) {
-                // Intelligent CSV Schema Extraction
+                // Intelligent CSV Schema Extraction (Limited to 10 rows for massive files)
                 const allLines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
                 const header = allLines[0];
-                const sample = allLines.slice(0, 25);
-                const rowCount = allLines.length;
+                const sample = allLines.slice(0, 10); // EXACTLY 10 ROWS as requested
                 
                 text = `[DATASET SCHEMA DETECTED]\n`;
-                text += `TOTAL ROWS: ${rowCount}\n`;
                 text += `COLUMNS: ${header.split(',').join(' | ')}\n\n`;
-                text += `[STRUCTURAL SAMPLE (First 25 rows)]:\n${sample.join('\n')}\n\n`;
-                text += `[LOGIC INSTRUCTION]: Analyze this dataset. Read it via io.StringIO in your Python code.`;
+                text += `[STRUCTURAL SAMPLE (First 10 rows)]:\n`;
+                text += `===CSV START===\n${sample.join('\n')}\n===CSV END===\n\n`;
+                text += `[LOGIC INSTRUCTION]: Analyze this dataset using the provided get_dataframe() helper.`;
             } else {
                 const lines = raw.split('\n');
-                text = lines.length > 100 
-                    ? `[TRUNCATED TEXT: Showing 100 of ${lines.length} lines]\n\n` + lines.slice(0, 100).join('\n')
+                text = lines.length > 800 
+                    ? `[TRUNCATED TEXT: Showing 800 lines]\n\n` + lines.slice(0, 800).join('\n')
                     : raw;
             }
         } else {

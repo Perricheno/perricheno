@@ -41,40 +41,41 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
     const isDatasetSchema = dataContext.includes('[DATASET SCHEMA DETECTED]');
 
     if (isPython) {
-        return `### MASTER DATA SCIENTIST ROLE: VISUALIZATION ENGINEER
+        return `### DATA SOURCE (THE SOURCE OF TRUTH)
+${dataContext ? `[DATA CONTEXT]\n${dataContext}\n[/DATA CONTEXT]` : '[DATA CONTEXT] Empty [/DATA CONTEXT]'}
+${hasImages ? `- VISION ASSETS: Images of the document are also provided for visual context.` : ''}
+
+### MASTER DATA SCIENTIST ROLE: VISUALIZATION ENGINEER
 You are a Senior Data Scientist at Perricheno. 
-Your task: Create a PREMIUM visualization from the provided context.
+Your task: Create a PREMIUM visualization based strictly on the above Data Context.
 
 ### 1. TARGET GOAL
 - PROJECT: "${topic}"
 - VISUAL: ${chartDesc}
 - INSTRUCTION: "${instruction || 'Visualize the key patterns'}"
 
-### 2. DATA SOURCE INVESTIGATION (THE SOURCE OF TRUTH)
-The data is provided below. You MUST use this data.
-
-[DATA CONTEXT]
-${dataContext}
-[/DATA CONTEXT]
-
-${hasImages ? `- VISION ASSETS: Images of the document are also provided for visual context.` : ''}
+### 2. DATA INVESTIGATION RULES
+You MUST use the data provided at the top of this prompt.
+BEWARE: Do NOT hallucinate metrics from the project title. If the [DATA CONTEXT] is empty, contains only boilerplate, or is insufficient for the requested chart, STOP and return a Python script that raises an Exception with a message in Russian explaining what is missing.
 
 ### 3. TECHNICAL SPECIFICATION (MANDATORY)
-- **DATA LOADING**: You do NOT have local files. The text between [DATA CONTEXT] tags IS your dataset.
+- **DATA LOADING**: You are provided with a globally available robust helper function called \`get_dataframe()\`.
 - **PYTHON SNIPPET**:
   \`\`\`python
   import pandas as pd
-  import io
+  import matplotlib.pyplot as plt
+  import seaborn as sns
   
-  # Load data from the provided context string
-  data_str = """${dataContext.replace(/"/g, "'")}"""
-  df = pd.read_csv(io.StringIO(data_str), sep="|") # or use manual dict if schema is detected
+  # YOU MUST USE THIS HELPER TO LOAD DATA:
+  df = get_dataframe()
+  
+  # Example cleaning:
+  # if df.empty: raise Exception("No data available")
   \`\`\`
-- **Outliers/Cleaning**: Handle NaNs and convert types.
 - **Labels**: Use ${isRu ? 'Russian' : 'English'} for all text in the plot. 
 
 ### 4. EXECUTION PLAN
-- Import: plt, sns, pd, np, io.
+- Import: plt, sns, pd, np.
 - **Result**: The final figure MUST be assigned to the variable \`fig\`.
 - **CRITICAL COMPATIBILITY**: Modern Pandas. NEVER use \`inplace=True\`. Use assignment: \`df = df.fillna(...)\`.
 - **NO EXTERNAL FILES**: Do NOT try to read from "images/" or use "pytesseract".
@@ -82,14 +83,15 @@ ${hasImages ? `- VISION ASSETS: Images of the document are also provided for vis
 OUTPUT: Pure Python code only.`;
     }
 
-    return `### MASTER DATA SCIENTIST ROLE: R VISUALIZATION ENGINEER
+    return `### DATA CONTEXT
+${dataContext ? `${dataContext}\n` : 'Empty'}
+${hasImages ? `VISION DATA: Priority data extracted from images.` : ''}
+
+### MASTER DATA SCIENTIST ROLE: R VISUALIZATION ENGINEER
 You are a Senior R Developer using \`ggplot2\`.
 
 GOAL: Create ${chartDesc} for "${topic}"
 INSTRUCTION: "${instruction}"
-
-${hasImages ? `VISION DATA: Priority data extracted from images.` : ''}
-${dataContext ? `DATA CONTEXT:\n${dataContext}\n` : ''}
 
 ### REQUIREMENTS:
 1. Load data into \`df\`.
@@ -124,10 +126,64 @@ library <- function(package, ...) {
 ` + rawCode;
 }
 
+function wrapPythonCode(rawCode: string, plainTextContext: string) {
+    const base64Data = Buffer.from(plainTextContext || '').toString('base64');
+    
+    // Use regular string literal with concatenation to avoid backtick escaping hell in template literals
+    const pythonHelper = [
+        "import pandas as pd",
+        "import io",
+        "import re",
+        "import base64",
+        "import numpy as np",
+        "",
+        "# Safely injected data string",
+        `data_str = base64.b64decode("${base64Data}").decode('utf-8')`,
+        "",
+        "def get_dataframe():",
+        '    """Advanced robust helper to extract dataframe from context."""',
+        "    if not data_str:",
+        "        return pd.DataFrame()",
+        "    try:",
+        "        csv_match = re.search(r'===CSV START===\\n(.*?)\\n===CSV END===', data_str, re.DOTALL)",
+        "        if csv_match:",
+        "            csv_content = csv_match.group(1)",
+        "        else:",
+        "            csv_content = re.sub(r'```[a-z]*', '', data_str).strip()",
+        "        if not csv_content.strip(): return pd.DataFrame()",
+        "        ",
+        "        df = pd.read_csv(io.StringIO(csv_content), sep=None, engine='python', on_bad_lines='skip')",
+        "        ",
+        "        # Deep cleaning",
+        "        df = df.dropna(axis=1, how='all').dropna(axis=0, how='all')",
+        "        for col in df.columns:",
+        "            if pd.api.types.is_object_dtype(df[col]):",
+        "                try:",
+        "                    # Detect if column is actually numeric with commas",
+        "                    test_col = df[col].astype(str).str.replace(',', '.').str.replace(' ', '')",
+        "                    if pd.to_numeric(test_col, errors='coerce').notna().sum() > len(df) * 0.5:",
+        "                        df[col] = pd.to_numeric(test_col, errors='coerce')",
+        "                except Exception:",
+        "                    pass",
+        "        ",
+        "        df = df.fillna(0)",
+        "        df.columns = df.columns.astype(str).str.strip()",
+        "        return df",
+        "    except Exception as e:",
+        '        print("Dataframe parse error:", e)',
+        "        return pd.DataFrame()",
+        "",
+        "# AI Code below",
+        ""
+    ].join("\\n");
+
+    return pythonHelper + rawCode;
+}
+
 function cleanCode(raw: string): string {
     let c = raw.trim();
-    if (c.startsWith("```")) c = c.replace(/^```(?:r|R|python|py)?\s*\n?/, "");
-    if (c.endsWith("```")) c = c.replace(/\n?```\s*$/, "");
+    if (c.startsWith("\`\`\`")) c = c.replace(/^\`\`\`(?:r|R|python|py)?\s*\n?/, "");
+    if (c.endsWith("\`\`\`")) c = c.replace(/\n?\`\`\`\s*$/, "");
     return c.trim();
 }
 
@@ -167,10 +223,11 @@ export async function POST(req: NextRequest) {
         const textContent = context.text_data || "";
         const hasVisionData = Array.isArray(images) && images.length > 0;
         
-        if (textContent.length < 100 && !hasVisionData) {
-            console.warn(`[Generate] Blocked potential hallucination for ${telegramId} - empty context.`);
+        // Increased threshold from 100 to 400 chars to ensure minimal data for analysis
+        if (textContent.length < 400 && !hasVisionData) {
+            console.warn(`[Generate] Blocked potential hallucination for ${telegramId} - insufficient context (${textContent.length} chars).`);
             return NextResponse.json({ 
-                error: "⚠️ Не удалось извлечь данные из файла или текста. Пожалуйста, убедитесь, что в файле есть текстовый слой или прикрепите более детальное описание данных для анализа." 
+                error: "⚠️ В документе недостаточно данных для анализа. Пожалуйста, убедитесь, что в файле есть количественные показатели или прикрепите детальное описание." 
             }, { status: 422 });
         }
 
@@ -184,16 +241,29 @@ export async function POST(req: NextRequest) {
         if (telegramId) {
             const user = getUserByTelegramId(String(telegramId));
             if (user) {
-                // Consolidation: Try to find existing session with SAME title from the last hour
+                // Check if a completed session with the exact same title exists to cache output
                 const existingSession = getRecentSessionByTitle(user.id, title || "Telegram Visual");
-                if (existingSession) {
+                if (existingSession && existingSession.status === "done" && (existingSession.visuals_json || existingSession.stream_text)) {
+                    console.log(`[Generate] Cache hit for session: ${existingSession.id}`);
+                    // Return instantly without triggering OpenAI or updating the DB
+                    if (chatId && messageId) {
+                        fetch(`${BOT_INTERNAL_URL}/complete-visual`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                            body: JSON.stringify({ chatId, messageId, sessionId: existingSession.id })
+                        }).catch(() => {});
+                    }
+                    return NextResponse.json({ success: true, sessionId: existingSession.id, cached: true });
+                }
+
+                if (existingSession && existingSession.status !== "done") {
                     sessionId = existingSession.id;
-                    console.log(`[Generate] Consolidating into existing session: ${sessionId}`);
+                    console.log(`[Generate] Consolidating into active existing session: ${sessionId}`);
                 }
 
                 // Identify Input Data Length
                 const inputChars = textContent.length;
-                if (inputChars > 0 && !existingSession) { // Only deduct for new sessions to be fair
+                if (inputChars > 0 && (!existingSession || existingSession.status === "done")) { // Only deduct for new sessions
                     const deduction = checkAndDeductUsage(user.id, 'chars', inputChars);
                     if (!deduction.success) {
                         return NextResponse.json({ 
@@ -202,7 +272,7 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
-                if (!existingSession) {
+                if (!existingSession || existingSession.status === "done") {
                     try {
                         createAgentSession({
                             id: sessionId,
@@ -216,7 +286,7 @@ export async function POST(req: NextRequest) {
                         console.error("Failed to create session:", e);
                     }
                 } else {
-                    // Update existing session status
+                    // Update existing active session status
                     updateAgentSession(sessionId, { status: "generating", error_msg: null });
                 }
             }
@@ -232,14 +302,40 @@ export async function POST(req: NextRequest) {
                 
                 const hasImages = Array.isArray(images) && images.length > 0;
 
-                // 1. Push status to bot
-                if (chatId && messageId) {
-                    fetch(`${BOT_INTERNAL_URL}/update-visual`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                        body: JSON.stringify({ chatId, messageId, text: "⏳ Генерация кода...", language })
-                    }).catch(() => {});
-                }
+                // --- Initialize Real-Time Throttled UI State Updater ---
+                const steps = [
+                    { text: "Подготовка контекста", state: "done" },
+                    { text: "Написание кода (ИИ)", state: "running" },
+                    { text: "Генерация графиков", state: "pending" }
+                ];
+                let statusLogs: string[] = [];
+                const addLog = (msg: string) => { statusLogs.push(msg); };
+                addLog(`[system] Данные загружены и подготовлены`);
+                
+                let generatedCode = "";
+                let lastUIUpdate = 0;
+                
+                const pushStatusUpdate = (force = false) => {
+                    const now = Date.now();
+                    if (chatId && messageId && (force || now - lastUIUpdate > 1500)) {
+                        lastUIUpdate = now;
+                        fetch(`${BOT_INTERNAL_URL}/update-visual`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
+                            body: JSON.stringify({ 
+                                chatId, messageId, language,
+                                statusData: {
+                                    steps,
+                                    logs: statusLogs.slice(-3),
+                                    code: generatedCode
+                                }
+                            })
+                        }).catch(() => {});
+                    }
+                };
+
+                // Initial Push
+                pushStatusUpdate(true);
 
                 // 2. Generate code via OpenAI
                 // SIGNATURE: topic, chartType, palette, language, instruction, dataContext, hasImages, runtime
@@ -254,7 +350,7 @@ export async function POST(req: NextRequest) {
                     runtime // 8. runtime
                 );
 
-                console.log(`[Generate] Built prompt for ${runtime}. Mode: ${hasImages ? 'VISION' : 'TEXT'}`);
+                addLog(`[info] Подготовлен промпт (${runtime}). Режим: ${hasImages ? 'VISION' : 'TEXT'}`);
 
                 // Build multimodal content if images are present
                 const userContent: any[] = [{ type: "text", text: prompt }];
@@ -278,8 +374,8 @@ export async function POST(req: NextRequest) {
                         "Authorization": `Bearer ${OPENAI_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: "gpt-5-mini-2025-08-07",
-                        stream: false,
+                        model: "gpt-5-mini-2025-08-07", // Use reliable model
+                        stream: true,
                         messages: [
                             { role: "system", content: systemRole },
                             { role: "user", content: userContent }
@@ -288,58 +384,89 @@ export async function POST(req: NextRequest) {
                     signal: AbortSignal.timeout(120000), 
                 });
 
-                if (!aiRes.ok) {
+                if (!aiRes.ok || !aiRes.body) {
                     const err = await aiRes.text();
-                    console.error("OpenAI Error:", err);
+                    addLog(`[error] Ошибка OpenAI API: HTTP ${aiRes.status}`);
+                    steps[1].state = "error";
+                    pushStatusUpdate(true);
                     updateAgentSession(sessionId, { status: "error", error_msg: `AI Error: ${err.slice(0, 200)}` });
-                    if (chatId && messageId) {
-                        fetch(`${BOT_INTERNAL_URL}/update-visual`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                            body: JSON.stringify({ chatId, messageId, text: `❌ AI Error: ${err.slice(0, 100)}`, language })
-                        }).catch(() => {});
-                    }
                     return;
                 }
 
-                const aiData = await aiRes.json();
-                const rawCode = aiData.choices?.[0]?.message?.content || "";
-                const generatedCode = cleanCode(rawCode);
+                addLog(`[stream] Подключение NodeJS -> OpenAI установлено`);
+                pushStatusUpdate(true);
 
-                if (!generatedCode) {
+                const reader = aiRes.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let rawCode = "";
+                let buffer = "";
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || "";
+                        
+                        for (const line of lines) {
+                            if (line.trim() === "") continue;
+                            if (line.startsWith("data: ") && !line.includes("[DONE]")) {
+                                try {
+                                    const parsed = JSON.parse(line.slice(6));
+                                    const token = parsed.choices?.[0]?.delta?.content;
+                                    if (token) {
+                                        rawCode += token;
+                                        // Update preview code (we don't want massive chunks over UI, just first 1000 chars)
+                                        generatedCode = rawCode;
+                                        pushStatusUpdate(); // Call throttler
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                } finally {
+                    reader.releaseLock();
+                }
+
+                const generatedCodeClean = cleanCode(rawCode);
+
+                if (!generatedCodeClean) {
+                    addLog(`[error] ИИ вернул пустой код без объяснений`);
+                    steps[1].state = "error";
+                    pushStatusUpdate(true);
                     updateAgentSession(sessionId, { status: "error", error_msg: "AI returned empty code" });
                     return;
                 }
 
-                // Save generated code to DB
-                updateAgentSession(sessionId, { stream_text: generatedCode });
+                // AI step is done, move to compilation
+                steps[1].state = "done";
+                steps[2].state = "running";
+                addLog(`[system] Код получен. Начинаю компиляцию в контейнере...`);
+                pushStatusUpdate(true);
 
-                // 3. Push code preview to bot
-                if (chatId && messageId) {
-                    const preview = generatedCode.length > 800 ? generatedCode.slice(0, 800) + "..." : generatedCode;
-                    fetch(`${BOT_INTERNAL_URL}/update-visual`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                        body: JSON.stringify({ chatId, messageId, text: preview, language })
-                    }).catch(() => {});
-                }
+                // Save generated code to DB
+                updateAgentSession(sessionId, { stream_text: generatedCodeClean });
+
 
                 // 4. Compile with auto-retry on failure (self-correction)
                 const MAX_RETRIES = 1;
-                let currentCode = generatedCode;
+                let currentCode = generatedCodeClean;
                 let compileSuccess = false;
                 let lastError = "";
 
                 for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-                    const finalCode = isPython ? currentCode : wrapRCode(currentCode);
+                    const finalCode = isPython ? wrapPythonCode(currentCode, context.text_data || "") : wrapRCode(currentCode);
 
-                    if (chatId && messageId && attempt > 0) {
-                        fetch(`${BOT_INTERNAL_URL}/update-visual`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                            body: JSON.stringify({ chatId, messageId, text: `🔄 Retry ${attempt}/${MAX_RETRIES} — исправляю ошибку...`, language })
-                        }).catch(() => {});
+                    if (attempt > 0) {
+                        steps[2].text = `Исправление ошибки (попытка ${attempt}/${MAX_RETRIES})`;
+                        addLog(`[error] Ошибка выполнения: запускаю агента-программиста (ретрай)`);
+                        pushStatusUpdate(true);
                     }
+
+                    addLog(`[compile] Отправлен запрос на сервер (${runtime})`);
+                    pushStatusUpdate(true);
 
                     const compileRes = await fetch(`${compilerUrl}/compile`, {
                         method: 'POST',
@@ -350,6 +477,7 @@ export async function POST(req: NextRequest) {
 
                     if (!compileRes.ok) {
                         lastError = `${runtime} compiler server error (HTTP ${compileRes.status})`;
+                        addLog(`[error] Сервер компиляции недоступен`);
                         continue;
                     }
 
@@ -379,6 +507,9 @@ export async function POST(req: NextRequest) {
                             }
                         }
                         compileSuccess = true;
+                        steps[2].state = "done";
+                        addLog(`[success] Изображение успешно сгенерировано!`);
+                        pushStatusUpdate(true);
                         break;
                     }
 
@@ -388,6 +519,9 @@ export async function POST(req: NextRequest) {
 
                     if (attempt < MAX_RETRIES) {
                         // Ask AI to fix the code
+                        addLog(`[stream] Ожидание исправления кода...`);
+                        pushStatusUpdate(true);
+
                         const fixRes = await fetch("https://api.openai.com/v1/chat/completions", {
                             method: "POST",
                             headers: {
@@ -396,11 +530,11 @@ export async function POST(req: NextRequest) {
                             },
                             body: JSON.stringify({
                                 model: "gpt-5-mini-2025-08-07",
-                                stream: false,
+                                stream: false, // For quick error fix, streams are slow and unnecessary
                                 messages: [
                                     { role: "system", content: `You are an expert ${runtime} debugger. Fix the code below so it runs without errors. Output ONLY the fixed ${runtime} code. No markdown fences. No commentary.` },
                                     { role: "user", content: `This ${runtime} code failed with the following error:\n\n--- ERROR ---\n${lastError}\n--- END ERROR ---\n\n--- CODE ---\n${currentCode}\n--- END CODE ---\n\nFix the code and return ONLY the corrected ${runtime} code.` }
-                                ],
+                                ]
                             }),
                             signal: AbortSignal.timeout(60000),
                         });
@@ -412,16 +546,7 @@ export async function POST(req: NextRequest) {
                             if (fixedCode && fixedCode.length > 20) {
                                 currentCode = fixedCode;
                                 updateAgentSession(sessionId, { stream_text: currentCode });
-
-                                // Push fixed code preview
-                                if (chatId && messageId) {
-                                    const preview = currentCode.length > 800 ? currentCode.slice(0, 800) + "..." : currentCode;
-                                    fetch(`${BOT_INTERNAL_URL}/update-visual`, {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
-                                        body: JSON.stringify({ chatId, messageId, text: preview, language })
-                                    }).catch(() => {});
-                                }
+                                generatedCode = currentCode;
                             }
                         }
                     }
@@ -429,6 +554,9 @@ export async function POST(req: NextRequest) {
 
                 // If all attempts failed
                 if (!compileSuccess) {
+                    steps[2].state = "error";
+                    addLog(`[error] Критическая ошибка генерации`);
+                    pushStatusUpdate(true);
                     updateAgentSession(sessionId, {
                         status: "error",
                         stream_text: currentCode,

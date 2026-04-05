@@ -132,6 +132,7 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
         // ── 1. Download and extract text from files ──
         if (s.files && s.files.length > 0) {
+            await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `🔍 *Шаг 1/3: Извлечение данных...*\n\nОбработка документов: ${s.files.length} шт.`, { parse_mode: "Markdown" }).catch(() => {});
             for (const file of s.files) {
                 try {
                     const fileLink = await ctx.telegram.getFileLink(file.fileId);
@@ -143,7 +144,6 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     
                     const pdfBuffer = await res.arrayBuffer();
                     
-                    // Always try extraction via site API
                     const extractRes = await fetch(`${SITE_URL}/api/internal/bot/extract-text`, {
                         method: "POST",
                         headers: { 
@@ -177,6 +177,7 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
 
         // ── 2. Download direct photos ──
         if (s.images && s.images.length > 0) {
+            await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `🧠 *Шаг 2/3: Обработка изображений...*\n\nПодготовка визуального контекста.`, { parse_mode: "Markdown" }).catch(() => {});
             for (const imgObj of s.images) {
                 if (imgObj.fileId && !imgObj.base64) {
                     try {
@@ -204,20 +205,11 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
         for (let i = 0; i < types.length; i++) {
             const currentType = types[i];
             
-            // API 9.5 Upgrade: Use sendMessageDraft for high-speed, rate-limit-free progress updates
-            await (ctx.telegram as any).callApi('sendMessageDraft', {
-                chat_id: ctx.chat.id,
-                message_id: statusMsg.message_id, // Draft updates the specific "anchor" message
-                text: `🚀 *Генерация (${i + 1}/${types.length}): ${currentType.toUpperCase()}*\n\n📊 Контент: ${visionImages.length} изображений, ${textParts.length} блоков текста.\n\n🕒 Пожалуйста, подождите...`,
-                parse_mode: "Markdown"
-            }).catch(async (e: any) => {
-                // Fallback to classic editMessageText if the server doesn't support the new draft method yet
-                console.warn("sendMessageDraft failed, falling back to editMessageText", e.message);
-                await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined,
-                    `🚀 *Генерация (${i + 1}/${types.length}): ${currentType.toUpperCase()}*\n\n🕒 Обработка...`,
-                    { parse_mode: "Markdown" }
-                ).catch(() => {});
-            });
+            const progressText = `✨ *Шаг 3/3: Генерация (${i + 1}/${types.length})*\n\n📊 Тип: *${currentType.toUpperCase()}*\n🛠 Среда: \`${lang.toUpperCase()}\`\n\n🕒 Проектирую визуализацию...`;
+            
+            await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, progressText, { 
+                parse_mode: "Markdown" 
+            }).catch(() => {});
 
             const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
                 method: "POST",
@@ -232,14 +224,16 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
                     chatId: ctx.chat.id,
                     messageId: statusMsg.message_id,
                     images: visionImages,
-                    attachedFiles: attachedFiles // Passes actual data files to compiler
+                    attachedFiles: attachedFiles 
                 }),
             });
 
             if (!genRes.ok) {
-                const errBody = await genRes.text().catch(() => 'Unknown error');
+                const errBody = await genRes.json().catch(() => ({ error: 'Unknown server error' })) as any;
                 console.error(`Error for type ${currentType}:`, errBody);
-                // Continue with next instead of failing entire session if one fails?
+                if (errBody.error) {
+                    await ctx.reply(`❌ *${currentType.toUpperCase()}:* ${errBody.error}`, { parse_mode: "Markdown" });
+                }
             }
         }
 

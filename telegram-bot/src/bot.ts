@@ -320,12 +320,44 @@ async function main() {
                     const path = url.replace("/bot-internal/", "");
                     
                     if (path === "update-visual") {
-                        const { chatId, messageId, text, language } = data;
-                        const displayCode = text.length > 800 ? text.slice(0, 800) + "..." : text;
-                        await bot.telegram.editMessageText(chatId, messageId, undefined, 
-                            `⚙️ *Генерация кода...*\n\n\`\`\`${language}\n${displayCode}\n\`\`\`\n\n🕒 Пожалуйста, подождите...`, 
-                            { parse_mode: "Markdown" }
-                        ).catch(() => {});
+                        const { chatId, messageId, text, language, statusData } = data;
+                        
+                        let draftText = "";
+                        if (statusData) {
+                            // Render Checklist
+                            let checklist = "*⚡ Статус Генерации:*\n";
+                            for (const step of statusData.steps || []) {
+                                if (step.state === "done") checklist += `✅ ${step.text}\n`;
+                                else if (step.state === "running") checklist += `🔄 ${step.text}...\n`;
+                                else checklist += `⏳ ${step.text}\n`;
+                            }
+                            
+                            // Render Logs
+                            let logBlock = "\n*Логи сервера:*\n";
+                            for (const log of statusData.logs || []) {
+                                logBlock += `\`> ${log}\`\n`;
+                            }
+
+                            // Render Code
+                            const codeBlock = statusData.code || "";
+                            const displayCode = codeBlock.length > 500 ? "...\n" + codeBlock.slice(-500) : codeBlock;
+                            
+                            draftText = `${checklist}${logBlock}\n*Код:*\n\`\`\`${language}\n${displayCode || "Ожидание..."}\n\`\`\``;
+                        } else {
+                            const displayCode = text.length > 800 ? text.slice(0, 800) + "..." : text;
+                            draftText = `⚙️ *Генерация кода...*\n\n\`\`\`${language}\n${displayCode}\n\`\`\`\n\n🕒 Пожалуйста, подождите...`;
+                        }
+
+                        // Применяем sendMessageDraft в качестве основного метода потоковой передачи (API 9.5)
+                        // editMessageText остается как фолбек (fallback) для старых клиентов/ограничений
+                        await bot.telegram.callApi("sendMessageDraft", {
+                            chat_id: chatId,
+                            text: draftText,
+                            parse_mode: "Markdown"
+                        }).catch(async (err: any) => {
+                            // Если sendMessageDraft не поддерживается, падаем на классический editMessageText
+                            await bot.telegram.editMessageText(chatId, messageId, undefined, draftText, { parse_mode: "Markdown" }).catch(() => {});
+                        });
                     }
 
                     if (path === "send-message") {

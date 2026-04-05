@@ -9,6 +9,9 @@ export async function handleHistory(ctx: any, page: number = 1) {
     const tgUser = ctx.from;
     
     try {
+        // Store current page in session to return to it after deletion
+        if (ctx.session) ctx.session.lastHistoryPage = page;
+
         const res = await fetch(`${SITE_URL}/api/internal/bot/history`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET! },
@@ -160,8 +163,9 @@ export async function handleDeleteSession(ctx: any, sessionId: string) {
 
         if (res.ok) {
             await ctx.answerCbQuery("🗑 Сессия успешно удалена!");
-            // Return to history page 1
-            await handleHistory(ctx, 1);
+            // Return to the same page if possible, otherwise page 1
+            const targetPage = ctx.session?.lastHistoryPage || 1;
+            await handleHistory(ctx, targetPage);
         } else {
             await ctx.answerCbQuery("❌ Ошибка при удалении.");
         }

@@ -3,18 +3,20 @@ import { InlineKeyboardButton } from "telegraf/types";
 
 export function getMainMenu() {
     return Markup.inlineKeyboard([
-        [Markup.button.callback("📊 Визуализация", "tool_visual")],
-        [Markup.button.callback("🚀 Компиляция", "tool_compile")],
+        [
+            Markup.button.callback("📊 Аналитика", "tool_visual"),
+            Markup.button.callback("💻 Компиляция", "tool_compile")
+        ],
         [
             Markup.button.callback("📂 История", "history_1"),
-            Markup.button.callback("⌛ Задачи", "tasks_active")
+            Markup.button.callback("⚡ Задачи", "tasks_active")
         ],
         [
-            Markup.button.callback("👤 Профиль", "me_info"),
-            Markup.button.callback("👥 Рефералы", "referral_main")
+            Markup.button.callback("💳 Баланс", "billing_info"),
+            Markup.button.callback("👤 Профиль", "me_info")
         ],
         [
-            Markup.button.callback("💳 Биллинг", "billing_info"),
+            Markup.button.callback("👥 Рефералы", "referral_main"),
             Markup.button.callback("⚙️ Настройки", "settings_main")
         ]
     ]);
@@ -22,15 +24,17 @@ export function getMainMenu() {
 
 
 export function getHistoryMenu(chats: any[], page: number, totalPages: number) {
-    const buttons = chats.map(c => [Markup.button.callback(c.title || "Без названия", `history_view_${c.id}`)]);
+    const buttons = chats.map(c => [
+        Markup.button.callback(`📊 ${c.title || "Без названия"}`, `history_view_${c.id}`)
+    ]);
     
     const nav = [];
-    if (page > 1) nav.push(Markup.button.callback("«", `history_${page - 1}`));
-    nav.push(Markup.button.callback(`${page} / ${totalPages}`, "noop"));
-    if (page < totalPages) nav.push(Markup.button.callback("»", `history_${page + 1}`));
+    if (page > 1) nav.push(Markup.button.callback("⬅️", `history_${page - 1}`));
+    nav.push(Markup.button.callback(`стр. ${page} из ${totalPages}`, "noop"));
+    if (page < totalPages) nav.push(Markup.button.callback("➡️", `history_${page + 1}`));
     
-    buttons.push(nav);
-    buttons.push([Markup.button.callback("🏠 В главное меню", "main_menu")]);
+    if (nav.length > 0) buttons.push(nav);
+    buttons.push([Markup.button.callback("🏠 Главное меню", "main_menu")]);
     
     return Markup.inlineKeyboard(buttons);
 }
@@ -38,23 +42,23 @@ export function getHistoryMenu(chats: any[], page: number, totalPages: number) {
 export function getSessionDetailKeyboard(sessionId: string, shareId?: string) {
     const buttons: any[][] = [
         [
-            Markup.button.callback("📄 PDF", `dl_pdf_${sessionId}`),
-            Markup.button.callback("📦 ZIP", `dl_zip_${sessionId}`)
+            Markup.button.callback("📄 Отчет PDF", `dl_pdf_${sessionId}`),
+            Markup.button.callback("📦 Данные ZIP", `dl_zip_${sessionId}`)
         ],
         [
-            Markup.button.callback("🖼 Фото", `view_images_${sessionId}`),
-            Markup.button.callback("💻 Код", `dl_code_${sessionId}`)
+            Markup.button.callback("🖼 Изображения", `view_images_${sessionId}`),
+            Markup.button.callback("💻 Исходный код", `dl_code_${sessionId}`)
         ]
     ];
 
     if (shareId) {
         const domain = process.env.WEBHOOK_DOMAIN || "perricheno.ru";
         const protocol = domain.includes("localhost") ? "http" : "https";
-        buttons.push([Markup.button.url("🔗 Открыть на сайте", `${protocol}://${domain}/agent/shared/${shareId}`)]);
+        buttons.push([Markup.button.url("🌐 Посмотреть на Perricheno Site", `${protocol}://${domain}/agent/shared/${shareId}`)]);
     }
 
     buttons.push([
-        Markup.button.callback("« Назад к списку", "history_1"),
+        Markup.button.callback("« К списку", "history_1"),
         Markup.button.callback("🗑 Удалить", `history_delete_${sessionId}`)
     ]);
     
@@ -70,9 +74,9 @@ export function getVisualSuggestionsKeyboard(selectedTypes: string[] = []) {
     ];
     
     const buttons = [];
-    for (let i = 0; i < types.length; i += 3) {
+    for (let i = 0; i < types.length; i += 2) { // Changed to 2 for better grid on mobile
         const row = [];
-        for (let j = 0; j < 3; j++) {
+        for (let j = 0; j < 2; j++) {
             const type = types[i + j];
             if (type) {
                 const isSelected = selectedTypes.includes(type.toLowerCase());
@@ -83,21 +87,21 @@ export function getVisualSuggestionsKeyboard(selectedTypes: string[] = []) {
     }
     
     const isAuto = selectedTypes.includes('auto');
-    buttons.push([Markup.button.callback(`${isAuto ? '✅ ' : '🤖 '}Авто-выбор (ИИ)`, "toggle_type_auto")]);
+    buttons.push([Markup.button.callback(`${isAuto ? '✅ ' : '🤖 '}Авто-выбор ИИ`, "toggle_type_auto")]);
     
     if (selectedTypes.length > 0) {
-        buttons.push([Markup.button.callback(`🚀 Сгенерировать (${selectedTypes.length})`, "visual_generate_start")]);
+        buttons.push([Markup.button.callback(`🚀 Создать визуализации (${selectedTypes.length})`, "visual_generate_start")]);
     }
     
-    buttons.push([Markup.button.callback("« Назад", "main_menu")]);
+    buttons.push([Markup.button.callback("« Главное меню", "main_menu")]);
     
     return Markup.inlineKeyboard(buttons);
 }
 
 export function getVisualActionKeyboard() {
     return Markup.inlineKeyboard([
-        [Markup.button.callback("🚀 Сгенерировать", "visual_generate")],
-        [Markup.button.callback("❌ Очистить и заново", "visual_reset")],
+        [Markup.button.callback("⚡ Сгенерировать", "visual_generate")],
+        [Markup.button.callback("🧹 Сбросить контекст", "visual_reset")],
         [Markup.button.callback("« Отмена", "main_menu")]
     ]);
 }
