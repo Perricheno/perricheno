@@ -206,6 +206,16 @@ try {
     `);
 } catch (e) {}
 
+// Idempotency: Processed Payments to prevent replay attacks
+try {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS processed_payments (
+            order_id TEXT PRIMARY KEY,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+} catch (e) {}
+
 try {
     db.exec(`
         CREATE TABLE IF NOT EXISTS usage_logs (
@@ -474,6 +484,16 @@ export function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | '
     if (amount > 0) {
         db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Purchased resource pack", `+${amount.toLocaleString()} ${typeName}`, 1);
     }
+}
+
+export function isPaymentProcessed(orderId: string): boolean {
+    const stmt = db.prepare('SELECT 1 FROM processed_payments WHERE order_id = ?');
+    return !!stmt.get(orderId);
+}
+
+export function markPaymentProcessed(orderId: string): void {
+    const stmt = db.prepare('INSERT INTO processed_payments (order_id) VALUES (?)');
+    stmt.run(orderId);
 }
 
 // --- Tasks ---

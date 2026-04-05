@@ -51,10 +51,24 @@ bot.action(/^toggle_type_(.+)$/, ctx => handleVisualToggleType(ctx));
 bot.action("main_menu", async (ctx: any) => {
     ctx.session.step = 'idle';
     await ctx.answerCbQuery();
-    await ctx.editMessageText(`🏠 *Главное меню*\n\nВыберите нужный инструмент:`, {
-        parse_mode: "Markdown",
-        ...getMainMenu()
-    });
+    
+    const text = `🏠 *Главное меню*\n\nВыберите нужный инструмент:`;
+    const keyboard = getMainMenu();
+
+    try {
+        // Try editing existing message
+        await ctx.editMessageText(text, {
+            parse_mode: "Markdown",
+            ...keyboard
+        });
+    } catch (err) {
+        // If it fails (e.g. current message is a photo), delete and send new
+        try { await ctx.deleteMessage().catch(() => {}); } catch(e) {}
+        await ctx.reply(text, {
+            parse_mode: "Markdown",
+            ...keyboard
+        });
+    }
 });
 
 bot.action("tool_visual", async (ctx: any) => {
@@ -120,10 +134,15 @@ bot.action(/^toggle_type_(.+)$/, async (ctx: any) => {
 bot.action("visual_generate_start", async (ctx: any) => {
     await ctx.answerCbQuery();
     const { getLangSelectionKeyboard } = await import("./keyboards/menu");
-    await ctx.editMessageText(`🖥 *Выбор платформы выполнения*\n\nВыберите язык, на котором ИИ будет генерировать код визуализации:`, {
-        parse_mode: "Markdown",
-        ...getLangSelectionKeyboard()
-    });
+    const text = `🖥 *Выбор платформы выполнения*\n\nВыберите язык, на котором ИИ будет генерировать код визуализации:`;
+    const keyboard = getLangSelectionKeyboard();
+
+    try {
+        await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard });
+    } catch (e) {
+        try { await ctx.deleteMessage().catch(() => {}); } catch(de) {}
+        await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
+    }
 });
 
 bot.action("visual_generate", ctx => handleVisualGenerateRequest(ctx));
@@ -141,11 +160,13 @@ bot.action("settings_main", async (ctx: any) => {
     await ctx.answerCbQuery();
     const text = `⚙️ *Настройки*\n\nЗдесь вы можете управлять вашим аккаунтом и безопасностью.`;
     const { getSettingsMenu } = await import("./keyboards/menu");
-    if (ctx.callbackQuery) {
-        await ctx.editMessageText(text, {
-            parse_mode: "Markdown",
-            ...getSettingsMenu()
-        }).catch(() => {});
+    const keyboard = getSettingsMenu();
+
+    try {
+        await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard });
+    } catch (e) {
+        try { await ctx.deleteMessage().catch(() => {}); } catch(de) {}
+        await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
     }
 });
 
@@ -160,11 +181,14 @@ bot.action("security_main", async (ctx: any) => {
         
         const countText = sessions.length === 1 ? "_У вас только одна активная сессия (вы)._" : `_Активных сессий: ${sessions.length}_`;
         const text = `🛡 *Безопасность и Сессии*\n\nЗдесь отображаются все устройства, имеющие доступ к вашему аккаунту Perricheno.\n\n${countText}`;
-        
-        await ctx.editMessageText(text, {
-            parse_mode: "Markdown",
-            ...getSecurityMenu(sessions || [])
-        }).catch(() => {});
+        const keyboard = getSecurityMenu(sessions || []);
+
+        try {
+            await ctx.editMessageText(text, { parse_mode: "Markdown", ...keyboard });
+        } catch (e) {
+            try { await ctx.deleteMessage().catch(() => {}); } catch(de) {}
+            await ctx.reply(text, { parse_mode: "Markdown", ...keyboard });
+        }
     } catch (e) {
         await ctx.reply("⚠️ Ошибка при загрузке сессий.");
     }

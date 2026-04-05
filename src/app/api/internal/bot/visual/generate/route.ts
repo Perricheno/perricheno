@@ -75,7 +75,8 @@ ${hasImages ? `- VISION ASSETS: Images of the document are also provided for vis
 
 ### 4. EXECUTION PLAN
 - Import: plt, sns, pd, np, io.
-- Result: The final figure MUST be assigned to the variable \`fig\`.
+- **Result**: The final figure MUST be assigned to the variable \`fig\`.
+- **CRITICAL COMPATIBILITY**: Modern Pandas. NEVER use \`inplace=True\`. Use assignment: \`df = df.fillna(...)\`.
 - **NO EXTERNAL FILES**: Do NOT try to read from "images/" or use "pytesseract".
 
 OUTPUT: Pure Python code only.`;

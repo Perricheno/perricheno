@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addPurchasedTokens } from '@/lib/db';
+import { addPurchasedTokens, isPaymentProcessed, markPaymentProcessed } from '@/lib/db';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET; // This is used to verify signatures
@@ -38,6 +38,12 @@ export async function POST(req: Request) {
             return new NextResponse('OK', { status: 200 });
         }
 
+        // --- IDEMPOTENCY CHECK ---
+        if (orderId && isPaymentProcessed(orderId)) {
+            console.log(`ℹ️ Webhook: Skipping already processed order ${orderId}`);
+            return new NextResponse('Already processed', { status: 200 });
+        }
+
         // CryptoCloud v2 Signature Verification: MD5(status_invoice + order_id + amount_crypto + currency_crypto + secret)
         // Wait, different v2 APIs use slightly different signatures. Let's do a basic check since they might pass status.
         if (CRYPTOCLOUD_SECRET && receivedSign) {
@@ -49,8 +55,8 @@ export async function POST(req: Request) {
             // but we absolutely should stringently verify it.
             if (expectedSign !== receivedSign) {
                 console.error(`🚨 SECURITY WARNING: Webhook signature mismatch! Expected ${expectedSign}, got ${receivedSign}.`);
-                // For strict security, uncomment the line below in production once signature format is 100% matched with your CryptoCloud settings:
-                // return new NextResponse('Invalid signature', { status: 403 });
+                // Strict security: reject requests with invalid signatures
+                return new NextResponse('Invalid signature', { status: 403 });
             }
         } else if (CRYPTOCLOUD_SECRET && !receivedSign) {
             console.error(`🚨 SECURITY WARNING: Webhook received without signature but secret is configured!`);
@@ -77,6 +83,9 @@ export async function POST(req: Request) {
         // Add tokens
         if (pack.chars > 0) addPurchasedTokens(userId, 'chars', pack.chars);
         if (pack.reports > 0) addPurchasedTokens(userId, 'reports', pack.reports);
+
+        // Mark as processed to prevent double-crediting
+        markPaymentProcessed(orderId);
 
         const packNames: Record<string, string> = {
             'starter_chars': '⚡ Starter Pack (100K)',

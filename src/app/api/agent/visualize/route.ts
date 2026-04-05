@@ -55,6 +55,7 @@ function buildVisualizationPrompt(topic: string, chartType: string, palette: str
         7. The script must be completely self-contained.
         8. DO NOT include \`plt.show()\`. 
         9. The figure MUST be stored in the global \`fig\` variable or just use the functional plt interface. The compiler will capture the output.
+        10. **CRITICAL**: Modern Pandas compatibility. NEVER use \`inplace=True\` (e.g. in \`fillna\`, \`dropna\`, \`replace\`). This is deprecated and will fail. Always use assignment: \`df = df.fillna(...)\`.
         
         OUTPUT: Only output pure Python code. NO markdown fences (\`\`\`python). NO commentary.`;
     }
