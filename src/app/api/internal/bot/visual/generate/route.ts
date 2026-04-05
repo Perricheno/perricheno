@@ -501,11 +501,12 @@ export async function POST(req: NextRequest) {
                             visuals_json: visualEntry,
                         });
 
-                        // Deduct usage
+                        // Deduct usage: INPUT (prompt + context) + OUTPUT (code)
                         if (telegramId) {
                             const user = getUserByTelegramId(String(telegramId));
                             if (user) {
-                                checkAndDeductUsage(user.id, 'chars', currentCode.length);
+                                const inputChars = prompt.length + (context.text_data?.length || 0);
+                                checkAndDeductUsage(user.id, 'chars', inputChars + currentCode.length);
                                 checkAndDeductUsage(user.id, 'visuals', 1);
                             }
                         }

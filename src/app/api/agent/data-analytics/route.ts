@@ -18,15 +18,25 @@ function buildVisualizationPrompt(prompt: string, dataContext: string, chartType
     const isPython = runtime === 'Python';
     const hasRealData = dataContext && dataContext.length > 50;
     
+    // Check if data looks like garbage binary
+    const isGarbageData = dataContext && /[\x00-\x08\x0E-\x1F]{5,}|(%[0-9A-Fa-f]{2}){10,}/.test(dataContext.slice(0, 500));
+    
+    const dataGuard = `
+**DATA QUALITY CHECK** (MANDATORY):
+- If the provided context below looks like binary garbage, garbled text, base64, hex, or unreadable characters, DO NOT attempt to parse it.
+- In that case, create a simple visualization with REALISTIC synthetic data that matches the user's topic/request.
+- NEVER try to parse file paths, filenames, or metadata markers like "[Failed" as actual data.
+- If context is plain readable text (not tabular), extract key facts/numbers and build a dataframe manually.`;
+    
     if (isPython) {
         return `You are a strict Data Analytics and Visualization Agent. Generate a SINGLE, complete, self-contained Python script to create a **${chartType.replace("_", " ").toUpperCase()}** chart based on the user's request.
         
         USER REQUEST: "${prompt}"
-        
-        ${dataContext ? `USER PROVIDED DATASET/CONTEXT:\n${dataContext}\n` : ''}
+        ${dataGuard}
+        ${dataContext && !isGarbageData ? `USER PROVIDED DATASET/CONTEXT:\n${dataContext}\n` : ''}
         
         REQUIREMENTS:
-        ${hasRealData 
+        ${hasRealData && !isGarbageData
             ? `1. **CRITICAL**: The user has provided REAL DATA/CONTEXT above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization or analysis. DO NOT invent synthetic data. If the data is text, construct a Pandas dataframe manually containing the relevant facts.`
             : `1. Create REALISTIC synthetic data matching the topic using Pandas if needed.`
         }
@@ -43,14 +53,21 @@ function buildVisualizationPrompt(prompt: string, dataContext: string, chartType
         OUTPUT: ONLY pure Python code. NO markdown fences (\`\`\`python). NO commentary at the start or end.`;
     }
 
+    const dataGuardR = `
+**DATA QUALITY CHECK** (MANDATORY):
+- If the provided context below looks like binary garbage, garbled text, base64, hex, or unreadable characters, DO NOT attempt to parse it.
+- In that case, create a simple visualization with REALISTIC synthetic data.
+- NEVER try to parse filenames or metadata markers as actual data.
+- If context is plain readable text (not tabular), extract key facts/numbers and build a data.frame manually.`;
+
     return `You are a strict Data Analytics and Visualization Agent. Generate a SINGLE, complete, self-contained R script to create a **${chartType.replace("_", " ").toUpperCase()}** chart based on the following request.
 
 USER REQUEST: "${prompt}"
-
-${dataContext ? `USER PROVIDED DATASET/CONTEXT:\n${dataContext}\n` : ''}
+${dataGuardR}
+${dataContext && !isGarbageData ? `USER PROVIDED DATASET/CONTEXT:\n${dataContext}\n` : ''}
 
 REQUIREMENTS:
-${hasRealData 
+${hasRealData && !isGarbageData
     ? `1. **CRITICAL**: The user has provided REAL DATA/CONTEXT above. You MUST extract, parse, and use THIS ACTUAL DATA in your visualization. DO NOT invent synthetic data.`
     : `1. Create REALISTIC synthetic data matching the topic if necessary.`
 }
@@ -130,8 +147,9 @@ No markdown fences, no extra text.`;
     let rawAnswer = aiData.choices[0].message.content.trim();
     if (rawAnswer.startsWith("```")) rawAnswer = rawAnswer.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
     
-    // Deduct small amount for suggestion call
-    checkAndDeductUsage(userId, 'chars', rawAnswer.length);
+    // Deduct INPUT (system prompt + user message) + OUTPUT (response)
+    const inputChars = systemPrompt.length + prompt.length + combinedContext.length;
+    checkAndDeductUsage(userId, 'chars', inputChars + rawAnswer.length);
 
     try {
         const parsed = JSON.parse(rawAnswer);
@@ -265,8 +283,9 @@ async function handleGenerate(userId: number, body: any) {
                             throw new Error(compileResult.log || 'Compilation failed');
                         }
 
-                        // Deduct usage only on success
-                        checkAndDeductUsage(userId, 'chars', cleanedCode.length);
+                        // Deduct usage: INPUT (prompt) + OUTPUT (code)
+                        const inputChars = aiPrompt.length;
+                        checkAndDeductUsage(userId, 'chars', inputChars + cleanedCode.length);
                         checkAndDeductUsage(userId, 'visuals', 1);
 
                         sendEvent('status', { 

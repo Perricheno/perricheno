@@ -373,7 +373,7 @@ export function deleteUser(id: number) {
 // --- Strict Usage Tracking ---
 
 export const LIMITS = {
-    free: { daily_chars: 100000, weekly_chars: 500000, reports: 1 }
+    free: { daily_chars: 50000, weekly_chars: 200000, reports: 1 }
 };
 
 function getWeekNumber(d: Date): string {

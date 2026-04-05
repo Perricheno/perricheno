@@ -216,8 +216,9 @@ library <- function(package, ...) {
                 }, { status: 500 });
             }
 
-            // Visuals are unlimited overall, but generating code costs characters
-            checkAndDeductUsage(userId, 'chars', generatedCode.length);
+            // Deduct INPUT (prompt) + OUTPUT (code) — every generation must count
+            const inputChars = prompt.length;
+            checkAndDeductUsage(userId, 'chars', inputChars + generatedCode.length);
             checkAndDeductUsage(userId, 'visuals', 1);
 
             return NextResponse.json({
