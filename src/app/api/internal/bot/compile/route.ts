@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { code, type = 'python', telegramId, files = [] } = await req.json();
+        const { code, type = 'python', telegramId, files = [] } = await req.json() as { code: string, type?: string, telegramId: string | number, files?: any[] };
         
         if (!code || !telegramId) {
             return NextResponse.json({ error: "Code and Telegram ID are required" }, { status: 400 });
@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
         const result = await compileRes.json();
         return NextResponse.json(result);
 
-    } catch (err: any) {
+    } catch (err) {
         console.error("[Bot Internal Compile] Error:", err);
-        return NextResponse.json({ error: err.message || "Internal compilation failed" }, { status: 500 });
+        return NextResponse.json({ error: err instanceof Error ? err.message : "Internal compilation failed" }, { status: 500 });
     }
 }

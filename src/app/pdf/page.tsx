@@ -14,10 +14,22 @@ import {
 import { useToast } from "@/components/ToastContext";
 
 type ToolType = 
-    | "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img" | "pdf-to-html" | "pdf-to-xml" | "pdf-to-pdfa"
-    | "merge-pdfs" | "split-pages" | "remove-pages" | "rotate-pdf" | "organize-pdf" | "scale-pages" | "crop-pdf"
-    | "add-password" | "remove-password" | "add-watermark" | "sanitize-pdf"
-    | "compress-pdf" | "ocr-pdf" | "repair-pdf" | "flatten-pdf" | "remove-blanks" | "extract-images";
+    // Convert
+    | "file-to-pdf" | "img-to-pdf" | "pdf-to-word" | "pdf-to-ppt" | "pdf-to-text" | "pdf-to-img" | "pdf-to-html" | "pdf-to-xml" | "pdf-to-pdfa" | "html-to-pdf" | "markdown-to-pdf" | "url-to-pdf" | "vector-to-pdf" | "text-editor-to-pdf" | "svg-to-pdf" | "pdf-to-xlsx" | "pdf-to-video" | "pdf-to-vector" | "pdf-to-text-editor" | "pdf-to-epub" | "pdf-to-csv" | "pdf-to-cbz" | "pdf-to-cbr" | "eml-to-pdf" | "ebook-to-pdf" | "cbz-to-pdf" | "cbr-to-pdf"
+    // Edit / General
+    | "merge-pdfs" | "split-pages" | "remove-pages" | "rotate-pdf" | "organize-pdf" | "scale-pages" | "crop-pdf" | "split-pdf-by-sections" | "split-pdf-by-chapters" | "split-for-poster-print" | "split-by-size-or-count" | "remove-image-pdf" | "pdf-to-single-page" | "overlay-pdfs" | "multi-page-layout" | "extract-bookmarks" | "edit-table-of-contents" | "booklet-imposition"
+    // Security
+    | "add-password" | "remove-password" | "add-watermark" | "sanitize-pdf" | "verify-pdf" | "validate-signature" | "remove-cert-sign" | "redact-pdf" | "get-info-on-pdf" | "cert-sign" | "auto-redact"
+    // Misc
+    | "compress-pdf" | "ocr-pdf" | "repair-pdf" | "flatten-pdf" | "remove-blanks" | "extract-images" | "update-metadata" | "unlock-pdf-forms" | "show-javascript" | "scanner-effect" | "replace-invert-pdf" | "rename-attachment" | "list-attachments" | "extract-image-scans" | "extract-attachments" | "delete-attachment" | "decompress-pdf" | "auto-split-pdf" | "auto-rename" | "add-stamp" | "add-page-numbers" | "add-image" | "add-attachments"
+    // Filter
+    | "filter-page-size" | "filter-page-rotation" | "filter-page-count" | "filter-file-size" | "filter-contains-text" | "filter-contains-image"
+    // Analysis
+    | "security-info" | "page-dimensions" | "page-count" | "form-fields" | "font-info" | "document-properties" | "basic-info" | "annotation-info"
+    // Form
+    | "modify-fields" | "fill-form" | "inspect-fields" | "fields-with-coordinates" | "extract-xlsx-form" | "extract-csv-form" | "delete-fields"
+    // Pipeline
+    | "import-database" | "handle-pipeline";
 
 interface ToolDef {
     id: ToolType;
@@ -26,7 +38,7 @@ interface ToolDef {
     icon: any;
     accept: string;
     outputExt: string;
-    category: "Convert" | "Edit" | "Security" | "Misc";
+    category: "Convert" | "Edit" | "Security" | "Misc" | "Form" | "Analysis" | "Filter" | "Pipeline";
 }
 
 const TOOLS: ToolDef[] = [
@@ -38,7 +50,26 @@ const TOOLS: ToolDef[] = [
     { id: "pdf-to-img", title: "PDF to Images", desc: "Save pages as Images", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Convert" },
     { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconTxt, accept: ".pdf", outputExt: ".txt", category: "Convert" },
     { id: "pdf-to-html", title: "PDF to HTML", desc: "Convert to Web Page", icon: IconBrowser, accept: ".pdf", outputExt: ".html", category: "Convert" },
-    { id: "pdf-to-pdfa", title: "PDF to PDF/A", desc: "Archival Format", icon: IconFileCheck, accept: ".pdf", outputExt: ".pdf", category: "Convert" },
+    { id: "pdf-to-xml", title: "PDF to XML", desc: "Convert PDF to XML", icon: IconCode, accept: ".pdf", outputExt: ".xml", category: "Convert" },
+    { id: "pdf-to-pdfa", title: "PDF to PDF/A", desc: "Convert to Archival Format", icon: IconFileCheck, accept: ".pdf", outputExt: ".pdf", category: "Convert" },
+    { id: "html-to-pdf", title: "HTML to PDF", desc: "Convert HTML to PDF", icon: IconBrowser, accept: ".html,.zip", outputExt: ".pdf", category: "Convert" },
+    { id: "markdown-to-pdf", title: "Markdown to PDF", desc: "Convert MD to PDF", icon: IconTxt, accept: ".md", outputExt: ".pdf", category: "Convert" },
+    { id: "url-to-pdf", title: "URL to PDF", desc: "Convert Website URL to PDF", icon: IconBrowser, accept: "text/plain", outputExt: ".pdf", category: "Convert" },
+    { id: "vector-to-pdf", title: "Vector to PDF", desc: "Convert PostScript to PDF", icon: IconPhoto, accept: "*/*", outputExt: ".pdf", category: "Convert" },
+    { id: "text-editor-to-pdf", title: "Text Editor to PDF", desc: "Convert Text Format to PDF", icon: IconTxt, accept: "*/*", outputExt: ".pdf", category: "Convert" },
+    { id: "svg-to-pdf", title: "SVG to PDF", desc: "Convert SVG to PDF", icon: IconPhoto, accept: ".svg", outputExt: ".pdf", category: "Convert" },
+    { id: "pdf-to-xlsx", title: "PDF to XLSX", desc: "Convert PDF to Excel", icon: IconFileDescription, accept: ".pdf", outputExt: ".xlsx", category: "Convert" },
+    { id: "pdf-to-video", title: "PDF to Video", desc: "Convert PDF to Slideshow", icon: IconPresentation, accept: ".pdf", outputExt: ".zip", category: "Convert" },
+    { id: "pdf-to-vector", title: "PDF to Vector", desc: "Convert PDF to Vector format", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Convert" },
+    { id: "pdf-to-text-editor", title: "PDF to Text Editor", desc: "Convert to Editor Format", icon: IconTxt, accept: ".pdf", outputExt: ".json", category: "Convert" },
+    { id: "pdf-to-epub", title: "PDF to EPUB", desc: "Convert PDF to eBook", icon: IconFileDescription, accept: ".pdf", outputExt: ".epub", category: "Convert" },
+    { id: "pdf-to-csv", title: "PDF to CSV", desc: "Extract CSV from PDF", icon: IconFileText, accept: ".pdf", outputExt: ".csv", category: "Convert" },
+    { id: "pdf-to-cbz", title: "PDF to CBZ", desc: "Convert PDF to Comic Book", icon: IconFileZip, accept: ".pdf", outputExt: ".cbz", category: "Convert" },
+    { id: "pdf-to-cbr", title: "PDF to CBR", desc: "Convert PDF to Comic Book", icon: IconFileZip, accept: ".pdf", outputExt: ".cbr", category: "Convert" },
+    { id: "eml-to-pdf", title: "EML to PDF", desc: "Convert Email to PDF", icon: IconFileText, accept: ".eml,.msg", outputExt: ".pdf", category: "Convert" },
+    { id: "ebook-to-pdf", title: "eBook to PDF", desc: "Convert eBook to PDF", icon: IconFileDescription, accept: ".epub,.mobi,.azw3", outputExt: ".pdf", category: "Convert" },
+    { id: "cbz-to-pdf", title: "CBZ to PDF", desc: "Convert CBZ to PDF", icon: IconFileZip, accept: ".cbz", outputExt: ".pdf", category: "Convert" },
+    { id: "cbr-to-pdf", title: "CBR to PDF", desc: "Convert CBR to PDF", icon: IconFileZip, accept: ".cbr", outputExt: ".pdf", category: "Convert" },
 
     // Edit
     { id: "merge-pdfs", title: "Merge PDFs", desc: "Combine multiple files", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
@@ -46,11 +77,32 @@ const TOOLS: ToolDef[] = [
     { id: "remove-pages", title: "Remove Pages", desc: "Delete unwanted pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
     { id: "rotate-pdf", title: "Rotate", desc: "Rotate pages 90°/180°", icon: IconRotate, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
     { id: "organize-pdf", title: "Organize", desc: "Rearrange page order", icon: IconArrowsShuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "scale-pages", title: "Scale Pages", desc: "Change the size of a PDF", icon: IconArrowsShuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "crop-pdf", title: "Crop PDF", desc: "Crops a document", icon: IconScissors, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "split-pdf-by-sections", title: "Split by Sections", desc: "Split pages into smaller sections", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "split-pdf-by-chapters", title: "Split by Chapters", desc: "Split PDEs by Chapters", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "split-for-poster-print", title: "Split for Poster", desc: "Split large pages to printable chunks", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "split-by-size-or-count", title: "Auto Split", desc: "Auto split documents by size or count", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "remove-image-pdf", title: "Remove Images", desc: "Remove images from file", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "pdf-to-single-page", title: "To Single Page", desc: "Convert to a single long page", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "overlay-pdfs", title: "Overlay PDFs", desc: "Overlay PDF files in various modes", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "multi-page-layout", title: "Multi-page Layout", desc: "Merge multiple pages into a single page", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "extract-bookmarks", title: "Extract Bookmarks", desc: "Extract PDF Bookmarks", icon: IconFileText, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "edit-table-of-contents", title: "Edit TOC", desc: "Edit Table of Contents", icon: IconFileText, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "booklet-imposition", title: "Booklet Imposition", desc: "Create a booklet", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
 
     // Security
     { id: "add-password", title: "Protect", desc: "Add Password", icon: IconLock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
     { id: "remove-password", title: "Unlock", desc: "Remove Password", icon: IconLockOpen, accept: ".pdf", outputExt: ".pdf", category: "Security" },
     { id: "sanitize-pdf", title: "Sanitize", desc: "Remove metadata/scripts", icon: IconShield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "add-watermark", title: "Watermark", desc: "Add watermark to a file", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "verify-pdf", title: "Verify PDF", desc: "Verify Standards Compliance", icon: IconShield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "validate-signature", title: "Validate Signature", desc: "Validate Digital Signature", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Security" },
+    { id: "remove-cert-sign", title: "Remove Cert Sign", desc: "Remove digital signature", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "redact-pdf", title: "Redact", desc: "Redacts areas and pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "get-info-on-pdf", title: "Get Info", desc: "Get comprehensive info", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Security" },
+    { id: "cert-sign", title: "Cert Sign", desc: "Sign with Digital Certificate", icon: IconLock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "auto-redact", title: "Auto Redact", desc: "Redact PDF automatically", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
 
     // Misc
     { id: "compress-pdf", title: "Compress", desc: "Reduce file size", icon: IconMinimize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
@@ -58,9 +110,58 @@ const TOOLS: ToolDef[] = [
     { id: "repair-pdf", title: "Repair", desc: "Fix broken PDFs", icon: IconWand, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
     { id: "flatten-pdf", title: "Flatten", desc: "Flatten forms/layers", icon: IconMaximize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
     { id: "extract-images", title: "Extract Images", desc: "Get all images", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "remove-blanks", title: "Remove Blanks", desc: "Remove blank pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "update-metadata", title: "Update Metadata", desc: "Update file metadata", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "unlock-pdf-forms", title: "Unlock Forms", desc: "Remove read-only from fields", icon: IconLockOpen, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "show-javascript", title: "Show JavaScript", desc: "Grabs all JS from PDF", icon: IconCode, accept: ".pdf", outputExt: ".js", category: "Misc" },
+    { id: "scanner-effect", title: "Scanner Effect", desc: "Apply scanner effect", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "replace-invert-pdf", title: "Invert Color", desc: "Replace-Invert Color PDF", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "rename-attachment", title: "Rename Attachment", desc: "Rename attachment in PDF", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "list-attachments", title: "List Attachments", desc: "List attachments in PDF", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Misc" },
+    { id: "extract-image-scans", title: "Extract Scans", desc: "Extract image scans", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "extract-attachments", title: "Extract Attachments", desc: "Extract attachments from PDF", icon: IconFileZip, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "delete-attachment", title: "Delete Attachment", desc: "Delete attachment from PDF", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "decompress-pdf", title: "Decompress", desc: "Decompress PDF streams", icon: IconMaximize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "auto-split-pdf", title: "Auto Split", desc: "Auto split pages", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "auto-rename", title: "Auto Rename", desc: "Extract header from PDF", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-stamp", title: "Add Stamp", desc: "Add stamp to a PDF", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-page-numbers", title: "Add Page Numbers", desc: "Add page numbers to document", icon: IconTxt, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-image", title: "Add Image", desc: "Overlay image onto a file", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-attachments", title: "Add Attachments", desc: "Add attachments to PDF", icon: IconFileZip, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+
+    // Filter
+    { id: "filter-page-size", title: "Filter Page Size", desc: "Check PDF page size", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-page-rotation", title: "Filter Rotation", desc: "Check PDF rotation", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-page-count", title: "Filter Page Count", desc: "Check PDF page count", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-file-size", title: "Filter File Size", desc: "Check PDF file size", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-contains-text", title: "Contains Text", desc: "Check if contains text", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-contains-image", title: "Contains Image", desc: "Check if contains image", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+
+    // Analysis
+    { id: "security-info", title: "Security Info", desc: "Get security information", icon: IconShield, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "page-dimensions", title: "Page Dimensions", desc: "Get page dimensions", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "page-count", title: "Page Count", desc: "Get PDF page count", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "form-fields", title: "Form Fields", desc: "Get form field information", icon: IconFileDescription, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "font-info", title: "Font Info", desc: "Get font information", icon: IconTxt, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "document-properties", title: "Document Props", desc: "Get PDF properties", icon: IconSettings, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "basic-info", title: "Basic Info", desc: "Get basic information", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "annotation-info", title: "Annotation Info", desc: "Get annotation info", icon: IconFileText, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+
+    // Form
+    { id: "modify-fields", title: "Modify Fields", desc: "Modify existing form fields", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Form" },
+    { id: "fill-form", title: "Fill Form", desc: "Fill PDF form fields", icon: IconFileText, accept: ".pdf", outputExt: ".pdf", category: "Form" },
+    { id: "inspect-fields", title: "Inspect Fields", desc: "Inspect PDF form fields", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Form" },
+    { id: "fields-with-coordinates", title: "Fields w/ Coords", desc: "Inspect fields with coordinates", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Form" },
+    { id: "extract-xlsx-form", title: "Extract as XLSX", desc: "Extract form fields as XLSX", icon: IconFileDescription, accept: ".pdf", outputExt: ".xlsx", category: "Form" },
+    { id: "extract-csv-form", title: "Extract as CSV", desc: "Extract form fields as CSV", icon: IconFileText, accept: ".pdf", outputExt: ".csv", category: "Form" },
+    { id: "delete-fields", title: "Delete Fields", desc: "Delete form fields", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Form" },
+
+    // Pipeline
+    { id: "import-database", title: "Import Database", desc: "Import backup file", icon: IconSettings, accept: ".zip,.db", outputExt: ".json", category: "Pipeline" },
+    { id: "handle-pipeline", title: "Handle Pipeline", desc: "Execute automated pipeline", icon: IconSettings, accept: ".pdf", outputExt: ".json", category: "Pipeline" },
 ];
 
-const CATEGORIES = ["All", "Convert", "Edit", "Security", "Misc"];
+const CATEGORIES = ["All", "Convert", "Edit", "Security", "Misc", "Form", "Analysis", "Filter", "Pipeline"];
 
 // ═══════════════════════════════════════════
 // Per-tool settings config from Stirling API

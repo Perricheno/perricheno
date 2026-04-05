@@ -7,7 +7,7 @@ import {
     IconX, IconPencil, IconCheck, IconEye, IconBug,
     IconClock, IconLetterCase, IconSettings,
     IconSchool, IconSearch, IconCertificate, IconChartPie,
-    IconLink, IconFilePlus, IconUser, IconChevronLeft
+    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
@@ -98,6 +98,13 @@ export default function AgentPage() {
     const targetStreamText = useRef("");
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Agent Mode States
+    const [isAgentMode, setIsAgentMode] = useState(false);
+    const [agentSubMode, setAgentSubMode] = useState<"chat" | "data_analytics">("data_analytics");
+    const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string}[]>([]);
+    const [agentLogs, setAgentLogs] = useState<{type: string, message: string}[]>([]);
+    const [agentSteps, setAgentSteps] = useState<{label: string, status: "pending" | "running" | "done" | "error"}[]>([]);
     const pollRef = useRef<NodeJS.Timeout | null>(null);
     const streamBoxRef = useRef<HTMLDivElement>(null);
 
@@ -234,9 +241,99 @@ export default function AgentPage() {
         }
     }, [user, setShowLogin, currentSessionId, settings, visuals]);
 
+    const handleAgentGenerate = async () => {
+        setPhase("streaming");
+        setTopic(prompt);
+        setAgentLogs([]);
+        setAgentSteps([
+           { label: "Initializing analytics session", status: "pending" },
+           { label: "Processing context & datasets", status: "pending" },
+           { label: "Generating AI execution code", status: "pending" },
+           { label: "Executing in secure compiler environment", status: "pending" },
+           { label: "Finalizing outputs", status: "pending" }
+        ]);
+        setIsEditing(false);
+        setIsFixingErrors(false);
+        startTimer();
+
+        const payload = { prompt: prompt, contextFiles: agentDataFiles, sessionId: currentSessionId };
+        setPrompt("");
+
+        try {
+            const res = await fetch('/api/agent/data-analytics', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                if (res.status === 402) { setBillingOpen(true); throw new Error("Quota exceeded! Please buy tokens to continue."); }
+                const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
+                throw new Error(errData.error || `HTTP ${res.status}`);
+            }
+
+            const reader = res.body?.getReader();
+            const decoder = new TextDecoder("utf-8");
+
+            if (reader) {
+                let currentChunk = "";
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunkStr = decoder.decode(value, { stream: true });
+                    currentChunk += chunkStr;
+
+                    const events = currentChunk.split("\n\n");
+                    currentChunk = events.pop() || "";
+
+                    for (const eventStr of events) {
+                        const evtLines = eventStr.split("\n");
+                        const eventLine = evtLines.find(l => l.startsWith("event:"));
+                        const dataLine = evtLines.find(l => l.startsWith("data:"));
+                        
+                        if (eventLine && dataLine) {
+                            const eventName = eventLine.replace("event: ", "").trim();
+                            const dataText = dataLine.replace("data: ", "").trim();
+                            
+                            try {
+                                const data = JSON.parse(dataText);
+                                if (eventName === 'progress') {
+                                    setAgentSteps(prev => {
+                                        const next = [...prev];
+                                        if (data.step >= 0 && data.step < next.length) { next[data.step].status = data.status; }
+                                        return next;
+                                    });
+                                } else if (eventName === 'log') {
+                                    setAgentLogs(prev => [...prev, { type: data.level, message: data.message }]);
+                                } else if (eventName === 'done') {
+                                    setCurrentSessionId(data.sessionId);
+                                    if (data.results && data.results.length > 0) {
+                                        setVisuals(prev => [...prev, ...data.results]);
+                                        setActiveTab("tex");
+                                    }
+                                } else if (eventName === 'error') {
+                                    throw new Error(data.message);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                setPhase("done");
+                loadSessions();
+                stopTimer();
+            }
+        } catch (e: any) {
+            stopTimer();
+            setError(e.message);
+            setPhase("done");
+        }
+    };
+
     const handleGenerate = () => {
         if (!user) { setShowLogin(true); return; }
         if (!prompt.trim()) return;
+        if (isAgentMode) { handleAgentGenerate(); return; }
         setDocType(docType);
         streamGenerate({ prompt, type: docType, ...settings }, prompt);
         setPrompt("");
@@ -351,6 +448,10 @@ export default function AgentPage() {
         setPrompt("");
         setPhase("idle");
         setSidebarOpen(false);
+        setIsAgentMode(false);
+        setAgentDataFiles([]);
+        setAgentLogs([]);
+        setAgentSteps([]);
     };
 
     const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
@@ -447,24 +548,37 @@ export default function AgentPage() {
         { id: "report", label: "Report", icon: IconChartPie },
     ];
 
+    const AGENT_MODES: { id: "chat" | "data_analytics"; label: string; icon: any }[] = [
+        { id: "chat", label: "Chat", icon: IconMessageCircle },
+        { id: "data_analytics", label: "Data Analytics", icon: IconDatabase },
+    ];
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         for (const file of files) {
             const text = await file.text();
-            setSettings(s => ({ 
-                ...s, 
-                referenceFilesText: [...s.referenceFilesText, text],
-                referenceFileNames: [...s.referenceFileNames, file.name]
-            }));
+            if (isAgentMode) {
+                setAgentDataFiles(prev => [...prev, { name: file.name, content: text }]);
+            } else {
+                setSettings(s => ({ 
+                    ...s, 
+                    referenceFilesText: [...s.referenceFilesText, text],
+                    referenceFileNames: [...s.referenceFileNames, file.name]
+                }));
+            }
         }
     };
 
     const removeFile = (idx: number) => {
-        setSettings(s => ({
-            ...s,
-            referenceFilesText: s.referenceFilesText.filter((_, i) => i !== idx),
-            referenceFileNames: s.referenceFileNames.filter((_, i) => i !== idx)
-        }));
+        if (isAgentMode) {
+            setAgentDataFiles(prev => prev.filter((_, i) => i !== idx));
+        } else {
+            setSettings(s => ({
+                ...s,
+                referenceFilesText: s.referenceFilesText.filter((_, i) => i !== idx),
+                referenceFileNames: s.referenceFileNames.filter((_, i) => i !== idx)
+            }));
+        }
     };
 
     const handleLinkAdd = () => {
@@ -490,7 +604,9 @@ export default function AgentPage() {
 
     // ─── LANDING ───
     if (phase === "idle") {
-        const activeMode = MODES.find(m => m.id === docType) || MODES[0];
+        const activeMode = isAgentMode 
+            ? AGENT_MODES.find(m => m.id === agentSubMode) || AGENT_MODES[0]
+            : MODES.find(m => m.id === docType) || MODES[0];
 
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#FBFBFC] relative p-6 overflow-hidden">
@@ -581,15 +697,15 @@ export default function AgentPage() {
                                                 transition={{ duration: 0.15 }}
                                                 className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl border border-[#e5e5e5] shadow-lg py-1 z-50"
                                             >
-                                                {MODES.map(m => (
+                                                {(isAgentMode ? AGENT_MODES : MODES).map((m: any) => (
                                                     <button 
                                                         key={m.id}
-                                                        onClick={() => { setDocType(m.id); setModeOpen(false); }}
-                                                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${m.id === docType ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
+                                                        onClick={() => { if(isAgentMode) { setAgentSubMode(m.id); } else { setDocType(m.id); } setModeOpen(false); }}
+                                                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${(isAgentMode ? m.id === agentSubMode : m.id === docType) ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
                                                     >
                                                         <m.icon className="w-4 h-4 shrink-0" stroke={2} />
                                                         <span>{m.label}</span>
-                                                        {m.id === docType && (
+                                                        {(isAgentMode ? m.id === agentSubMode : m.id === docType) && (
                                                             <IconCheck className="w-4 h-4 ml-auto text-[#1a1a1a]" stroke={2.5} />
                                                         )}
                                                     </button>
@@ -598,6 +714,16 @@ export default function AgentPage() {
                                         )}
                                     </AnimatePresence>
                                 </div>
+
+                                <div className="w-px h-4 bg-[#e5e5e5] mx-1" />
+
+                                <label className="flex items-center gap-2 cursor-pointer ml-1 mr-2">
+                                    <div className="relative rounded-full w-8 h-4 transition-colors duration-300" style={{ backgroundColor: isAgentMode ? "#1a1a1a" : "#e5e5e5" }}>
+                                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${isAgentMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                    </div>
+                                    <span className="text-[13px] font-medium text-[#666]">Agent</span>
+                                    <input type="checkbox" className="hidden" checked={isAgentMode} onChange={(e) => setIsAgentMode(e.target.checked)} />
+                                </label>
 
                                 <div className="w-px h-4 bg-[#e5e5e5] mx-1" />
 
@@ -631,12 +757,12 @@ export default function AgentPage() {
                     </div>
 
                     {/* Attached files */}
-                    {settings.referenceFileNames.length > 0 && (
+                    {(isAgentMode ? agentDataFiles.length > 0 : settings.referenceFileNames.length > 0) && (
                         <div className="w-full mt-3 flex flex-wrap gap-2">
-                            {settings.referenceFileNames.map((name, idx) => (
+                            {(isAgentMode ? agentDataFiles : settings.referenceFileNames).map((file, idx) => (
                                 <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-lg text-[12px] font-medium text-[#666] border border-[#e5e5e5]">
-                                    <IconFileText className="w-3.5 h-3.5 text-[#999]" />
-                                    <span>{name}</span>
+                                    {isAgentMode ? <IconDatabase className="w-3.5 h-3.5 text-[#999]" /> : <IconFileText className="w-3.5 h-3.5 text-[#999]" />}
+                                    <span>{isAgentMode ? (file as any).name : file}</span>
                                     <button onClick={() => removeFile(idx)} className="p-0.5 hover:text-red-500 transition-colors">
                                         <IconX className="w-3 h-3" />
                                     </button>
@@ -700,31 +826,73 @@ export default function AgentPage() {
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
                                 <IconClock className="w-3.5 h-3.5" stroke={2.5} /> <span className="tabular-nums">{elapsedTime.toFixed(1)}s</span>
                             </div>
-                            <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
+                            {!isAgentMode && <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
                                 <IconLetterCase className="w-4 h-4" stroke={2.5} /> <span className="tabular-nums">{streamChars.toLocaleString()} chars</span>
-                            </div>
+                            </div>}
                         </div>
-                        <div className="flex items-center gap-4">
+                        {!isAgentMode && <div className="flex items-center gap-4">
                             <span className="text-[10px] font-black text-black tabular-nums tracking-widest">{estimatedProgress}%</span>
                             <div className="w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
                                 <motion.div className="h-full bg-black" animate={{ width: `${estimatedProgress}%` }} transition={{ duration: 0.3 }} />
                             </div>
-                        </div>
+                        </div>}
                     </div>
-                    <div className="flex-1 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col">
-                        <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-3 shrink-0">
-                            <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                            <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">Agent Logic Stream</span>
-                            <span className="text-[10px] font-black text-[#D4D4D8] ml-auto truncate uppercase tracking-widest max-w-[150px] sm:max-w-xs">{topic}</span>
-                        </div>
-                        <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 bg-[#FAFAFA]">
-                            <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 font-sans text-[#52525B]">
-                                <ReactMarkdown>{displayStreamText}</ReactMarkdown>
-                                {displayStreamText.length < targetStreamText.current.length && (
-                                    <span className="inline-block w-1 h-4 bg-black ml-1 animate-pulse" />
+                    <div className="flex-1 flex gap-4 overflow-hidden">
+                        {/* Main Stream Area */}
+                        <div className="flex-1 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col">
+                            <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-3 shrink-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                                <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">{isAgentMode ? "Agent Analytics Console" : "Agent Logic Stream"}</span>
+                                <span className="text-[10px] font-black text-[#D4D4D8] ml-auto truncate uppercase tracking-widest max-w-[150px] sm:max-w-xs">{topic}</span>
+                            </div>
+                            <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 bg-[#FAFAFA]">
+                                {!isAgentMode ? (
+                                    <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 font-sans text-[#52525B]">
+                                        <ReactMarkdown>{displayStreamText}</ReactMarkdown>
+                                        {displayStreamText.length < targetStreamText.current.length && (
+                                            <span className="inline-block w-1 h-4 bg-black ml-1 animate-pulse" />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="font-mono text-xs text-gray-800 space-y-1 pb-4">
+                                        {agentLogs.map((log, i) => (
+                                            <div key={i} className={`p-1 rounded ${
+                                                log.type === 'error' ? 'text-red-600 bg-red-50' : (
+                                                log.type === 'success' ? 'text-green-600 bg-green-50' : (
+                                                log.type === 'code' ? 'text-[#1a1a1a] bg-gray-100' : 'text-[#666]'
+                                            ))}`}>
+                                                <span className="opacity-50 select-none">[{new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" })}]</span> {log.message}
+                                            </div>
+                                        ))}
+                                        <div className="p-2 text-gray-400 flex items-center gap-2 mt-2">
+                                            <IconLoader2 className="w-3 h-3 animate-spin" /> {agentSteps.some(s => s.status === 'running') ? "Processing..." : "Awaiting agent thought..."}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
+                        {/* Checklist Sidebar */}
+                        {isAgentMode && (
+                            <div className="hidden md:flex w-72 shrink-0 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex-col">
+                                <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-2 shrink-0">
+                                    <IconCheck className="w-4 h-4 text-black" stroke={2.5} />
+                                    <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">Progression</span>
+                                </div>
+                                <div className="flex-1 p-6 overflow-y-auto space-y-5">
+                                    {agentSteps.map((step, i) => (
+                                        <div key={i} className={`flex items-start gap-3 text-sm font-bold ${step.status === 'done' ? 'text-black' : step.status === 'running' ? 'text-[#3b82f6]' : step.status === 'error' ? 'text-red-500' : 'text-[#D4D4D8]'}`}>
+                                            <div className="mt-[3px] shrink-0">
+                                                {step.status === 'done' ? <IconCheck className="w-4 h-4" stroke={3} /> : 
+                                                 step.status === 'running' ? <IconLoader2 className="w-4 h-4 animate-spin" stroke={3} /> : 
+                                                 step.status === 'error' ? <IconX className="w-4 h-4" stroke={3} /> : 
+                                                 <div className="w-2.5 h-2.5 rounded-full bg-gray-100 ml-0.5" />}
+                                            </div>
+                                            <span className="leading-snug">{step.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>

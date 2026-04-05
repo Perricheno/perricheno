@@ -182,8 +182,8 @@ function wrapPythonCode(rawCode: string, plainTextContext: string) {
 
 function cleanCode(raw: string): string {
     let c = raw.trim();
-    if (c.startsWith("\`\`\`")) c = c.replace(/^\`\`\`(?:r|R|python|py)?\s*\n?/, "");
-    if (c.endsWith("\`\`\`")) c = c.replace(/\n?\`\`\`\s*$/, "");
+    if (c.startsWith("```")) c = c.replace(/^```(?:r|R|python|py)?\s*\n?/, "");
+    if (c.endsWith("```")) c = c.replace(/\n?```\s*$/, "");
     return c.trim();
 }
 
@@ -241,6 +241,9 @@ export async function POST(req: NextRequest) {
         if (telegramId) {
             const user = getUserByTelegramId(String(telegramId));
             if (user) {
+                if (user.is_banned) {
+                    return NextResponse.json({ error: "Ваш аккаунт заморожен администрацией." }, { status: 403 });
+                }
                 // Check if a completed session with the exact same title exists to cache output
                 const existingSession = getRecentSessionByTitle(user.id, title || "Telegram Visual");
                 if (existingSession && existingSession.status === "done" && (existingSession.visuals_json || existingSession.stream_text)) {
@@ -573,14 +576,15 @@ export async function POST(req: NextRequest) {
                     }).catch(() => {});
                 }
 
-            } catch (err: any) {
-                console.error("Bot visual background error:", err);
-                updateAgentSession(sessionId, { status: "error", error_msg: err.message });
+            } catch (err) {
+                console.error("Clean code failed:", err);
+                updateAgentSession(sessionId, { status: "error", error_msg: err instanceof Error ? err.message : String(err) });
             }
         })();
 
         return NextResponse.json({ success: true, sessionId });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err) {
+        console.error("Compile failed:", err);
+        return NextResponse.json({ error: err instanceof Error ? err.message : "Compilation failed" }, { status: 500 });
     }
 }

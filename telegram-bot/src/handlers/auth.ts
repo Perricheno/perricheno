@@ -83,6 +83,7 @@ export async function handleMe(ctx: any) {
                          `🔗 Username: @${u.username || tgUser.username || "—"}\n` +
                          `🌟 Тариф: \`${u.account_tier || "free"}\`\n` +
                          `📅 Дата регистрации: \`${createdDate}\`\n\n` +
+                         (u.is_banned ? `⚠️ *ВАШ АККАУНТ ЗАМОРОЖЕН АДМИНИСТРАЦИЕЙ* ⚠️\n\n` : '') +
                          `Статистику по лимитам вы можете найти в разделе [Биллинг].`;
             
             const keyboard = Markup.inlineKeyboard([
