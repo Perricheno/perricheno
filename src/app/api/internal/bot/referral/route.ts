@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ 
             success: true, 
             stats,
-            referralLink: `https://t.me/p_perricheno_bot?start=ref_${user.telegram_id}`
+            referralLink: `https://t.me/perrichenobot?start=ref_${user.telegram_id}`
         });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });

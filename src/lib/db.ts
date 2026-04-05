@@ -123,6 +123,7 @@ try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"
 try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_banned BOOLEAN DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN is_deleted BOOLEAN DEFAULT 0"); } catch (e) {}
 
 // Super Admin IDs (Hardcoded for total reliability)
 const SUPER_ADMINS = ['1153844209', '5934503762']; // Added multiple IDs to be safe
@@ -301,32 +302,33 @@ export function getUserById(id: number): User | undefined {
 export function upsertUser(data: { telegram_id: string; username?: string; first_name?: string; photo_url?: string }): User {
     const { telegram_id, username, first_name, photo_url } = data;
 
-    // Check if exists
-    const existing = getUserByTelegramId(telegram_id);
+    // Check if exists (including deleted ones to prevent limit reset abuse)
+    const existing = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id) as User | undefined;
 
     if (existing) {
-        // Update
+        // Update and Revive (clear is_deleted flag)
         const stmt = db.prepare(`
             UPDATE users 
-            SET username = ?, first_name = ?, photo_url = ?
+            SET username = ?, first_name = ?, photo_url = ?, is_deleted = 0
             WHERE telegram_id = ?
         `);
         stmt.run(username || null, first_name || null, photo_url || null, telegram_id);
         return getUserByTelegramId(telegram_id)!;
     } else {
-        // Insert
+        // Insert new
         const stmt = db.prepare(`
-            INSERT INTO users (telegram_id, username, first_name, photo_url, last_reset_date)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (telegram_id, username, first_name, photo_url, last_reset_date, is_deleted)
+            VALUES (?, ?, ?, ?, ?, 0)
         `);
         const today = new Date().toISOString().split('T')[0];
-        const info = stmt.run(telegram_id, username || null, first_name || null, photo_url || null, today);
+        stmt.run(telegram_id, username || null, first_name || null, photo_url || null, today);
         return getUserByTelegramId(telegram_id)!;
     }
 }
 
 export function deleteUser(id: number) {
-    const stmt = db.prepare('DELETE FROM users WHERE id = ?');
+    // ANTI-ABUSE: Clear identity data but keep the row and limits
+    const stmt = db.prepare('UPDATE users SET is_deleted = 1, username = NULL, first_name = NULL, photo_url = NULL WHERE id = ?');
     stmt.run(id);
 }
 
