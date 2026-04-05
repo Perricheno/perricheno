@@ -305,6 +305,9 @@ export default function AgentPage() {
         setIsFixingErrors(false);
         startTimer();
 
+        // Local collector for visuals (React state is async)
+        const collectedVisuals: any[] = [];
+
         try {
             const res = await fetch('/api/agent/data-analytics', {
                 method: "POST",
@@ -376,18 +379,37 @@ export default function AgentPage() {
                                         return [...prev, { type: 'code', message: data.delta }];
                                     });
                                 } else if (eventName === 'chart_done') {
-                                    setVisuals(prev => [...prev, {
+                                    const visual = {
                                         image: data.image,
                                         chart_type: data.chartType,
                                         code: data.code,
                                         language: data.runtime || settings.runtime
-                                    }]);
-                                    // Clear code log for next chart
+                                    };
+                                    collectedVisuals.push(visual);
+                                    setVisuals(prev => [...prev, visual]);
                                     setAgentLogs(prev => [...prev, { type: 'success', message: `✓ ${data.chartType} generated successfully` }]);
                                 } else if (eventName === 'chart_error') {
                                     setAgentLogs(prev => [...prev, { type: 'error', message: `✗ ${data.chartType} failed: ${data.error}` }]);
                                 } else if (eventName === 'all_done') {
-                                    // All charts processed
+                                    // Save analytics session to history
+                                    try {
+                                        const saveRes = await fetch('/api/agent/sessions', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                title: analyticsPrompt.slice(0, 80),
+                                                doc_type: 'data_analytics',
+                                                settings_json: settings,
+                                                visuals_json: collectedVisuals,
+                                            })
+                                        });
+                                        if (saveRes.ok) {
+                                            const { session } = await saveRes.json();
+                                            setCurrentSessionId(session.id);
+                                        }
+                                    } catch (saveErr) {
+                                        console.error("[Analytics] Failed to save session:", saveErr);
+                                    }
                                 } else if (eventName === 'error') {
                                     throw new Error(data.message);
                                 }
@@ -649,15 +671,40 @@ export default function AgentPage() {
                     formData.append('fileInput', file);
                     
                     if (ext === 'pdf') {
-                        // PDF → direct text extraction
-                        const res = await fetch('/api/pdf-proxy?type=pdf-to-text', {
+                        // PDF → try direct text extraction first
+                        let res = await fetch('/api/pdf-proxy?type=pdf-to-text', {
                             method: 'POST',
                             body: formData
                         });
                         if (res.ok) {
                             text = await res.text();
-                        } else {
-                            text = `[Failed to extract text from ${file.name}]`;
+                        }
+                        // If text extraction returned empty or failed, try OCR
+                        if (!text || text.trim().length < 20) {
+                            console.log(`[Upload] pdf-to-text yielded little text for ${file.name}, trying OCR...`);
+                            const ocrForm = new FormData();
+                            ocrForm.append('fileInput', file);
+                            ocrForm.append('languages', 'eng');
+                            ocrForm.append('sidecar', 'true');
+                            ocrForm.append('skipText', 'true');
+                            const ocrRes = await fetch('/api/pdf-proxy?type=ocr-pdf', {
+                                method: 'POST',
+                                body: ocrForm
+                            });
+                            if (ocrRes.ok) {
+                                // OCR returns a PDF — extract text from it
+                                const ocrBlob = await ocrRes.blob();
+                                const textForm2 = new FormData();
+                                textForm2.append('fileInput', ocrBlob, file.name);
+                                const textRes2 = await fetch('/api/pdf-proxy?type=pdf-to-text', {
+                                    method: 'POST',
+                                    body: textForm2
+                                });
+                                if (textRes2.ok) {
+                                    const ocrText = await textRes2.text();
+                                    if (ocrText.trim().length > text.trim().length) text = ocrText;
+                                }
+                            }
                         }
                     } else {
                         // Office files: convert to PDF first, then extract text
@@ -673,14 +720,17 @@ export default function AgentPage() {
                                 method: 'POST',
                                 body: textForm
                             });
-                            text = textRes.ok ? await textRes.text() : `[Failed to extract text from ${file.name}]`;
-                        } else {
-                            text = `[Failed to convert ${file.name}]`;
+                            text = textRes.ok ? await textRes.text() : '';
                         }
                     }
                 } catch (err) {
                     console.error(`File extraction failed for ${file.name}:`, err);
-                    text = `[Error processing ${file.name}]`;
+                }
+
+                // If extraction completely failed, skip the file and notify user
+                if (!text || text.trim().length < 10) {
+                    setAgentLogs(prev => [...prev, { type: 'error', message: `⚠ Could not extract text from ${file.name}. File skipped.` }]);
+                    continue; // Do NOT add broken context
                 }
             } else {
                 // Text-based files (csv, txt, json, etc.): read directly
@@ -741,6 +791,22 @@ export default function AgentPage() {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#FBFBFC] relative p-6 overflow-hidden">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
+
+                {/* Suggesting overlay */}
+                <AnimatePresence>
+                    {isSuggesting && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-30 bg-[#FBFBFC]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
+                        >
+                            <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center">
+                                <IconLoader2 className="w-6 h-6 text-black animate-spin" />
+                            </div>
+                            <p className="text-sm font-bold text-black tracking-tight">Analyzing your data...</p>
+                            <p className="text-xs text-gray-400">AI is recommending the best chart types</p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-[640px] flex flex-col items-center">
                     
@@ -941,52 +1007,94 @@ export default function AgentPage() {
 
     // ─── SUGGESTING (Data Analytics - Chart Selection) ───
     if (phase === "suggesting") {
+        const ALL_CHARTS = [
+            "bar","line","scatter","bubble","lollipop","histogram","density2d","ridge","boxplot","violin",
+            "joyplot","kdensity","heatmap","marginal","hexbin","pairplot","qqplot","pie","rose","treemap",
+            "circlepack","sunburst","waffle","dendrogram","radar","network","sankey","chord","parallel",
+            "waterfall","dumbbell","volcano","survival","wordcloud","choropleth","bubble_map","pca","kmeans",
+            "roc","regression","arima","3d_surface","3d_scatter"
+        ];
+
+        const toggleChart = (chart: string) => {
+            setSuggestedCharts(prev => 
+                prev.includes(chart) 
+                    ? prev.filter(c => c !== chart) 
+                    : [...prev, chart]
+            );
+        };
+
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#FBFBFC] relative p-6 overflow-hidden">
+            <div className="w-full h-full flex flex-col items-center bg-[#FBFBFC] relative overflow-auto">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-xl flex flex-col items-center">
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-2xl flex flex-col items-center px-4 py-10 md:py-16">
                     
-                    <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
-                        <IconChartPie className="w-10 h-10 text-black" stroke={2} />
+                    <div className="w-16 h-16 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-5">
+                        <IconChartPie className="w-8 h-8 text-black" stroke={2} />
                     </div>
                     
-                    <h2 className="text-2xl font-black text-black tracking-tight mb-2 text-center">Recommended Charts</h2>
-                    <p className="text-xs text-[#A1A1AA] font-bold mb-8 text-center max-w-md">{suggestReasoning}</p>
+                    <h2 className="text-2xl font-black text-black tracking-tight mb-1 text-center">Configure Visualizations</h2>
+                    <p className="text-xs text-[#A1A1AA] font-medium mb-6 text-center max-w-md">{suggestReasoning}</p>
 
-                    {/* Chart toggles */}
-                    <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-                        {suggestedCharts.map((chart) => (
-                            <motion.button
-                                key={chart}
-                                whileTap={{ scale: 0.96 }}
-                                onClick={() => {
-                                    setSuggestedCharts(prev => 
-                                        prev.includes(chart) && prev.length > 1
-                                            ? prev.filter(c => c !== chart) 
-                                            : prev.includes(chart) ? prev : [...prev, chart]
-                                    );
-                                }}
-                                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-gray-100 bg-white text-black font-black text-[10px] uppercase tracking-widest shadow-sm hover:border-black transition-all"
-                            >
-                                <IconCheck className="w-3.5 h-3.5 text-black" stroke={3} />
-                                {chart.replace("_", " ")}
-                            </motion.button>
-                        ))}
+                    {/* Runtime Toggle */}
+                    <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl p-1 mb-6 shadow-sm">
+                        <button 
+                            onClick={() => setSettings(s => ({ ...s, runtime: 'R' }))}
+                            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                                settings.runtime === 'R' 
+                                    ? 'bg-black text-white shadow-sm' 
+                                    : 'text-gray-400 hover:text-black'
+                            }`}>
+                            R
+                        </button>
+                        <button 
+                            onClick={() => setSettings(s => ({ ...s, runtime: 'Python' }))}
+                            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                                settings.runtime === 'Python' 
+                                    ? 'bg-black text-white shadow-sm' 
+                                    : 'text-gray-400 hover:text-black'
+                            }`}>
+                            Python
+                        </button>
+                    </div>
+
+                    {/* Chart Selection Grid */}
+                    <div className="w-full mb-6">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">
+                            Select chart types · <span className="text-black">{suggestedCharts.length}</span> selected
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {ALL_CHARTS.map((chart) => {
+                                const isSelected = suggestedCharts.includes(chart);
+                                return (
+                                    <button
+                                        key={chart}
+                                        onClick={() => toggleChart(chart)}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                                            isSelected
+                                                ? 'bg-black text-white border-black shadow-sm'
+                                                : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300 hover:text-gray-600'
+                                        }`}
+                                    >
+                                        {chart.replace(/_/g, " ")}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sticky bottom-4">
                         <button 
                             onClick={() => { setPhase("idle"); setSuggestedCharts([]); setIsAnalyticsSession(false); }} 
-                            className="px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all active:scale-95"
+                            className="px-6 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all active:scale-95"
                         >
                             Back
                         </button>
                         <button 
                             onClick={() => startAnalyticsGenerate(suggestedCharts)} 
                             disabled={suggestedCharts.length === 0}
-                            className="px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-20 flex items-center gap-2"
+                            className="px-8 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-20 flex items-center gap-2"
                         >
                             <IconArrowRight className="w-4 h-4" /> Generate {suggestedCharts.length} Chart{suggestedCharts.length !== 1 ? 's' : ''}
                         </button>
