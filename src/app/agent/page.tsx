@@ -638,7 +638,55 @@ export default function AgentPage() {
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         for (const file of files) {
-            const text = await file.text();
+            const ext = file.name.split('.').pop()?.toLowerCase() || '';
+            const binaryFormats = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
+            let text = '';
+
+            if (binaryFormats.includes(ext)) {
+                // Binary files: extract text via server-side Stirling API
+                try {
+                    const formData = new FormData();
+                    formData.append('fileInput', file);
+                    
+                    if (ext === 'pdf') {
+                        // PDF → direct text extraction
+                        const res = await fetch('/api/pdf-proxy?type=pdf-to-text', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (res.ok) {
+                            text = await res.text();
+                        } else {
+                            text = `[Failed to extract text from ${file.name}]`;
+                        }
+                    } else {
+                        // Office files: convert to PDF first, then extract text
+                        const convRes = await fetch('/api/pdf-proxy?type=file-to-pdf', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (convRes.ok) {
+                            const pdfBlob = await convRes.blob();
+                            const textForm = new FormData();
+                            textForm.append('fileInput', pdfBlob, file.name.replace(/\.[^.]+$/, '.pdf'));
+                            const textRes = await fetch('/api/pdf-proxy?type=pdf-to-text', {
+                                method: 'POST',
+                                body: textForm
+                            });
+                            text = textRes.ok ? await textRes.text() : `[Failed to extract text from ${file.name}]`;
+                        } else {
+                            text = `[Failed to convert ${file.name}]`;
+                        }
+                    }
+                } catch (err) {
+                    console.error(`File extraction failed for ${file.name}:`, err);
+                    text = `[Error processing ${file.name}]`;
+                }
+            } else {
+                // Text-based files (csv, txt, json, etc.): read directly
+                text = await file.text();
+            }
+
             if (!isAgentMode) {
                 setAgentDataFiles(prev => [...prev, { name: file.name, content: text }]);
             } else {
