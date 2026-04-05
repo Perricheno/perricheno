@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getUserByTelegramId } from "@/lib/db";
+import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getUserByTelegramId, getRecentSessionByTitle } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -159,8 +159,19 @@ export async function POST(req: NextRequest) {
         
         console.log(`[Generate] Request from ${telegramId}: images=${images?.length || 0}, textChars=${context?.text_data?.length || 0}`);
 
-        if (!context) {
+        if (!context || (!context.text_data && (!images || images.length === 0))) {
             return NextResponse.json({ error: "No context provided" }, { status: 400 });
+        }
+
+        // --- Data Integrity Guard: Prevent hallucinations when text extraction fails ---
+        const textContent = context.text_data || "";
+        const hasVisionData = Array.isArray(images) && images.length > 0;
+        
+        if (textContent.length < 100 && !hasVisionData) {
+            console.warn(`[Generate] Blocked potential hallucination for ${telegramId} - empty context.`);
+            return NextResponse.json({ 
+                error: "⚠️ Не удалось извлечь данные из файла или текста. Пожалуйста, убедитесь, что в файле есть текстовый слой или прикрепите более детальное описание данных для анализа." 
+            }, { status: 422 });
         }
 
         const isPython = language !== 'r';
@@ -168,14 +179,21 @@ export async function POST(req: NextRequest) {
         const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
         const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
-        const sessionId = uuidv4();
+        let sessionId = uuidv4();
         // ── Create DB session & Deduct Input Usage ──
         if (telegramId) {
             const user = getUserByTelegramId(String(telegramId));
             if (user) {
+                // Consolidation: Try to find existing session with SAME title from the last hour
+                const existingSession = getRecentSessionByTitle(user.id, title || "Telegram Visual");
+                if (existingSession) {
+                    sessionId = existingSession.id;
+                    console.log(`[Generate] Consolidating into existing session: ${sessionId}`);
+                }
+
                 // Identify Input Data Length
-                const inputChars = (context.text_data || "").length;
-                if (inputChars > 0) {
+                const inputChars = textContent.length;
+                if (inputChars > 0 && !existingSession) { // Only deduct for new sessions to be fair
                     const deduction = checkAndDeductUsage(user.id, 'chars', inputChars);
                     if (!deduction.success) {
                         return NextResponse.json({ 
@@ -184,17 +202,22 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
-                try {
-                    createAgentSession({
-                        id: sessionId,
-                        user_id: user.id,
-                        title: title || "Telegram Visual",
-                        status: "generating",
-                        doc_type: "visual",
-                        share_id: uuidv4().split('-')[0],
-                    });
-                } catch (e) {
-                    console.error("Failed to create session:", e);
+                if (!existingSession) {
+                    try {
+                        createAgentSession({
+                            id: sessionId,
+                            user_id: user.id,
+                            title: title || "Telegram Visual",
+                            status: "generating",
+                            doc_type: "visual",
+                            share_id: uuidv4().split('-')[0],
+                        });
+                    } catch (e) {
+                        console.error("Failed to create session:", e);
+                    }
+                } else {
+                    // Update existing session status
+                    updateAgentSession(sessionId, { status: "generating", error_msg: null });
                 }
             }
         }
@@ -245,8 +268,8 @@ export async function POST(req: NextRequest) {
                 }
 
                 const systemRole = hasImages 
-                    ? `You are an expert ${runtime} visualization engineer and OCR analyst. Your task is to extract REAL statistics from the IMAGES of documents provided and visualize them. Use the user instruction as a guide on WHICH metrics to find.`
-                    : `You are an expert ${runtime} data scientist. Your task is to analyze the provided TEXT context, extract quantitative metrics, and create a premium visualization. No images are provided, so focus entirely on the text data.`;
+                    ? `You are an expert ${runtime} visualization engineer and OCR analyst. Your task is to extract REAL statistics from the IMAGES of documents provided and visualize them. Use the user instruction as a guide on WHICH metrics to find. BEWARE: Do NOT hallucinate data from the project title. Use only what you see in the images or text context.`
+                    : `You are an expert ${runtime} data scientist. Your task is to analyze the provided TEXT context, extract quantitative metrics, and create a premium visualization. No images are provided, so focus entirely on the provided text. BEWARE: The project title is just a label. Do NOT create visualizations like "Letter frequency in the project name" unless specifically asked. If the [DATA CONTEXT] has NO quantitative metrics, return a clear error in Russian saying that no data is found for analysis.`;
 
                 const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
                     method: "POST",

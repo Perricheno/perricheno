@@ -641,6 +641,17 @@ export function getAgentSessionByShareId(shareId: string): AgentSession | undefi
     return db.prepare('SELECT * FROM agent_sessions WHERE share_id = ?').get(shareId) as AgentSession | undefined;
 }
 
+export function getRecentSessionByTitle(userId: number, title: string): AgentSession | undefined {
+    // Find session with same title for this user created in the last 1 hour
+    return db.prepare(`
+        SELECT * FROM agent_sessions 
+        WHERE user_id = ? AND title = ? 
+        AND created_at > datetime('now', '-1 hour')
+        ORDER BY created_at DESC 
+        LIMIT 1
+    `).get(userId, title) as AgentSession | undefined;
+}
+
 export function updateAgentSession(id: string, data: {
     title?: string;
     main_tex?: string | null;

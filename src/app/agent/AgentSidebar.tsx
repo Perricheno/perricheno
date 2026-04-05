@@ -77,7 +77,7 @@ export function AgentSidebar({
                                             {s.share_id && <span className="px-1.5 py-0.5 rounded-sm bg-blue-500/20 text-blue-100 uppercase text-[9px] font-bold tracking-wider">Shared</span>}
                                         </div>
                                     </div>
-                                    <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-[var(--card)]' : 'text-gray-500'}`}>
+                                    <div className={`flex items-center gap-1 transition-opacity ${isActive ? 'text-[var(--card)]' : 'text-gray-500 opacity-40 hover:opacity-100'}`}>
                                         <button onClick={(e) => onShareSession(s.id, e)} className="p-1.5 hover:bg-black/10 rounded-md" title="Share Session">
                                             <IconShare className="w-3.5 h-3.5" />
                                         </button>

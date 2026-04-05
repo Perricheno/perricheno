@@ -207,7 +207,22 @@ export default function ChatPage() {
         }
     };
 
-    const deleteThread = (id: string) => {
+    const deleteThread = async (id: string) => {
+        // --- Persistence: DELETE on Server ---
+        if (user) {
+            try {
+                const res = await fetch(`/api/chat/history?sessionId=${id}`, {
+                    method: "DELETE"
+                });
+                if (!res.ok) {
+                    showToast("Failed to delete chat on server", "error");
+                }
+            } catch (e) {
+                console.error("Failed to delete thread on server:", e);
+                showToast("Connection error during deletion", "error");
+            }
+        }
+
         setThreads(prev => {
             const updated = prev.filter(t => t.id !== id);
             if (updated.length === 0) {
@@ -428,8 +443,8 @@ export default function ChatPage() {
                         <IconMessage className="w-4 h-4 shrink-0 opacity-50" />
                         <span className="flex-1 truncate">{t.title}</span>
                         {threads.length > 1 && (
-                            <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-0 group-hover:opacity-100 hover:text-red-500">
-                                <IconTrash className="w-3 h-3" />
+                            <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-40 hover:opacity-100 hover:text-red-500 transition-opacity">
+                                <IconTrash className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
