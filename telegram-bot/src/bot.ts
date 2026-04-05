@@ -112,6 +112,20 @@ bot.action(/^task_reset_(.+)$/, async (ctx: any) => {
     await handleTaskReset(ctx, sessionId);
 });
 
+bot.action(/^toggle_type_(.+)$/, async (ctx: any) => {
+    const { handleVisualToggleType } = await import("./handlers/visual");
+    await handleVisualToggleType(ctx);
+});
+
+bot.action("visual_generate_start", async (ctx: any) => {
+    await ctx.answerCbQuery();
+    const { getLangSelectionKeyboard } = await import("./keyboards/menu");
+    await ctx.editMessageText(`🖥 *Выбор платформы выполнения*\n\nВыберите язык, на котором ИИ будет генерировать код визуализации:`, {
+        parse_mode: "Markdown",
+        ...getLangSelectionKeyboard()
+    });
+});
+
 bot.action("visual_generate", ctx => handleVisualGenerateRequest(ctx));
 bot.action("visual_reset", ctx => handleVisualReset(ctx));
 bot.action("lang_python", ctx => handleVisualProcess(ctx, 'python'));
