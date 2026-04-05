@@ -41,10 +41,29 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Super Admin IDs (Hardcoded for total reliability)
+        const SUPER_ADMINS = ['1153844209', '5934503762'];
+
         // Mark as completed with the user's data
         db.prepare(
             "UPDATE auth_requests SET status = 'completed', tg_user_data = ? WHERE token = ?"
         ).run(JSON.stringify(user), token);
+
+        // Ensure user exists and promote to admin if in SUPER_ADMINS
+        if (SUPER_ADMINS.includes(String(user.id))) {
+            try {
+                // First, ensure the user record exists in the users table
+                // (This table might be populated by bot initialization or first login)
+                db.prepare(`
+                    INSERT INTO users (telegram_id, username, first_name, is_admin)
+                    VALUES (?, ?, ?, 1)
+                    ON CONFLICT(telegram_id) DO UPDATE SET is_admin = 1
+                `).run(String(user.id), user.username || "", user.first_name || "");
+                console.log(`🛡️ Super-admin ${user.id} promoted during login.`);
+            } catch (e) {
+                console.error("⚠️ Failed to auto-promote super-admin during verify:", e);
+            }
+        }
 
         return NextResponse.json({ success: true });
     } catch (err: any) {

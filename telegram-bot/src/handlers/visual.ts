@@ -204,10 +204,20 @@ export async function handleVisualProcess(ctx: any, lang: 'python' | 'r') {
         for (let i = 0; i < types.length; i++) {
             const currentType = types[i];
             
-            await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined,
-                `🚀 *Генерация (${i + 1}/${types.length}): ${currentType.toUpperCase()}*\n\n📊 Визуальный контекст: ${visionImages.length} стр.\n\n🕒 Обрабатываю...`,
-                { parse_mode: "Markdown" }
-            ).catch(() => {});
+            // API 9.5 Upgrade: Use sendMessageDraft for high-speed, rate-limit-free progress updates
+            await (ctx.telegram as any).callApi('sendMessageDraft', {
+                chat_id: ctx.chat.id,
+                message_id: statusMsg.message_id, // Draft updates the specific "anchor" message
+                text: `🚀 *Генерация (${i + 1}/${types.length}): ${currentType.toUpperCase()}*\n\n📊 Контент: ${visionImages.length} изображений, ${textParts.length} блоков текста.\n\n🕒 Пожалуйста, подождите...`,
+                parse_mode: "Markdown"
+            }).catch(async (e: any) => {
+                // Fallback to classic editMessageText if the server doesn't support the new draft method yet
+                console.warn("sendMessageDraft failed, falling back to editMessageText", e.message);
+                await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined,
+                    `🚀 *Генерация (${i + 1}/${types.length}): ${currentType.toUpperCase()}*\n\n🕒 Обработка...`,
+                    { parse_mode: "Markdown" }
+                ).catch(() => {});
+            });
 
             const genRes = await fetch(`${SITE_URL}/api/internal/bot/visual/generate`, {
                 method: "POST",

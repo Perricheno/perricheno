@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const userId = parseInt(searchParams.get("userId") || "");
+    const userId = searchParams.get("userId");
 
     if (!userId) {
         return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing data" }, { status: 400 });
         }
 
-        updateBotSession(userId, session);
+        updateBotSession(String(userId), session);
         return NextResponse.json({ success: true });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });

@@ -97,10 +97,9 @@ db.exec(`
     );
 
     CREATE TABLE IF NOT EXISTS bot_sessions (
-        user_id INTEGER PRIMARY KEY,
+        telegram_id TEXT PRIMARY KEY,
         session_data TEXT NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 `);
 
@@ -722,8 +721,8 @@ export async function deleteTelegramNotification(userId: number, messageId: numb
 
 // --- Bot Persistence ---
 
-export function getBotSession(userId: number): any | null {
-    const row = db.prepare('SELECT session_data FROM bot_sessions WHERE user_id = ?').get(userId) as any;
+export function getBotSession(telegramId: string): any | null {
+    const row = db.prepare('SELECT session_data FROM bot_sessions WHERE telegram_id = ?').get(telegramId) as any;
     if (!row) return null;
     try {
         return JSON.parse(row.session_data);
@@ -732,15 +731,15 @@ export function getBotSession(userId: number): any | null {
     }
 }
 
-export function updateBotSession(userId: number, data: any): void {
+export function updateBotSession(telegramId: string, data: any): void {
     const sessionJson = JSON.stringify(data);
     db.prepare(`
-        INSERT INTO bot_sessions (user_id, session_data, updated_at)
+        INSERT INTO bot_sessions (telegram_id, session_data, updated_at)
         VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(user_id) DO UPDATE SET 
+        ON CONFLICT(telegram_id) DO UPDATE SET 
             session_data = excluded.session_data,
             updated_at = CURRENT_TIMESTAMP
-    `).run(userId, sessionJson);
+    `).run(telegramId, sessionJson);
 }
 
 export function cleanupStuckSessions(): void {
