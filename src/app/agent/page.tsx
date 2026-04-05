@@ -847,30 +847,30 @@ export default function AgentPage() {
 
                                 <div className="w-px h-4 bg-[#e5e5e5] mx-1" />
 
-                                <label className="flex items-center gap-2 cursor-pointer ml-1 mr-2">
+                                <label className="flex items-center gap-1.5 cursor-pointer ml-1 mr-1">
                                     <div className="relative rounded-full w-8 h-4 transition-colors duration-300" style={{ backgroundColor: isAgentMode ? "#1a1a1a" : "#e5e5e5" }}>
                                         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${isAgentMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
                                     </div>
-                                    <span className="text-[13px] font-medium text-[#666]">Agent</span>
+                                    <span className="text-[13px] font-medium text-[#666] hidden sm:inline">Agent</span>
                                     <input type="checkbox" className="hidden" checked={isAgentMode} onChange={(e) => setIsAgentMode(e.target.checked)} />
                                 </label>
 
-                                <div className="w-px h-4 bg-[#e5e5e5] mx-1" />
+                                <div className="w-px h-4 bg-[#e5e5e5] mx-0.5" />
 
-                                <label className="cursor-pointer p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                <label className="cursor-pointer p-1.5 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
                                     <IconPaperclip className="w-4 h-4" stroke={2} />
-                                    <input type="file" className="hidden" multiple accept=".pdf,.txt" onChange={handleFileUpload} />
+                                    <input type="file" className="hidden" multiple accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.ppt" onChange={handleFileUpload} />
                                 </label>
-                                <button onClick={handleLinkAdd} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                <button onClick={handleLinkAdd} className="p-1.5 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors hidden sm:flex">
                                     <IconLink className="w-4 h-4" stroke={2} />
                                 </button>
-                                {/* Settings Dropdown Button */}
-                                <div className="relative">
-                                    <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-2 rounded-lg transition-colors ${settingsOpen ? 'text-[#1a1a1a] bg-[#f5f5f5]' : 'text-[#999] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}`} title="Document Settings">
+                                {/* Settings & User — hidden on mobile, available via Settings page */}
+                                <div className="relative hidden md:block">
+                                    <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-1.5 rounded-lg transition-colors ${settingsOpen ? 'text-[#1a1a1a] bg-[#f5f5f5]' : 'text-[#999] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}`} title="Document Settings">
                                         <IconSettings className="w-4 h-4" stroke={2} />
                                     </button>
                                 </div>
-                                <button onClick={() => user ? setBillingOpen(true) : setShowLogin(true)} className="p-2 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Account & Billing">
+                                <button onClick={() => user ? setBillingOpen(true) : setShowLogin(true)} className="p-1.5 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors hidden md:flex" title="Account & Billing">
                                     <IconUser className="w-4 h-4" stroke={2} />
                                 </button>
                             </div>
