@@ -10,13 +10,22 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
+    const userIdStr = searchParams.get("userId");
+    const telegramId = searchParams.get("telegramId");
 
-    if (!userId) {
+    if (telegramId) {
+        const { getSessionsByUserId, getUserByTelegramId } = await import("@/lib/db");
+        const user = getUserByTelegramId(telegramId);
+        if (!user) return NextResponse.json({ sessions: [] });
+        const sessions = getSessionsByUserId(user.id);
+        return NextResponse.json({ sessions });
+    }
+
+    if (!userIdStr) {
         return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    const session = getBotSession(userId);
+    const session = getBotSession(userIdStr);
     return NextResponse.json({ session });
 }
 
@@ -27,7 +36,20 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { userId, session } = await req.json();
+        const { userId, session, action, telegramId } = await req.json();
+
+        const { getUserByTelegramId, deleteAllOtherSessions, updateBotSession } = await import("@/lib/db");
+
+        if (action === 'terminate_others' && telegramId) {
+            const user = getUserByTelegramId(telegramId);
+            if (user) {
+                // Kill all sessions. Note: The current device will survive if it stays in its own cookie.
+                // But from the bot's perspective, 'terminate_others' usually means log out of EVERYTHING ELSE.
+                deleteAllOtherSessions(user.id, 'bot-trigger'); 
+                return NextResponse.json({ success: true });
+            }
+        }
+
         if (!userId || !session) {
             return NextResponse.json({ error: "Missing data" }, { status: 400 });
         }

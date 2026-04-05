@@ -101,9 +101,37 @@ db.exec(`
         session_data TEXT NOT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        user_agent TEXT,
+        ip TEXT,
+        location TEXT,
+        last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 `);
 
-// Safe migrations for legacy database updates
+// Migration: Ensure bot_sessions uses telegram_id instead of user_id
+try {
+    const tableInfo = db.prepare("PRAGMA table_info(bot_sessions)").all() as any[];
+    const hasUserId = tableInfo.some(col => col.name === 'user_id');
+    if (hasUserId) {
+        console.log("🔄 Migrating bot_sessions table (Legacy user_id detected)...");
+        db.exec("DROP TABLE bot_sessions");
+        db.exec(`
+            CREATE TABLE bot_sessions (
+                telegram_id TEXT PRIMARY KEY,
+                session_data TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+    }
+} catch (e) {
+    console.error("⚠️ Failed to migrate bot_sessions:", e);
+}
 try { db.exec("ALTER TABLE agent_sessions ADD COLUMN status TEXT DEFAULT 'done'"); } catch (e) {}
 try { db.exec("ALTER TABLE agent_sessions ADD COLUMN error_msg TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE agent_sessions ADD COLUMN stream_text TEXT"); } catch (e) {}
@@ -742,6 +770,32 @@ export function updateBotSession(telegramId: string, data: any): void {
             session_data = excluded.session_data,
             updated_at = CURRENT_TIMESTAMP
     `).run(telegramId, sessionJson);
+}
+
+// --- Stateful Sessions ---
+
+export function createSessionRecord(data: { id: string, user_id: number, user_agent?: string, ip?: string, location?: string }) {
+    const stmt = db.prepare(`
+        INSERT INTO sessions (id, user_id, user_agent, ip, location)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(data.id, data.user_id, data.user_agent || null, data.ip || null, data.location || null);
+}
+
+export function getSessionById(id: string) {
+    return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as any;
+}
+
+export function getSessionsByUserId(userId: number) {
+    return db.prepare('SELECT * FROM sessions WHERE user_id = ? ORDER BY created_at DESC').all(userId) as any[];
+}
+
+export function deleteSessionRecord(id: string) {
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+}
+
+export function deleteAllOtherSessions(userId: number, currentSessionId: string) {
+    db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').run(userId, currentSessionId);
 }
 
 export function cleanupStuckSessions(): void {

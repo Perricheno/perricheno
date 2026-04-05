@@ -31,7 +31,18 @@ export async function GET(req: NextRequest) {
                 photo_url: tgUser.photo_url || "",
             });
 
-            await createSession(user.id);
+            const sessionData = await createSession(user.id);
+
+            // Send Security Notification via Telegram
+            const { sendTelegramNotification } = await import("@/lib/db");
+            const alertText = `🔔 *Безопасность: Новый вход*\n\n` +
+                              `Обнаружен новый вход в ваш аккаунт Perricheno.\n\n` +
+                              `📱 *Устройство:* \`${sessionData.ua.split(' (')[0]}\`\n` +
+                              `🌍 *Место:* \`${sessionData.location}\`\n` +
+                              `📍 *IP:* \`${sessionData.ip}\`\n\n` +
+                              `_Если это были не вы, немедленно завершите все сессии в настройках бота._`;
+            
+            await sendTelegramNotification(user.id, alertText).catch(e => console.error("Notification failed", e));
 
             // Clean up used token
             db.prepare("DELETE FROM auth_requests WHERE token = ?").run(token);

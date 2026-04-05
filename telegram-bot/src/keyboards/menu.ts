@@ -155,3 +155,32 @@ export function getBillingHistoryKeyboard(hasTxs: boolean) {
     buttons.push([Markup.button.callback("« Назад к биллингу", "billing_info")]);
     return Markup.inlineKeyboard(buttons);
 }
+
+// ── Settings & Security Keyboards ──
+
+export function getSettingsMenu() {
+    return Markup.inlineKeyboard([
+        [Markup.button.callback("🛡 Безопасность и Сессии", "security_main")],
+        [Markup.button.callback("🌐 Сменить язык (Beta)", "noop")],
+        [Markup.button.callback("« Назад", "main_menu")]
+    ]);
+}
+
+export function getSecurityMenu(sessions: any[]) {
+    const buttons = [];
+    
+    // List active sessions as text-buttons (informative)
+    for (const s of sessions) {
+        const date = new Date(s.created_at).toLocaleDateString();
+        const shortUa = s.user_agent.split(' (')[0];
+        buttons.push([Markup.button.callback(`📍 ${shortUa} — ${s.location} (${date})`, "noop")]);
+    }
+
+    if (sessions.length > 1) {
+        buttons.push([Markup.button.callback("🚫 Завершить другие сеансы", "security_terminate_others")]);
+    }
+    
+    buttons.push([Markup.button.callback("« Назад в настройки", "settings_main")]);
+    
+    return Markup.inlineKeyboard(buttons);
+}

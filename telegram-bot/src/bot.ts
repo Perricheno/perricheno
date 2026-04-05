@@ -123,16 +123,62 @@ bot.action("noop", async (ctx) => {
 });
 
 // --- Missing handler: "settings_main" (from getMainMenu) ---
-bot.action("settings_main", async (ctx) => {
+bot.action("settings_main", async (ctx: any) => {
     await ctx.answerCbQuery();
-    const text = `⚙️ *Настройки*\n\nНастройки пока в разработке. Следите за обновлениями!`;
+    const text = `⚙️ *Настройки*\n\nЗдесь вы можете управлять вашим аккаунтом и безопасностью.`;
+    const { getSettingsMenu } = await import("./keyboards/menu");
     if (ctx.callbackQuery) {
         await ctx.editMessageText(text, {
             parse_mode: "Markdown",
-            reply_markup: {
-                inline_keyboard: [[{ text: "« Назад", callback_data: "main_menu" }]]
-            }
+            ...getSettingsMenu()
         }).catch(() => {});
+    }
+});
+
+bot.action("security_main", async (ctx: any) => {
+    await ctx.answerCbQuery("📡 Запрашиваю список сессий...");
+    try {
+        const res = await fetch(`${SITE_INTERNAL_URL}/api/internal/bot/session?telegramId=${ctx.from.id}`, {
+            headers: { "X-Bot-Secret": WEBHOOK_SECRET }
+        });
+        const { sessions } = await res.json() as any;
+        const { getSecurityMenu } = await import("./keyboards/menu");
+        
+        const countText = sessions.length === 1 ? "_У вас только одна активная сессия (вы)._" : `_Активных сессий: ${sessions.length}_`;
+        const text = `🛡 *Безопасность и Сессии*\n\nЗдесь отображаются все устройства, имеющие доступ к вашему аккаунту Perricheno.\n\n${countText}`;
+        
+        await ctx.editMessageText(text, {
+            parse_mode: "Markdown",
+            ...getSecurityMenu(sessions || [])
+        }).catch(() => {});
+    } catch (e) {
+        await ctx.reply("⚠️ Ошибка при загрузке сессий.");
+    }
+});
+
+bot.action("security_terminate_others", async (ctx: any) => {
+    await ctx.answerCbQuery("🚫 Завершаю сеансы...");
+    try {
+        await fetch(`${SITE_INTERNAL_URL}/api/internal/bot/session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Bot-Secret": WEBHOOK_SECRET },
+            body: JSON.stringify({ action: "terminate_others", telegramId: String(ctx.from.id) })
+        });
+        
+        await ctx.reply("✅ *Все остальные сеансы завершены.*\n\nДругие устройства будут разлогинены при следующей активности.");
+        
+        // Refresh security view
+        const res = await fetch(`${SITE_INTERNAL_URL}/api/internal/bot/session?telegramId=${ctx.from.id}`, {
+            headers: { "X-Bot-Secret": WEBHOOK_SECRET }
+        });
+        const { sessions } = await res.json() as any;
+        const { getSecurityMenu } = await import("./keyboards/menu");
+        await ctx.editMessageText(`🛡 *Безопасность и Сессии*\n\n_Сеансы сброшены._`, {
+            parse_mode: "Markdown",
+            ...getSecurityMenu(sessions || [])
+        }).catch(() => {});
+    } catch (e) {
+        await ctx.reply("⚠️ Не удалось завершить сеансы.");
     }
 });
 
