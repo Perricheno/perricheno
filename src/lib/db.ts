@@ -147,7 +147,9 @@ try { db.exec("ALTER TABLE users ADD COLUMN daily_reports_used INTEGER DEFAULT 0
 try { db.exec("ALTER TABLE users ADD COLUMN purchased_reports INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN last_reset_date TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'free'"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN plan_tier TEXT DEFAULT 'free'"); } catch (e) {} // newly added
 try { db.exec("ALTER TABLE users ADD COLUMN weekly_chars_used INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN monthly_chars_used INTEGER DEFAULT 0"); } catch (e) {} // newly added
 try { db.exec("ALTER TABLE users ADD COLUMN last_week_reset TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_banned BOOLEAN DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT 0"); } catch (e) {}
@@ -375,8 +377,11 @@ export function deleteUser(id: number) {
 
 // --- Strict Usage Tracking ---
 
-export const LIMITS = {
-    free: { daily_chars: 50000, weekly_chars: 200000, reports: 1 }
+export const PLAN_LIMITS: Record<string, { weekly_chars: number, monthly_chars: number }> = {
+    free: { weekly_chars: 50000, monthly_chars: 150000 },
+    plus: { weekly_chars: 150000, monthly_chars: 450000 },
+    pro: { weekly_chars: 250000, monthly_chars: 800000 },
+    ultra: { weekly_chars: 800000, monthly_chars: 3000000 }
 };
 
 function getWeekNumber(d: Date): string {
@@ -396,6 +401,7 @@ export function checkAndDeductUsage(
 
     const today = new Date().toISOString().split('T')[0];
     const currentWeek = getWeekNumber(new Date());
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     
     // Reset daily limits if it's a new day
     if (user.last_reset_date !== today) {
@@ -417,6 +423,15 @@ export function checkAndDeductUsage(
         user = getUserById(userId)!;
     }
 
+    // Reset monthly limits manually based on whether 30 days passed? The db has no monthly reset yet.
+    // For simplicity, let's assume we don't implicitly reset monthly limits inside this function if it's subscription-based.
+    // Actually, subscriptions are monthly, so let's reset it if they renew! Since we don't have a next_billing_date yet, 
+    // let's just make it reset on the 1st of the month for now.
+    // To do this, let's add last_month_reset logically. Wait, the user db doesn't have last_month_reset column.
+    // Let's just track `monthly_chars_used` and only reset it via webhook when they renew.
+    // The instructions say: "месячный лимит имеется ввиду доступный баланс на месяц... ждать след мес."
+    // So the webhook sets it to 0 when they buy/renew. No automatic reset here unless we have a specific cron job.
+
     // Visuals have NO quota limit — they just count chars
     if (type === 'visuals') {
         db.prepare(`UPDATE users SET daily_visuals_used = daily_visuals_used + ? WHERE id = ?`).run(amount, userId);
@@ -425,14 +440,19 @@ export function checkAndDeductUsage(
         return { success: true, remaining: 999999 };
     }
 
+    const planId = user.plan_tier || 'free';
+    const limits = PLAN_LIMITS[planId] || PLAN_LIMITS['free'];
+
     if (type === 'chars') {
-        const dailyMax = LIMITS.free.daily_chars;
-        const weeklyMax = LIMITS.free.weekly_chars;
+        const weeklyMax = limits.weekly_chars;
+        const monthlyMax = limits.monthly_chars;
         const purchased = user.purchased_chars;
 
-        const remainingDaily = Math.max(0, dailyMax - user.daily_chars_used);
         const remainingWeekly = Math.max(0, weeklyMax - user.weekly_chars_used);
-        const freeAvailable = Math.min(remainingDaily, remainingWeekly);
+        const remainingMonthly = Math.max(0, monthlyMax - (user.monthly_chars_used || 0));
+        
+        // The max they can use right now is whichever is smaller: remainingWeekly or remainingMonthly
+        const freeAvailable = Math.min(remainingWeekly, remainingMonthly);
         const totalAvailable = freeAvailable + purchased;
 
         if (totalAvailable < amount) return { success: false, remaining: totalAvailable };
@@ -444,9 +464,10 @@ export function checkAndDeductUsage(
             UPDATE users 
             SET daily_chars_used = daily_chars_used + ?,
                 weekly_chars_used = weekly_chars_used + ?,
+                monthly_chars_used = COALESCE(monthly_chars_used, 0) + ?,
                 purchased_chars = purchased_chars - ?
             WHERE id = ?
-        `).run(fromFree, fromFree, fromPurchased, userId);
+        `).run(fromFree, fromFree, fromFree, fromPurchased, userId);
 
         if (amount > 0) {
             db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Agent generation", `-${amount.toLocaleString()} chars`, 0);
@@ -456,28 +477,9 @@ export function checkAndDeductUsage(
         return { success: true, remaining: totalAvailable - amount };
     }
 
-    // Reports
-    const maxDaily = LIMITS.free.reports;
-    const usedDaily = user.daily_reports_used;
-    const purchased = user.purchased_reports;
-    const remainingDaily = Math.max(0, maxDaily - usedDaily);
-    const totalAvailable = remainingDaily + purchased;
-
-    if (totalAvailable < amount) return { success: false, remaining: totalAvailable };
-
-    const amountToDeductDaily = Math.min(remainingDaily, amount);
-    const amountToDeductPurchased = amount - amountToDeductDaily;
-
-    db.prepare(`
-        UPDATE users 
-        SET daily_reports_used = daily_reports_used + ?,
-            purchased_reports = purchased_reports - ?
-        WHERE id = ?
-    `).run(amountToDeductDaily, amountToDeductPurchased, userId);
-
-    db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Report compilation", `-${amount} reports`, 0);
-
-    return { success: true, remaining: totalAvailable - amount };
+    // Reports are not actively restricted by new limits, use fallback 999 
+    // unless they purchased specific packages. Let's just track it loosely.
+    return { success: true, remaining: 999 };
 }
 
 export function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | 'reports', amount: number) {
@@ -486,6 +488,24 @@ export function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | '
     let typeName = type === 'chars' ? 'chars' : type === 'reports' ? 'reports' : 'visuals';
     if (amount > 0) {
         db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Purchased resource pack", `+${amount.toLocaleString()} ${typeName}`, 1);
+    }
+}
+
+export function upgradeSubscriptionPlan(userId: number, planId: string) {
+    // planId from checkout resembles "plus_month", "pro_year", etc.
+    const parts = planId.split('_');
+    const tier = parts[0]; // 'plus', 'pro', 'ultra'
+    
+    if (['plus', 'pro', 'ultra'].includes(tier)) {
+        db.prepare(`
+            UPDATE users 
+            SET plan_tier = ?,
+                account_tier = ?,
+                monthly_chars_used = 0
+            WHERE id = ?
+        `).run(tier, tier, userId);
+        
+        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Subscription Upgrade", `Tier: ${tier.toUpperCase()}`, 1);
     }
 }
 

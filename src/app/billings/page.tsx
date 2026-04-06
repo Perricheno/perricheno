@@ -35,8 +35,8 @@ const PLANS = [
         id: "plus",
         name: "Plus (Standard)",
         desc: "Workhorse for students & Python analysts.",
-        priceMonthly: 15,
-        priceAnnual: 12,
+        priceMonthly: 3.99,
+        priceAnnual: 3.19,
         tag: null,
         accent: "#a8a8a8",
         features: [
@@ -54,8 +54,8 @@ const PLANS = [
         id: "pro",
         name: "Pro (Researcher)",
         desc: "Gold standard. Elite R stack & AI corrections.",
-        priceMonthly: 35,
-        priceAnnual: 29,
+        priceMonthly: 6.99,
+        priceAnnual: 5.59,
         tag: "Popular",
         accent: "#10b981", // Green accent as requested
         features: [
@@ -72,8 +72,8 @@ const PLANS = [
         id: "ultra",
         name: "Ultra (Absolute Power)",
         desc: "Ultimate tier. Max savings & heavy bonuses.",
-        priceMonthly: 75,
-        priceAnnual: 59,
+        priceMonthly: 14.99,
+        priceAnnual: 11.99,
         tag: "Best Value",
         accent: "#f59e0b",
         features: [
@@ -92,12 +92,23 @@ export default function BillingsPage() {
     const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
     const [limits, setLimits] = useState<any>(null);
     const [fullUser, setFullUser] = useState<any>(null);
+    const [exchangeRate, setExchangeRate] = useState<number | null>(500);
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [receipts, setReceipts] = useState<any[]>([]);
     const [isAnnual, setIsAnnual] = useState(true);
-
     useEffect(() => {
+        // Fetch real-time USD/KZT exchange rate
+        fetch("https://open.er-api.com/v6/latest/USD")
+            .then(res => res.json())
+            .then(data => {
+                if (data?.rates?.KZT) {
+                    setExchangeRate(data.rates.KZT);
+                }
+            }).catch(() => {
+                setExchangeRate(495); // Fallback if API fails
+            });
+
         if (user) {
             fetch("/api/auth/me")
                 .then(r => r.json())
@@ -116,9 +127,21 @@ export default function BillingsPage() {
         if (planId === 'free') return;
         setCheckoutLoading(planId);
         try {
-            // Logic to be mapped to the actual recurring backend processor later
             const interval = isAnnual ? 'year' : 'month';
-            alert(`Upgrading to ${planId} (${interval})! Setup backend required.`);
+            const fullPlanId = `${planId}_${interval}`;
+            const res = await fetch("/api/billing/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ planId: fullPlanId })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Payment failed");
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error("No checkout URL returned");
+            }
         } catch (err: any) {
             alert(`Checkout error: ${err.message || 'Unknown'}`);
         } finally {
@@ -309,14 +332,21 @@ export default function BillingsPage() {
                                         {plan.priceMonthly === 0 ? (
                                             <div className="text-4xl font-black text-[#F1F1F3]">$0</div>
                                         ) : (
-                                            <div className="flex items-end gap-1">
-                                                <span className="text-xl font-bold text-gray-500 mb-1">$</span>
-                                                <span className="text-4xl font-black text-[#F1F1F3]">{price}</span>
-                                                <span className="text-xs font-semibold text-gray-500 mb-2">/mo</span>
-                                            </div>
+                                            <>
+                                                <div className="flex items-end gap-1">
+                                                    <span className="text-xl font-bold text-gray-500 mb-1">$</span>
+                                                    <span className="text-4xl font-black text-[#F1F1F3]">{price}</span>
+                                                    <span className="text-xs font-semibold text-gray-500 mb-2">/mo</span>
+                                                </div>
+                                                {exchangeRate && (
+                                                    <div className="text-[15px] font-bold text-gray-400 mt-1">
+                                                        ~{(price * exchangeRate).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₸
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                         <div className="text-[10px] text-gray-500 font-medium mt-1 h-4">
-                                            {isAnnual && price > 0 ? `Billed annually at $${price * 12}` : ''}
+                                            {isAnnual && price > 0 ? `Billed annually at $${(price * 12).toFixed(2)}` : ''}
                                         </div>
                                     </div>
 

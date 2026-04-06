@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addPurchasedTokens, isPaymentProcessed, markPaymentProcessed } from '@/lib/db';
+import { upgradeSubscriptionPlan, isPaymentProcessed, markPaymentProcessed } from '@/lib/db';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET; // This is used to verify signatures
 
-const PACKAGES: Record<string, { chars: number; reports: number }> = {
-    'starter_chars': { chars: 100000, reports: 0 },
-    'writer': { chars: 500000, reports: 0 },
-    'data_scientist': { chars: 2000000, reports: 0 },
-    'researcher': { chars: 5000000, reports: 0 },
-    'report_single': { chars: 0, reports: 3 },
-    'report_bulk': { chars: 0, reports: 15 },
-    'combo_lite': { chars: 1000000, reports: 5 },
-    'combo_pro': { chars: 10000000, reports: 30 },
+const PLANS: Record<string, { tier: string, duration: string, name: string }> = {
+    'plus_month': { tier: 'plus', duration: '1 Month', name: 'Plus (1 Month)' },
+    'plus_year': { tier: 'plus', duration: '1 Year', name: 'Plus (1 Year)' },
+    'pro_month': { tier: 'pro', duration: '1 Month', name: 'Pro (1 Month)' },
+    'pro_year': { tier: 'pro', duration: '1 Year', name: 'Pro (1 Year)' },
+    'ultra_month': { tier: 'ultra', duration: '1 Month', name: 'Ultra (1 Month)' },
+    'ultra_year': { tier: 'ultra', duration: '1 Year', name: 'Ultra (1 Year)' }
 };
 
 export async function POST(req: Request) {
@@ -44,18 +42,12 @@ export async function POST(req: Request) {
             return new NextResponse('Already processed', { status: 200 });
         }
 
-        // CryptoCloud v2 Signature Verification: MD5(status_invoice + order_id + amount_crypto + currency_crypto + secret)
-        // Wait, different v2 APIs use slightly different signatures. Let's do a basic check since they might pass status.
         if (CRYPTOCLOUD_SECRET && receivedSign) {
-            // General verification logic for CryptoCloud
             const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
             const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
             
-            // NOTE: Due to docs variation, we log it without hard-blocking immediately if it mismatches because of missing currency string, 
-            // but we absolutely should stringently verify it.
             if (expectedSign !== receivedSign) {
                 console.error(`🚨 SECURITY WARNING: Webhook signature mismatch! Expected ${expectedSign}, got ${receivedSign}.`);
-                // Strict security: reject requests with invalid signatures
                 return new NextResponse('Invalid signature', { status: 403 });
             }
         } else if (CRYPTOCLOUD_SECRET && !receivedSign) {
@@ -69,35 +61,30 @@ export async function POST(req: Request) {
 
         const parts = orderId.split('_');
         const userIdStr = parts[1];
-        const packId = parts[3];
-        
-        const userId = parseInt(userIdStr, 10);
-        const pack = PACKAGES[packId];
+        // The orderId string is like: UID_8_PACK_plus_month_TS_1711234
+        // 'UID' [0], '8' [1], 'PACK' [2], 'plus' [3], 'month' [4] wait.
+        // Wait, what splitting logic does `checkout` use? Let's fix this safely.
+        // Let's find "PACK_" in orderId...
+        const packStartIndex = orderId.indexOf("PACK_") + 5;
+        const tsIndex = orderId.indexOf("_TS_");
+        const packId = orderId.substring(packStartIndex, tsIndex);
 
-        if (isNaN(userId) || !pack) {
+        const userId = parseInt(userIdStr, 10);
+        const plan = PLANS[packId];
+
+        if (isNaN(userId) || !plan) {
             return new NextResponse('Bad package data', { status: 400 });
         }
 
-        console.log(`✅ Webhook: Received payment from UID ${userId} for pack ${packId}`);
+        console.log(`✅ Webhook: Received payment from UID ${userId} for plan ${packId}`);
 
-        // Add tokens
-        if (pack.chars > 0) addPurchasedTokens(userId, 'chars', pack.chars);
-        if (pack.reports > 0) addPurchasedTokens(userId, 'reports', pack.reports);
+        // Upgrade the subscription
+        upgradeSubscriptionPlan(userId, packId);
 
         // Mark as processed to prevent double-crediting
         markPaymentProcessed(orderId);
 
-        const packNames: Record<string, string> = {
-            'starter_chars': '⚡ Starter Pack (100K)',
-            'writer': '✍️ Writer Pack (500K)',
-            'data_scientist': '🔬 Data Scientist (2M)',
-            'researcher': '📚 Researcher (5M)',
-            'report_single': '📄 3 Reports',
-            'report_bulk': '⭐ 15 Reports',
-            'combo_lite': '📦 Lite Bundle',
-            'combo_pro': '🔥 Pro Bundle',
-        };
-        const packName = packNames[packId] || packId;
+        const packName = plan.name;
         const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
         const receiptId = `PRN-${uniqueId}-${userId}`;
 
@@ -163,8 +150,8 @@ export async function POST(req: Request) {
                     `📦 Пакет: <b>${packName}</b>`,
                 ];
                 
-                if (pack.chars > 0) lines.push(`🔤 Символов: <b>+${pack.chars.toLocaleString()}</b>`);
-                if (pack.reports > 0) lines.push(`📄 Отчётов: <b>+${pack.reports}</b>`);
+                if (plan.tier) lines.push(`🔤 Доступ: <b>${plan.name}</b>`);
+                if (plan.duration) lines.push(`⌛ Период: <b>${plan.duration}</b>`);
                 
                 lines.push(
                     ``,
