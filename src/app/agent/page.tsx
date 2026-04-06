@@ -8,7 +8,7 @@ import {
     IconClock, IconLetterCase, IconSettings,
     IconSchool, IconSearch, IconCertificate, IconChartPie,
     IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
-    IconPlus
+    IconPlus, IconLock
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
@@ -1043,17 +1043,21 @@ export default function AgentPage() {
                     {/* Runtime Toggle */}
                     <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl p-1 mb-6 shadow-sm">
                         <button 
+                            disabled={['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')}
                             onClick={() => setSettings(s => ({ ...s, runtime: 'R' }))}
-                            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                                settings.runtime === 'R' 
-                                    ? 'bg-black text-white shadow-sm' 
-                                    : 'text-gray-400 hover:text-black'
+                            className={`px-5 py-2 flex items-center gap-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                                ['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')
+                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed opacity-50'
+                                    : settings.runtime === 'R' 
+                                        ? 'bg-black text-white shadow-sm' 
+                                        : 'text-gray-400 hover:text-black'
                             }`}>
+                            {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <IconLock className="w-3 h-3" />}
                             R
                         </button>
                         <button 
                             onClick={() => setSettings(s => ({ ...s, runtime: 'Python' }))}
-                            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                            className={`px-5 py-2 flex items-center gap-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
                                 settings.runtime === 'Python' 
                                     ? 'bg-black text-white shadow-sm' 
                                     : 'text-gray-400 hover:text-black'
@@ -1070,16 +1074,22 @@ export default function AgentPage() {
                         <div className="flex flex-wrap justify-center gap-2">
                             {ALL_CHARTS.map((chart) => {
                                 const isSelected = suggestedCharts.includes(chart);
+                                const isPremium = !["bar", "line", "scatter", "histogram", "pie"].includes(chart);
+                                const isLocked = isPremium && (!user?.plan_tier || user.plan_tier.toLowerCase() === "free");
                                 return (
                                     <button
                                         key={chart}
-                                        onClick={() => toggleChart(chart)}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
-                                            isSelected
-                                                ? 'bg-black text-white border-black shadow-sm'
-                                                : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300 hover:text-gray-600'
+                                        onClick={() => !isLocked && toggleChart(chart)}
+                                        disabled={isLocked}
+                                        className={`px-3 py-1.5 flex items-center gap-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                                            isLocked
+                                                ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed opacity-50'
+                                                : isSelected
+                                                    ? 'bg-black text-white border-black shadow-sm'
+                                                    : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300 hover:text-gray-600'
                                         }`}
                                     >
+                                        {isLocked && <IconLock className="w-3 h-3" stroke={2.5} />}
                                         {chart.replace(/_/g, " ")}
                                     </button>
                                 );

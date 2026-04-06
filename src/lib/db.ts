@@ -313,13 +313,16 @@ export interface User {
     created_at: string;
     
     // Usage limits
+    plan_tier?: string;
     daily_chars_used: number;
     weekly_chars_used: number;
+    monthly_chars_used?: number;
     purchased_chars: number;
     daily_visuals_used: number;
     purchased_visuals: number;
     daily_reports_used: number;
     purchased_reports: number;
+
     last_reset_date: string | null;
     last_week_reset: string | null;
     is_banned: number;

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash, IconX } from "@tabler/icons-react";
+import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash, IconX, IconLock } from "@tabler/icons-react";
 import { CodeImage, Language } from "./types";
 import { IconBrandPython, IconLetterR } from "@tabler/icons-react";
+import { useAdmin } from "@/components/AdminContext";
 
 interface Props {
     topic: string;
@@ -198,6 +199,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
 }
 
 export function AgentVisualizations({ topic, language, visuals, setVisuals, sessionId, openEditor, onAddVisualsToReport, runtime, setRuntime, onQuotaExceeded }: Props) {
+    const { user } = useAdmin();
     const [selectedCharts, setSelectedCharts] = useState<string[]>(["bar"]);
     const [palette, setPalette] = useState("viridis");
     const [dataContext, setDataContext] = useState("");
@@ -328,12 +330,16 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                     <div className="flex flex-wrap gap-2">
                         {CHART_TYPES.map((c: any) => {
                             const active = selectedCharts.includes(c.id);
+                            const isPremium = !["bar", "line", "scatter", "histogram", "pie"].includes(c.id);
+                            const isLocked = isPremium && (!user?.plan_tier || user.plan_tier.toLowerCase() === "free");
                             return (
                                 <div key={c.id} className="relative group">
                                     <button
-                                        onClick={() => toggleChart(c.id)}
-                                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${active ? 'bg-black text-white border-black shadow-lg z-20' : 'bg-white text-gray-300 border-gray-100 hover:border-gray-300 z-10'}`}
+                                        onClick={() => !isLocked && toggleChart(c.id)}
+                                        disabled={isLocked}
+                                        className={`px-4 py-2 flex items-center gap-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${isLocked ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed opacity-50' : active ? 'bg-black text-white border-black shadow-lg z-20' : 'bg-white text-gray-300 border-gray-100 hover:border-gray-300 z-10'}`}
                                     >
+                                        {isLocked && <IconLock className="w-3" />}
                                         {c.label}
                                     </button>
                                     
@@ -370,10 +376,16 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                             <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] block ml-1">Environment</label>
                             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
                                 <button 
+                                    disabled={['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')}
                                     onClick={() => setRuntime('R')}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${runtime === 'R' ? 'bg-white text-black shadow-sm' : 'text-gray-300 hover:text-gray-400'}`}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        ['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')
+                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed opacity-50'
+                                            : runtime === 'R' ? 'bg-white text-black shadow-sm' : 'text-gray-300 hover:text-gray-400'
+                                    }`}
                                 >
-                                    <IconLetterR className="w-3.5 h-3.5" stroke={3} />
+                                    {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <IconLock className="w-3.5 h-3.5" />}
+                                    {!['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <IconLetterR className="w-3.5 h-3.5" stroke={3} />}
                                     R
                                 </button>
                                 <button 
@@ -430,10 +442,19 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
 
                             <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-4 backdrop-blur-md p-6">
                                 <button
-                                    onClick={() => openEditor(i)}
-                                    className="w-full py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-[#222] transition-all shadow-xl hover:scale-105 active:scale-95"
+                                    onClick={() => {
+                                        if (['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')) return;
+                                        openEditor(i);
+                                    }}
+                                    disabled={['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')}
+                                    className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all ${
+                                        ['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free')
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-75 border border-gray-200'
+                                            : 'bg-black text-white hover:bg-[#222] shadow-xl hover:scale-105 active:scale-95'
+                                    }`}
                                 >
-                                    <IconCode className="w-4 h-4" /> AI Edit Code
+                                    {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') ? <IconLock className="w-4 h-4" /> : <IconCode className="w-4 h-4" />}
+                                     AI Edit Code
                                 </button>
                                 <button
                                     onClick={() => downloadImage(img.image, `fig_${i + 1}_${img.chart_type}`)}
