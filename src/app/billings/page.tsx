@@ -54,7 +54,7 @@ const PLANS = [
         id: "pro",
         name: "Pro (Researcher)",
         desc: "Gold standard. Elite R stack & AI corrections.",
-        priceMonthly: 6.99,
+        priceMonthly: 7.99,
         priceAnnual: 69.00,
         tag: "Popular",
         accent: "#10b981", // Green accent as requested

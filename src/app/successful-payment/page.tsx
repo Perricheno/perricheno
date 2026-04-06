@@ -15,7 +15,7 @@ export default function SuccessfulPayment() {
                 
                 <h1 className="text-3xl font-black mb-3 tracking-tight text-black">Payment Successful!</h1>
                 <p className="text-[#A1A1AA] font-medium text-sm mb-10 leading-relaxed">
-                    Your account has been successfully credited with tokens. You can now return to the agent and continue unleashing your productivity.
+                    Your subscription has been activated. You can now return to the agent and continue unleashing your productivity.
                 </p>
 
                 <Link href="/agent">

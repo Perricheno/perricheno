@@ -15,11 +15,11 @@ export default function FailedPayment() {
                 
                 <h1 className="text-3xl font-black mb-3 tracking-tight text-black">Payment Failed</h1>
                 <p className="text-[#A1A1AA] font-medium text-sm mb-10 leading-relaxed">
-                    Something went wrong while processing your payment. Your card was not charged, and tokens were not added. 
+                    Something went wrong while processing your payment. You were not charged, and no subscription was activated. 
                 </p>
 
                 <div className="flex flex-col gap-3">
-                    <Link href="/agent">
+                    <Link href="/billings">
                         <button className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-black text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-[#222] transition-all shadow-xl active:scale-95 group">
                             <IconRefresh className="w-4 h-4 group-hover:-rotate-180 transition-transform duration-500" /> Try Again
                         </button>

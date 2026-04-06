@@ -256,6 +256,9 @@ try {
     `);
 } catch (e) {}
 
+// Migration: Add is_active column to promo_codes
+try { db.exec("ALTER TABLE promo_codes ADD COLUMN is_active BOOLEAN DEFAULT 1"); } catch (e) {}
+
 try {
     db.exec(`
         CREATE TABLE IF NOT EXISTS system_config (

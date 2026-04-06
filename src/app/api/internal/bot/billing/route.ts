@@ -204,6 +204,7 @@ export async function POST(req: NextRequest) {
 
             const promo = db.prepare("SELECT * FROM promo_codes WHERE code = ?").get(code.toUpperCase()) as any;
             if (!promo) return NextResponse.json({ error: "Промокод не найден." }, { status: 404 });
+            if (promo.is_active === 0) return NextResponse.json({ error: "Промокод деактивирован." }, { status: 410 });
             if (promo.uses >= promo.max_uses) return NextResponse.json({ error: "Лимит активаций исчерпан." }, { status: 410 });
 
             // Check if user already used this promo

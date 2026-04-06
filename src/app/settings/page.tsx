@@ -3,36 +3,41 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-    IconBolt, IconReceipt, IconFileText,
-    IconPackage, IconFlame, IconStar, IconArrowRight,
-    IconTrendingUp, IconClock, IconLogin, IconCreditCard,
-    IconSparkles, IconMail, IconUser, IconChevronRight
+    IconReceipt,
+    IconPackage, IconTrendingUp, IconClock, IconLogin,
+    IconMail, IconChevronRight, IconDatabase,
+    IconShieldLock, IconTrash, IconPlayerPlay, IconPlayerPause, IconCopy, IconCheck
 } from "@tabler/icons-react";
 
-const PACKS = [
-    { id: 'starter_chars', name: 'Starter', desc: '100K Characters', price: 1, tag: null, gradient: 'from-gray-50 to-white', accent: '#666', category: 'chars', icon: IconBolt },
-    { id: 'writer', name: 'Writer', desc: '500K Characters', price: 3, tag: null, gradient: 'from-gray-50 to-white', accent: '#444', category: 'chars', icon: IconFileText },
-    { id: 'data_scientist', name: 'Data Scientist', desc: '2M Characters', price: 5, tag: 'Popular', gradient: 'from-[#111] to-[#1a1a1a]', accent: '#10b981', category: 'chars', icon: IconSparkles },
-    { id: 'researcher', name: 'Researcher', desc: '5M Characters', price: 12, tag: null, gradient: 'from-gray-50 to-white', accent: '#3b82f6', category: 'chars', icon: IconTrendingUp },
-    { id: 'combo_lite', name: 'Lite Bundle', desc: '1M Chars + 10 Visuals', price: 7, tag: null, gradient: 'from-gray-50 to-white', accent: '#8b5cf6', category: 'combo', icon: IconPackage },
-    { id: 'combo_pro', name: 'Pro Bundle', desc: '10M Chars + 50 Visuals', price: 20, tag: 'Best', gradient: 'from-[#0a0a0a] to-[#111]', accent: '#f59e0b', category: 'combo', icon: IconFlame },
-];
+interface PromoCode {
+    id: number;
+    code: string;
+    type: string;
+    amount: number;
+    uses: number;
+    max_uses: number;
+    is_active: number;
+    created_at: string;
+}
 
 export default function SettingsPage() {
     const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
-    const [limits, setLimits] = useState<any>(null);
     const [fullUser, setFullUser] = useState<any>(null);
-    const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [receipts, setReceipts] = useState<any[]>([]);
+
+    // Promo management (admin only)
+    const [promos, setPromos] = useState<PromoCode[]>([]);
+    const [promoLoading, setPromoLoading] = useState(false);
+    const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
             fetch("/api/auth/me")
                 .then(r => r.json())
-                .then(d => { setLimits(d.limits); setFullUser(d.user); });
+                .then(d => { setFullUser(d.user); });
 
             fetch("/api/billing/stats")
                 .then(r => r.json())
@@ -43,27 +48,57 @@ export default function SettingsPage() {
         }
     }, [user]);
 
-    const handleCheckout = async (packId: string) => {
-        setCheckoutLoading(packId);
-        try {
-            const res = await fetch('/api/billing/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ packId })
-            });
-            let data;
-            try { data = JSON.parse(await res.text()); } catch {
-                window.location.assign("https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH");
-                return;
-            }
-            if (data.url) window.location.assign(data.url);
-            else if (data.fallback_url) window.location.assign(data.fallback_url);
-            else alert('Checkout failed: ' + (data.error || 'Unknown error'));
-        } catch (err: any) {
-            alert(`Checkout error: ${err.message || 'Unknown'}`);
-        } finally {
-            setCheckoutLoading(null);
+    // Load promo codes if admin
+    useEffect(() => {
+        if (fullUser?.isAdmin) {
+            fetchPromos();
         }
+    }, [fullUser]);
+
+    const fetchPromos = async () => {
+        setPromoLoading(true);
+        try {
+            const res = await fetch("/api/admin/promos");
+            const data = await res.json();
+            if (data.promos) setPromos(data.promos);
+        } catch (e) {
+            console.error("Failed to fetch promos:", e);
+        } finally {
+            setPromoLoading(false);
+        }
+    };
+
+    const togglePromo = async (promoId: number, currentActive: number) => {
+        try {
+            await fetch("/api/admin/promos", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ promoId, action: "toggle_active", is_active: currentActive ? 0 : 1 })
+            });
+            fetchPromos();
+        } catch (e) {
+            console.error("Failed to toggle promo:", e);
+        }
+    };
+
+    const deletePromo = async (promoId: number) => {
+        if (!confirm("Delete this promo code permanently?")) return;
+        try {
+            await fetch("/api/admin/promos", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ promoId, action: "delete" })
+            });
+            fetchPromos();
+        } catch (e) {
+            console.error("Failed to delete promo:", e);
+        }
+    };
+
+    const copyCode = (code: string) => {
+        navigator.clipboard.writeText(code);
+        setCopiedCode(code);
+        setTimeout(() => setCopiedCode(null), 2000);
     };
 
     const timelineItems = useMemo(() => {
@@ -85,8 +120,22 @@ export default function SettingsPage() {
         return items.sort((a, b) => b._time - a._time);
     }, [transactions, receipts]);
 
-    const dailyUsed = fullUser?.daily_chars_used || 0;
-    const dailyLimit = limits?.free?.daily_chars || 100000;
+    const currentPlanId = fullUser?.plan_tier || 'free';
+    const planLabels: Record<string, string> = {
+        free: 'Free',
+        plus: 'Plus',
+        pro: 'Pro',
+        ultra: 'Ultra'
+    };
+    const planLimits = {
+        free: { weekly: 50000, monthly: 150000 },
+        plus: { weekly: 150000, monthly: 450000 },
+        pro: { weekly: 250000, monthly: 800000 },
+        ultra: { weekly: 800000, monthly: 3000000 }
+    }[currentPlanId as 'free'|'plus'|'pro'|'ultra'] || { weekly: 50000, monthly: 150000 };
+
+    const weeklyUsed = fullUser?.weekly_chars_used || 0;
+    const monthlyUsed = fullUser?.monthly_chars_used || 0;
     const purchasedChars = fullUser?.purchased_chars || 0;
 
     return (
@@ -99,7 +148,7 @@ export default function SettingsPage() {
                     {/* ━━ Header ━━ */}
                     <div className="mb-10">
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a1a] mb-1">Settings</h1>
-                        <p className="text-sm text-gray-400">Manage your account and purchase credits.</p>
+                        <p className="text-sm text-gray-400">Manage your account and view history.</p>
                     </div>
 
                     {/* ━━ Account Card ━━ */}
@@ -111,12 +160,16 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-base font-bold truncate text-[#1a1a1a]">{fullUser.username || fullUser.first_name || "User"}</p>
-                                    <p className="text-xs text-gray-400">{fullUser.is_admin ? "Admin" : "Member"} · Since {fullUser.created_at ? new Date(fullUser.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "—"}</p>
+                                    <p className="text-xs text-gray-400">
+                                        {fullUser.isAdmin ? "Admin" : "Member"} · {planLabels[currentPlanId] || 'Free'} Plan · Since {fullUser.created_at ? new Date(fullUser.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "—"}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
                                     <div className="text-right hidden sm:block">
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Today</p>
-                                        <p className="text-sm font-black tabular-nums text-[#1a1a1a]">{(dailyUsed / 1000).toFixed(0)}K <span className="text-gray-300 font-medium">/ {(dailyLimit / 1000).toFixed(0)}K</span></p>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Weekly</p>
+                                        <p className="text-sm font-black tabular-nums text-[#1a1a1a]">
+                                            {(weeklyUsed / 1000).toFixed(0)}K <span className="text-gray-300 font-medium">/ {(planLimits.weekly / 1000).toFixed(0)}K</span>
+                                        </p>
                                     </div>
                                     <div className="w-px h-8 bg-gray-100 hidden sm:block" />
                                     <div className="text-right hidden sm:block">
@@ -132,7 +185,7 @@ export default function SettingsPage() {
                                 <IconLogin className="w-7 h-7 text-gray-300" />
                             </div>
                             <h3 className="text-lg font-bold mb-1.5 text-[#1a1a1a]">Sign in to continue</h3>
-                            <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Connect your Telegram account to view usage and purchase credits.</p>
+                            <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Connect your Telegram account to view usage and manage settings.</p>
                             <button onClick={() => setShowLogin(true)} className="px-8 py-3 bg-[#1a1a1a] text-white rounded-xl font-bold text-sm hover:bg-black transition-all active:scale-95 shadow-lg">
                                 Sign In
                             </button>
@@ -141,84 +194,101 @@ export default function SettingsPage() {
                         <div className="h-20 bg-gray-50 rounded-2xl animate-pulse mb-8" />
                     )}
 
-                    {/* ━━ Resource Packs ━━ */}
-                    <div className="mb-10">
-                        <div className="flex items-center justify-between mb-5">
-                            <h2 className="text-xl font-black tracking-tight text-[#1a1a1a]">Resource Packs</h2>
-                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-100 shadow-sm rounded-lg">
-                                <IconCreditCard className="w-3 h-3 text-gray-400" />
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">CryptoCloud</span>
+                    {/* ━━ Usage Overview (compact) ━━ */}
+                    {user && fullUser && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+                            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <IconClock className="w-3.5 h-3.5 text-gray-400" stroke={2} />
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Weekly Usage</p>
+                                </div>
+                                <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden mb-1">
+                                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyUsed / planLimits.weekly) * 100)}%` }} />
+                                </div>
+                                <p className="text-[10px] text-gray-400">{(weeklyUsed / 1000).toFixed(0)}K / {(planLimits.weekly / 1000).toFixed(0)}K</p>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <IconPackage className="w-3.5 h-3.5 text-gray-400" stroke={2} />
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Monthly Balance</p>
+                                </div>
+                                <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden mb-1">
+                                    <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (monthlyUsed / planLimits.monthly) * 100)}%` }} />
+                                </div>
+                                <p className="text-[10px] text-gray-400">{(monthlyUsed / 1000).toFixed(0)}K / {(planLimits.monthly / 1000).toFixed(0)}K</p>
+                            </div>
+                            <div className="bg-[#111] rounded-2xl border border-gray-800 p-4 shadow-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <IconDatabase className="w-3.5 h-3.5 text-gray-400" stroke={2} />
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Legacy Credits</p>
+                                </div>
+                                <p className="text-lg font-black tabular-nums text-emerald-400">
+                                    {purchasedChars >= 1000000 ? `${(purchasedChars / 1000000).toFixed(1)}M` : `${(purchasedChars / 1000).toFixed(0)}K`}
+                                </p>
+                                <p className="text-[9px] text-gray-500 mt-0.5">Never expires</p>
                             </div>
                         </div>
+                    )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {PACKS.map((pack, idx) => {
-                                const isDark = pack.gradient.includes('#111') || pack.gradient.includes('#0a0a0a');
-                                
-                                return (
-                                    <motion.div 
-                                        key={pack.id}
-                                        initial={{ opacity: 0, y: 12 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05, duration: 0.4 }}
-                                        className={`group relative rounded-2xl p-5 cursor-pointer transition-all duration-300 overflow-hidden border ${
-                                            isDark 
-                                                ? 'bg-gradient-to-br ' + pack.gradient + ' border-gray-800 hover:border-gray-700 shadow-lg hover:shadow-2xl' 
-                                                : 'bg-gradient-to-br ' + pack.gradient + ' border-gray-100 hover:border-gray-200 hover:shadow-md'
-                                        }`}
-                                        onClick={() => handleCheckout(pack.id)}
-                                    >
-                                        {/* Tag */}
-                                        {pack.tag && (
-                                            <div className={`absolute top-3 right-3 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-md ${
-                                                pack.tag === 'Popular' ? 'bg-emerald-500 text-white' :
-                                                pack.tag === 'Best' ? 'bg-amber-400 text-black' :
-                                                'bg-gray-200 text-gray-600'
-                                            }`}>
-                                                {pack.tag}
+                    {/* ━━ Promo Code Management (Admin Only) ━━ */}
+                    {fullUser?.isAdmin && (
+                        <div className="mb-10">
+                            <div className="flex items-center gap-2 mb-5">
+                                <IconShieldLock className="w-5 h-5 text-[#1a1a1a]" stroke={2} />
+                                <h2 className="text-xl font-black tracking-tight text-[#1a1a1a]">Promo Codes</h2>
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded">Admin</span>
+                            </div>
+
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                {promoLoading ? (
+                                    <div className="p-10 text-center">
+                                        <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent animate-spin rounded-full mx-auto" />
+                                    </div>
+                                ) : promos.length > 0 ? (
+                                    <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50">
+                                        {promos.map(promo => (
+                                            <div key={promo.id} className={`flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors ${!promo.is_active ? 'opacity-50' : ''}`}>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-2 h-2 rounded-full shrink-0 ${promo.is_active ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-bold font-mono truncate text-[#1a1a1a]">{promo.code}</p>
+                                                            <button onClick={() => copyCode(promo.code)} className="text-gray-300 hover:text-[#1a1a1a] transition-colors">
+                                                                {copiedCode === promo.code ? <IconCheck className="w-3 h-3 text-emerald-500" /> : <IconCopy className="w-3 h-3" />}
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-400">
+                                                            {promo.type} · {promo.amount.toLocaleString()} · {promo.uses}/{promo.max_uses} uses
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <button
+                                                        onClick={() => togglePromo(promo.id, promo.is_active)}
+                                                        className={`p-1.5 rounded-lg transition-colors ${promo.is_active ? 'hover:bg-amber-50 text-amber-500' : 'hover:bg-emerald-50 text-emerald-500'}`}
+                                                        title={promo.is_active ? 'Deactivate' : 'Activate'}
+                                                    >
+                                                        {promo.is_active ? <IconPlayerPause className="w-3.5 h-3.5" stroke={2} /> : <IconPlayerPlay className="w-3.5 h-3.5" stroke={2} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deletePromo(promo.id)}
+                                                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <IconTrash className="w-3.5 h-3.5" stroke={2} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        )}
-
-                                        {/* Icon */}
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${
-                                            isDark ? 'bg-white/10' : 'bg-black/5'
-                                        }`}>
-                                            <pack.icon className={`w-4.5 h-4.5 ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`} stroke={2} />
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="mb-4">
-                                            <h3 className={`text-base font-bold mb-0.5 ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`}>{pack.name}</h3>
-                                            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{pack.desc}</p>
-                                        </div>
-
-                                        {/* Price & CTA */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-baseline gap-0.5">
-                                                <span className={`text-xs font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>$</span>
-                                                <span className={`text-2xl font-black ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`}>{pack.price}</span>
-                                            </div>
-                                            <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-all group-hover:gap-2 ${
-                                                isDark ? 'text-gray-400 group-hover:text-white' : 'text-gray-400 group-hover:text-[#1a1a1a]'
-                                            }`}>
-                                                {checkoutLoading === pack.id ? (
-                                                    <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent animate-spin rounded-full" />
-                                                ) : (
-                                                    <>Buy <IconChevronRight className="w-3 h-3" /></>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Hover glow for dark cards */}
-                                        {isDark && (
-                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                                                style={{ background: `radial-gradient(circle at 50% 120%, ${pack.accent}15 0%, transparent 70%)` }} />
-                                        )}
-                                    </motion.div>
-                                );
-                            })}
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-10 text-center">
+                                        <p className="text-sm text-gray-400">No promo codes found</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* ━━ Transaction History ━━ */}
                     {user && (
