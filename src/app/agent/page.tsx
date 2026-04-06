@@ -472,9 +472,11 @@ export default function AgentPage() {
         // Set basic fields from sidebar immediately
         setCurrentSessionId(s.id);
         setTopic(s.title);
-        setDocType(s.doc_type as DocType);
-        setIsAnalyticsSession(s.doc_type === 'data_analytics');
-        setIsAgentMode(s.doc_type !== 'data_analytics');
+        // Map legacy data-analytics to updated data_analytics type if necessary
+        const dt = (s.doc_type === 'data-analytics' ? 'data_analytics' : s.doc_type) as DocType;
+        setDocType(dt);
+        setIsAnalyticsSession(dt === 'data_analytics');
+        setIsAgentMode(dt !== 'data_analytics');
         setError(null);
         setSidebarOpen(false);
 
