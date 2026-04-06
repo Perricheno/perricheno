@@ -8,16 +8,90 @@ import {
     IconCreditCard, IconDatabase, IconReceipt,
     IconSparkles, IconLogin, IconClock, IconTrendingUp,
     IconFileText, IconPackage, IconFlame,
-    IconBolt, IconChevronRight, IconMail
+    IconBolt, IconChevronRight, IconMail, IconCheck, IconLock
 } from "@tabler/icons-react";
 
-const PACKS = [
-    { id: 'starter_chars', name: 'Starter', desc: '100K Characters', price: 1, tag: null, gradient: 'from-gray-50 to-white', accent: '#666', category: 'chars', icon: IconBolt },
-    { id: 'writer', name: 'Writer', desc: '500K Characters', price: 3, tag: null, gradient: 'from-gray-50 to-white', accent: '#444', category: 'chars', icon: IconFileText },
-    { id: 'data_scientist', name: 'Data Scientist', desc: '2M Characters', price: 5, tag: 'Popular', gradient: 'from-[#111] to-[#1a1a1a]', accent: '#10b981', category: 'chars', icon: IconSparkles },
-    { id: 'researcher', name: 'Researcher', desc: '5M Characters', price: 12, tag: null, gradient: 'from-gray-50 to-white', accent: '#3b82f6', category: 'chars', icon: IconTrendingUp },
-    { id: 'combo_lite', name: 'Lite Bundle', desc: '1M Chars + 10 Visuals', price: 7, tag: null, gradient: 'from-gray-50 to-white', accent: '#8b5cf6', category: 'combo', icon: IconPackage },
-    { id: 'combo_pro', name: 'Pro Bundle', desc: '10M Chars + 50 Visuals', price: 20, tag: 'Best', gradient: 'from-[#0a0a0a] to-[#111]', accent: '#f59e0b', category: 'combo', icon: IconFlame },
+const PLANS = [
+    {
+        id: "free",
+        name: "Free",
+        desc: "For exploring basic analytics.",
+        priceMonthly: 0,
+        priceAnnual: 0,
+        tag: null,
+        accent: "#666",
+        features: [
+            { text: "50K tokens / week", included: true },
+            { text: "150K tokens max / month", included: true },
+            { text: "5 Basic visual charts", included: true },
+            { text: "Python engine", included: true },
+            { text: "7-day chat retention", included: true },
+            { text: "R Language engine", included: false },
+            { text: "ZIP Project Export", included: false },
+            { text: "AI Code Editing", included: false },
+            { text: "Share Reports", included: false },
+        ]
+    },
+    {
+        id: "plus",
+        name: "Plus",
+        desc: "Advanced charts and exports.",
+        priceMonthly: 15,
+        priceAnnual: 12,
+        tag: null,
+        accent: "#a8a8a8",
+        features: [
+            { text: "150K tokens / week", included: true },
+            { text: "450K tokens max / month", included: true },
+            { text: "All 38+ visual charts", included: true },
+            { text: "Python engine", included: true },
+            { text: "14-day chat retention", included: true },
+            { text: "ZIP Project Export", included: true },
+            { text: "R Language engine", included: false },
+            { text: "AI Code Editing", included: false },
+            { text: "Share Reports", included: false },
+        ]
+    },
+    {
+        id: "pro",
+        name: "Pro",
+        desc: "Professional data science toolkit.",
+        priceMonthly: 35,
+        priceAnnual: 29,
+        tag: "Popular",
+        accent: "#10b981", // Green accent as requested
+        features: [
+            { text: "250K tokens / week", included: true },
+            { text: "800K tokens max / month", included: true },
+            { text: "All 38+ visual charts", included: true },
+            { text: "Python & R engines", included: true },
+            { text: "30-day chat retention", included: true },
+            { text: "ZIP Project Export", included: true },
+            { text: "AI Code Editing (Standard)", included: true },
+            { text: "Share Reports", included: true },
+            { text: "Giveaway participation", included: true },
+        ]
+    },
+    {
+        id: "ultra",
+        name: "Ultra",
+        desc: "Maximum limits with exclusive perks.",
+        priceMonthly: 75,
+        priceAnnual: 59,
+        tag: "Best Value",
+        accent: "#f59e0b",
+        features: [
+            { text: "800K tokens / week", included: true },
+            { text: "3M tokens max / month", included: true },
+            { text: "All 38+ visual charts", included: true },
+            { text: "Python & R engines", included: true },
+            { text: "90-day chat retention", included: true },
+            { text: "ZIP Project Export", included: true },
+            { text: "AI Code Editing (0.5x cost)", included: true },
+            { text: "Share Reports", included: true },
+            { text: "2x Referral & Promo bonuses", included: true },
+        ]
+    }
 ];
 
 export default function BillingsPage() {
@@ -27,6 +101,7 @@ export default function BillingsPage() {
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [receipts, setReceipts] = useState<any[]>([]);
+    const [isAnnual, setIsAnnual] = useState(true);
 
     useEffect(() => {
         if (user) {
@@ -43,25 +118,13 @@ export default function BillingsPage() {
         }
     }, [user]);
 
-    const handleCheckout = async (packId: string) => {
-        setCheckoutLoading(packId);
+    const handleCheckout = async (planId: string) => {
+        if (planId === 'free') return;
+        setCheckoutLoading(planId);
         try {
-            const res = await fetch('/api/billing/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ packId })
-            });
-            const rawText = await res.text();
-            let data;
-            try {
-                data = JSON.parse(rawText);
-            } catch {
-                window.location.assign("https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH");
-                return;
-            }
-            if (data.url) window.location.assign(data.url);
-            else if (data.fallback_url) window.location.assign(data.fallback_url);
-            else alert('Checkout failed: ' + (data.error || 'Unknown error'));
+            // Logic to be mapped to the actual recurring backend processor later
+            const interval = isAnnual ? 'year' : 'month';
+            alert(`Upgrading to ${planId} (${interval})! Setup backend required.`);
         } catch (err: any) {
             alert(`Checkout error: ${err.message || 'Unknown'}`);
         } finally {
@@ -88,198 +151,240 @@ export default function BillingsPage() {
         return items.sort((a, b) => b._time - a._time);
     }, [transactions, receipts]);
 
-    const dailyUsed = fullUser?.daily_chars_used || 0;
-    const dailyLimit = limits?.free?.daily_chars || 50000;
+    // Determine visual UI limits strictly based on plan (defaults to free tier logic)
+    const currentPlanId = fullUser?.plan_tier || 'free';
+    const planLimits = {
+        free: { weekly: 50000, monthly: 150000 },
+        plus: { weekly: 150000, monthly: 450000 },
+        pro: { weekly: 250000, monthly: 800000 },
+        ultra: { weekly: 800000, monthly: 3000000 }
+    }[currentPlanId as 'free'|'plus'|'pro'|'ultra'] || { weekly: 50000, monthly: 150000 };
+
     const weeklyUsed = fullUser?.weekly_chars_used || 0;
-    const weeklyLimit = limits?.free?.weekly_chars || 200000;
+    const weeklyLimit = planLimits.weekly;
+    const monthlyUsed = fullUser?.monthly_chars_used || 0;
+    const monthlyLimit = planLimits.monthly;
+
     const purchasedChars = fullUser?.purchased_chars || 0;
 
     return (
         <div className="w-full h-full font-sans overflow-auto pb-24 md:pb-0 bg-[#FBFBFC]">
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
 
-            <div className="max-w-[900px] mx-auto px-5 py-10 md:py-20">
+            <div className="max-w-[1100px] mx-auto px-5 py-10 md:py-20">
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
 
                     {/* ━━ Header ━━ */}
-                    <div className="mb-10">
-                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a1a] mb-1">Billing</h1>
-                        <p className="text-sm text-gray-400">Monitor usage, purchase credits, and view transaction history.</p>
+                    <div className="mb-10 text-center">
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[#1a1a1a] mb-3">Pick Your Plan</h1>
+                        <p className="text-sm md:text-base text-gray-500">Scale insights with higher limits, advanced engines, and exclusive features.</p>
                     </div>
 
                     {/* ━━ Usage Overview ━━ */}
                     {user && fullUser && limits ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-                            {/* Daily Usage */}
-                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
-                                            <IconBolt className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
-                                        </div>
-                                        <p className="text-xs font-bold text-[#1a1a1a]">Daily</p>
-                                    </div>
-                                    <p className="text-sm font-black tabular-nums text-[#1a1a1a]">
-                                        {(dailyUsed / 1000).toFixed(0)}K<span className="text-gray-300 font-medium">/{(dailyLimit / 1000).toFixed(0)}K</span>
-                                    </p>
-                                </div>
-                                <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
-                                    <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (dailyUsed / dailyLimit) * 100)}%` }} />
-                                </div>
-                            </div>
-
-                            {/* Weekly Usage */}
-                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-12 max-w-2xl mx-auto items-stretch">
+                            {/* Current Usage */}
+                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col justify-between">
+                                {/* Weekly usage */}
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
                                             <IconClock className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
+                                            <p className="text-xs font-bold text-[#1a1a1a]">Weekly Tokens</p>
                                         </div>
-                                        <p className="text-xs font-bold text-[#1a1a1a]">Weekly</p>
+                                        <p className="text-xs font-black tabular-nums text-[#1a1a1a]">
+                                            {(weeklyUsed / 1000).toFixed(0)}K<span className="text-gray-300 font-medium">/{(weeklyLimit / 1000).toFixed(0)}K</span>
+                                        </p>
                                     </div>
-                                    <p className="text-sm font-black tabular-nums text-[#1a1a1a]">
-                                        {(weeklyUsed / 1000).toFixed(0)}K<span className="text-gray-300 font-medium">/{(weeklyLimit / 1000).toFixed(0)}K</span>
-                                    </p>
+                                    <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                                        <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyUsed / weeklyLimit) * 100)}%` }} />
+                                    </div>
+                                    <p className="text-[9px] text-gray-400 mt-1">Resets Monday 00:00 AST</p>
                                 </div>
-                                <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
-                                    <div className="h-full bg-orange-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyUsed / weeklyLimit) * 100)}%` }} />
+
+                                {/* Monthly usage */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <IconPackage className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
+                                            <p className="text-xs font-bold text-[#1a1a1a]">Available Balance (Monthly)</p>
+                                        </div>
+                                        <p className="text-xs font-black tabular-nums text-[#1a1a1a]">
+                                            {(monthlyUsed / 1000).toFixed(0)}K<span className="text-gray-300 font-medium">/{(monthlyLimit / 1000).toFixed(0)}K</span>
+                                        </p>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                                        <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (monthlyUsed / monthlyLimit) * 100)}%` }} />
+                                    </div>
+                                    <p className="text-[9px] text-gray-400 mt-1">Stops entirely when depleted</p>
                                 </div>
                             </div>
 
-                            {/* Character Balance */}
+                            {/* Legacy Char Balance */}
                             <div className="bg-[#111] rounded-2xl border border-gray-800 p-5 shadow-lg">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
                                             <IconDatabase className="w-3.5 h-3.5 text-white" stroke={2} />
                                         </div>
-                                        <p className="text-xs font-bold text-white">Purchased</p>
+                                        <p className="text-xs font-bold text-[#F1F1F3]">Legacy Credits</p>
                                     </div>
                                     <p className="text-lg font-black tabular-nums text-emerald-400">
                                         {purchasedChars >= 1000000 ? `${(purchasedChars / 1000000).toFixed(1)}M` : `${(purchasedChars / 1000).toFixed(0)}K`}
                                     </p>
                                 </div>
+                                <p className="text-[10px] text-gray-400">Never expires. Automatically used if subscription runs out.</p>
                             </div>
                         </div>
                     ) : !user ? (
-                        <div className="bg-white rounded-2xl border border-gray-100 p-10 md:p-14 text-center mb-8">
+                        <div className="bg-white rounded-2xl border border-gray-100 p-10 md:p-14 text-center mb-12 max-w-2xl mx-auto">
                             <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
                                 <IconLogin className="w-7 h-7 text-gray-300" />
                             </div>
                             <h3 className="text-lg font-bold mb-1.5 text-[#1a1a1a]">Sign in to continue</h3>
-                            <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Connect your Telegram account to view usage and purchase credits.</p>
+                            <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">Connect your Telegram account to view usage and upgrade limits.</p>
                             <button onClick={() => setShowLogin(true)} className="px-8 py-3 bg-[#1a1a1a] text-white rounded-xl font-bold text-sm hover:bg-black transition-all active:scale-95 shadow-lg">
                                 Sign In
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 gap-3 mb-8">
-                            {[0,1].map(i => (
-                                <div key={i} className="h-20 bg-gray-50 rounded-2xl animate-pulse" />
+                        <div className="grid grid-cols-2 gap-3 mb-12 max-w-2xl mx-auto">
+                            {[0, 1].map(i => (
+                                <div key={i} className="h-24 bg-gray-50 rounded-2xl animate-pulse" />
                             ))}
                         </div>
                     )}
 
-                    {/* ━━ Resource Packs ━━ */}
-                    <div className="mb-10">
-                        <div className="flex items-center justify-between mb-5">
-                            <h2 className="text-xl font-black tracking-tight text-[#1a1a1a]">Resource Packs</h2>
-                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-100 shadow-sm rounded-lg">
-                                <IconCreditCard className="w-3 h-3 text-gray-400" />
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">CryptoCloud</span>
-                            </div>
+                    {/* Toggle */}
+                    <div className="flex items-center justify-center gap-3 mb-10">
+                        <span className={`text-sm font-semibold transition-colors ${!isAnnual ? 'text-[#1a1a1a]' : 'text-gray-400'}`}>Monthly</span>
+                        <button 
+                            onClick={() => setIsAnnual(!isAnnual)}
+                            className="relative w-14 h-7 bg-[#111] rounded-full p-1 transition-colors"
+                        >
+                            <motion.div 
+                                layout 
+                                className="w-5 h-5 bg-white rounded-full shadow-md"
+                                animate={{ x: isAnnual ? 28 : 0 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className={`text-sm font-semibold transition-colors ${isAnnual ? 'text-[#1a1a1a]' : 'text-gray-400'}`}>Annual</span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Save 20%</span>
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {PACKS.map((pack, idx) => {
-                                const isDark = pack.gradient.includes('#111') || pack.gradient.includes('#0a0a0a');
-                                
-                                return (
-                                    <motion.div 
-                                        key={pack.id}
-                                        initial={{ opacity: 0, y: 12 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05, duration: 0.4 }}
-                                        className={`group relative rounded-2xl p-5 cursor-pointer transition-all duration-300 overflow-hidden border ${
-                                            isDark 
-                                                ? 'bg-gradient-to-br ' + pack.gradient + ' border-gray-800 hover:border-gray-700 shadow-lg hover:shadow-2xl' 
-                                                : 'bg-gradient-to-br ' + pack.gradient + ' border-gray-100 hover:border-gray-200 hover:shadow-md'
-                                        }`}
-                                        onClick={() => handleCheckout(pack.id)}
-                                    >
-                                        {/* Tag */}
-                                        {pack.tag && (
-                                            <div className={`absolute top-3 right-3 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-md ${
-                                                pack.tag === 'Popular' ? 'bg-emerald-500 text-white' :
-                                                pack.tag === 'Best' ? 'bg-amber-400 text-black' :
-                                                'bg-gray-200 text-gray-600'
-                                            }`}>
-                                                {pack.tag}
-                                            </div>
-                                        )}
-
-                                        {/* Icon */}
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${
-                                            isDark ? 'bg-white/10' : 'bg-black/5'
+                    {/* ━━ Subscription Cards ━━ */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-20 items-stretch">
+                        {PLANS.map((plan, idx) => {
+                            const isPro = plan.id === "pro";
+                            const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+                            
+                            return (
+                                <motion.div 
+                                    key={plan.id}
+                                    initial={{ opacity: 0, y: 12 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1, duration: 0.4 }}
+                                    className={`relative rounded-3xl p-6 flex flex-col transition-all duration-300 border ${
+                                        isPro 
+                                            ? 'bg-[#111] border-emerald-500/30 hover:border-emerald-500/50 shadow-2xl shadow-emerald-900/10 scale-100 lg:scale-[1.02] z-10' 
+                                            : 'bg-[#111] border-gray-800 hover:border-gray-700 shadow-xl'
+                                    }`}
+                                >
+                                    {/* Tag */}
+                                    {plan.tag && (
+                                        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                                            plan.tag === 'Popular' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' :
+                                            plan.tag === 'Best Value' ? 'bg-[#f59e0b] text-[#111]' :
+                                            'bg-gray-200 text-gray-600'
                                         }`}>
-                                            <pack.icon className={`w-4.5 h-4.5 ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`} stroke={2} />
+                                            {plan.tag}
                                         </div>
+                                    )}
 
-                                        {/* Info */}
-                                        <div className="mb-4">
-                                            <h3 className={`text-base font-bold mb-0.5 ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`}>{pack.name}</h3>
-                                            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{pack.desc}</p>
-                                        </div>
+                                    {/* Header */}
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-black text-[#F1F1F3] uppercase tracking-wide mb-1">{plan.name}</h3>
+                                        <p className="text-sm text-gray-400 min-h-[40px]">{plan.desc}</p>
+                                    </div>
 
-                                        {/* Price & CTA */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-baseline gap-0.5">
-                                                <span className={`text-xs font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>$</span>
-                                                <span className={`text-2xl font-black ${isDark ? 'text-white' : 'text-[#1a1a1a]'}`}>{pack.price}</span>
+                                    {/* Price */}
+                                    <div className="mb-6">
+                                        {plan.priceMonthly === 0 ? (
+                                            <div className="text-4xl font-black text-[#F1F1F3]">$0</div>
+                                        ) : (
+                                            <div className="flex items-end gap-1">
+                                                <span className="text-xl font-bold text-gray-500 mb-1">$</span>
+                                                <span className="text-4xl font-black text-[#F1F1F3]">{price}</span>
+                                                <span className="text-xs font-semibold text-gray-500 mb-2">/mo</span>
                                             </div>
-                                            <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-all group-hover:gap-2 ${
-                                                isDark ? 'text-gray-400 group-hover:text-white' : 'text-gray-400 group-hover:text-[#1a1a1a]'
-                                            }`}>
-                                                {checkoutLoading === pack.id ? (
-                                                    <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent animate-spin rounded-full" />
-                                                ) : (
-                                                    <>Buy <IconChevronRight className="w-3 h-3" /></>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Hover glow for dark cards */}
-                                        {isDark && (
-                                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                                                style={{ background: `radial-gradient(circle at 50% 120%, ${pack.accent}15 0%, transparent 70%)` }} />
                                         )}
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
+                                        <div className="text-[10px] text-gray-500 font-medium mt-1 h-4">
+                                            {isAnnual && price > 0 ? `Billed annually at $${price * 12}` : ''}
+                                        </div>
+                                    </div>
+
+                                    {/* CTA */}
+                                    <button 
+                                        className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98] mb-8 ${
+                                            isPro ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20' : 
+                                            plan.id === 'free' ? 'bg-white/5 text-white hover:bg-white/10' :
+                                            'bg-[#F1F1F3] text-[#111] hover:bg-white'
+                                        }`}
+                                        onClick={() => handleCheckout(plan.id)}
+                                    >
+                                        {plan.id === 'free' ? 'Current Plan' : 'Get Plan'}
+                                    </button>
+
+                                    {/* Features List */}
+                                    <div className="flex-1">
+                                        <ul className="space-y-3.5">
+                                            {plan.features.map((feature, fIdx) => (
+                                                <li key={fIdx} className="flex items-start gap-3">
+                                                    {feature.included ? (
+                                                        <IconCheck className="w-4 h-4 text-[#F1F1F3] shrink-0 mt-0.5" stroke={3} />
+                                                    ) : (
+                                                        <IconLock className="w-4 h-4 text-gray-600 shrink-0 mt-0.5" stroke={2} />
+                                                    )}
+                                                    <span className={`text-xs ${feature.included ? 'text-[#F1F1F3]' : 'text-gray-600'}`}>
+                                                        {feature.text}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    
+                                    {/* Bottom Glow */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none"
+                                         style={{ background: `radial-gradient(circle at top right, ${plan.accent}, transparent 70%)` }} />
+                                </motion.div>
+                            );
+                        })}
                     </div>
 
                     {/* ━━ Transaction History ━━ */}
                     {user && (
-                        <div className="mb-10">
+                        <div className="mb-10 max-w-3xl mx-auto">
                             <h2 className="text-xl font-black tracking-tight text-[#1a1a1a] mb-5">Transaction History</h2>
 
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                                 <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-50">
                                     {timelineItems.length > 0 ? timelineItems.slice(0, 40).map((item, idx) => (
                                         item.is_receipt ? (
-                                            <div key={`r-${item.id}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                                                        <IconPackage className="w-3.5 h-3.5 text-emerald-600" stroke={2} />
+                                            <div key={`r-${item.id}`} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                                                        <IconPackage className="w-4 h-4 text-emerald-600" stroke={2} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-semibold truncate text-[#1a1a1a]">{item.pack_name}</p>
-                                                        <p className="text-[10px] text-gray-400 font-medium">{item.display_date}</p>
+                                                        <p className="text-sm font-bold truncate text-[#1a1a1a]">{item.pack_name || "Subscription Upgrade"}</p>
+                                                        <p className="text-[11px] text-gray-400 font-medium">{item.display_date}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <span className="text-xs font-bold tabular-nums text-emerald-600">{item.amount_text}</span>
+                                                <div className="flex items-center gap-3 shrink-0">
+                                                    <span className="text-sm font-black tabular-nums text-emerald-600">{item.amount_text}</span>
                                                     <a href={`/api/billing/receipt/${item.id}`} target="_blank" rel="noopener noreferrer"
                                                         className="text-[9px] font-bold text-gray-300 uppercase tracking-widest hover:text-[#1a1a1a] transition-colors hidden sm:block">
                                                         PDF
@@ -287,25 +392,25 @@ export default function BillingsPage() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div key={`t-${item.id}-${idx}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${item.is_positive ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                                                        {item.is_positive ? <IconTrendingUp className="w-3.5 h-3.5 text-emerald-500" /> : <IconClock className="w-3.5 h-3.5 text-gray-400" />}
+                                            <div key={`t-${item.id}-${idx}`} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.is_positive ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                                                        {item.is_positive ? <IconTrendingUp className="w-4 h-4 text-emerald-500" /> : <IconClock className="w-4 h-4 text-gray-400" />}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-semibold truncate text-[#1a1a1a]">{item.type}</p>
-                                                        <p className="text-[10px] text-gray-400 font-medium">{item.display_date}</p>
+                                                        <p className="text-sm font-bold truncate text-[#1a1a1a]">{item.type}</p>
+                                                        <p className="text-[11px] text-gray-400 font-medium">{item.display_date}</p>
                                                     </div>
                                                 </div>
-                                                <span className={`text-xs font-bold tabular-nums shrink-0 ${item.is_positive ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                                <span className={`text-sm font-black tabular-nums shrink-0 ${item.is_positive ? 'text-emerald-600' : 'text-[#1a1a1a]'}`}>
                                                     {item.amount}
                                                 </span>
                                             </div>
                                         )
                                     )) : (
-                                        <div className="p-14 text-center">
-                                            <IconReceipt className="w-8 h-8 mx-auto text-gray-200 mb-2" />
-                                            <p className="text-sm text-gray-400">No transactions yet</p>
+                                        <div className="p-16 text-center">
+                                            <IconReceipt className="w-10 h-10 mx-auto text-gray-200 mb-3" />
+                                            <p className="text-sm text-gray-400 font-medium">No transactions yet</p>
                                         </div>
                                     )}
                                 </div>
@@ -314,14 +419,14 @@ export default function BillingsPage() {
                     )}
 
                     {/* ━━ Footer ━━ */}
-                    <div className="pt-6 border-t border-gray-100 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-400">
+                    <div className="pt-8 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-gray-400">
                         <a href="mailto:support@perricheno.ru" className="flex items-center gap-1.5 hover:text-[#1a1a1a] transition-colors">
-                            <IconMail className="w-3 h-3" /> Support
+                            <IconMail className="w-3.5 h-3.5" /> Support
                         </a>
                         <span className="text-gray-200">·</span>
-                        <span>Terms of Service</span>
+                        <span className="hover:text-[#1a1a1a] cursor-pointer transition-colors">Terms of Service</span>
                         <span className="text-gray-200">·</span>
-                        <span>Usage Policy</span>
+                        <span className="hover:text-[#1a1a1a] cursor-pointer transition-colors">Usage Policy</span>
                     </div>
 
                 </motion.div>
