@@ -36,7 +36,7 @@ const PLANS = [
         name: "Plus (Standard)",
         desc: "Workhorse for students & Python analysts.",
         priceMonthly: 3.99,
-        priceAnnual: 3.19,
+        priceAnnual: 39.00,
         tag: null,
         accent: "#a8a8a8",
         features: [
@@ -55,7 +55,7 @@ const PLANS = [
         name: "Pro (Researcher)",
         desc: "Gold standard. Elite R stack & AI corrections.",
         priceMonthly: 6.99,
-        priceAnnual: 5.59,
+        priceAnnual: 69.00,
         tag: "Popular",
         accent: "#10b981", // Green accent as requested
         features: [
@@ -73,7 +73,7 @@ const PLANS = [
         name: "Ultra (Absolute Power)",
         desc: "Ultimate tier. Max savings & heavy bonuses.",
         priceMonthly: 14.99,
-        priceAnnual: 11.99,
+        priceAnnual: 149.00,
         tag: "Best Value",
         accent: "#f59e0b",
         features: [
@@ -311,13 +311,14 @@ export default function BillingsPage() {
                                     }`}
                                 >
                                     {/* Tag */}
-                                    {plan.tag && (
+                                    {(isAnnual && plan.priceAnnual > 0 ? true : plan.tag) && (
                                         <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
-                                            plan.tag === 'Popular' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' :
-                                            plan.tag === 'Best Value' ? 'bg-[#f59e0b] text-[#111]' :
-                                            'bg-gray-200 text-gray-600'
+                                            (isAnnual && plan.priceAnnual > 0) ? 'bg-[#f59e0b] text-[#111] shadow-lg shadow-[#f59e0b]/20 whitespace-nowrap' :
+                                            plan.tag === 'Popular' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap' :
+                                            plan.tag === 'Best Value' ? 'bg-[#f59e0b] text-[#111] whitespace-nowrap' :
+                                            'bg-gray-200 text-gray-600 whitespace-nowrap'
                                         }`}>
-                                            {plan.tag}
+                                            {(isAnnual && plan.priceAnnual > 0) ? '2 Months Free' : plan.tag}
                                         </div>
                                     )}
 
@@ -336,7 +337,7 @@ export default function BillingsPage() {
                                                 <div className="flex items-end gap-1">
                                                     <span className="text-xl font-bold text-gray-500 mb-1">$</span>
                                                     <span className="text-4xl font-black text-[#F1F1F3]">{price}</span>
-                                                    <span className="text-xs font-semibold text-gray-500 mb-2">/mo</span>
+                                                    <span className="text-xs font-semibold text-gray-500 mb-2">/{isAnnual ? 'yr' : 'mo'}</span>
                                                 </div>
                                                 {exchangeRate && (
                                                     <div className="text-[15px] font-bold text-gray-400 mt-1">
@@ -346,7 +347,7 @@ export default function BillingsPage() {
                                             </>
                                         )}
                                         <div className="text-[10px] text-gray-500 font-medium mt-1 h-4">
-                                            {isAnnual && price > 0 ? `Billed annually at $${(price * 12).toFixed(2)}` : ''}
+                                            {isAnnual && price > 0 ? `Billed annually at $${price.toFixed(2)}` : ''}
                                         </div>
                                     </div>
 

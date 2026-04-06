@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
-import { getUserById, checkAndDeductUsage, LIMITS } from "@/lib/db";
+import { getUserById, checkAndDeductUsage, PLAN_LIMITS } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
     const userId = await verifySession();
@@ -23,5 +23,5 @@ export async function GET(req: NextRequest) {
 
     const isAdmin = user.telegram_id === '1153844209';
 
-    return NextResponse.json({ user: { ...user, isAdmin }, limits: LIMITS });
+    return NextResponse.json({ user: { ...user, isAdmin }, limits: PLAN_LIMITS });
 }

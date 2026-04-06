@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db, { getUserById, LIMITS, addPurchasedTokens } from "@/lib/db";
+import db, { getUserById, PLAN_LIMITS, addPurchasedTokens } from "@/lib/db";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
@@ -50,15 +50,15 @@ export async function POST(req: NextRequest) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
             const tier = user.account_tier || "free";
-            const limits = LIMITS[tier as keyof typeof LIMITS] || LIMITS.free;
+            const limits = PLAN_LIMITS[tier as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
             
             const billing = {
                 id: user.id,
                 tier,
                 daily_chars: {
                     used: user.daily_chars_used || 0,
-                    max: limits.daily_chars,
-                    remaining: Math.max(0, limits.daily_chars - (user.daily_chars_used || 0))
+                    max: 0,
+                    remaining: 0
                 },
                 weekly_chars: {
                     used: user.weekly_chars_used || 0,
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
                 },
                 generations: {
                     reports_daily: user.daily_reports_used || 0,
-                    reports_max: limits.reports,
+                    reports_max: 999,
                     visuals_daily: user.daily_visuals_used || 0
                 },
                 resets: {
