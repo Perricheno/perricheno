@@ -61,8 +61,9 @@ jobs:
             update_env "BOT_CONTAINER_URL" "http://telegram-bot:3001"
             
             # Wipe any local manual changes on the server to prevent merge conflicts during pull
-            echo "🧹 Cleaning up local server changes..."
-            git reset --hard HEAD
+            echo "🧹 Syncing with remote repository forcesly..."
+            git fetch origin main
+            git reset --hard origin/main
             git clean -fd
             
             bash deploy.sh
