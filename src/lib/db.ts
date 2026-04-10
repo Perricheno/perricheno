@@ -347,10 +347,10 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
 
 export async function getAgentSessionsByUser(userId: number): Promise<AgentSession[]> {
     const { data } = await supabase.from('agent_sessions')
-        .select('*')
+        .select('id, title, doc_type, status, error_msg, share_id, updated_at, created_at')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false });
-    return data || [];
+    return (data || []) as AgentSession[];
 }
 
 export async function getAgentSession(id: string): Promise<AgentSession | undefined> {
