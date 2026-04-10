@@ -156,6 +156,7 @@ export async function checkAndDeductUsage(
         const fromFree = Math.min(freeAvailable, amount);
         const fromPurchased = amount - fromFree;
 
+        // Pass full amount for weekly/monthly tracking (not just fromFree)
         const { error } = await supabase.rpc('deduct_user_usage', {
             p_user_id: userId,
             p_free_deduction: fromFree,

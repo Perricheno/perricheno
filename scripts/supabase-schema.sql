@@ -186,12 +186,12 @@ CREATE OR REPLACE FUNCTION deduct_user_usage(
     p_amount BIGINT
 ) RETURNS void AS $$
 BEGIN
-    -- Update user balance
+    -- Update user balance: track ALL usage in daily/weekly/monthly, deduct purchased separately
     UPDATE users 
     SET 
-        daily_chars_used = daily_chars_used + p_free_deduction,
-        weekly_chars_used = weekly_chars_used + p_free_deduction,
-        monthly_chars_used = COALESCE(monthly_chars_used, 0) + p_free_deduction,
+        daily_chars_used = daily_chars_used + p_amount,
+        weekly_chars_used = weekly_chars_used + p_amount,
+        monthly_chars_used = COALESCE(monthly_chars_used, 0) + p_amount,
         purchased_chars = purchased_chars - p_purchased_deduction
     WHERE id = p_user_id;
 
@@ -205,3 +205,4 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+
