@@ -21,12 +21,13 @@ jobs:
           CRYPTOCLOUD_SECRET: ${{ secrets.CRYPTOCLOUD_SECRET }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEBHOOK_DOMAIN: ${{ secrets.WEBHOOK_DOMAIN }}
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET
+          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,NEXT_PUBLIC_SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY
           script: |
             cd ${{ secrets.SERVER_PATH }}
             
@@ -55,6 +56,8 @@ jobs:
             update_env "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
             update_env "WEBHOOK_DOMAIN" "$WEBHOOK_DOMAIN"
             update_env "WEBHOOK_SECRET" "$WEBHOOK_SECRET"
+            update_env "NEXT_PUBLIC_SUPABASE_URL" "$NEXT_PUBLIC_SUPABASE_URL"
+            update_env "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
             
             # Ensure static internal domains are set
             update_env "SITE_INTERNAL_URL" "http://perricheno-site:3000"
