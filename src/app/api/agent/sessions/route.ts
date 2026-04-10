@@ -8,7 +8,7 @@ export async function GET() {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
-    const sessions = getAgentSessionsByUser(userId);
+    const sessions = await getAgentSessionsByUser(userId);
     return NextResponse.json({ sessions });
 }
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
 
-    const session = createAgentSession({
+    const session = await createAgentSession({
         id: uuidv4(),
         user_id: userId,
         title,
