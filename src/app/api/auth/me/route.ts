@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Auto-ping limits tracker to reset daily/weekly limits if date changed
-    checkAndDeductUsage(userId, 'chars', 0);
+    await checkAndDeductUsage(userId, 'chars', 0);
 
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user) {
         return NextResponse.json({ user: null }, { status: 404 });
     }

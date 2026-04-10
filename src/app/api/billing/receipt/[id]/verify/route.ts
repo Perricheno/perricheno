@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -9,13 +9,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     try {
-        const stmt = db.prepare(`
-            SELECT r.id, r.type, r.pack_name, r.amount_text, r.created_at, u.username, u.telegram_id 
-            FROM receipts r
-            LEFT JOIN users u ON r.user_id = u.id
-            WHERE r.id = ?
-        `);
-        const result = stmt.get(id) as any;
+        const { data: result } = await supabase.from('receipts')
+            .select('id, type, pack_name, amount_text, created_at, user_id')
+            .eq('id', id)
+            .single();
+
+        // Fetch user data separately
+        let username = 'ANONYMOUS';
+        let telegramId = '';
+        if (result) {
+            const { data: userData } = await supabase.from('users').select('username, telegram_id').eq('id', result.user_id).single();
+            if (userData) {
+                username = userData.username || '';
+                telegramId = userData.telegram_id || '';
+            }
+        }
 
         if (!result) {
             return new NextResponse(
@@ -191,7 +199,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                         <div class="value">${date}</div>
                         
                         <div class="label">Beneficiary</div>
-                        <div class="value">${result.telegram_id || result.username || 'ANONYMOUS'}</div>
+                        <div class="value">${telegramId || username || 'ANONYMOUS'}</div>
                         
                         <div class="label">Tx Type</div>
                         <div class="value" style="text-transform: uppercase;">${result.type}</div>

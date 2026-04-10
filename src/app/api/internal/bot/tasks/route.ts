@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import db, { getUserByTelegramId } from "@/lib/db";
+import { getUserByTelegramId } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
     const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const { telegram_id, action, sessionId } = await req.json();
-        const user = getUserByTelegramId(String(telegram_id));
+        const user = await getUserByTelegramId(String(telegram_id));
         
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -19,17 +20,17 @@ export async function POST(req: NextRequest) {
 
         // 1. Handle Task Reset/Cleanup
         if (action === "reset" && sessionId) {
-            db.prepare(`UPDATE agent_sessions SET status = 'failed', error_msg = 'Manual reset via bot' WHERE id = ? AND user_id = ?`).run(sessionId, user.id);
+            await supabase.from('agent_sessions').update({ status: 'failed', error_msg: 'Manual reset via bot' }).eq('id', sessionId).eq('user_id', user.id);
             return NextResponse.json({ success: true, message: "Task reset complete." });
         }
 
         // 2. Query Active Tasks
-        const tasks = db.prepare(`
-            SELECT id, title, status, created_at 
-            FROM agent_sessions 
-            WHERE user_id = ? AND status IN ('generating', 'processing', 'extracting')
-            ORDER BY created_at DESC
-        `).all(user.id) as any[];
+        const { data: tasksData } = await supabase.from('agent_sessions')
+            .select('id, title, status, created_at')
+            .eq('user_id', user.id)
+            .in('status', ['generating', 'processing', 'extracting'])
+            .order('created_at', { ascending: false });
+        const tasks = tasksData || [];
 
         return NextResponse.json({ 
             success: true, 

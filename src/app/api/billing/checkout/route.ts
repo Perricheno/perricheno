@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import db from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SHOP_ID = process.env.CRYPTOCLOUD_SHOP_ID;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
             
             // Send fallback to Telegram if token exists
             if (process.env.TELEGRAM_BOT_TOKEN) {
-                const userRow = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId) as any;
+                const { data: userRow } = await supabase.from('users').select('telegram_id').eq('id', userId).single();
                 if (userRow?.telegram_id) {
                     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         method: "POST",
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
             
             // Send proper generated invoice via Bot
             if (process.env.TELEGRAM_BOT_TOKEN) {
-                const userRow = db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId) as any;
+                const { data: userRow } = await supabase.from('users').select('telegram_id').eq('id', userId).single();
                 if (userRow?.telegram_id) {
                     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         method: "POST",

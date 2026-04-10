@@ -27,7 +27,7 @@ export async function createSession(userId: number) {
     const expires = new Date(Date.now() + SESSION_DURATION);
     
     // 1. Store in DB
-    createSessionRecord({
+    await createSessionRecord({
         id: sessionId,
         user_id: userId,
         user_agent: ua,
@@ -70,7 +70,7 @@ export async function verifySession() {
         const sessionId = payload.sessionId as string;
         
         // 3. Verify sessionId exists in DB
-        const session = getSessionById(sessionId);
+        const session = await getSessionById(sessionId);
         if (!session) return null;
 
         return session.user_id as number;
@@ -88,7 +88,7 @@ export async function deleteSession() {
     if (token) {
         try {
             const { payload } = await jwtVerify(token, SECRET_KEY);
-            deleteSessionRecord(payload.sessionId as string);
+            await deleteSessionRecord(payload.sessionId as string);
         } catch {}
     }
 

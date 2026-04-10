@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import db, { getUserById } from '@/lib/db';
+import { getUserById } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 async function verifyAdmin() {
     const userId = await verifySession();
     if (!userId) return null;
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user || user.telegram_id !== '1153844209') return null;
     return user;
 }
@@ -17,13 +18,10 @@ export async function GET() {
     }
 
     try {
-        const promos = db.prepare(`
-            SELECT id, code, type, amount, uses, max_uses, 
-                   COALESCE(is_active, 1) as is_active, created_at 
-            FROM promo_codes 
-            ORDER BY created_at DESC 
-            LIMIT 100
-        `).all();
+        const { data: promos } = await supabase.from('promo_codes')
+            .select('id, code, type, amount, uses, max_uses, is_active, created_at')
+            .order('created_at', { ascending: false })
+            .limit(100);
 
         return NextResponse.json({ promos });
     } catch (err: any) {
@@ -45,14 +43,14 @@ export async function PUT(req: Request) {
         }
 
         if (action === 'toggle_active') {
-            db.prepare('UPDATE promo_codes SET is_active = ? WHERE id = ?').run(is_active, promoId);
+            await supabase.from('promo_codes').update({ is_active }).eq('id', promoId);
             return NextResponse.json({ success: true });
         }
 
         if (action === 'delete') {
             // Delete usages first, then the promo code
-            db.prepare('DELETE FROM promo_usages WHERE promo_id = ?').run(promoId);
-            db.prepare('DELETE FROM promo_codes WHERE id = ?').run(promoId);
+            await supabase.from('promo_usages').delete().eq('promo_id', promoId);
+            await supabase.from('promo_codes').delete().eq('id', promoId);
             return NextResponse.json({ success: true });
         }
 

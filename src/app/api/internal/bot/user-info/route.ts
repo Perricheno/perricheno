@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
@@ -17,9 +17,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing telegram_id" }, { status: 400 });
         }
 
-        const user = db
-            .prepare("SELECT * FROM users WHERE telegram_id = ?")
-            .get(telegram_id) as any;
+        const { data: user } = await supabase.from('users').select('*').eq('telegram_id', telegram_id).single();
 
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db, { getUserByTelegramId, getReferralStats } from "@/lib/db";
+import { getUserByTelegramId, getReferralStats } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
     const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
 
     try {
         const { telegram_id } = await req.json();
-        const user = getUserByTelegramId(String(telegram_id));
+        const user = await getUserByTelegramId(String(telegram_id));
         
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        const stats = getReferralStats(user.id);
+        const stats = await getReferralStats(user.id);
         return NextResponse.json({ 
             success: true, 
             stats,

@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
         const compilerUrl = isPython ? PYTHON_COMPILER_URL : R_COMPILER_URL;
 
         // ── 1. Identify User & Deduct Usage ──
-        const user = getUserByTelegramId(String(telegramId));
+        const user = await getUserByTelegramId(String(telegramId));
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
         const charCount = code.length;
-        const deduction = checkAndDeductUsage(user.id, 'chars', charCount);
+        const deduction = await checkAndDeductUsage(user.id, 'chars', charCount);
         
         if (!deduction.success) {
             return NextResponse.json({ 

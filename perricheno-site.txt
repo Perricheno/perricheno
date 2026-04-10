@@ -1,0 +1,292 @@
+# File Tree: perricheno-site
+
+**Generated:** 4/10/2026, 4:11:16 AM
+**Root Path:** `/root/perricheno-site`
+
+```
+├── 📁 .github
+│   └── 📁 workflows
+│       └── ⚙️ deploy.yml
+├── 📁 LATEX Template by perricheno
+│   ├── 📄 main_template.tex
+│   ├── 📄 msurj.cls
+│   └── 📄 references.bib
+├── 📁 public
+│   ├── 📁 previews
+│   │   ├── 🖼️ 3d_scatter.png
+│   │   ├── 🖼️ 3d_surface.png
+│   │   ├── 🖼️ bar.png
+│   │   ├── 🖼️ boxplot.png
+│   │   ├── 🖼️ bubble.png
+│   │   ├── 🖼️ chord.png
+│   │   ├── 🖼️ circlepack.png
+│   │   ├── 🖼️ dendrogram.png
+│   │   ├── 🖼️ density2d.png
+│   │   ├── 🖼️ dumbbell.png
+│   │   ├── 🖼️ heatmap.png
+│   │   ├── 🖼️ histogram.png
+│   │   ├── 🖼️ lollipop.png
+│   │   ├── 🖼️ marginal.png
+│   │   ├── 🖼️ parallel.png
+│   │   ├── 🖼️ radar.png
+│   │   ├── 🖼️ sankey.png
+│   │   ├── 🖼️ waffle.png
+│   │   └── 🖼️ wordcloud.png
+│   ├── 🖼️ Vector.svg
+│   ├── 🖼️ file.svg
+│   ├── 🖼️ globe.svg
+│   ├── 🖼️ logo-dark.png
+│   ├── 🖼️ logo.png
+│   ├── 🖼️ newlogo.png
+│   ├── 🖼️ next.svg
+│   ├── 🖼️ vercel.svg
+│   └── 🖼️ window.svg
+├── 📁 python-compiler
+│   ├── 🐳 Dockerfile
+│   ├── 📄 requirements.txt
+│   └── 🐍 server.py
+├── 📁 r-compiler
+│   ├── 🐳 Dockerfile
+│   └── 📄 server.R
+├── 📁 src
+│   ├── 📁 app
+│   │   ├── 📁 agent
+│   │   │   ├── 📁 shared
+│   │   │   │   └── 📁 [shareId]
+│   │   │   │       ├── 📄 SharedSessionView.tsx
+│   │   │   │       └── 📄 page.tsx
+│   │   │   ├── 📄 AgentBillingModal.tsx
+│   │   │   ├── 📄 AgentSettingsPanel.tsx
+│   │   │   ├── 📄 AgentSidebar.tsx
+│   │   │   ├── 📄 AgentVisualizations.tsx
+│   │   │   ├── 📄 CodeEditorModal.tsx
+│   │   │   ├── 📄 page.tsx
+│   │   │   └── 📄 types.ts
+│   │   ├── 📁 api
+│   │   │   ├── 📁 admin
+│   │   │   │   ├── 📁 promos
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 stats
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   └── 📁 users
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 agent
+│   │   │   │   ├── 📁 compile-pdf
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 data-analytics
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 generate
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 python-compile
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 r-compile
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 sessions
+│   │   │   │   │   ├── 📁 [id]
+│   │   │   │   │   │   ├── 📁 share
+│   │   │   │   │   │   │   └── 📄 route.ts
+│   │   │   │   │   │   └── 📄 route.ts
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   └── 📁 visualize
+│   │   │   │       ├── 📁 edit
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 generate-code
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 recommend
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 auth
+│   │   │   │   ├── 📁 delete
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 link
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 login
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 logout
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 me
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   └── 📁 poll
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 billing
+│   │   │   │   ├── 📁 checkout
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   ├── 📁 receipt
+│   │   │   │   │   └── 📁 [id]
+│   │   │   │   │       ├── 📁 verify
+│   │   │   │   │       │   └── 📄 route.ts
+│   │   │   │   │       └── 📄 route.ts
+│   │   │   │   ├── 📁 stats
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   └── 📁 webhook
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 canvas
+│   │   │   │   └── 📁 generate
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 chat
+│   │   │   │   └── 📁 history
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 internal
+│   │   │   │   └── 📁 bot
+│   │   │   │       ├── 📁 billing
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 compile
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 extract-text
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 history
+│   │   │   │       │   ├── 📁 files
+│   │   │   │       │   │   └── 📄 route.ts
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 referral
+│   │   │   │       │   ├── 📁 apply
+│   │   │   │       │   │   └── 📄 route.ts
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 session
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 tasks
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 user-info
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       ├── 📁 verify
+│   │   │   │       │   └── 📄 route.ts
+│   │   │   │       └── 📁 visual
+│   │   │   │           ├── 📁 compile
+│   │   │   │           │   └── 📄 route.ts
+│   │   │   │           └── 📁 generate
+│   │   │   │               └── 📄 route.ts
+│   │   │   ├── 📁 pdf-proxy
+│   │   │   │   └── 📄 route.ts
+│   │   │   ├── 📁 tasks
+│   │   │   │   ├── 📁 parse
+│   │   │   │   │   └── 📄 route.ts
+│   │   │   │   └── 📄 route.ts
+│   │   │   ├── 📁 telegram
+│   │   │   │   └── 📁 send
+│   │   │   │       └── 📄 route.ts
+│   │   │   ├── 📁 webhook
+│   │   │   │   └── 📁 telegram
+│   │   │   │       └── 📄 route.ts
+│   │   │   └── 📁 webhook-proxy
+│   │   │       └── 📄 route.ts
+│   │   ├── 📁 billings
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 callback
+│   │   │   └── 📄 route.ts
+│   │   ├── 📁 canvas
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 chat
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 code
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 dashboard
+│   │   │   ├── 📄 OverseerClient.tsx
+│   │   │   ├── 📄 actions.ts
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 failed-payment
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 pdf
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 privacy
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 settings
+│   │   │   ├── 📄 loading.tsx
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 successful-payment
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 tasks
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📁 terms
+│   │   │   └── 📄 page.tsx
+│   │   ├── 📄 actions.ts
+│   │   ├── 📄 favicon.ico
+│   │   ├── 🎨 globals.css
+│   │   ├── 📄 layout.tsx
+│   │   ├── 📄 manifest.ts
+│   │   └── 📄 page.tsx
+│   ├── 📁 components
+│   │   ├── 📁 ui
+│   │   │   ├── 📄 3d-card.tsx
+│   │   │   ├── 📄 CometCard.tsx
+│   │   │   ├── 📄 FloatingDock.tsx
+│   │   │   ├── 🎨 Grainient.css
+│   │   │   ├── 📄 Grainient.tsx
+│   │   │   └── 📄 JuicyButton.tsx
+│   │   ├── 📄 AdminContext.tsx
+│   │   ├── 📄 ChatPage.tsx
+│   │   ├── 📄 ChatSettingsModal.tsx
+│   │   ├── 📄 CodeLab.tsx
+│   │   ├── 📄 DashboardPage.tsx
+│   │   ├── 📄 HomePage.tsx
+│   │   ├── 📄 LoginModal.tsx
+│   │   ├── 📄 MinimalSidebar.tsx
+│   │   ├── 📄 ProjectSection.tsx
+│   │   ├── 📄 ProjectsPage.tsx
+│   │   ├── 📄 ThemeToggle.tsx
+│   │   ├── 📄 ToastContext.tsx
+│   │   └── 📄 theme-provider.tsx
+│   ├── 📁 content
+│   │   ├── 📝 privacy_en.md
+│   │   ├── 📝 privacy_ru.md
+│   │   ├── 📝 terms_en.md
+│   │   └── 📝 terms_ru.md
+│   ├── 📁 data
+│   │   ├── 📄 privacy_content.ts
+│   │   ├── ⚙️ settings.json
+│   │   └── 📄 terms_content.ts
+│   ├── 📁 lib
+│   │   ├── 📁 templates
+│   │   │   ├── 📄 main (1).tex
+│   │   │   └── 📄 receipt.tex
+│   │   ├── 📄 db.ts
+│   │   ├── 📄 json-canvas.ts
+│   │   ├── 📄 receiptGenerator.ts
+│   │   ├── 📄 session.ts
+│   │   ├── 📄 telegram-auth.ts
+│   │   └── 📄 utils.ts
+│   ├── 📁 scripts
+│   │   └── 📄 test-settings.ts
+│   └── 📁 types
+│       └── 📄 user.ts
+├── 📁 telegram-bot
+│   ├── 📁 src
+│   │   ├── 📁 handlers
+│   │   │   ├── 📄 auth.ts
+│   │   │   ├── 📄 billing.ts
+│   │   │   ├── 📄 history.ts
+│   │   │   ├── 📄 referral.ts
+│   │   │   ├── 📄 tasks.ts
+│   │   │   └── 📄 visual.ts
+│   │   ├── 📁 keyboards
+│   │   │   └── 📄 menu.ts
+│   │   ├── 📁 utils
+│   │   │   └── 📄 format.ts
+│   │   ├── 📄 bot.ts
+│   │   ├── 📄 sessionStore.ts
+│   │   └── 📄 telegraf.d.ts
+│   ├── ⚙️ .dockerignore
+│   ├── 🐳 Dockerfile
+│   ├── ⚙️ package-lock.json
+│   ├── ⚙️ package.json
+│   ├── ⚙️ tsconfig.json
+│   └── 📄 Руководство по Telegram Bot API (2).txt
+├── ⚙️ .dockerignore
+├── ⚙️ .gitignore
+├── 🐳 Dockerfile
+├── 📝 README.md
+├── 📄 deploy.sh
+├── ⚙️ docker-compose.yml
+├── 📄 eslint.config.mjs
+├── 📄 get_bot_name.js
+├── 📄 next.config.ts
+├── ⚙️ package-lock.json
+├── ⚙️ package.json
+├── 📄 perricheno.db
+├── 📄 postcss.config.mjs
+├── ⚙️ tsconfig.json
+└── 📄 Создание аналога Obsidian Canvas.txt
+```
+
+---
+
+_Generated by FileTree Pro Extension_

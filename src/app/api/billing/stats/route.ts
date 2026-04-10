@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import db from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(req: Request) {
     const userId = await verifySession();
@@ -10,36 +10,30 @@ export async function GET(req: Request) {
 
     try {
         // Fetch last 15 transactions - exclude 0 amounts or empty text
-        const txStmt = db.prepare(`
-            SELECT id, topic as type, amount_text as amount, is_positive, created_at as _date 
-            FROM transactions 
-            WHERE user_id = ? AND amount_text NOT IN ('0', '0.00', '-0', '-0.00', '')
-            ORDER BY created_at DESC 
-            LIMIT 20
-        `);
-        const transactionsRaw = txStmt.all(userId) as any[];
+        const { data: transactionsRaw } = await supabase.from('transactions')
+            .select('id, topic, amount_text, is_positive, created_at')
+            .eq('user_id', userId)
+            .not('amount_text', 'in', '("0","0.00","-0","-0.00","")')
+            .order('created_at', { ascending: false })
+            .limit(20);
 
-        const receiptStmt = db.prepare(`
-            SELECT id, type, pack_name, amount_text, created_at 
-            FROM receipts 
-            WHERE user_id = ?
-            ORDER BY created_at DESC
-        `);
-        const receiptsRaw = receiptStmt.all(userId) as any[];
+        const { data: receiptsRaw } = await supabase.from('receipts')
+            .select('id, type, pack_name, amount_text, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
 
         // Format transactions
-        const transactions = transactionsRaw.map(tx => {
-            const d = new Date(tx._date + 'Z'); 
-            // Final cleanup of the amount string to prevent "-0" or "-1" weirdness from DB
-            let cleanAmount = tx.amount;
+        const transactions = (transactionsRaw || []).map(tx => {
+            const d = new Date(tx.created_at); 
+            let cleanAmount = tx.amount_text;
             if (cleanAmount.startsWith('-0')) cleanAmount = cleanAmount.replace('-0', '0');
             
             return {
                 id: `txn_${tx.id}`,
-                type: tx.type,
+                type: tx.topic,
                 amount: cleanAmount,
                 date: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                is_positive: tx.is_positive === 1
+                is_positive: !!tx.is_positive
             };
         }).filter(tx => tx.amount !== '0' && tx.amount !== '0.00');
 

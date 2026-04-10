@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -9,14 +9,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     try {
-        const stmt = db.prepare(`SELECT pdf_base64 FROM receipts WHERE id = ?`);
-        const result = stmt.get(id) as any;
+        const { data: result } = await supabase.from('receipts').select('pdf_base64').eq('id', id).single();
 
         if (!result || !result.pdf_base64) {
-            // Receipt might still be generating in the background, or doesn't exist.
-            // If it exists but no PDB, we can show a wait message.
-            const checkStmt = db.prepare(`SELECT id FROM receipts WHERE id = ?`);
-            const exists = checkStmt.get(id) as any;
+            const { data: exists } = await supabase.from('receipts').select('id').eq('id', id).maybeSingle();
             
             if (exists) {
                 return new NextResponse(

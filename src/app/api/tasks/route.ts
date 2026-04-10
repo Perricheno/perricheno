@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jwt from 'jose';
-import db, { getTasksByUserId, createTask, updateTaskStatus, deleteTask, getUserById } from '@/lib/db';
+import { getTasksByUserId, createTask, updateTaskStatus, deleteTask, getUserById } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env-938210");
 
@@ -11,7 +12,7 @@ async function verifyAuth(req: NextRequest) {
 
     try {
         const { payload } = await jwt.jwtVerify(sessionToken, JWT_SECRET);
-        return getUserById(Number(payload.userId));
+        return await getUserById(Number(payload.userId));
     } catch {
         return null;
     }
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     const user = await verifyAuth(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const tasks = getTasksByUserId(user.id);
+    const tasks = await getTasksByUserId(user.id);
     return NextResponse.json(tasks);
 }
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Text and remindAt are required' }, { status: 400 });
         }
 
-        const task = createTask(user.id, text, remindAt);
+        const task = await createTask(user.id, text, remindAt);
         return NextResponse.json(task);
     } catch (e) {
         return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
@@ -58,15 +59,13 @@ export async function PUT(req: NextRequest) {
 
         // Update text and remindAt if provided
         if (text || remindAt) {
-            const updates: string[] = [];
-            const values: any[] = [];
-            if (text) { updates.push('task_text = ?'); values.push(text); }
-            if (remindAt) { updates.push('remind_at = ?'); values.push(remindAt); }
-            if (status) { updates.push('status = ?'); values.push(status); }
-            values.push(taskId);
-            db.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+            const updates: Record<string, any> = {};
+            if (text) updates.task_text = text;
+            if (remindAt) updates.remind_at = remindAt;
+            if (status) updates.status = status;
+            await supabase.from('tasks').update(updates).eq('id', taskId);
         } else if (status) {
-            updateTaskStatus(taskId, status);
+            await updateTaskStatus(taskId, status);
         }
 
         return NextResponse.json({ success: true });
@@ -87,7 +86,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'id parameter is required' }, { status: 400 });
         }
 
-        deleteTask(Number(taskId));
+        await deleteTask(Number(taskId));
         return NextResponse.json({ success: true });
     } catch (e) {
         return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import db, { getUserById, PLAN_LIMITS, addPurchasedTokens } from "@/lib/db";
+import { getUserById, PLAN_LIMITS, addPurchasedTokens } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
         }
 
         const user = telegram_id
-            ? db.prepare("SELECT * FROM users WHERE telegram_id = ?").get(String(telegram_id)) as any
+            ? (await supabase.from('users').select('*').eq('telegram_id', String(telegram_id)).single()).data
             : null;
 
         // ═══════════════════════════════
@@ -159,13 +160,13 @@ export async function POST(req: NextRequest) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
             const limit = body.limit || 10;
-            const txs = db.prepare(`
-                SELECT id, topic, amount_text, is_positive, created_at
-                FROM transactions
-                WHERE user_id = ? AND amount_text NOT IN ('0', '-0', '')
-                ORDER BY created_at DESC
-                LIMIT ?
-            `).all(user.id, limit) as any[];
+            const { data: txsData } = await supabase.from('transactions')
+                .select('id, topic, amount_text, is_positive, created_at')
+                .eq('user_id', user.id)
+                .not('amount_text', 'in', '("0","-0","")')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            const txs = txsData || [];
 
             const transactions = txs.map(tx => ({
                 id: tx.id,
@@ -175,13 +176,12 @@ export async function POST(req: NextRequest) {
                 date: tx.created_at
             }));
 
-            const receiptsDb = db.prepare(`
-                SELECT id, type, pack_name, amount_text, created_at
-                FROM receipts
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-                LIMIT ?
-            `).all(user.id, limit) as any[];
+            const { data: receiptsData } = await supabase.from('receipts')
+                .select('id, type, pack_name, amount_text, created_at')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            const receiptsDb = receiptsData || [];
 
             const receipts = receiptsDb.map(r => ({
                 id: r.id,
@@ -202,20 +202,20 @@ export async function POST(req: NextRequest) {
             const { code } = body;
             if (!code) return NextResponse.json({ error: "Missing code" }, { status: 400 });
 
-            const promo = db.prepare("SELECT * FROM promo_codes WHERE code = ?").get(code.toUpperCase()) as any;
+            const { data: promo } = await supabase.from('promo_codes').select('*').eq('code', code.toUpperCase()).single();
             if (!promo) return NextResponse.json({ error: "Промокод не найден." }, { status: 404 });
-            if (promo.is_active === 0) return NextResponse.json({ error: "Промокод деактивирован." }, { status: 410 });
+            if (promo.is_active === false) return NextResponse.json({ error: "Промокод деактивирован." }, { status: 410 });
             if (promo.uses >= promo.max_uses) return NextResponse.json({ error: "Лимит активаций исчерпан." }, { status: 410 });
 
             // Check if user already used this promo
-            const alreadyUsed = db.prepare("SELECT id FROM promo_usages WHERE promo_id = ? AND user_id = ?").get(promo.id, user.id);
+            const { data: alreadyUsed } = await supabase.from('promo_usages').select('id').eq('promo_id', promo.id).eq('user_id', user.id).maybeSingle();
             if (alreadyUsed) return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
 
             // Record usage
             try {
-                db.prepare("INSERT INTO promo_usages (promo_id, user_id) VALUES (?, ?)").run(promo.id, user.id);
+                await supabase.from('promo_usages').insert({ promo_id: promo.id, user_id: user.id });
             } catch (err: any) {
-                if (err.message.includes("UNIQUE constraint failed")) {
+                if (err.message?.includes("duplicate")) {
                     return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
                 }
                 throw err;
@@ -223,10 +223,10 @@ export async function POST(req: NextRequest) {
 
             // Apply promo
             const type = promo.type as 'chars' | 'visuals' | 'reports';
-            addPurchasedTokens(user.id, type, promo.amount);
+            await addPurchasedTokens(user.id, type, promo.amount);
             
             // Increment uses
-            db.prepare("UPDATE promo_codes SET uses = uses + 1 WHERE id = ?").run(promo.id);
+            await supabase.from('promo_codes').update({ uses: promo.uses + 1 }).eq('id', promo.id);
 
             const crypto = require('crypto');
             const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
@@ -266,7 +266,7 @@ export async function POST(req: NextRequest) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
             const { transactionId } = body;
-            const tx = db.prepare("SELECT * FROM transactions WHERE id = ? AND user_id = ?").get(transactionId, user.id) as any;
+            const { data: tx } = await supabase.from('transactions').select('*').eq('id', transactionId).eq('user_id', user.id).single();
             if (!tx) return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
 
             return NextResponse.json({

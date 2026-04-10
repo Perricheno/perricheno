@@ -9,7 +9,7 @@ export async function GET(req: Request, context: RouteContext) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     const { id } = await context.params;
-    const session = getAgentSession(id);
+    const session = await getAgentSession(id);
 
     if (!session) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -42,7 +42,7 @@ export async function PUT(req: Request, context: RouteContext) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     const { id } = await context.params;
-    const session = getAgentSession(id);
+    const session = await getAgentSession(id);
 
     if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
     if (session.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -68,7 +68,7 @@ export async function PUT(req: Request, context: RouteContext) {
             return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
         }
 
-        updateAgentSession(id, update);
+        await updateAgentSession(id, update);
         return NextResponse.json({ success: true });
     } catch (e: any) {
         console.error("PUT session error:", e);
@@ -82,7 +82,7 @@ export async function DELETE(req: Request, context: RouteContext) {
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
     const { id } = await context.params;
-    const deleted = deleteAgentSession(id, userId);
+    const deleted = await deleteAgentSession(id, userId);
 
     if (!deleted) return NextResponse.json({ error: "Session not found or unauthorized" }, { status: 404 });
     return NextResponse.json({ success: true });

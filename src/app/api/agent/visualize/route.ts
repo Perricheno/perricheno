@@ -87,7 +87,7 @@ export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
-    const precheck = checkAndDeductUsage(userId, 'visuals', 0);
+    const precheck = await checkAndDeductUsage(userId, 'visuals', 0);
     if (precheck.remaining <= 0) {
         return NextResponse.json({ error: "LIMIT_REACHED", details: "Visual tokens limit reached." }, { status: 402 });
     }

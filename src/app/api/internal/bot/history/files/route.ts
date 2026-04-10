@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const { sessionId, type } = await req.json();
-        const session = getAgentSession(sessionId);
+        const session = await getAgentSession(sessionId);
 
         if (!session) {
             return NextResponse.json({ error: "Session not found" }, { status: 404 });

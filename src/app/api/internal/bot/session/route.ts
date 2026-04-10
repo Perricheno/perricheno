@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
 
     if (telegramId) {
         const { getSessionsByUserId, getUserByTelegramId } = await import("@/lib/db");
-        const user = getUserByTelegramId(telegramId);
+        const user = await getUserByTelegramId(telegramId);
         if (!user) return NextResponse.json({ sessions: [] });
-        const sessions = getSessionsByUserId(user.id);
+        const sessions = await getSessionsByUserId(user.id);
         return NextResponse.json({ sessions });
     }
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    const session = getBotSession(userIdStr);
+    const session = await getBotSession(userIdStr);
     return NextResponse.json({ session });
 }
 
@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
         const { getUserByTelegramId, deleteAllOtherSessions, updateBotSession } = await import("@/lib/db");
 
         if (action === 'terminate_others' && telegramId) {
-            const user = getUserByTelegramId(telegramId);
+            const user = await getUserByTelegramId(telegramId);
             if (user) {
                 // Kill all sessions. Note: The current device will survive if it stays in its own cookie.
                 // But from the bot's perspective, 'terminate_others' usually means log out of EVERYTHING ELSE.
-                deleteAllOtherSessions(user.id, 'bot-trigger'); 
+                await deleteAllOtherSessions(user.id, 'bot-trigger'); 
                 return NextResponse.json({ success: true });
             }
         }
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing data" }, { status: 400 });
         }
 
-        updateBotSession(String(userId), session);
+        await updateBotSession(String(userId), session);
         return NextResponse.json({ success: true });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });

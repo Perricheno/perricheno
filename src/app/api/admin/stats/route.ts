@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import db, { getUserById } from '@/lib/db';
+import { getUserById } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 async function verifyAdmin() {
     const userId = await verifySession();
     if (!userId) return null;
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user || user.telegram_id !== '1153844209') return null;
     return user;
 }
@@ -18,14 +19,17 @@ export async function GET(req: Request) {
 
     try {
         // Global Stats
-        const totalUsersResult = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-        const totalCharsResult = db.prepare('SELECT SUM(tokens) as count FROM usage_logs').get() as { count: number };
+        const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
         
-        // Find total purchases (is_positive = 1 and like 'Purchased%')
-        // In this case, we just count how many purchase transactions there are
-        const totalPurchasesResult = db.prepare(`SELECT COUNT(*) as count FROM transactions WHERE is_positive = 1 AND topic = 'Purchased resource pack'`).get() as { count: number };
+        let totalChars = 0;
+        const { data: usage } = await supabase.from('usage_logs').select('tokens');
+        if (usage) totalChars = usage.reduce((sum, r) => sum + (r.tokens || 0), 0);
 
-        const recentLogsResult = db.prepare(`SELECT tokens, created_at FROM usage_logs WHERE created_at >= datetime('now', '-7 days')`).all() as any[];
+        const { count: totalPurchases } = await supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('is_positive', true).eq('topic', 'Purchased resource pack');
+
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+        const { data: recentLogsData } = await supabase.from('usage_logs').select('tokens, created_at').gte('created_at', sevenDaysAgo);
+        const recentLogsResult = recentLogsData || [];
 
         // Build 7 day array
         const now = new Date();
@@ -50,9 +54,9 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             stats: {
-                totalUsers: totalUsersResult.count,
-                totalUsage: totalCharsResult.count || 0,
-                totalTransactions: totalPurchasesResult.count
+                totalUsers: totalUsers || 0,
+                totalUsage: totalChars,
+                totalTransactions: totalPurchases || 0
             },
             weekData
         });

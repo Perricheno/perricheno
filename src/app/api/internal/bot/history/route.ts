@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
@@ -14,41 +14,39 @@ export async function POST(req: NextRequest) {
 
         // Single Session View
         if (sessionId && !updateVisuals) {
-            const session = db.prepare(`
-                SELECT id, title, status, doc_type, error_msg, share_id, created_at, updated_at 
-                FROM agent_sessions 
-                WHERE id = ?
-            `).get(sessionId) as any;
+            const { data: session } = await supabase.from('agent_sessions')
+                .select('id, title, status, doc_type, error_msg, share_id, created_at, updated_at')
+                .eq('id', sessionId)
+                .single();
             return NextResponse.json({ session });
         }
 
         // Update visuals_json for a session (called after compilation)
         if (sessionId && updateVisuals) {
-            db.prepare(`UPDATE agent_sessions SET visuals_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(updateVisuals, sessionId);
+            await supabase.from('agent_sessions').update({ visuals_json: updateVisuals, updated_at: new Date().toISOString() }).eq('id', sessionId);
             return NextResponse.json({ success: true });
         }
 
         if (!telegram_id) return NextResponse.json({ error: "Missing telegram_id" }, { status: 400 });
 
-        const user = db.prepare("SELECT id FROM users WHERE telegram_id = ?").get(telegram_id) as any;
+        const { data: user } = await supabase.from('users').select('id').eq('telegram_id', telegram_id).single();
         if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
         const offset = (page - 1) * limit;
 
         // Get sessions for agent reports
-        const stats = db.prepare("SELECT COUNT(*) as total FROM agent_sessions WHERE user_id = ?").get(user.id) as { total: number };
-        const sessions = db.prepare(`
-            SELECT id, title, status, created_at, updated_at 
-            FROM agent_sessions 
-            WHERE user_id = ? 
-            ORDER BY updated_at DESC 
-            LIMIT ? OFFSET ?
-        `).all(user.id, limit, offset) as any[];
+        const { count } = await supabase.from('agent_sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+        const { data: sessionsData } = await supabase.from('agent_sessions')
+            .select('id, title, status, created_at, updated_at')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+        const sessions = sessionsData || [];
 
         return NextResponse.json({
             sessions,
-            total: stats.total,
-            totalPages: Math.ceil(stats.total / limit),
+            total: count || 0,
+            totalPages: Math.ceil((count || 0) / limit),
             currentPage: page
         });
     } catch (err: any) {
@@ -70,7 +68,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
         }
 
-        db.prepare(`DELETE FROM agent_sessions WHERE id = ?`).run(sessionId);
+        await supabase.from('agent_sessions').delete().eq('id', sessionId);
         
         return NextResponse.json({ success: true });
     } catch (err: any) {

@@ -202,9 +202,9 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
         if (!response.ok) {
             const errBody = await response.text();
             console.error("OpenAI API Error:", errBody);
-            updateAgentSession(sessionId, { status: "error", error_msg: `API error: ${errBody.slice(0, 200)}` });
+            await updateAgentSession(sessionId, { status: "error", error_msg: `API error: ${errBody.slice(0, 200)}` });
             
-            const session = getAgentSession(sessionId);
+            const session = await getAgentSession(sessionId);
             if (session && session.tg_message_id) {
                 await updateTelegramNotification(userId, session.tg_message_id, `❌ *Ошибка генерации*: ${session.title}\n\nПроизошла ошибка API (${errBody.slice(0, 50)}...). Попробуйте еще раз.`);
             }
@@ -242,11 +242,11 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
 
             // Sync stream progress to db every 150ms max for a smoother UI experience
             if (Date.now() - lastDbUpdate > 150) {
-                updateAgentSession(sessionId, { stream_text: accumulated });
+                await updateAgentSession(sessionId, { stream_text: accumulated });
                 
                 // Also update Telegram every 2.5 seconds (to avoid rate limits)
                 if (Date.now() - lastDbUpdate > 2500) {
-                    const session = getAgentSession(sessionId);
+                    const session = await getAgentSession(sessionId);
                     if (session && session.tg_message_id) {
                         await updateTelegramNotification(userId, session.tg_message_id, 
                             `⚡ *Процесс генерации*: ${session.title}\n\n` +
@@ -260,7 +260,7 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
         }
 
         // Final db sync
-        updateAgentSession(sessionId, { stream_text: accumulated });
+        await updateAgentSession(sessionId, { stream_text: accumulated });
 
         let clean = accumulated.trim();
         if (clean.startsWith("```json")) clean = clean.substring(7);
@@ -272,9 +272,9 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
             finalData = JSON.parse(clean);
             if (!finalData.main_tex) throw new Error("Invalid output — missing main_tex");
         } catch (e: any) {
-            updateAgentSession(sessionId, { status: "error", error_msg: "AI generated invalid JSON: " + e.message });
+            await updateAgentSession(sessionId, { status: "error", error_msg: "AI generated invalid JSON: " + e.message });
             
-            const session = getAgentSession(sessionId);
+            const session = await getAgentSession(sessionId);
             if (session) {
                 await sendTelegramNotification(userId, `❌ *Ошибка генерации*: ${session.title}\n\nНейросеть вернула некорректный формат данных. Пожалуйста, попробуйте изменить запрос.`);
             }
@@ -282,7 +282,7 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
         }
 
         // Success Update
-        updateAgentSession(sessionId, {
+        await updateAgentSession(sessionId, {
             status: "done",
             main_tex: finalData.main_tex,
             references_bib: finalData.references_bib || null,
@@ -291,9 +291,9 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
         });
 
         // Notify telegram with final stats and links
-        const session = getAgentSession(sessionId);
+        const session = await getAgentSession(sessionId);
         if (session && session.tg_message_id) {
-            const user = getUserById(userId);
+            const user = await getUserById(userId);
             const remaining = user ? (user.purchased_chars + 15000 - user.daily_chars_used) : 0;
             const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://perricheno.ru'}/agent/shared/${session.share_id}`;
             
@@ -311,11 +311,11 @@ async function runAgentTaskBackground(sessionId: string, messages: any[], userId
         // Exact Character Billing Mapping (Prompt + Completion)
         const promptChars = JSON.stringify(messages).length;
         const completionChars = clean.length;
-        checkAndDeductUsage(userId, 'chars', promptChars + completionChars);
+        await checkAndDeductUsage(userId, 'chars', promptChars + completionChars);
 
     } catch (err: any) {
         console.error("Background Agent Error:", err);
-        updateAgentSession(sessionId, { status: "error", error_msg: err.message || "Unexpected background error." });
+        await updateAgentSession(sessionId, { status: "error", error_msg: err.message || "Unexpected background error." });
     }
 }
 
@@ -325,7 +325,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const precheck = checkAndDeductUsage(userId, 'chars', 0);
+    const precheck = await checkAndDeductUsage(userId, 'chars', 0);
     if (precheck.remaining <= 0) {
         return NextResponse.json({ error: "LIMIT_REACHED", details: "Characters limit reached." }, { status: 402 });
     }
@@ -367,7 +367,7 @@ export async function POST(req: Request) {
         }
 
         // --- CONCURRENCY LIMIT ---
-        const activeCount = getActiveAgentSessionsCount(userId);
+        const activeCount = await getActiveAgentSessionsCount(userId);
         if (activeCount >= 3) {
             return NextResponse.json({ 
                 error: `Достигнут лимит одновременных генераций (макс. 3). Дождитесь завершения текущих задач.` 
@@ -379,7 +379,7 @@ export async function POST(req: Request) {
 
         // If useDbImages, load visuals from the database instead of from the request body
         if (settings.useDbImages && sessionId) {
-            const existingSession = getAgentSession(sessionId);
+            const existingSession = await getAgentSession(sessionId);
             if (existingSession?.visuals_json) {
                 try {
                     settings.visuals = JSON.parse(existingSession.visuals_json);
@@ -401,7 +401,7 @@ export async function POST(req: Request) {
             // Notify Telegram Start
             const msgId = await sendTelegramNotification(userId, `🚀 *Начало генерации*: ${shortTitle}\n\nВаш документ обрабатывается. Это может занять до 2 минут.`);
 
-            createAgentSession({
+            await createAgentSession({
                 id: sessionId,
                 user_id: userId,
                 title: shortTitle + (settings.prompt.length > 50 ? '...' : ''),
@@ -413,13 +413,13 @@ export async function POST(req: Request) {
                 settings_json: JSON.stringify(settings),
             });
         } else {
-            const existing = getAgentSession(sessionId);
+            const existing = await getAgentSession(sessionId);
             const shareId = existing?.share_id || uuidv4().split('-')[0];
 
             // Notify Telegram Re-Start
             const msgId = await sendTelegramNotification(userId, `🔄 *Перегенерация документа*: ${shortTitle}\n\nПрименяем ваши изменения...`);
 
-            updateAgentSession(sessionId, { 
+            await updateAgentSession(sessionId, { 
                 status: 'generating', 
                 stream_text: '', 
                 error_msg: null,

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { verifySession } from '@/lib/session';
-import db, { getUserById } from '@/lib/db';
+import { getUserById } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import OverseerClient from './OverseerClient';
 
 export default async function OverseerDashboard() {
@@ -8,25 +9,36 @@ export default async function OverseerDashboard() {
     const userId = await verifySession();
     if (!userId) notFound();
     
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user || user.telegram_id !== '1153844209') notFound();
 
-    // 2. Direct Server-Side Data Fetch (No API endpoints required)
+    const { count: totalAgents } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    
+    let tokensBurnt = 0;
+    const { data: usage } = await supabase.from('usage_logs').select('tokens');
+    if (usage) tokensBurnt = usage.reduce((sum, row) => sum + (row.tokens || 0), 0);
+
+    const { count: purchases } = await supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('is_positive', true).eq('topic', 'Purchased resource pack');
+
     const stats = {
-        totalAgents: (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count,
-        tokensBurnt: (db.prepare('SELECT SUM(tokens) as count FROM usage_logs').get() as any).count || 0,
-        purchases: (db.prepare(`SELECT COUNT(*) as count FROM transactions WHERE is_positive = 1 AND topic = 'Purchased resource pack'`).get() as any).count,
+        totalAgents: totalAgents || 0,
+        tokensBurnt: tokensBurnt,
+        purchases: purchases || 0,
     };
 
-    const users = db.prepare(`SELECT * FROM users ORDER BY created_at DESC LIMIT 100`).all() as any[];
-    const promoCodes = db.prepare(`SELECT * FROM promo_codes ORDER BY created_at DESC`).all() as any[];
+    const { data: usersData } = await supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100);
+    const users = usersData || [];
+    
+    const { data: promoData } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false });
+    const promoCodes = promoData || [];
     
     // Simulate complex tracking data for missing components
     const inferenceLatencies = Array.from({length: 24}).map(() => Math.floor(Math.random() * 200 + 400));
     
     // Config state
-    const configsRaw = db.prepare(`SELECT * FROM system_config`).all() as any[];
-    const config = configsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+    const { data: configsData } = await supabase.from('system_config').select('*');
+    const configsRaw = configsData || [];
+    const config = configsRaw.reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }), {});
 
     return (
         <div className="fixed inset-0 z-[100] bg-white font-mono text-black overflow-hidden flex flex-col selection:bg-black selection:text-white">

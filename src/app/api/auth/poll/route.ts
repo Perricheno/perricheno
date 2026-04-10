@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/db";
 import { createSession } from "@/lib/session";
 
@@ -12,9 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const row = db
-            .prepare("SELECT status, tg_user_data FROM auth_requests WHERE token = ?")
-            .get(token) as any;
+        const { data: row } = await supabase.from('auth_requests').select('status, tg_user_data').eq('token', token).single();
 
         if (!row) {
             return NextResponse.json({ status: "expired" });
@@ -24,7 +22,7 @@ export async function GET(req: NextRequest) {
             const tgUser = JSON.parse(row.tg_user_data);
 
             // Create session — same as normal login flow
-            const user = upsertUser({
+            const user = await upsertUser({
                 telegram_id: String(tgUser.id),
                 username: tgUser.username,
                 first_name: tgUser.first_name,
@@ -45,7 +43,7 @@ export async function GET(req: NextRequest) {
             await sendTelegramNotification(user.id, alertText).catch(e => console.error("Notification failed", e));
 
             // Clean up used token
-            db.prepare("DELETE FROM auth_requests WHERE token = ?").run(token);
+            await supabase.from('auth_requests').delete().eq('token', token);
 
             return NextResponse.json({ status: "completed", user });
         }

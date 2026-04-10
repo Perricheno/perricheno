@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         console.log("Auth Verified. Upserting user...");
 
         // Ensure ID is string for DB but comes as number from Telegram
-        const user = upsertUser({
+        const user = await upsertUser({
             telegram_id: String(data.id),
             username: data.username,
             first_name: data.first_name,

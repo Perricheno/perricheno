@@ -1,0 +1,342 @@
+{
+    "nodes": [
+        {
+            "id": "group_users",
+            "type": "group",
+            "x": -50,
+            "y": -50,
+            "width": 550,
+            "height": 650,
+            "label": "User Identity & Quotas",
+            "color": "4"
+        },
+        {
+            "id": "table_users",
+            "type": "text",
+            "text": "# users\nCore identity and quota tracking system.\n\n- **id**: INTEGER PRIMARY KEY\n- **telegram_id**: TEXT UNIQUE\n- **username**: TEXT\n- **first_name**: TEXT\n- **photo_url**: TEXT\n---\n**Limits & Tiers:**\n- `plan_tier` (Free/Plus/Pro/Ultra)\n- `account_tier`\n- `daily_chars_used`, `weekly_chars_used`, `monthly_chars_used`\n- `purchased_chars`, `purchased_visuals`, `purchased_reports`\n- `daily_visuals_used`, `daily_reports_used`\n---\n**Resets & Tracking:**\n- `last_reset_date`, `last_week_reset`\n- `referred_by`\n- `is_banned`, `is_admin`, `is_deleted`\n- `created_at`",
+            "x": 0,
+            "y": 0,
+            "width": 450,
+            "height": 550,
+            "color": "4"
+        },
+        {
+            "id": "group_bot",
+            "type": "group",
+            "x": -200,
+            "y": -700,
+            "width": 800,
+            "height": 550,
+            "label": "Telegram Bot Lifecycle",
+            "color": "2"
+        },
+        {
+            "id": "table_bot_sessions",
+            "type": "text",
+            "text": "# bot_sessions\nState memory for Telegraf step-by-step logic.\n\n- **telegram_id**: TEXT PRIMARY KEY\n- **session_data**: TEXT JSON\n- **updated_at**: DATETIME",
+            "x": -150,
+            "y": -600,
+            "width": 350,
+            "height": 180,
+            "color": "2"
+        },
+        {
+            "id": "table_system_notifications",
+            "type": "text",
+            "text": "# system_notifications\nDeferred push notifications to users.\n\n- **id**: PK\n- **user_id**: INTEGER (FK -> users.id)\n- **message**: TEXT\n- **read**: BOOLEAN\n- **created_at**: DATETIME",
+            "x": 250,
+            "y": -600,
+            "width": 300,
+            "height": 200,
+            "color": "2"
+        },
+        {
+            "id": "table_tasks",
+            "type": "text",
+            "text": "# tasks\nAutomated background reminders/cron via bot.\n\n- **id**: PK\n- **user_id**: INTEGER (FK -> users.id)\n- **task_text**: TEXT\n- **remind_at**: DATETIME\n- **status**: 'pending' | 'done'\n- **created_at**: DATETIME",
+            "x": 200,
+            "y": -350,
+            "width": 350,
+            "height": 180,
+            "color": "2"
+        },
+        {
+            "id": "group_web",
+            "type": "group",
+            "x": -900,
+            "y": -650,
+            "width": 550,
+            "height": 450,
+            "label": "Web Application Access",
+            "color": "1"
+        },
+        {
+            "id": "table_auth_requests",
+            "type": "text",
+            "text": "# auth_requests\nDeep-link authentication handshake connecting Bot to Web Dashboard.\n\n- **token**: TEXT PRIMARY KEY\n- **status**: 'pending' | 'approved'\n- **tg_user_data**: TEXT JSON payload\n- **created_at**: DATETIME",
+            "x": -850,
+            "y": -550,
+            "width": 400,
+            "height": 180,
+            "color": "1"
+        },
+        {
+            "id": "table_sessions",
+            "type": "text",
+            "text": "# sessions\nActive browser instances mapped to User.\n\n- **id**: TEXT PK\n- **user_id**: INTEGER (FK -> users.id)\n- **user_agent**: TEXT\n- **ip**: TEXT\n- **location**: TEXT\n- **last_active**: DATETIME\n- **created_at**: DATETIME",
+            "x": -850,
+            "y": -320,
+            "width": 400,
+            "height": 200,
+            "color": "1"
+        },
+        {
+            "id": "group_agents",
+            "type": "group",
+            "x": 650,
+            "y": -200,
+            "width": 950,
+            "height": 600,
+            "label": "Agent Document Generation (AI Core)",
+            "color": "5"
+        },
+        {
+            "id": "table_agent_sessions",
+            "type": "text",
+            "text": "# agent_sessions\nCore document research instances driven by LLM agents.\n\n- **id**: TEXT PK\n- **user_id**: INTEGER (FK -> users.id)\n- **title**: TEXT\n- **doc_type**: TEXT\n- **settings_json**: TEXT\n- **main_tex**: TEXT (LaTeX Source code)\n- **references_bib**: TEXT (BibTeX data)\n- **visuals_json**: TEXT\n- **share_id**: TEXT UNIQUE\n- **status**: 'pending' | 'generating' | 'done' | 'error'\n- **error_msg**: TEXT\n- **stream_text**: TEXT\n- **tg_message_id**: INTEGER (For seamless UI updating)",
+            "x": 700,
+            "y": -100,
+            "width": 420,
+            "height": 450,
+            "color": "5"
+        },
+        {
+            "id": "table_visual_assets",
+            "type": "text",
+            "text": "# visual_assets\nPython/R generated charts, graphs & images.\n\n- **id**: TEXT PK\n- **user_id**: INTEGER (FK -> users.id)\n- **session_id**: TEXT (FK -> agent_sessions)\n- **type**: TEXT\n- **url**: TEXT (CDN Storage URL)\n- **source_code**: TEXT\n- **prompt**: TEXT\n- **created_at**: DATETIME",
+            "x": 1180,
+            "y": -100,
+            "width": 370,
+            "height": 250,
+            "color": "5"
+        },
+        {
+            "id": "table_latex_errors",
+            "type": "text",
+            "text": "# latex_errors\nLaTeX parser debugger logs.\n\n- **id**: INTEGER PK\n- **user_id**: INTEGER (FK -> users.id)\n- **error_text**: TEXT\n- **session_id**: TEXT (FK -> agent_sessions)\n- **created_at**: DATETIME",
+            "x": 1180,
+            "y": 200,
+            "width": 370,
+            "height": 150,
+            "color": "5"
+        },
+        {
+            "id": "group_chat",
+            "type": "group",
+            "x": 650,
+            "y": 450,
+            "width": 950,
+            "height": 350,
+            "label": "Standard Conversational Chat",
+            "color": "6"
+        },
+        {
+            "id": "table_chat_sessions",
+            "type": "text",
+            "text": "# chat_sessions\nParent thread for simple chat interactions.\n\n- **id**: TEXT PK\n- **user_id**: INTEGER (FK -> users.id)\n- **title**: TEXT\n- **created_at**: DATETIME\n- **updated_at**: DATETIME",
+            "x": 700,
+            "y": 500,
+            "width": 400,
+            "height": 200,
+            "color": "6"
+        },
+        {
+            "id": "table_chat_messages",
+            "type": "text",
+            "text": "# chat_messages\nIndividual replies & messages tied to a thread.\n\n- **id**: TEXT PK\n- **session_id**: TEXT (FK -> chat_sessions.id)\n- **role**: 'user' | 'assistant'\n- **content**: TEXT\n- **metadata_json**: TEXT\n- **created_at**: DATETIME",
+            "x": 1150,
+            "y": 500,
+            "width": 400,
+            "height": 200,
+            "color": "6"
+        },
+        {
+            "id": "group_billing",
+            "type": "group",
+            "x": -1580,
+            "y": -150,
+            "width": 1400,
+            "height": 850,
+            "label": "Billing, Transactions & Quota Logs",
+            "color": "3"
+        },
+        {
+            "id": "table_transactions",
+            "type": "text",
+            "text": "# transactions\nLedger of all mutations (purchases & deductions).\n\n- **id**: INTEGER PK\n- **user_id**: INTEGER (FK -> users.id)\n- **topic**: TEXT (Reason, e.g. 'Daily Reset')\n- **amount_text**: TEXT (e.g. '-15 000 chars')\n- **is_positive**: BOOLEAN (0/1)\n- **created_at**: DATETIME",
+            "x": -850,
+            "y": -50,
+            "width": 550,
+            "height": 200,
+            "color": "3"
+        },
+        {
+            "id": "table_receipts",
+            "type": "text",
+            "text": "# receipts\nGenerated PDF Invoices stored natively.\n\n- **id**: TEXT PK\n- **user_id**: INTEGER (FK -> users.id)\n- **type**: TEXT\n- **pack_name**: TEXT\n- **amount_text**: TEXT\n- **pdf_base64**: TEXT (Raw PDF Blob)\n- **created_at**: DATETIME",
+            "x": -850,
+            "y": 180,
+            "width": 450,
+            "height": 220,
+            "color": "3"
+        },
+        {
+            "id": "table_usage_logs",
+            "type": "text",
+            "text": "# usage_logs\nGranular per-token expenditure tracking for analytics.\n\n- **id**: INTEGER PK\n- **user_id**: INTEGER\n- **tokens**: INTEGER\n- **created_at**: DATETIME",
+            "x": -850,
+            "y": 450,
+            "width": 400,
+            "height": 160,
+            "color": "3"
+        },
+        {
+            "id": "table_promo_codes",
+            "type": "text",
+            "text": "# promo_codes\nGlobal system promo definitions.\n\n- **id**: INTEGER PK\n- **code**: TEXT UNIQUE\n- **type**: TEXT\n- **amount**: INTEGER\n- **uses**: INTEGER\n- **max_uses**: INTEGER\n- **is_active**: BOOLEAN\n- **created_at**: DATETIME",
+            "x": -1500,
+            "y": -50,
+            "width": 400,
+            "height": 220,
+            "color": "3"
+        },
+        {
+            "id": "table_promo_usages",
+            "type": "text",
+            "text": "# promo_usages\nAbuse-prevention mapping to block duplicate redemptions.\n\n- **id**: INTEGER PK\n- **promo_id**: INTEGER (FK -> promo_codes.id)\n- **user_id**: INTEGER (FK -> users.id)\n- **created_at**: DATETIME\n*(UNIQUE idx on promo_id + user_id)*",
+            "x": -1500,
+            "y": 200,
+            "width": 400,
+            "height": 180,
+            "color": "3"
+        },
+        {
+            "id": "table_processed_payments",
+            "type": "text",
+            "text": "# processed_payments\nCryptoCloud Idempotency blocks to prevent relay-attacks.\n\n- **order_id**: TEXT PK\n- **created_at**: DATETIME",
+            "x": -1500,
+            "y": 450,
+            "width": 400,
+            "height": 120,
+            "color": "3"
+        },
+        {
+            "id": "table_system_config",
+            "type": "text",
+            "text": "# system_config\nGlobal Key/Value configuration entries.\n\n- **key**: TEXT PK\n- **value**: TEXT\n- **updated_at**: DATETIME",
+            "x": 0,
+            "y": 700,
+            "width": 300,
+            "height": 150,
+            "color": "4"
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "fromNode": "table_users",
+            "fromSide": "top",
+            "toNode": "table_tasks",
+            "toSide": "bottom",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e2",
+            "fromNode": "table_users",
+            "fromSide": "top",
+            "toNode": "table_system_notifications",
+            "toSide": "bottom",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e3",
+            "fromNode": "table_users",
+            "fromSide": "left",
+            "toNode": "table_sessions",
+            "toSide": "right",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e4",
+            "fromNode": "table_users",
+            "fromSide": "left",
+            "toNode": "table_transactions",
+            "toSide": "right",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e5",
+            "fromNode": "table_users",
+            "fromSide": "left",
+            "toNode": "table_receipts",
+            "toSide": "right",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e6",
+            "fromNode": "table_users",
+            "fromSide": "right",
+            "toNode": "table_agent_sessions",
+            "toSide": "left",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e7",
+            "fromNode": "table_users",
+            "fromSide": "right",
+            "toNode": "table_chat_sessions",
+            "toSide": "left",
+            "label": "user_id -> id"
+        },
+        {
+            "id": "e8",
+            "fromNode": "table_chat_sessions",
+            "fromSide": "right",
+            "toNode": "table_chat_messages",
+            "toSide": "left",
+            "label": "session_id -> id"
+        },
+        {
+            "id": "e9",
+            "fromNode": "table_agent_sessions",
+            "fromSide": "right",
+            "toNode": "table_visual_assets",
+            "toSide": "left",
+            "label": "session_id -> id"
+        },
+        {
+            "id": "e10",
+            "fromNode": "table_agent_sessions",
+            "fromSide": "right",
+            "toNode": "table_latex_errors",
+            "toSide": "left",
+            "label": "session_id -> id"
+        },
+        {
+            "id": "e11",
+            "fromNode": "table_promo_codes",
+            "fromSide": "bottom",
+            "toNode": "table_promo_usages",
+            "toSide": "top",
+            "label": "promo_id -> id"
+        },
+        {
+            "id": "e12",
+            "fromNode": "table_transactions",
+            "fromSide": "left",
+            "toNode": "table_promo_usages",
+            "toSide": "right",
+            "label": "user_id -> id"
+        }
+    ]
+}

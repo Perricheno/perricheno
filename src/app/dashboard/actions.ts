@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import db, { getUserById } from "@/lib/db";
+import { getUserById } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { verifySession } from "@/lib/session";
 import crypto from "crypto";
 
@@ -16,39 +17,39 @@ export async function generateSecurePromoCode() {
 async function verifyAdmin() {
     const userId = await verifySession();
     if (!userId) throw new Error("Unauthorized");
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user || user.telegram_id !== '1153844209') throw new Error("Forbidden");
     return user;
 }
 
 export async function createPromoCode(code: string, type: string, amount: number, maxUses: number) {
     await verifyAdmin();
-    db.prepare(`INSERT INTO promo_codes (code, type, amount, max_uses) VALUES (?, ?, ?, ?)`).run(code, type, amount, maxUses);
+    await supabase.from('promo_codes').insert({ code, type, amount, max_uses: maxUses });
     revalidatePath("/dashboard");
     return { success: true };
 }
 
 export async function setSystemConfig(key: string, value: string) {
     await verifyAdmin();
-    db.prepare(`INSERT INTO system_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(key, value);
+    await supabase.from('system_config').upsert({ key, value }, { onConflict: 'key' });
     revalidatePath("/dashboard");
     return { success: true };
 }
 
 export async function manageUserTokens(userId: number, action: string, amount: number) {
     await verifyAdmin();
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user) throw new Error("User missing");
 
     if (action === 'grant_chars') {
-        db.prepare('UPDATE users SET purchased_chars = purchased_chars + ? WHERE id = ?').run(amount, userId);
-        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Admin System Grant", `+${amount.toLocaleString()} chars`, 1);
+        await supabase.from('users').update({ purchased_chars: user.purchased_chars + amount }).eq('id', userId);
+        await supabase.from('transactions').insert({ user_id: userId, topic: "Admin System Grant", amount_text: `+${amount.toLocaleString()} chars`, is_positive: true });
     } else if (action === 'grant_reports') {
-        db.prepare('UPDATE users SET purchased_reports = purchased_reports + ? WHERE id = ?').run(amount, userId);
-        db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(userId, "Admin System Grant", `+${amount.toLocaleString()} reports`, 1);
+        await supabase.from('users').update({ purchased_reports: user.purchased_reports + amount }).eq('id', userId);
+        await supabase.from('transactions').insert({ user_id: userId, topic: "Admin System Grant", amount_text: `+${amount.toLocaleString()} reports`, is_positive: true });
     } else if (action === 'toggle_freeze') {
-        const newStatus = user.is_banned ? 0 : 1;
-        db.prepare('UPDATE users SET is_banned = ? WHERE id = ?').run(newStatus, userId);
+        const newStatus = user.is_banned ? false : true;
+        await supabase.from('users').update({ is_banned: newStatus }).eq('id', userId);
     }
     revalidatePath("/dashboard");
     return { success: true };
@@ -60,11 +61,11 @@ export async function sendDirectMessage(userId: number, message: string) {
     const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
     // 1. Save to DB
-    db.prepare(`INSERT INTO system_notifications (user_id, message) VALUES (?, ?)`).run(userId, message);
+    await supabase.from('system_notifications').insert({ user_id: userId, message });
 
     // 2. PUSH to Telegram Bot
     try {
-        const user = getUserById(userId);
+        const user = await getUserById(userId);
         if (user && user.telegram_id) {
             const formatted = `📩 *Сообщение от администрации Perricheno*:\n\n${message}`;
             await fetch(`${BOT_INTERNAL_URL}/send-message`, {
@@ -158,9 +159,9 @@ export async function checkServiceHealth(serviceId: string) {
             case 'db': {
                 log.push("Checking SQLite V-Base Integrity...");
                 const start = Date.now();
-                const users = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
+                const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
                 const end = Date.now();
-                log.push(`SUCCESS: ${users.count} user records indexed. Latency: ${end - start}ms`);
+                log.push(`SUCCESS: ${count || 0} user records indexed. Latency: ${end - start}ms`);
                 break;
             }
             case 'stirling': {

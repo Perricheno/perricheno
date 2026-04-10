@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 
 // Generate a unique deep link token for Telegram auth
@@ -7,14 +7,11 @@ export async function POST() {
     try {
         const token = uuidv4();
 
-        db.prepare(
-            "INSERT INTO auth_requests (token, status) VALUES (?, 'pending')"
-        ).run(token);
+        await supabase.from('auth_requests').insert({ token, status: 'pending' });
 
         // Cleanup: delete tokens older than 10 minutes
-        db.prepare(
-            "DELETE FROM auth_requests WHERE created_at < datetime('now', '-10 minutes')"
-        ).run();
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        await supabase.from('auth_requests').delete().lt('created_at', tenMinAgo);
 
         const botUsername = process.env.TELEGRAM_BOT_USERNAME || "PerrichenoBot";
         const deepLink = `https://t.me/${botUsername}?start=${token}`;

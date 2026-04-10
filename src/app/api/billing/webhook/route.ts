@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         }
 
         // --- IDEMPOTENCY CHECK ---
-        if (orderId && isPaymentProcessed(orderId)) {
+        if (orderId && await isPaymentProcessed(orderId)) {
             console.log(`ℹ️ Webhook: Skipping already processed order ${orderId}`);
             return new NextResponse('Already processed', { status: 200 });
         }
@@ -79,10 +79,10 @@ export async function POST(req: Request) {
         console.log(`✅ Webhook: Received payment from UID ${userId} for plan ${packId}`);
 
         // Upgrade the subscription
-        upgradeSubscriptionPlan(userId, packId);
+        await upgradeSubscriptionPlan(userId, packId);
 
         // Mark as processed to prevent double-crediting
-        markPaymentProcessed(orderId);
+        await markPaymentProcessed(orderId);
 
         const packName = plan.name;
         const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
         try {
             const botToken = process.env.TELEGRAM_BOT_TOKEN;
             const { getUserById } = await import('@/lib/db');
-            const user = getUserById(userId);
+            const user = await getUserById(userId);
             
             if (botToken && user?.telegram_id) {
                 const lines = [

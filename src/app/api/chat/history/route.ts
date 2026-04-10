@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
-import db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Handle persistent chat history and session management
@@ -16,30 +16,26 @@ export async function GET(req: NextRequest) {
 
     try {
         if (sessionId) {
-            // Get messages for one session
-            const messages = db.prepare(`
-                SELECT id, role, content as text, created_at as timestamp 
-                FROM chat_messages 
-                WHERE session_id = ? 
-                ORDER BY created_at ASC
-            `).all(sessionId) as any[];
+            const { data: messages } = await supabase.from('chat_messages')
+                .select('id, role, content, created_at')
+                .eq('session_id', sessionId)
+                .order('created_at', { ascending: true });
 
             return NextResponse.json({ 
-                messages: messages.map(m => ({
-                    ...m,
-                    timestamp: new Date(m.timestamp + 'Z')
+                messages: (messages || []).map(m => ({
+                    id: m.id,
+                    role: m.role,
+                    text: m.content,
+                    timestamp: new Date(m.created_at)
                 }))
             });
         } else {
-            // Get all sessions for user
-            const sessions = db.prepare(`
-                SELECT id, title, created_at as createdAt 
-                FROM chat_sessions 
-                WHERE user_id = ? 
-                ORDER BY updated_at DESC
-            `).all(userId) as any[];
+            const { data: sessions } = await supabase.from('chat_sessions')
+                .select('id, title, created_at')
+                .eq('user_id', userId)
+                .order('updated_at', { ascending: false });
 
-            return NextResponse.json({ sessions });
+            return NextResponse.json({ sessions: (sessions || []).map(s => ({ ...s, createdAt: s.created_at })) });
         }
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -56,29 +52,23 @@ export async function POST(req: NextRequest) {
         const { action, sessionId, title, message } = body;
 
         if (action === "create_session") {
-            db.prepare(`
-                INSERT INTO chat_sessions (id, user_id, title)
-                VALUES (?, ?, ?)
-            `).run(sessionId, userId, title);
+            await supabase.from('chat_sessions').insert({ id: sessionId, user_id: userId, title });
             return NextResponse.json({ success: true });
         }
 
         if (action === "save_message") {
             const { id, role, text, metadata } = message;
             
-            // Ensure session exists (auto-create if missing for robustness)
-            const session = db.prepare("SELECT id FROM chat_sessions WHERE id = ?").get(sessionId);
+            const { data: session } = await supabase.from('chat_sessions').select('id').eq('id', sessionId).maybeSingle();
             if (!session) {
-                db.prepare(`INSERT INTO chat_sessions (id, user_id, title) VALUES (?, ?, ?)`).run(sessionId, userId, title || "New Chat");
+                await supabase.from('chat_sessions').insert({ id: sessionId, user_id: userId, title: title || "New Chat" });
             }
 
-            db.prepare(`
-                INSERT INTO chat_messages (id, session_id, role, content, metadata_json)
-                VALUES (?, ?, ?, ?, ?)
-            `).run(id, sessionId, role, text, JSON.stringify(metadata || {}));
+            await supabase.from('chat_messages').insert({
+                id, session_id: sessionId, role, content: text, metadata_json: JSON.stringify(metadata || {})
+            });
 
-            // Update session timestamp
-            db.prepare(`UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(sessionId);
+            await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId);
 
             return NextResponse.json({ success: true });
         }
@@ -98,7 +88,7 @@ export async function DELETE(req: NextRequest) {
     if (!sessionId) return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
 
     try {
-        db.prepare("DELETE FROM chat_sessions WHERE id = ? AND user_id = ?").run(sessionId, userId);
+        await supabase.from('chat_sessions').delete().eq('id', sessionId).eq('user_id', userId);
         return NextResponse.json({ success: true });
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 });

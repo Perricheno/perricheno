@@ -8,7 +8,7 @@ interface PageProps {
 
 export default async function SharedSessionPage({ params }: PageProps) {
     const { shareId } = await params;
-    const session = getAgentSessionByShareId(shareId);
+    const session = await getAgentSessionByShareId(shareId);
 
     if (!session) return notFound();
 

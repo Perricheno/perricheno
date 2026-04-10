@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jwt from 'jose';
-import db, { getUserById, createTask } from '@/lib/db';
+import { getUserById, createTask } from '@/lib/db';
 
 const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env-938210");
 
@@ -10,7 +10,7 @@ async function verifyAuth(req: NextRequest) {
     if (!sessionToken) return null;
     try {
         const { payload } = await jwt.jwtVerify(sessionToken, JWT_SECRET);
-        return getUserById(Number(payload.userId));
+        return await getUserById(Number(payload.userId));
     } catch {
         return null;
     }
@@ -88,7 +88,7 @@ Example output:
 
         // Save to DB automatically
         if (parsed.task && parsed.remind_at) {
-             const newTask = createTask(user.id, parsed.task, parsed.remind_at);
+             const newTask = await createTask(user.id, parsed.task, parsed.remind_at);
              return NextResponse.json({ success: true, task: newTask });
         } else {
              return NextResponse.json({ error: 'Model returned incomplete data' }, { status: 500 });

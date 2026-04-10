@@ -239,13 +239,13 @@ export async function POST(req: NextRequest) {
         let sessionId = uuidv4();
         // ── Create DB session & Deduct Input Usage ──
         if (telegramId) {
-            const user = getUserByTelegramId(String(telegramId));
+            const user = await getUserByTelegramId(String(telegramId));
             if (user) {
                 if (user.is_banned) {
                     return NextResponse.json({ error: "Ваш аккаунт заморожен администрацией." }, { status: 403 });
                 }
                 // Check if a completed session with the exact same title exists to cache output
-                const existingSession = getRecentSessionByTitle(user.id, title || "Telegram Visual");
+                const existingSession = await getRecentSessionByTitle(user.id, title || "Telegram Visual");
                 if (existingSession && existingSession.status === "done" && (existingSession.visuals_json || existingSession.stream_text)) {
                     console.log(`[Generate] Cache hit for session: ${existingSession.id}`);
                     // Return instantly without triggering OpenAI or updating the DB
@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
                 // Identify Input Data Length
                 const inputChars = textContent.length;
                 if (inputChars > 0 && (!existingSession || existingSession.status === "done")) { // Only deduct for new sessions
-                    const deduction = checkAndDeductUsage(user.id, 'chars', inputChars);
+                    const deduction = await checkAndDeductUsage(user.id, 'chars', inputChars);
                     if (!deduction.success) {
                         return NextResponse.json({ 
                             error: `Insufficient balance to analyze data. Need ${inputChars} symbols, but you only have ${Math.floor(deduction.remaining)}.` 
@@ -277,7 +277,7 @@ export async function POST(req: NextRequest) {
 
                 if (!existingSession || existingSession.status === "done") {
                     try {
-                        createAgentSession({
+                        await createAgentSession({
                             id: sessionId,
                             user_id: user.id,
                             title: title || "Telegram Visual",
@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
                     }
                 } else {
                     // Update existing active session status
-                    updateAgentSession(sessionId, { status: "generating", error_msg: null });
+                    await updateAgentSession(sessionId, { status: "generating", error_msg: null });
                 }
             }
         }
@@ -392,7 +392,7 @@ export async function POST(req: NextRequest) {
                     addLog(`[error] Ошибка OpenAI API: HTTP ${aiRes.status}`);
                     steps[1].state = "error";
                     pushStatusUpdate(true);
-                    updateAgentSession(sessionId, { status: "error", error_msg: `AI Error: ${err.slice(0, 200)}` });
+                    await updateAgentSession(sessionId, { status: "error", error_msg: `AI Error: ${err.slice(0, 200)}` });
                     return;
                 }
 
@@ -439,7 +439,7 @@ export async function POST(req: NextRequest) {
                     addLog(`[error] ИИ вернул пустой код без объяснений`);
                     steps[1].state = "error";
                     pushStatusUpdate(true);
-                    updateAgentSession(sessionId, { status: "error", error_msg: "AI returned empty code" });
+                    await updateAgentSession(sessionId, { status: "error", error_msg: "AI returned empty code" });
                     return;
                 }
 
@@ -450,7 +450,7 @@ export async function POST(req: NextRequest) {
                 pushStatusUpdate(true);
 
                 // Save generated code to DB
-                updateAgentSession(sessionId, { stream_text: generatedCodeClean });
+                await updateAgentSession(sessionId, { stream_text: generatedCodeClean });
 
 
                 // 4. Compile with auto-retry on failure (self-correction)
@@ -495,7 +495,7 @@ export async function POST(req: NextRequest) {
                             source_code: currentCode
                         }]);
 
-                        updateAgentSession(sessionId, {
+                        await updateAgentSession(sessionId, {
                             status: "done",
                             stream_text: currentCode,
                             visuals_json: visualEntry,
@@ -503,11 +503,11 @@ export async function POST(req: NextRequest) {
 
                         // Deduct usage: INPUT (prompt + context) + OUTPUT (code)
                         if (telegramId) {
-                            const user = getUserByTelegramId(String(telegramId));
+                            const user = await getUserByTelegramId(String(telegramId));
                             if (user) {
                                 const inputChars = prompt.length + (context.text_data?.length || 0);
-                                checkAndDeductUsage(user.id, 'chars', inputChars + currentCode.length);
-                                checkAndDeductUsage(user.id, 'visuals', 1);
+                                await checkAndDeductUsage(user.id, 'chars', inputChars + currentCode.length);
+                                await checkAndDeductUsage(user.id, 'visuals', 1);
                             }
                         }
                         compileSuccess = true;
@@ -561,7 +561,7 @@ export async function POST(req: NextRequest) {
                     steps[2].state = "error";
                     addLog(`[error] Критическая ошибка генерации`);
                     pushStatusUpdate(true);
-                    updateAgentSession(sessionId, {
+                    await updateAgentSession(sessionId, {
                         status: "error",
                         stream_text: currentCode,
                         error_msg: lastError,

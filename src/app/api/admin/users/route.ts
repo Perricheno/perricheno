@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import db, { getUserById } from '@/lib/db';
+import { getUserById } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 async function verifyAdmin() {
     const userId = await verifySession();
     if (!userId) return null;
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
     if (!user || user.telegram_id !== '1153844209') return null;
     return user;
 }
@@ -20,13 +21,14 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const search = url.searchParams.get('search') || '';
         
-        let users;
+        let users = [] as any[];
         if (search) {
-            const stmt = db.prepare(`SELECT * FROM users WHERE telegram_id LIKE ? OR username LIKE ? OR first_name LIKE ? ORDER BY created_at DESC LIMIT 50`);
-            users = stmt.all(`%${search}%`, `%${search}%`, `%${search}%`);
+            const pattern = `%${search}%`;
+            const { data } = await supabase.from('users').select('*').or(`telegram_id.ilike.${pattern},username.ilike.${pattern},first_name.ilike.${pattern}`).order('created_at', { ascending: false }).limit(50);
+            if (data) users = data;
         } else {
-            const stmt = db.prepare(`SELECT * FROM users ORDER BY created_at DESC LIMIT 50`);
-            users = stmt.all();
+            const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false }).limit(50);
+            if (data) users = data;
         }
 
         return NextResponse.json({ users });
@@ -45,15 +47,19 @@ export async function PUT(req: Request) {
         const data = await req.json();
         const { targetUserId, action, amount, tier } = data;
 
-        const targetUser = getUserById(targetUserId);
+        const targetUser = await getUserById(targetUserId);
         if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
         if (action === 'grant_chars' || action === 'grant_reports') {
             const isChars = action === 'grant_chars';
             const resourceName = isChars ? 'chars' : 'reports';
             
-            db.prepare(`UPDATE users SET purchased_${resourceName} = purchased_${resourceName} + ? WHERE id = ?`).run(amount, targetUserId);
-            db.prepare(`INSERT INTO transactions (user_id, topic, amount_text, is_positive) VALUES (?, ?, ?, ?)`).run(targetUserId, "Admin Bonus", `+${amount.toLocaleString()} ${resourceName}`, 1);
+            if (isChars) {
+                await supabase.from('users').update({ purchased_chars: targetUser.purchased_chars + amount }).eq('id', targetUserId);
+            } else {
+                await supabase.from('users').update({ purchased_reports: targetUser.purchased_reports + amount }).eq('id', targetUserId);
+            }
+            await supabase.from('transactions').insert({ user_id: targetUserId, topic: "Admin Bonus", amount_text: `+${amount.toLocaleString()} ${resourceName}`, is_positive: true });
 
             // Trigger receipt generation
             const crypto = require('crypto');
@@ -76,10 +82,10 @@ export async function PUT(req: Request) {
             }
 
         } else if (action === 'set_tier') {
-            db.prepare('UPDATE users SET account_tier = ? WHERE id = ?').run(tier, targetUserId);
+            await supabase.from('users').update({ account_tier: tier }).eq('id', targetUserId);
         } else if (action === 'toggle_ban') {
-            const newBanStatus = targetUser.is_banned ? 0 : 1;
-            db.prepare('UPDATE users SET is_banned = ? WHERE id = ?').run(newBanStatus, targetUserId);
+            const newBanStatus = targetUser.is_banned ? false : true;
+            await supabase.from('users').update({ is_banned: newBanStatus }).eq('id', targetUserId);
             return NextResponse.json({ success: true, newBanStatus });
         } else {
             return NextResponse.json({ error: "Invalid action" }, { status: 400 });
