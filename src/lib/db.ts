@@ -156,17 +156,27 @@ export async function checkAndDeductUsage(
         const fromFree = Math.min(freeAvailable, amount);
         const fromPurchased = amount - fromFree;
 
-        // Pass full amount for weekly/monthly tracking (not just fromFree)
-        const { error } = await supabase.rpc('deduct_user_usage', {
-            p_user_id: userId,
-            p_free_deduction: fromFree,
-            p_purchased_deduction: fromPurchased,
-            p_amount: amount
-        });
+        const newWeekly = (user.weekly_chars_used || 0) + fromFree;
+        const newMonthly = (user.monthly_chars_used || 0) + fromFree;
+        const newDaily = (user.daily_chars_used || 0) + fromFree;
+        const newPurchased = Math.max(0, purchased - fromPurchased);
+
+        // Update database explicitly without relying on the RPC
+        const { error } = await supabase.from('users').update({
+            weekly_chars_used: newWeekly,
+            monthly_chars_used: newMonthly,
+            daily_chars_used: newDaily,
+            purchased_chars: newPurchased
+        }).eq('id', userId);
 
         if (error) {
-            console.error("RPC Error deduct_user_usage:", error);
+            console.error("Direct Update Error deduct_user_usage:", error);
             return { success: false, remaining: totalAvailable };
+        }
+        
+        // Log the usage
+        if (amount > 0) {
+            await supabase.from('usage_logs').insert({ user_id: userId, tokens: amount });
         }
 
         return { success: true, remaining: totalAvailable - amount };

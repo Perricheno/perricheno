@@ -371,82 +371,26 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
     // ─── STREAMING ───
     if (phase === "streaming") {
-        const estimatedProgress = Math.min(95, Math.round((streamChars / EXPECTED_CHARS) * 100));
         return (
             <div className="w-full h-full flex flex-col font-sans bg-[#FBFBFC] p-4 md:p-6 overflow-hidden relative">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full h-full flex flex-col max-w-4xl mx-auto pl-12 md:pl-0 pt-4 md:pt-0">
-                    <div className="flex items-center justify-between mb-6 md:px-1">
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
-                                <IconClock className="w-3.5 h-3.5" stroke={2.5} /> <span className="tabular-nums">{elapsedTime.toFixed(1)}s</span>
-                            </div>
-                            {isAgentMode && <div className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A1A1AA]">
-                                <IconLetterCase className="w-4 h-4" stroke={2.5} /> <span className="tabular-nums">{streamChars.toLocaleString()} chars</span>
-                            </div>}
-                        </div>
-                        {isAgentMode && <div className="flex items-center gap-4">
-                            <span className="text-[10px] font-black text-black tabular-nums tracking-widest">{estimatedProgress}%</span>
-                            <div className="w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                <motion.div className="h-full bg-black" animate={{ width: `${estimatedProgress}%` }} transition={{ duration: 0.3 }} />
-                            </div>
-                        </div>}
+                
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full flex flex-col items-center justify-center">
+                    <div className="flex gap-4 mb-8">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                            <motion.div
+                                key={i}
+                                className="w-3 h-3 bg-black rounded-full"
+                                animate={{ y: [0, -12, 0], scale: [1, 1.1, 1] }}
+                                transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
+                            />
+                        ))}
                     </div>
-                    <div className="flex-1 flex gap-4 overflow-hidden">
-                        <div className="flex-1 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col">
-                            <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-3 shrink-0">
-                                <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                                <span className="text-[10px] font-black text-black uppercase tracking-[0.3em]">{!isAgentMode ? "Agent Analytics Console" : "Agent Logic Stream"}</span>
-                                <span className="text-[10px] font-black text-[#D4D4D8] ml-auto truncate uppercase tracking-widest max-w-[150px] sm:max-w-xs">{topic}</span>
-                            </div>
-                            <div ref={streamBoxRef} className="flex-1 overflow-auto p-6 bg-[#FAFAFA]">
-                                {isAgentMode ? (
-                                    <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 font-sans text-[#52525B]">
-                                        <ReactMarkdown>{displayStreamText}</ReactMarkdown>
-                                        {displayStreamText.length < targetStreamText.current.length && (
-                                            <span className="inline-block w-1 h-4 bg-black ml-1 animate-pulse" />
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="font-mono text-xs text-gray-800 space-y-1 pb-4">
-                                        {agentLogs.map((log, i) => (
-                                            <div key={i} className={`p-1 rounded ${
-                                                log.type === 'error' ? 'text-red-600 bg-red-50' : (
-                                                log.type === 'success' ? 'text-green-600 bg-green-50' : (
-                                                log.type === 'code' ? 'text-[#1a1a1a] bg-gray-100' : 'text-[#666]'
-                                            ))}`}>
-                                                <span className="opacity-50 select-none">[{new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" })}]</span> {log.message}
-                                            </div>
-                                        ))}
-                                        <div className="p-2 text-gray-400 flex items-center gap-2 mt-2">
-                                            <IconLoader2 className="w-3 h-3 animate-spin" /> {agentSteps.some(s => s.status === 'running') ? "Processing..." : "Awaiting agent thought..."}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        {!isAgentMode && (
-                            <div className="hidden md:flex w-72 shrink-0 bg-white rounded-[32px] border border-gray-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.06)] overflow-hidden flex-col">
-                                <div className="h-12 bg-white border-b border-gray-50 flex items-center px-6 gap-2 shrink-0">
-                                    <IconCheck className="w-4 h-4 text-black" stroke={2.5} />
-                                    <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">Progression</span>
-                                </div>
-                                <div className="flex-1 p-6 overflow-y-auto space-y-5">
-                                    {agentSteps.map((step, i) => (
-                                        <div key={i} className={`flex items-start gap-3 text-sm font-bold ${step.status === 'done' ? 'text-black' : step.status === 'running' ? 'text-[#3b82f6]' : step.status === 'error' ? 'text-red-500' : 'text-[#D4D4D8]'}`}>
-                                            <div className="mt-[3px] shrink-0">
-                                                {step.status === 'done' ? <IconCheck className="w-4 h-4" stroke={3} /> : 
-                                                 step.status === 'running' ? <IconLoader2 className="w-4 h-4 animate-spin" stroke={3} /> : 
-                                                 step.status === 'error' ? <IconX className="w-4 h-4" stroke={3} /> : 
-                                                 <div className="w-2.5 h-2.5 rounded-full bg-gray-100 ml-0.5" />}
-                                            </div>
-                                            <span className="leading-snug">{step.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                    <div className="text-[12px] font-black tracking-[0.4em] text-black uppercase mb-3 ml-1 text-center">
+                        Generating
+                    </div>
+                    <div className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-[0.2em] text-center">
+                        {isAgentMode ? 'Analytics Console' : `${docType.replace("_", " ")} • ${settings.style}`}
                     </div>
                 </motion.div>
             </div>
@@ -480,6 +424,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                 <span>•</span>
                                 <span>{settings.style}</span>
                                 {referencesBib && <><span>•</span><span className="text-black">Refs Attached</span></>}
+                                {mainTex && <><span>•</span><span className="text-emerald-500 font-bold tabular-nums">~{mainTex.length.toLocaleString()} Chars</span></>}
                             </div>
                         </>
                     )}
