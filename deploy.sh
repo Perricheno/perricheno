@@ -11,7 +11,8 @@ export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
 echo "⬇️  Pulling latest changes..."
-git pull origin main
+git fetch origin main
+git reset --hard origin/main
 
 echo "🚀 Building & Deploying with zero-downtime..."
 # --build builds if necessary, using cache. 
