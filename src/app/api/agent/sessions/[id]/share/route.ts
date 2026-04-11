@@ -12,7 +12,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
 
-    const shareId = toggleAgentSessionShare(id, userId);
+    const shareId = await toggleAgentSessionShare(id, userId);
 
     return NextResponse.json({
         shared: shareId !== null,
