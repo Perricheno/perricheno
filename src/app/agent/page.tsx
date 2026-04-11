@@ -79,6 +79,7 @@ export default function AgentPage() {
     const [suggestedCharts, setSuggestedCharts] = useState<string[]>([]);
     const [suggestReasoning, setSuggestReasoning] = useState("");
     const [isSuggesting, setIsSuggesting] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [analyticsPrompt, setAnalyticsPrompt] = useState("");
     const [phase, setPhase] = useState<"idle" | "suggesting">("idle");
     const [error, setError] = useState<string | null>(null);
@@ -131,7 +132,9 @@ export default function AgentPage() {
     const handleGenerate = async () => {
         if (!user) { setShowLogin(true); return; }
         if (!prompt.trim()) return;
+        if (isGenerating) return;
 
+        setIsGenerating(true);
         if (!isAgentMode) {
             if (agentSubMode === 'chat') {
                 try {
@@ -154,6 +157,8 @@ export default function AgentPage() {
                     }
                 } catch (err: any) {
                     setError(err.message);
+                } finally {
+                    setIsGenerating(false);
                 }
                 return;
             } else if (agentSubMode === 'literature_search') {
@@ -173,9 +178,12 @@ export default function AgentPage() {
                     router.push(`/agent/scholar/${data.sessionId}`);
                 } catch (err: any) {
                     setError(err.message);
+                } finally {
+                    setIsGenerating(false);
                 }
                 return;
             }
+            setIsGenerating(false);
             handleAgentGenerate();
             return;
         }
@@ -199,6 +207,8 @@ export default function AgentPage() {
             router.push(`/agent/${sessionId}`);
         } catch (err: any) {
             setError(err.message);
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -594,6 +604,18 @@ export default function AgentPage() {
                         <p className="text-xs text-gray-400">AI is recommending the best chart types</p>
                     </motion.div>
                 )}
+                {isGenerating && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-30 bg-[#FBFBFC]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
+                    >
+                        <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center">
+                            <IconLoader2 className="w-6 h-6 text-black animate-spin" />
+                        </div>
+                        <p className="text-sm font-bold text-black tracking-tight">Initializing Session...</p>
+                        <p className="text-xs text-gray-400">Preparing your isolated environment</p>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-[640px] flex flex-col items-center">
@@ -708,10 +730,10 @@ export default function AgentPage() {
                         {/* Right: Submit */}
                         <button 
                             onClick={handleGenerate} 
-                            disabled={!prompt.trim() || isSuggesting} 
+                            disabled={!prompt.trim() || isSuggesting || isGenerating} 
                             className="w-8 h-8 bg-[#1a1a1a] text-white rounded-lg flex items-center justify-center disabled:opacity-10 disabled:bg-[#e5e5e5] transition-all hover:bg-black active:scale-95"
                         >
-                            {isSuggesting ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
+                            {(isSuggesting || isGenerating) ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
                         </button>
                     </div>
                 </div>

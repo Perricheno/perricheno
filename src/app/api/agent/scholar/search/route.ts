@@ -18,38 +18,39 @@ export async function POST(req: Request) {
         const prompt = session.stream_text || ""; // Stored the prompt here temporarily
         const settings = (typeof session.settings_json === 'string' ? JSON.parse(session.settings_json) : session.settings_json) as AgentSettings;
 
-        const gptQueryPrompt = `You are an expert academic librarian. Your task is to convert the user's natural language request into a strictly formatted 'search_query' string for the arXiv API. 
-CRITICAL LANGUAGE RULE: arXiv primarily indexes papers in English. You MUST translate the user's query into English keywords UNLESS the user explicitly specifies a different language or clearly intends to find regional papers. If they just type in another language casually, translate their core technical intent to English for the best results.
-Do NOT use double quotes. Use valid arXiv prefixes: ti (title), abs (abstract), au (author).
-Use logical operators AND, OR, ANDNOT. 
-If the user's prompt is very vague or broad, extract the main keywords and use "abs:" or "all:".
-Only return the RAW query string. No markdown, no explanations.
+        // Ultra-fast AI Auto-translation
+        const translationPrompt = `You are an academic translation bridge. The user is searching for scientific papers.
+If the following query is in English, reply EXACTLY with the query. 
+If it is in ANY other language, translate it faithfully to English keywords. 
+DO NOT respond with anything else (no quotes, no intro).
+Query: ${prompt}`;
 
-User Prompt: ${prompt}
-Optional Filters applied in settings: 
-- Authors: ${settings.scholarAuthors ? settings.scholarAuthors : "None"}
-
-Generate the arXiv search_query:`;
-
-        const openAiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
-                messages: [{ role: "user", content: gptQueryPrompt }]
-            })
-        });
-
-        const completion = await openAiRes.json();
-        
-        if (completion.error) {
-            console.error("OpenAI Error:", completion.error);
+        let translatedPrompt = prompt.trim();
+        try {
+            const openAiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.OPENAI_API_KEY}` },
+                body: JSON.stringify({
+                    model: "gpt-5-mini-2025-08-07",
+                    messages: [{ role: "user", content: translationPrompt }],
+                    temperature: 0
+                })
+            });
+            if (openAiRes.ok) {
+                const completion = await openAiRes.json();
+                translatedPrompt = completion.choices?.[0]?.message?.content?.trim() || prompt.trim();
+            }
+        } catch (e) {
+            console.error("Translation error", e);
         }
 
-        const arxivQuery = completion.choices?.[0]?.message?.content?.trim() || `all:${prompt}`;
+        // Directly construct arXiv query (Ultra-fast, deterministic)
+        const keywords = translatedPrompt ? `all:${translatedPrompt}` : "all:science";
+        let arxivQuery = keywords;
+
+        if (settings.scholarAuthors && settings.scholarAuthors !== "None") {
+            arxivQuery = `(${keywords}) AND au:${settings.scholarAuthors}`;
+        }
 
         // 2. Build arXiv API URL
         const maxResults = settings.scholarMaxArticles || 10;
@@ -57,8 +58,25 @@ Generate the arXiv search_query:`;
         // Sort by submittedDate descending (freshest first)
         const arxivUrl = `http://export.arxiv.org/api/query?search_query=${encodedQuery}&max_results=${maxResults}&sortBy=submittedDate&sortOrder=descending`;
 
-        // 3. Fetch from arXiv
-        const response = await fetch(arxivUrl);
+        // 3. Fetch from arXiv with caching and User-Agent to mitigate 503 errors and limits
+        let fetchOptions: RequestInit = {
+            headers: { "User-Agent": "Perricheno-AI-Agent/1.0 (support@perricheno.com)" },
+            next: { revalidate: 3600 } // NEXT.JS CACHE: Cache identical searches for 1 hour to handle 500-1000 users!
+        };
+
+        let response = await fetch(arxivUrl, fetchOptions);
+
+        // Simple 1-second retry if 503 Service Unavailable
+        if (response.status === 503) {
+            console.log("arXiv 503 Service Unavailable. Retrying once after 1 second...");
+            await new Promise(r => setTimeout(r, 1000));
+            fetchOptions = {
+                headers: { "User-Agent": "Perricheno-AI-Agent/1.0 (support@perricheno.com)" },
+                cache: 'no-store' // bypass cache on retry just in case
+            };
+            response = await fetch(arxivUrl, fetchOptions);
+        }
+
         if (!response.ok) {
             throw new Error(`arXiv API error: ${response.status} ${response.statusText}`);
         }
