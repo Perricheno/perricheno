@@ -66,25 +66,27 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		req.MaxResults = 10
 	}
 
-	// Prepare keywords
-	keywords := "all:science"
+	// Prepare plain query for OpenAlex
+	plainQuery := "science"
 	if req.Query != "" {
-		keywords = "all:" + req.Query
+		plainQuery = req.Query
 	}
+	openAlexEncoded := url.QueryEscape(plainQuery)
 
-	arxivQuery := keywords
+	// Prepare keywords for arXiv
+	arxivQuery := "all:" + plainQuery
 	if req.Authors != "" && req.Authors != "None" {
-		arxivQuery = fmt.Sprintf("(%s) AND au:%s", keywords, req.Authors)
+		arxivQuery = fmt.Sprintf("(%s) AND au:%s", arxivQuery, req.Authors)
 	}
-	encodedQuery := url.QueryEscape(arxivQuery)
+	arxivEncoded := url.QueryEscape(arxivQuery)
 
 	var articles []ScholarArticle
 	var err error
 
 	if req.Source == "openalex" {
-		articles, err = fetchOpenAlex(encodedQuery, req)
+		articles, err = fetchOpenAlex(openAlexEncoded, req)
 	} else {
-		articles, err = fetchArxiv(encodedQuery, req)
+		articles, err = fetchArxiv(arxivEncoded, req)
 	}
 
 	if err != nil {
@@ -95,7 +97,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp := SearchResponse{
 		Articles: articles,
-		Query:    req.Query,
+		Query:    plainQuery,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
