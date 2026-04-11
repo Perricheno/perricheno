@@ -197,7 +197,13 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
 
     const handleSelectSession = (s: AgentSession) => {
         setSidebarOpen(false);
-        router.push(s.doc_type === 'chat' ? `/agent/chat/${s.id}` : `/agent/${s.id}`);
+        if (s.doc_type === 'chat') {
+            router.push(`/agent/chat/${s.id}`);
+        } else if (s.doc_type === 'literature_search') {
+            router.push(`/agent/scholar/${s.id}`);
+        } else {
+            router.push(`/agent/${s.id}`);
+        }
     };
 
     const handleDeleteSession = async (id: string, e: React.MouseEvent) => {

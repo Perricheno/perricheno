@@ -8,7 +8,7 @@ import {
     IconClock, IconLetterCase, IconSettings,
     IconSchool, IconSearch, IconCertificate, IconChartPie,
     IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
-    IconPlus, IconLock, IconRobot
+    IconPlus, IconLock, IconRobot, IconBook2
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -72,7 +72,7 @@ export default function AgentPage() {
 
     // Agent Mode States
     const [isAgentMode, setIsAgentMode] = useState(true);
-    const [agentSubMode, setAgentSubMode] = useState<"data_analytics" | "chat">("data_analytics");
+    const [agentSubMode, setAgentSubMode] = useState<"data_analytics" | "chat" | "literature_search">("literature_search");
     const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string, type?: string}[]>([]);
 
     // Suggestion step state (Data Analytics)
@@ -121,7 +121,8 @@ export default function AgentPage() {
         { id: "report", label: "Report", icon: IconChartPie },
     ];
 
-    const AGENT_MODES: { id: "data_analytics" | "chat"; label: string; icon: any }[] = [
+    const AGENT_MODES: { id: "data_analytics" | "chat" | "literature_search"; label: string; icon: any }[] = [
+        { id: "literature_search", label: "Literature Search", icon: IconBook2 },
         { id: "data_analytics", label: "Data Analytics", icon: IconDatabase },
         { id: "chat", label: "Chat", icon: IconRobot },
     ];
@@ -132,7 +133,6 @@ export default function AgentPage() {
         if (!prompt.trim()) return;
 
         if (!isAgentMode) {
-            // Chat mode: create session and redirect
             if (agentSubMode === 'chat') {
                 try {
                     const res = await fetch('/api/agent/chat/sessions', {
@@ -152,6 +152,25 @@ export default function AgentPage() {
                         }));
                         router.push(`/agent/chat/${sessionId}`);
                     }
+                } catch (err: any) {
+                    setError(err.message);
+                }
+                return;
+            } else if (agentSubMode === 'literature_search') {
+                try {
+                    const res = await fetch('/api/agent/scholar/sessions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, settings }) // Add settings for maxArticles and limits
+                    });
+                    if (!res.ok) {
+                        if (res.status === 402) { setBillingOpen(true); return; }
+                        const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
+                        setError(errData.error || `HTTP ${res.status}`);
+                        return;
+                    }
+                    const data = await res.json();
+                    router.push(`/agent/scholar/${data.sessionId}`);
                 } catch (err: any) {
                     setError(err.message);
                 }
@@ -407,6 +426,8 @@ export default function AgentPage() {
         setSidebarOpen(false);
         if (s.doc_type === 'chat') {
             router.push(`/agent/chat/${s.id}`);
+        } else if (s.doc_type === 'literature_search') {
+            router.push(`/agent/scholar/${s.id}`);
         } else {
             router.push(`/agent/${s.id}`);
         }
@@ -670,7 +691,7 @@ export default function AgentPage() {
                                 <IconPaperclip className="w-4 h-4" stroke={2} />
                                 <input type="file" className="hidden" multiple accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.ppt,.png,.jpg,.jpeg,.webp" onChange={handleFileUpload} />
                             </label>
-                            {isAgentMode && (
+                            {(!isAgentMode && agentSubMode === "chat") ? null : (
                                 <>
                                     <button onClick={handleLinkAdd} className="p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
                                         <IconLink className="w-4 h-4" stroke={2} />
@@ -741,6 +762,7 @@ export default function AgentPage() {
                                 updateSetting={(k, v) => setSettings(s => ({ ...s, [k]: v }))}
                                 detailsOpen={detailsOpen}
                                 setDetailsOpen={setDetailsOpen}
+                                agentSubMode={!isAgentMode ? agentSubMode : null}
                                 onOpenBilling={() => {
                                     if (!user) setShowLogin(true);
                                     else { setSettingsOpen(false); setBillingOpen(true); }

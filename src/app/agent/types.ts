@@ -1,4 +1,4 @@
-export type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study" | "data_analytics" | "data-analytics" | "chat";
+export type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study" | "data_analytics" | "data-analytics" | "chat" | "literature_search";
 export type Style = "simple" | "medium" | "phd";
 export type Language = "en" | "ru";
 
@@ -29,6 +29,11 @@ export interface AgentSettings {
     referenceFilesText: string[];
     referenceFileNames: string[];
     runtime: 'R' | 'Python';
+    
+    // Literature Search specific settings
+    scholarMaxArticles: number;
+    scholarYearFrom: string;
+    scholarAuthors: string;
 }
 
 export const DEFAULT_SETTINGS: AgentSettings = {
@@ -49,6 +54,9 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     referenceFilesText: [],
     referenceFileNames: [],
     runtime: 'R',
+    scholarMaxArticles: 10,
+    scholarYearFrom: 'Any',
+    scholarAuthors: '',
 };
 
 export interface CodeImage {
@@ -58,12 +66,20 @@ export interface CodeImage {
     language: 'R' | 'Python';
 }
 
+export interface ScholarArticle {
+    title: string;
+    summary: string;
+    authors: string[];
+    year: number;
+    url: string;
+}
+
 export interface AgentSession {
     id: string;
     user_id: number;
     title: string;
     doc_type: DocType;
-    status: "generating" | "done" | "error";
+    status: "generating" | "done" | "completed" | "error";
     error_msg: string | null;
     stream_text: string | null;
     settings_json: string | null;

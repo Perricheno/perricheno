@@ -9,9 +9,10 @@ interface Props {
     setDetailsOpen: (v: boolean) => void;
     onOpenBilling?: () => void;
     isAdmin?: boolean;
+    agentSubMode?: "chat" | "data_analytics" | "literature_search" | null;
 }
 
-export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, onOpenBilling, isAdmin }: Props) {
+export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, onOpenBilling, isAdmin, agentSubMode }: Props) {
     const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
         <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
@@ -40,8 +41,53 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
 
     return (
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6 space-y-5 shadow-sm mt-4">
-            {/* Row 1: Language + Style */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            
+            {agentSubMode === "literature_search" ? (
+                <>
+                    <div className="space-y-4 pb-2 border-b border-[var(--border)]">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Number of Articles</label>
+                            <span className="text-sm font-mono font-bold text-[var(--foreground)] tabular-nums">{settings.scholarMaxArticles}</span>
+                        </div>
+                        <input
+                            type="range"
+                            min={5}
+                            max={50}
+                            step={5}
+                            value={settings.scholarMaxArticles}
+                            onChange={(e) => updateSetting("scholarMaxArticles", Number(e.target.value))}
+                            className="w-full h-1.5 bg-[var(--border)] rounded-full appearance-none cursor-pointer accent-[var(--foreground)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[var(--foreground)] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-sm"
+                        />
+                        <div className="flex justify-between text-[10px] text-gray-300 font-mono">
+                            <span>5</span><span>20</span><span>50</span>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Year From</label>
+                            <SegmentedControl
+                                options={[{ label: "Any", value: "Any" }, { label: "2015+", value: "2015" }, { label: "2020+", value: "2020" }, { label: "2023+", value: "2023" }]}
+                                value={settings.scholarYearFrom}
+                                onChange={(v) => updateSetting("scholarYearFrom", v)}
+                            />
+                        </div>
+                        <div className="space-y-2 flex flex-col justify-end">
+                            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Specific Authors</label>
+                            <input
+                                type="text"
+                                value={settings.scholarAuthors}
+                                onChange={(e) => updateSetting("scholarAuthors", e.target.value)}
+                                placeholder="e.g. Yoshua Bengio (Optional)"
+                                className="w-full px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--foreground)] transition-colors placeholder:text-gray-300"
+                            />
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <>
+                    {/* Row 1: Language + Style */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Language</label>
                     <SegmentedControl
@@ -144,6 +190,8 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                     )}
                 </AnimatePresence>
             </div>
+            </>
+            )}
 
             {/* Quick action helper */}
             <div className="pt-4 border-t border-[var(--border)] mt-4 space-y-2">

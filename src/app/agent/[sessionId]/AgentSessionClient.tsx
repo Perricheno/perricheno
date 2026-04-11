@@ -288,6 +288,8 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         setSidebarOpen(false);
         if (s.doc_type === 'chat') {
             router.push(`/agent/chat/${s.id}`);
+        } else if (s.doc_type === 'literature_search') {
+            router.push(`/agent/scholar/${s.id}`);
         } else {
             router.push(`/agent/${s.id}`);
         }
