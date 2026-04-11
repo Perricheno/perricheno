@@ -192,16 +192,16 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                                 </a>
                                                 {article.url && (
                                                     <>
-                                                        <a href={article.url.replace('/abs/', '/pdf/')} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-red-600 bg-red-50 hover:bg-red-600 hover:text-white px-4 py-2 rounded-lg transition-colors border border-red-200 flex items-center gap-2 shadow-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white">
+                                                        <a href={article.url.replace('/abs/', '/pdf/')} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
                                                             <IconFileText className="w-3.5 h-3.5" /> PDF
                                                         </a>
-                                                        <a href={article.url.replace('/abs/', '/e-print/')} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg transition-colors border border-blue-200 flex items-center gap-2 shadow-sm dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white">
+                                                        <a href={article.url.replace('/abs/', '/e-print/')} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
                                                             <IconCode className="w-3.5 h-3.5" /> LaTeX Source
                                                         </a>
                                                     </>
                                                 )}
                                                 {article.doi && (
-                                                    <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white px-4 py-2 rounded-lg transition-colors border border-emerald-200 flex items-center gap-2 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-600 dark:hover:text-white">
+                                                    <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
                                                         <IconBook2 className="w-3.5 h-3.5" /> DOI
                                                     </a>
                                                 )}

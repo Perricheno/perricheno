@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -180,14 +181,14 @@ func fetchOpenAlex(encodedQuery string, req SearchRequest) ([]ScholarArticle, er
 			authors = append(authors, "Unknown")
 		}
 
-		title := work.Title
+		title := cleanLatex(work.Title)
 		if title == "" {
 			title = "Untitled"
 		}
 
 		articles = append(articles, ScholarArticle{
 			Title:   title,
-			Summary: abstract,
+			Summary: cleanLatex(abstract),
 			Authors: authors,
 			Year:    work.Year,
 			URL:     articleUrl,
@@ -299,11 +300,11 @@ func fetchArxiv(encodedQuery string, req SearchRequest) ([]ScholarArticle, error
 			return strings.TrimSpace(s)
 		}
 
-		title := cleanHtml(entry.Title)
+		title := cleanLatex(cleanHtml(entry.Title))
 		if title == "" {
 			title = "Untitled"
 		}
-		summary := cleanHtml(entry.Summary)
+		summary := cleanLatex(cleanHtml(entry.Summary))
 		if summary == "" {
 			summary = "No abstract available."
 		}
@@ -354,4 +355,27 @@ func fetchArxiv(encodedQuery string, req SearchRequest) ([]ScholarArticle, error
 	}
 
 	return articles, nil
+}
+
+// cleanLatex strips common LaTeX macro wrappers and math delimiters to make abstracts readable as plain text.
+func cleanLatex(s string) string {
+	s = strings.ReplaceAll(s, "$", "")
+	s = strings.ReplaceAll(s, "\\dots", "...")
+	s = strings.ReplaceAll(s, "\\ldots", "...")
+	s = strings.ReplaceAll(s, "\\{", "{")
+	s = strings.ReplaceAll(s, "\\}", "}")
+
+	macros := []string{"emph", "textbf", "textit", "mathcal", "mathbb", "mathrm", "mathbf", "text"}
+	for _, m := range macros {
+		re := regexp.MustCompile(`\\` + m + `\{([^}]+)\}`)
+		s = re.ReplaceAllString(s, "$1")
+	}
+
+	// Double-pass for nested macros like \emph{\mathcal{F}}
+	for _, m := range macros {
+		re := regexp.MustCompile(`\\` + m + `\{([^}]+)\}`)
+		s = re.ReplaceAllString(s, "$1")
+	}
+
+	return s
 }
