@@ -11,20 +11,27 @@ export async function POST(req: Request) {
     const { initialMessage } = await req.json().catch(() => ({}));
 
     const title = initialMessage ? initialMessage.slice(0, 80) : 'New Chat';
+    const id = crypto.randomUUID();
     
-    const session = await createAgentSession({
-        user_id: userId,
-        title,
-        doc_type: 'chat',
-        status: 'done',
-        stream_text: '[]', // empty messages array
-        main_tex: null,
-        references_bib: null,
-        visuals_json: null,
-        settings_json: null,
-    });
+    try {
+        const session = await createAgentSession({
+            id,
+            user_id: userId,
+            title,
+            doc_type: 'chat',
+            status: 'done',
+            stream_text: '[]',
+            main_tex: null,
+            references_bib: null,
+            visuals_json: null,
+            settings_json: null,
+        });
 
-    return NextResponse.json({ sessionId: session.id });
+        return NextResponse.json({ sessionId: session?.id || id });
+    } catch (err: any) {
+        console.error('Failed to create chat session:', err);
+        return NextResponse.json({ error: err.message || "Failed to create session" }, { status: 500 });
+    }
 }
 
 export async function GET(req: Request) {
