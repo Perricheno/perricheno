@@ -34,12 +34,29 @@ export async function POST(req: Request) {
     } catch { chatHistory = []; }
 
     // Build file context for the user message
-    let userContent = message;
+    let userContent: any = message;
     if (files && files.length > 0) {
-        const fileContext = files.map((f: { name: string; content: string }) => 
-            `\n\n--- FILE: ${f.name} ---\n${f.content.slice(0, 50000)}\n--- END FILE ---`
-        ).join('');
-        userContent = message + fileContext;
+        const textFiles = files.filter((f: any) => !f.content.startsWith('data:image/'));
+        const imageFiles = files.filter((f: any) => f.content.startsWith('data:image/'));
+
+        let textPart = message;
+        if (textFiles.length > 0) {
+            textPart += textFiles.map((f: any) => 
+                `\n\n--- FILE: ${f.name} ---\n${f.content.slice(0, 50000)}\n--- END FILE ---`
+            ).join('');
+        }
+
+        if (imageFiles.length > 0) {
+            userContent = [
+                { type: "text", text: textPart },
+                ...imageFiles.map((f: any) => ({
+                    type: "image_url",
+                    image_url: { url: f.content }
+                }))
+            ];
+        } else {
+            userContent = textPart;
+        }
     }
 
     // Add user message to history
@@ -117,7 +134,16 @@ export async function POST(req: Request) {
                 }
 
                 // Deduct usage
-                const charCount = fullResponse.length + userContent.length;
+                let charCount = fullResponse.length;
+                if (typeof userContent === 'string') {
+                    charCount += userContent.length;
+                } else if (Array.isArray(userContent)) {
+                    const textObj = userContent.find(i => i.type === 'text');
+                    if (textObj) charCount += textObj.text.length;
+                    const imgCount = userContent.filter(i => i.type === 'image_url').length;
+                    charCount += imgCount * 3000; // Charge ~3000 chars per image upload token-wise
+                }
+                
                 await checkAndDeductUsage(userId, 'chars', charCount);
 
                 // Save assistant message to history

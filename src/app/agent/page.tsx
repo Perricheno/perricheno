@@ -73,7 +73,7 @@ export default function AgentPage() {
     // Agent Mode States
     const [isAgentMode, setIsAgentMode] = useState(true);
     const [agentSubMode, setAgentSubMode] = useState<"data_analytics" | "chat">("data_analytics");
-    const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string}[]>([]);
+    const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string, type?: string}[]>([]);
 
     // Suggestion step state (Data Analytics)
     const [suggestedCharts, setSuggestedCharts] = useState<string[]>([]);
@@ -307,7 +307,22 @@ export default function AgentPage() {
             const binaryFormats = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
             let text = '';
 
-            if (binaryFormats.includes(ext)) {
+            if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+                if (isAgentMode) {
+                    alert("Images are currently only supported in Chat mode.");
+                    continue;
+                }
+                try {
+                    const reader = new FileReader();
+                    const base64Promise = new Promise<string>((resolve) => {
+                        reader.onload = (e) => resolve(e.target?.result as string);
+                    });
+                    reader.readAsDataURL(file);
+                    text = await base64Promise;
+                } catch (err) {
+                    console.error("Image read failed", err);
+                }
+            } else if (binaryFormats.includes(ext)) {
                 try {
                     const formData = new FormData();
                     formData.append('fileInput', file);
@@ -352,7 +367,7 @@ export default function AgentPage() {
             }
 
             if (!isAgentMode) {
-                setAgentDataFiles(prev => [...prev, { name: file.name, content: text }]);
+                setAgentDataFiles(prev => [...prev, { name: file.name, type: ext, content: text }]);
             } else {
                 setSettings(s => ({ 
                     ...s, 
@@ -653,16 +668,20 @@ export default function AgentPage() {
 
                             <label className="cursor-pointer p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
                                 <IconPaperclip className="w-4 h-4" stroke={2} />
-                                <input type="file" className="hidden" multiple accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.ppt" onChange={handleFileUpload} />
+                                <input type="file" className="hidden" multiple accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.ppt,.png,.jpg,.jpeg,.webp" onChange={handleFileUpload} />
                             </label>
-                            <button onClick={handleLinkAdd} className="p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
-                                <IconLink className="w-4 h-4" stroke={2} />
-                            </button>
-                            <div className="relative">
-                                <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-1 rounded-lg transition-colors ${settingsOpen ? 'text-[#1a1a1a] bg-[#f5f5f5]' : 'text-[#999] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}`} title="Document Settings">
-                                    <IconSettings className="w-4 h-4" stroke={2} />
-                                </button>
-                            </div>
+                            {isAgentMode && (
+                                <>
+                                    <button onClick={handleLinkAdd} className="p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
+                                        <IconLink className="w-4 h-4" stroke={2} />
+                                    </button>
+                                    <div className="relative">
+                                        <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-1 rounded-lg transition-colors ${settingsOpen ? 'text-[#1a1a1a] bg-[#f5f5f5]' : 'text-[#999] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}`} title="Document Settings">
+                                            <IconSettings className="w-4 h-4" stroke={2} />
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Right: Submit */}
@@ -679,12 +698,16 @@ export default function AgentPage() {
                 {/* Attached files */}
                 {(!isAgentMode ? agentDataFiles.length > 0 : settings.referenceFileNames.length > 0) && (
                     <div className="w-full mt-3 flex flex-wrap gap-2">
-                        {(!isAgentMode ? agentDataFiles : settings.referenceFileNames).map((file, idx) => (
-                            <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-lg text-[12px] font-medium text-[#666] border border-[#e5e5e5]">
-                                {!isAgentMode ? <IconDatabase className="w-3.5 h-3.5 text-[#999]" /> : <IconFileText className="w-3.5 h-3.5 text-[#999]" />}
-                                <span>{!isAgentMode ? (file as any).name : file}</span>
-                                <button onClick={() => removeFile(idx)} className="p-0.5 hover:text-red-500 transition-colors">
-                                    <IconX className="w-3 h-3" />
+                        {(!isAgentMode ? agentDataFiles : settings.referenceFileNames).map((file: any, idx) => (
+                            <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[200px]">
+                                {(!isAgentMode && file.type && file.type.match(/^(jpg|jpeg|png|webp)$/i)) ? (
+                                    <img src={file.content} alt={file.name} className="w-5 h-5 object-cover rounded shadow-sm" />
+                                ) : (
+                                    <IconFileText className="w-3.5 h-3.5 text-[#999]" />
+                                )}
+                                <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{!isAgentMode ? file.name : file}</span>
+                                <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors">
+                                    <IconX className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         ))}

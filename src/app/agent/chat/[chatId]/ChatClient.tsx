@@ -5,7 +5,7 @@ import {
     IconArrowRight, IconLoader2, IconPaperclip, IconUser,
     IconX, IconMenu2, IconFileText, IconTrash,
     IconClock, IconLock, IconRobot, IconCopy,
-    IconCheck, IconPlus
+    IconCheck, IconPlus, IconBolt
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -77,7 +77,20 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
             const ext = file.name.split('.').pop()?.toLowerCase() || '';
             const binaryFormats = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx'];
             let text = '';
-            if (binaryFormats.includes(ext)) {
+            
+            // For images, we can convert to base64 so they can be processed by vision models later
+            if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+                try {
+                    const reader = new FileReader();
+                    const base64Promise = new Promise<string>((resolve) => {
+                        reader.onload = (e) => resolve(e.target?.result as string);
+                    });
+                    reader.readAsDataURL(file);
+                    text = await base64Promise;
+                } catch (err) {
+                    console.error("Image read failed", err);
+                }
+            } else if (binaryFormats.includes(ext)) {
                 try {
                     const formData = new FormData();
                     formData.append('fileInput', file);
@@ -95,11 +108,14 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                         }
                     }
                 } catch (err) { console.error(`File extraction failed: ${file.name}`, err); }
-                if (!text || text.trim().length < 10) continue;
             } else {
-                text = await file.text();
+                try {
+                    text = await file.text();
+                } catch (err) { console.error("Text read failed", err); }
             }
-            setAttachedFiles(prev => [...prev, { name: file.name, content: text, type: ext }]);
+
+            // Always add to UI so user sees it, even if empty/binary
+            setAttachedFiles(prev => [...prev, { name: file.name, content: text || "binary_file_or_empty", type: ext }]);
         }
         e.target.value = '';
     };
@@ -111,7 +127,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
         const userMessage: ChatMessage = {
             role: 'user',
             content: messageText,
-            files: files.map((f: any) => ({ name: f.name, type: f.type || '' })),
+            files: files.map((f: any) => ({ name: f.name, type: f.type || '', content: f.content })),
             created_at: new Date().toISOString()
         };
 
@@ -200,14 +216,8 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
     };
 
     return (
-        <div className="flex h-full w-full bg-[var(--background)]">
-            {/* Sidebar Toggle */}
-            {!sidebarOpen && (
-                <button onClick={() => setSidebarOpen(true)}
-                    className="absolute top-4 left-4 z-40 p-2 bg-[var(--card)] border border-[var(--border)] rounded-lg text-gray-500 hover:text-[var(--foreground)] shadow-sm">
-                    <IconMenu2 className="w-5 h-5" />
-                </button>
-            )}
+        <div className="flex h-full w-full bg-[#f9f9fa] relative overflow-hidden [&::-webkit-scrollbar]:hidden">
+            {/* Sidebar Toggle is now in the header only */}
 
             {/* Sidebar */}
             <AnimatePresence>
@@ -268,26 +278,31 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
             </AnimatePresence>
 
             {/* Main Chat */}
-            <div className="flex-1 flex flex-col h-full max-w-3xl mx-auto w-full">
+            <div className="flex-1 flex flex-col h-full max-w-5xl mx-auto w-full relative">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--border)] bg-[var(--card)] shrink-0">
-                    <div className="flex items-center gap-3 ml-10">
-                        <img src="/Vector.svg" alt="P" className="w-5 h-5 opacity-30" />
+                <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[var(--border)] bg-white shrink-0 sticky top-0 z-10 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="md:hidden p-2 -ml-2 text-gray-500 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">
+                            <IconMenu2 className="w-5 h-5" />
+                        </button>
+                        <img src="/Vector.svg" alt="P" className="w-5 h-5 opacity-40 ml-1 md:ml-0" />
                         <div>
-                            <h1 className="text-[14px] font-bold text-[var(--foreground)]">Chat</h1>
-                            <p className="text-[10px] text-gray-400">{messages.length} messages{tokenCount > 0 ? ` · ~${(tokenCount/1000).toFixed(1)}K chars` : ''}</p>
+                            <h1 className="text-[15px] font-bold text-[#1a1a1a]">Chat</h1>
+                            <p className="text-[11px] font-medium text-gray-400">{messages.length} messages{tokenCount > 0 ? ` · ~${(tokenCount/1000).toFixed(1)}K chars` : ''}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-1 bg-[var(--background)] p-0.5 rounded-lg border border-[var(--border)]">
-                        <span className="px-3 py-1 rounded-md text-[10px] font-bold bg-[var(--card)] text-[var(--foreground)] shadow-sm">GPT-5 Mini</span>
-                        <span className="px-3 py-1 rounded-md text-[10px] font-bold text-gray-300 flex items-center gap-1 cursor-not-allowed">
-                            <IconLock className="w-3 h-3" /> Grok 4.1
+                    <div className="flex items-center gap-1 bg-gray-50/50 p-1 rounded-xl border border-[var(--border)]">
+                        <span className="px-3 py-1 rounded-lg text-[11px] font-bold bg-white text-black shadow-sm ring-1 ring-gray-200/50">GPT-5 Mini</span>
+                        <span className="px-3 py-1 rounded-lg text-[11px] font-bold text-gray-400 flex items-center gap-1.5 cursor-not-allowed hidden sm:flex">
+                            <IconLock className="w-3.5 h-3.5" /> Grok 4.1
                         </span>
                     </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6">
+                <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {messages.length === 0 && !isStreaming && (
                         <div className="flex flex-col items-center justify-center h-full text-center select-none pt-10">
                             <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 opacity-20 mb-4" />
@@ -296,15 +311,25 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                         </div>
                     )}
 
-                    {messages.map((msg, idx) => (
+                    {messages.map((msg, idx) => {
+                        const isMsgArray = Array.isArray(msg.content);
+                        const textContent = isMsgArray ? msg.content.find((i: any) => i.type === 'text')?.text || '' : msg.content;
+                        const imageContent = isMsgArray ? msg.content.filter((i: any) => i.type === 'image_url') : [];
+
+                        return (
                         <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] md:max-w-[75%] ${msg.role === 'user' ? '' : ''}`}>
                                 {msg.files && msg.files.length > 0 && (
                                     <div className="flex flex-wrap gap-1.5 mb-2 justify-end">
-                                        {msg.files.map((f, fi) => (
-                                            <span key={fi} className="px-2 py-1 bg-white border border-[#e5e5e5] rounded-md text-[10px] font-bold text-gray-500 flex items-center gap-1 shadow-sm">
-                                                <IconFileText className="w-3.5 h-3.5" /> {f.name}
-                                            </span>
+                                        {msg.files.map((f: any, fi: number) => (
+                                            <div key={fi} className="px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded-[14px] flex items-center gap-2 shadow-sm max-w-[200px]">
+                                                {f.content && f.content.startsWith('data:image/') ? (
+                                                     <img src={f.content} alt={f.name} className="w-8 h-8 object-cover rounded-md" />
+                                                ) : (
+                                                     <IconFileText className="w-5 h-5 text-gray-300" />
+                                                )}
+                                                <span className="text-[11px] font-bold text-gray-200 truncate">{f.name}</span>
+                                            </div>
                                         ))}
                                     </div>
                                 )}
@@ -316,14 +341,23 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                 }`}>
                                     {msg.role === 'assistant' ? (
                                         <div className="prose prose-sm max-w-none leading-relaxed prose-headings:font-bold prose-headings:text-[#1a1a1a] prose-p:text-[#1a1a1a] prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-mono prose-pre:bg-[#1a1a1a] prose-pre:text-gray-200 prose-pre:rounded-xl">
-                                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                            <ReactMarkdown>{textContent}</ReactMarkdown>
                                         </div>
                                     ) : (
-                                        <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
+                                        <div className="flex flex-col gap-2">
+                                            <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{textContent}</p>
+                                            {imageContent.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    {imageContent.map((img: any, iidx: number) => (
+                                                        <img key={iidx} src={img.image_url.url} alt="attached" className="max-w-[200px] max-h-[200px] object-cover rounded-xl border border-white/20" />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
 
                                     {msg.role === 'assistant' && (
-                                        <button onClick={() => copyMessage(msg.content, idx)}
+                                        <button onClick={() => copyMessage(textContent, idx)}
                                             className="absolute -bottom-6 left-0 p-1.5 bg-white border border-gray-100 rounded-md text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-all shadow-sm">
                                             {copiedIdx === idx ? <IconCheck className="w-3 h-3 text-emerald-500" /> : <IconCopy className="w-3 h-3" />}
                                         </button>
@@ -335,7 +369,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                 )}
                             </div>
                         </div>
-                    ))}
+                    )})}
 
                     {/* Streaming */}
                     {isStreaming && (
@@ -360,46 +394,63 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                 </div>
 
                 {/* Input */}
-                <div className="shrink-0 p-4 md:px-8 md:pb-6 md:pt-2">
-                    {attachedFiles.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                            {attachedFiles.map((f, idx) => (
-                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#e5e5e5] rounded-[10px] text-[11px] font-bold text-gray-600 shadow-sm">
-                                    <IconFileText className="w-3.5 h-3.5 text-black" />
-                                    <span className="max-w-[200px] truncate">{f.name}</span>
-                                    <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))} className="hover:text-red-500 ml-1 transition-colors">
-                                        <IconX className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                <div className="shrink-0 p-4 pb-28 md:px-8 md:pb-8 md:pt-2">
+                    <div className="bg-white rounded-[24px] border border-[var(--border)] shadow-sm focus-within:border-gray-400 focus-within:shadow-md transition-all flex flex-col pt-2">
+                        {/* Attached Files Preview Inside Input */}
+                        {attachedFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 px-4 pt-2">
+                                {attachedFiles.map((f, idx) => (
+                                    <div key={idx} className="flex items-center gap-3 px-3 py-2 bg-[#f9f9fa] border border-gray-200 rounded-[14px] max-w-[220px] shadow-sm relative group">
+                                        <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg shrink-0 border border-gray-200 overflow-hidden">
+                                            {f.type.match(/^(jpg|jpeg|png|webp)$/i) ? (
+                                                <img src={f.content} alt={f.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <IconFileText className="w-5 h-5 text-gray-400" />
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-[12px] font-bold text-[#1a1a1a] truncate">{f.name}</span>
+                                            <span className="text-[10px] font-medium text-gray-500 uppercase">{f.type || 'FILE'}</span>
+                                        </div>
+                                        <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))} 
+                                            className="absolute -top-1.5 -right-1.5 bg-white text-gray-400 hover:text-red-500 rounded-full border border-gray-200 p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <IconX className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                    <div className="bg-white rounded-[24px] border border-[var(--border)] shadow-sm focus-within:border-gray-400 focus-within:shadow-md transition-all">
-                        <div className="px-5 pt-4 pb-1">
+                        <div className="flex px-5 pt-3 pb-2">
                             <textarea
                                 ref={textareaRef}
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                                placeholder="Message Perricheno..."
-                                className="w-full text-[15px] font-medium text-[#1a1a1a] bg-transparent outline-none placeholder:text-gray-300 resize-none max-h-[150px] leading-relaxed"
+                                placeholder="Спроси Perricheno"
+                                className="w-full text-[15px] font-medium text-[#1a1a1a] bg-transparent outline-none placeholder:text-gray-400 resize-none max-h-[150px] leading-relaxed"
                                 rows={1}
                                 disabled={isStreaming}
                                 autoFocus
                             />
                         </div>
+                        
                         <div className="flex items-center justify-between px-3 pb-3">
-                            <label className="cursor-pointer p-2 text-gray-400 hover:text-black rounded-xl hover:bg-gray-50 transition-colors">
-                                <IconPaperclip className="w-5 h-5" />
-                                <input type="file" className="hidden" multiple
-                                    accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.png,.jpg,.jpeg,.webp"
-                                    onChange={handleFileUpload} />
-                            </label>
+                            <div className="flex items-center gap-1">
+                                <label className="cursor-pointer p-2 text-gray-400 hover:text-[#1a1a1a] rounded-xl hover:bg-gray-50 transition-colors">
+                                    <IconPaperclip className="w-[22px] h-[22px]" />
+                                    <input type="file" className="hidden" multiple
+                                        accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.png,.jpg,.jpeg,.webp"
+                                        onChange={handleFileUpload} />
+                                </label>
+                                <button className="p-2 text-gray-400 hover:text-[#1a1a1a] rounded-xl hover:bg-gray-50 transition-colors">
+                                    <IconBolt className="w-5 h-5" />
+                                </button>
+                            </div>
                             <button onClick={handleSend}
                                 disabled={isStreaming || (!input.trim() && attachedFiles.length === 0)}
-                                className="w-9 h-9 bg-black text-white rounded-[14px] flex items-center justify-center disabled:opacity-20 transition-all shadow-md active:scale-95 disabled:active:scale-100">
-                                {isStreaming ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-5 h-5 stroke-[2.5]" />}
+                                className="w-10 h-10 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-all shadow-md active:scale-95 disabled:active:scale-100 mr-1">
+                                {isStreaming ? <IconLoader2 className="w-5 h-5 animate-spin" /> : <IconArrowRight className="w-5 h-5 stroke-[2.5]" />}
                             </button>
                         </div>
                     </div>
