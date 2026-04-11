@@ -1,15 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { supabase } from "@/lib/supabaseClient";
-import OpenAI from "openai";
-import { parseStringPromise } from "xml2js";
+import { supabase } from "@/lib/supabase";
 import { AgentSettings, ScholarArticle } from "@/app/agent/types";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
     try {
         const { sessionId } = await req.json();
         
@@ -29,7 +23,6 @@ export async function POST(req: NextRequest) {
         const prompt = session.stream_text || ""; // Stored the prompt here temporarily
         const settings = (typeof session.settings_json === 'string' ? JSON.parse(session.settings_json) : session.settings_json) as AgentSettings;
 
-        // 1. Ask GPT to build the arXiv query 
         const gptQueryPrompt = `You are an expert academic librarian. Your task is to convert the user's natural language request into a strictly formatted 'search_query' string for the arXiv API.
 Do NOT use double quotes. Use valid arXiv prefixes: ti (title), abs (abstract), au (author).
 Use logical operators AND, OR, ANDNOT. 
@@ -42,13 +35,21 @@ Optional Filters applied in settings:
 
 Generate the arXiv search_query:`;
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            temperature: 0.2,
-            messages: [{ role: "user", content: gptQueryPrompt }],
+        const openAiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "gpt-5-mini-2025-08-07",
+                temperature: 0.8,
+                messages: [{ role: "user", content: gptQueryPrompt }]
+            })
         });
 
-        const arxivQuery = completion.choices[0].message.content?.trim() || `all:${prompt}`;
+        const completion = await openAiRes.json();
+        const arxivQuery = completion.choices?.[0]?.message?.content?.trim() || `all:${prompt}`;
 
         // 2. Build arXiv API URL
         const maxResults = settings.scholarMaxArticles || 10;
@@ -63,49 +64,53 @@ Generate the arXiv search_query:`;
         }
         const xmlText = await response.text();
 
-        // 4. Parse XML with xml2js
-        const result = await parseStringPromise(xmlText);
-        
+        // 4. Custom Regex Parser (no external dependencies required)
         let articles: ScholarArticle[] = [];
+        const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+        let entryMatch;
 
-        if (result.feed && result.feed.entry) {
-            const entries = Array.isArray(result.feed.entry) ? result.feed.entry : [result.feed.entry];
-            
-            for (const entry of entries) {
-                const title = (entry.title?.[0] || "Untitled").replace(/\n/g, ' ').trim();
-                const summary = (entry.summary?.[0] || "No abstract available.").replace(/\n/g, ' ').trim();
-                const publishedDate = entry.published?.[0] || "";
-                const year = publishedDate ? new Date(publishedDate).getFullYear() : 0;
-                
-                // Filter by year if necessary
-                if (settings.scholarYearFrom && settings.scholarYearFrom !== "Any") {
-                    if (year < parseInt(settings.scholarYearFrom)) {
-                        continue;
-                    }
-                }
-                
-                const url = entry.id?.[0] || "";
-                
-                // Extract authors
-                let authorsList: string[] = [];
-                if (entry.author) {
-                    authorsList = entry.author.map((a: any) => a.name?.[0] || "Unknown");
-                }
+        while ((entryMatch = entryRegex.exec(xmlText)) !== null) {
+            const entryXml = entryMatch[1];
 
-                articles.push({
-                    title,
-                    summary,
-                    authors: authorsList,
-                    year,
-                    url
-                });
+            const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(entryXml);
+            const summaryMatch = /<summary>([\s\S]*?)<\/summary>/.exec(entryXml);
+            const publishedMatch = /<published>([\s\S]*?)<\/published>/.exec(entryXml);
+            const idMatch = /<id>([\s\S]*?)<\/id>/.exec(entryXml);
+
+            const title = titleMatch ? titleMatch[1].replace(/\n/g, ' ').trim() : "Untitled";
+            const summary = summaryMatch ? summaryMatch[1].replace(/\n/g, ' ').trim() : "No abstract available.";
+            const publishedDate = publishedMatch ? publishedMatch[1] : "";
+            const year = publishedDate ? new Date(publishedDate).getFullYear() : 0;
+            const url = idMatch ? idMatch[1].trim() : "";
+
+            // Filter by year if necessary
+            if (settings.scholarYearFrom && settings.scholarYearFrom !== "Any") {
+                if (year < parseInt(settings.scholarYearFrom)) {
+                    continue;
+                }
             }
+
+            const authorRegex = /<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/g;
+            let authorsList: string[] = [];
+            let authorMatch;
+            while ((authorMatch = authorRegex.exec(entryXml)) !== null) {
+                authorsList.push(authorMatch[1].trim());
+            }
+            if (authorsList.length === 0) authorsList.push("Unknown");
+
+            articles.push({
+                title,
+                summary,
+                authors: authorsList,
+                year,
+                url
+            });
         }
 
         // 5. Save back to DB
         await supabase.from('agent_sessions').update({
             status: 'completed',
-            visuals_json: articles,
+            visuals_json: JSON.stringify(articles),
         }).eq('id', sessionId);
 
         return NextResponse.json({ articles, query: arxivQuery });
