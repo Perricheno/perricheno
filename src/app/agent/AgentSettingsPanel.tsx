@@ -63,6 +63,15 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                         </div>
                     </div>
                     
+                    <div className="space-y-4 pb-4 border-b border-[var(--border)] mt-4">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Search Database</label>
+                        <SegmentedControl
+                            options={[{ label: "OpenAlex (Powerful/No-Limits)", value: "openalex" }, { label: "arXiv (Strict)", value: "arxiv" }]}
+                            value={settings.scholarSource || 'openalex'}
+                            onChange={(v) => updateSetting("scholarSource", v)}
+                        />
+                    </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
                             <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Year From</label>

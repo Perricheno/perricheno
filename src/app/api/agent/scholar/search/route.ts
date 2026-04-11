@@ -52,89 +52,138 @@ Query: ${prompt}`;
             arxivQuery = `(${keywords}) AND au:${settings.scholarAuthors}`;
         }
 
-        // 2. Build arXiv API URL
         const maxResults = settings.scholarMaxArticles || 10;
-        const encodedQuery = encodeURIComponent(arxivQuery);
-        // Sort by submittedDate descending (freshest first)
-        const arxivUrl = `http://export.arxiv.org/api/query?search_query=${encodedQuery}&max_results=${maxResults}&sortBy=submittedDate&sortOrder=descending`;
-
-        // 3. Fetch from arXiv with caching and User-Agent to mitigate 503 errors and limits
-        let fetchOptions: RequestInit = {
-            headers: { "User-Agent": "Perricheno-AI-Agent/1.0 (support@perricheno.com)" },
-            next: { revalidate: 3600 } // NEXT.JS CACHE: Cache identical searches for 1 hour to handle 500-1000 users!
-        };
-
-        let response = await fetch(arxivUrl, fetchOptions);
-
-        // Simple 1-second retry if 503 Service Unavailable
-        if (response.status === 503) {
-            console.log("arXiv 503 Service Unavailable. Retrying once after 1 second...");
-            await new Promise(r => setTimeout(r, 1000));
-            fetchOptions = {
-                headers: { "User-Agent": "Perricheno-AI-Agent/1.0 (support@perricheno.com)" },
-                cache: 'no-store' // bypass cache on retry just in case
-            };
-            response = await fetch(arxivUrl, fetchOptions);
-        }
-
-        if (!response.ok) {
-            throw new Error(`arXiv API error: ${response.status} ${response.statusText}`);
-        }
-        const xmlText = await response.text();
-
-        // 4. Custom Bulletproof XML Parser (zero external dependencies)
         let articles: ScholarArticle[] = [];
-        const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
-        let entryMatch;
+        const usingOpenAlex = settings.scholarSource === 'openalex';
 
-        while ((entryMatch = entryRegex.exec(xmlText)) !== null) {
-            const entryXml = entryMatch[1];
-
-            // Robust regex to capture tags even if they have attributes like <title type="html">
-            const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(entryXml);
-            const summaryMatch = /<summary[^>]*>([\s\S]*?)<\/summary>/i.exec(entryXml);
-            const publishedMatch = /<published[^>]*>([\s\S]*?)<\/published>/i.exec(entryXml);
-            const idMatch = /<id[^>]*>([\s\S]*?)<\/id>/i.exec(entryXml);
-            const doiMatch = /<arxiv:doi[^>]*>([\s\S]*?)<\/arxiv:doi>/i.exec(entryXml);
-
-            // Clean up text: replace CDATA sections, remove HTML tags, compress newlines
-            const cleanHtml = (str: string) => str
-                .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') // Extract CDATA contents
-                .replace(/<[^>]+>/g, '') // Strip remaining HTML tags
-                .replace(/\s+/g, ' ') // Clean up newlines & multi-spaces
-                .trim();
-
-            const title = titleMatch ? cleanHtml(titleMatch[1]) : "Untitled";
-            const summary = summaryMatch ? cleanHtml(summaryMatch[1]) : "No abstract available.";
-            const publishedDate = publishedMatch ? publishedMatch[1].trim() : "";
-            const year = publishedDate ? new Date(publishedDate).getFullYear() : 0;
-            const url = idMatch ? idMatch[1].trim() : "";
-            const doi = doiMatch ? doiMatch[1].trim() : undefined;
-
-            // Filter by year if necessary
+        if (usingOpenAlex) {
+            // ===== OPENALEX API =====
+            const openAlexQuery = encodedQuery; // OpenAlex works well with plain url-encoded keywords
+            let openAlexUrl = `https://api.openalex.org/works?search=${openAlexQuery}&per-page=${maxResults}&mailto=admin@perricheno.com`;
+            
+            // Add year filter
             if (settings.scholarYearFrom && settings.scholarYearFrom !== "Any") {
-                if (year < parseInt(settings.scholarYearFrom)) {
-                    continue;
+                openAlexUrl += `&filter=publication_year:>${parseInt(settings.scholarYearFrom) - 1}`;
+            }
+            
+            // Add author filter (simple text search in author names if provided)
+            if (settings.scholarAuthors && settings.scholarAuthors !== "None") {
+                openAlexUrl += `,author.id:${encodeURIComponent(settings.scholarAuthors)}`; // This is a rough approx, OpenAlex prefers author OpenAlex IDs, but 'search' parameter covers general text anyway
+            }
+
+            const response = await fetch(openAlexUrl, { next: { revalidate: 3600 } });
+            if (!response.ok) throw new Error(`OpenAlex API error: ${response.status}`);
+            const data = await response.json();
+
+            // Reconstruct abstract from inverted index
+            const reconstructAbstract = (invertedIndex: any) => {
+                if (!invertedIndex) return "No abstract available.";
+                let maxPos = 0;
+                for (const positions of Object.values(invertedIndex)) {
+                    for (const pos of (positions as number[])) {
+                        if (pos > maxPos) maxPos = pos;
+                    }
                 }
-            }
+                const arr = new Array(maxPos + 1).fill("");
+                for (const [word, positions] of Object.entries(invertedIndex)) {
+                    for (const pos of (positions as number[])) {
+                        arr[pos] = word;
+                    }
+                }
+                return arr.join(" ").trim();
+            };
 
-            // Extract all authors smoothly
-            const authorRegex = /<author[^>]*>[\s\S]*?<name[^>]*>([\s\S]*?)<\/name>[\s\S]*?<\/author>/gi;
-            let authorsList: string[] = [];
-            let authorMatch;
-            while ((authorMatch = authorRegex.exec(entryXml)) !== null) {
-                if (authorMatch[1]) authorsList.push(cleanHtml(authorMatch[1]));
-            }
-            if (authorsList.length === 0) authorsList.push("Unknown");
-
-            articles.push({
-                title,
-                summary,
-                authors: authorsList,
-                year,
-                url,
-                doi
+            articles = (data.results || []).map((work: any) => {
+                // Try to find if it's an arXiv paper to build PDF/TeX links, otherwise use OA url
+                let url = work.id; // Default OpenAlex url
+                let doi = work.doi ? work.doi.replace('https://doi.org/', '') : undefined;
+                
+                // If it's open access, provide that as the main URL so the UI can do its best
+                if (work.open_access?.oa_url) url = work.open_access.oa_url;
+                
+                return {
+                    title: work.title || "Untitled",
+                    summary: reconstructAbstract(work.abstract_inverted_index),
+                    authors: work.authorships?.map((a: any) => a.author?.display_name || "Unknown") || ["Unknown"],
+                    year: work.publication_year || 0,
+                    url,
+                    doi
+                };
             });
+
+        } else {
+            // ===== ARXIV API =====
+            const arxivUrl = `http://export.arxiv.org/api/query?search_query=${encodedQuery}&max_results=${maxResults}&sortBy=submittedDate&sortOrder=descending`;
+
+            let fetchOptions: RequestInit = {
+                headers: { "User-Agent": "Perricheno-AI-Agent/1.0 (support@perricheno.com)" },
+                next: { revalidate: 3600 } 
+            };
+
+            let response = await fetch(arxivUrl, fetchOptions);
+
+            if (response.status === 503) {
+                console.log("arXiv 503 Service Unavailable. Retrying once after 1 second...");
+                await new Promise(r => setTimeout(r, 1000));
+                fetchOptions = {
+                    headers: { "User-Agent": "Perricheno-AI-Agent/1.0 (support@perricheno.com)" },
+                    cache: 'no-store' 
+                };
+                response = await fetch(arxivUrl, fetchOptions);
+            }
+
+            if (!response.ok) {
+                throw new Error(`arXiv API error: ${response.status} ${response.statusText}`);
+            }
+            const xmlText = await response.text();
+
+            const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
+            let entryMatch;
+
+            while ((entryMatch = entryRegex.exec(xmlText)) !== null) {
+                const entryXml = entryMatch[1];
+                const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(entryXml);
+                const summaryMatch = /<summary[^>]*>([\s\S]*?)<\/summary>/i.exec(entryXml);
+                const publishedMatch = /<published[^>]*>([\s\S]*?)<\/published>/i.exec(entryXml);
+                const idMatch = /<id[^>]*>([\s\S]*?)<\/id>/i.exec(entryXml);
+                const doiMatch = /<arxiv:doi[^>]*>([\s\S]*?)<\/arxiv:doi>/i.exec(entryXml);
+
+                const cleanHtml = (str: string) => str
+                    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+                    .replace(/<[^>]+>/g, '') 
+                    .replace(/\s+/g, ' ') 
+                    .trim();
+
+                const title = titleMatch ? cleanHtml(titleMatch[1]) : "Untitled";
+                const summary = summaryMatch ? cleanHtml(summaryMatch[1]) : "No abstract available.";
+                const publishedDate = publishedMatch ? publishedMatch[1].trim() : "";
+                const year = publishedDate ? new Date(publishedDate).getFullYear() : 0;
+                const url = idMatch ? idMatch[1].trim() : "";
+                const doi = doiMatch ? doiMatch[1].trim() : undefined;
+
+                if (settings.scholarYearFrom && settings.scholarYearFrom !== "Any") {
+                    if (year < parseInt(settings.scholarYearFrom)) {
+                        continue;
+                    }
+                }
+
+                const authorRegex = /<author[^>]*>[\s\S]*?<name[^>]*>([\s\S]*?)<\/name>[\s\S]*?<\/author>/gi;
+                let authorsList: string[] = [];
+                let authorMatch;
+                while ((authorMatch = authorRegex.exec(entryXml)) !== null) {
+                    if (authorMatch[1]) authorsList.push(cleanHtml(authorMatch[1]));
+                }
+                if (authorsList.length === 0) authorsList.push("Unknown");
+
+                articles.push({
+                    title,
+                    summary,
+                    authors: authorsList,
+                    year,
+                    url,
+                    doi
+                });
+            }
         }
 
         // 5. Save back to DB
@@ -143,7 +192,7 @@ Query: ${prompt}`;
             visuals_json: JSON.stringify(articles),
         }).eq('id', sessionId);
 
-        return NextResponse.json({ articles, query: arxivQuery });
+        return NextResponse.json({ articles, query: translatedPrompt });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

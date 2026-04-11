@@ -34,6 +34,7 @@ export interface AgentSettings {
     scholarMaxArticles: number;
     scholarYearFrom: string;
     scholarAuthors: string;
+    scholarSource: 'arxiv' | 'openalex';
 }
 
 export const DEFAULT_SETTINGS: AgentSettings = {
@@ -57,6 +58,7 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     scholarMaxArticles: 10,
     scholarYearFrom: 'Any',
     scholarAuthors: '',
+    scholarSource: 'openalex',
 };
 
 export interface CodeImage {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, IconMenu2 } from "@tabler/icons-react";
+import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, IconMenu2, IconFileText, IconCode } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { AgentSession, ScholarArticle } from "../../types";
 import { AgentSidebar } from "../../AgentSidebar";
