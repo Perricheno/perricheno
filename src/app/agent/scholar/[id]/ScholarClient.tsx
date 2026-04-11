@@ -5,7 +5,7 @@ import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, Icon
 import { useRouter } from "next/navigation";
 import { AgentSession, ScholarArticle } from "../../types";
 import { AgentSidebar } from "../../AgentSidebar";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 
 interface Props {
     initialSession: AgentSession;
