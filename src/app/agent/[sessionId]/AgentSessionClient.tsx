@@ -286,7 +286,11 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     // Navigate to a different session
     const handleSelectSession = (s: AgentSession) => {
         setSidebarOpen(false);
-        router.push(`/agent/${s.id}`);
+        if (s.doc_type === 'chat') {
+            router.push(`/agent/chat/${s.id}`);
+        } else {
+            router.push(`/agent/${s.id}`);
+        }
     };
 
     const handleNewSession = () => {
