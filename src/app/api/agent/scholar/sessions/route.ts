@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/lib/supabase";
 import { verifySession } from '@/lib/session';
+import { checkAndDeductUsage } from '@/lib/db';
 
 export async function POST(req: NextRequest | Request) {
     try {
@@ -9,17 +10,13 @@ export async function POST(req: NextRequest | Request) {
         const userId = await verifySession();
         if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const { data: dbUser } = await supabase.from('users').select('id, tokens').eq('id', userId).single();
-        if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-        if (dbUser.tokens < 100) {
-            return NextResponse.json({ error: "Insufficient tokens" }, { status: 402 });
+        // Deduct 2500 chars for a Literature Search operation
+        const usage = await checkAndDeductUsage(userId, 'chars', 2500);
+        if (!usage.success) {
+            return NextResponse.json({ error: "Insufficient characters on balance" }, { status: 402 });
         }
 
         const sessionId = uuidv4();
-        
-        // Deduct initial base token amount for the scholar search
-        await supabase.from('users').update({ tokens: dbUser.tokens - 100 }).eq('id', userId);
 
         await supabase.from('agent_sessions').insert({
             id: sessionId,
