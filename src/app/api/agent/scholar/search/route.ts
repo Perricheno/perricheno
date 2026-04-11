@@ -53,6 +53,7 @@ Query: ${prompt}`;
         }
 
         const maxResults = settings.scholarMaxArticles || 10;
+        const encodedQuery = encodeURIComponent(arxivQuery);
         let articles: ScholarArticle[] = [];
         const usingOpenAlex = settings.scholarSource === 'openalex';
 
