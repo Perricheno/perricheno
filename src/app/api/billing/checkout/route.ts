@@ -39,6 +39,16 @@ export const PLANS: Record<string, {
         amount: 149.00,
         name: 'Ultra (1 Year)',
         description: 'Ultimate plan for 1 year — save ~$31',
+    },
+    'data_scientist': {
+        amount: 25.00,
+        name: 'Data Scientist Pack',
+        description: '2M Chars + 50 Visuals',
+    },
+    'researcher': {
+        amount: 60.00,
+        name: 'Researcher Bundle',
+        description: '5M Chars + 150 Visuals',
     }
 };
 

@@ -209,12 +209,15 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
     const [isSuggesting, setIsSuggesting] = useState(false);
 
     useEffect(() => {
-        // Process queue sequentially
-        const activeJob = generatingQueue.find(j => j.isActive);
-        if (!activeJob) {
-            const nextPending = generatingQueue.find(j => !j.isActive && !j.isFailed);
-            if (nextPending) {
-                setGeneratingQueue(prev => prev.map(j => j.id === nextPending.id ? { ...j, isActive: true } : j));
+        // Process queue in parallel up to 3 jobs at once
+        const activeCount = generatingQueue.filter(j => j.isActive).length;
+        if (activeCount < 3) {
+            const pendingJobs = generatingQueue.filter(j => !j.isActive && !j.isFailed);
+            if (pendingJobs.length > 0) {
+                const jobsToStart = pendingJobs.slice(0, 3 - activeCount).map(j => j.id);
+                setGeneratingQueue(prev => prev.map(j => 
+                    jobsToStart.includes(j.id) ? { ...j, isActive: true } : j
+                ));
             }
         }
     }, [generatingQueue]);
@@ -394,6 +397,22 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                                 >
                                     <IconBrandPython className="w-3.5 h-3.5" />
                                     Python
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] block ml-1">Model</label>
+                            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-white text-black shadow-sm">
+                                    <IconWand className="w-3.5 h-3.5" />
+                                    GPT-5 Mini
+                                </button>
+                                <button 
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-gray-50 text-gray-300 cursor-not-allowed opacity-50"
+                                >
+                                    <IconLock className="w-3.5 h-3.5" />
+                                    Grok 4.1 Flash
                                 </button>
                             </div>
                         </div>

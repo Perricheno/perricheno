@@ -3,7 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IconX, IconUser, IconCreditCard, IconHistory, IconChartPie, IconDatabase, IconLayoutDashboard } from '@tabler/icons-react';
 
 interface BillingLimits {
-    free: { daily_chars: number; weekly_chars: number; reports: number; };
+    free: { daily_chars: number; weekly_chars: number; reports: number; daily_visuals?: number; };
+    plus?: { daily_chars: number; weekly_chars: number; reports: number; daily_visuals?: number; };
+    pro?: { daily_chars: number; weekly_chars: number; reports: number; daily_visuals?: number; };
+    ultra?: { daily_chars: number; weekly_chars: number; reports: number; daily_visuals?: number; };
 }
 
 interface UserInfo {
@@ -159,10 +162,11 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                         <div>
                                             <h2 className="text-2xl font-black text-black mb-1">Compute Usage</h2>
-                                            <p className="text-sm font-medium text-gray-400 mb-6 tracking-wide">Track your daily generation tokens. Limits reset at midnight (UTC).</p>
+                                            <p className="text-sm font-medium text-gray-400 mb-6 tracking-wide">Track your generation tokens. Limits reset based on schedule.</p>
                                             <div className="space-y-4">
-                                                {renderProgressBar('Daily Characters', user.daily_chars_used, limits.free.daily_chars, user.purchased_chars)}
-                                                {renderProgressBar('Weekly Characters', user.weekly_chars_used || 0, limits.free.weekly_chars, 0)}
+                                                {renderProgressBar('Daily Characters', user.daily_chars_used, limits.free.daily_chars || 100000, user.purchased_chars)}
+                                                {renderProgressBar('Weekly Characters', user.weekly_chars_used || 0, limits.free.weekly_chars || 500000, 0)}
+                                                {renderProgressBar('Daily Visuals', user.daily_visuals_used, limits.free.daily_visuals || 150, user.purchased_visuals)}
                                             </div>
                                         </div>
 

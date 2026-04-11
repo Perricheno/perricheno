@@ -1,7 +1,7 @@
 # Use rocker/r-ver which is optimized for fast binary installation via Posit Package Manager
 FROM rocker/r-ver:4.4.0
 
-# Install system dependencies required by various R packages
+# Install system dependencies required by various R packages and Go compiler
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2-dev \
     libxt-dev \
@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     libglu1-mesa-dev \
     xvfb \
+    golang \
     && rm -rf /var/lib/apt/lists/*
 
 # Install R packages using the pre-configured binary repository (extremely fast)
@@ -25,15 +26,15 @@ RUN install2.r --error --skipinstalled \
     treemap igraph \
     viridis RColorBrewer scales \
     Cairo svglite \
-    jsonlite httpuv \
     ggridges ggrepel patchwork gridExtra \
     reshape2 forcats lubridate \
     fmsb waffle waterfalls wordcloud ggExtra ggalt
 
-COPY server.R /app/server.R
-
 WORKDIR /app
+
+COPY main.go /app/main.go
+RUN go build -o r-compiler main.go
 
 EXPOSE 8000
 
-CMD ["Rscript", "server.R"]
+CMD ["./r-compiler"]

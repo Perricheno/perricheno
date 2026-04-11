@@ -1,17 +1,30 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { upgradeSubscriptionPlan, isPaymentProcessed, markPaymentProcessed } from '@/lib/db';
+import { upgradeSubscriptionPlan, isPaymentProcessed, markPaymentProcessed, addPurchasedTokens } from '@/lib/db';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET; // This is used to verify signatures
 
-const PLANS: Record<string, { tier: string, duration: string, name: string }> = {
+const PLANS: Record<string, { tier?: string, duration?: string, name: string, chars?: number, visuals?: number, reports?: number }> = {
+    // Subscriptions
     'plus_month': { tier: 'plus', duration: '1 Month', name: 'Plus (1 Month)' },
     'plus_year': { tier: 'plus', duration: '1 Year', name: 'Plus (1 Year)' },
     'pro_month': { tier: 'pro', duration: '1 Month', name: 'Pro (1 Month)' },
     'pro_year': { tier: 'pro', duration: '1 Year', name: 'Pro (1 Year)' },
     'ultra_month': { tier: 'ultra', duration: '1 Month', name: 'Ultra (1 Month)' },
-    'ultra_year': { tier: 'ultra', duration: '1 Year', name: 'Ultra (1 Year)' }
+    'ultra_year': { tier: 'ultra', duration: '1 Year', name: 'Ultra (1 Year)' },
+
+    // Web purchases (AgentBillingModal)
+    'data_scientist': { chars: 2000000, visuals: 50, name: 'Data Scientist Pack' },
+    'researcher': { chars: 5000000, visuals: 150, name: 'Researcher Bundle' },
+
+    // Telegram Bot purchases
+    'starter_chars': { chars: 100000, name: 'Starter Pack' },
+    'writer': { chars: 500000, name: 'Writer Pack' },
+    'report_single': { reports: 3, name: '3 Reports' },
+    'report_bulk': { reports: 15, name: '15 Reports' },
+    'combo_lite': { chars: 1000000, reports: 5, name: 'Lite Bundle' },
+    'combo_pro': { chars: 10000000, reports: 30, name: 'Pro Bundle' },
 };
 
 export async function POST(req: Request) {
@@ -78,8 +91,14 @@ export async function POST(req: Request) {
 
         console.log(`✅ Webhook: Received payment from UID ${userId} for plan ${packId}`);
 
-        // Upgrade the subscription
-        await upgradeSubscriptionPlan(userId, packId);
+        // Grant resources
+        if (plan.tier) {
+            await upgradeSubscriptionPlan(userId, packId);
+        } else {
+            if (plan.chars) await addPurchasedTokens(userId, 'chars', plan.chars);
+            if (plan.visuals) await addPurchasedTokens(userId, 'visuals', plan.visuals);
+            if (plan.reports) await addPurchasedTokens(userId, 'reports', plan.reports);
+        }
 
         // Mark as processed to prevent double-crediting
         await markPaymentProcessed(orderId);

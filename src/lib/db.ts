@@ -121,16 +121,14 @@ export async function checkAndDeductUsage(
     }
 
     if (type === 'visuals') {
-        const { error } = await supabase.rpc('deduct_user_usage', {
-            p_user_id: userId, p_free_deduction: 0, p_purchased_deduction: 0, p_amount: amount
-        });
+        // Direct database increment instead of RPC
+        const { error } = await supabase.from('users').update({
+            daily_visuals_used: user.daily_visuals_used + amount
+        }).eq('id', userId);
+
         if (!error) {
-            await supabase.from('users').update({
-                daily_visuals_used: user.daily_visuals_used + amount
-            }).eq('id', userId);
-            
             await supabase.from('transactions').insert({
-                user_id: userId, topic: "Visual generation", amount_text: `-${amount} chars`, is_positive: false
+                user_id: userId, topic: "Visual generation", amount_text: `-${amount} visuals`, is_positive: false
             });
             await supabase.from('usage_logs').insert({ user_id: userId, tokens: amount });
         }
