@@ -18,11 +18,12 @@ export async function POST(req: Request) {
         const prompt = session.stream_text || ""; // Stored the prompt here temporarily
         const settings = (typeof session.settings_json === 'string' ? JSON.parse(session.settings_json) : session.settings_json) as AgentSettings;
 
-        const gptQueryPrompt = `You are an expert academic librarian. Your task is to convert the user's natural language request into a strictly formatted 'search_query' string for the arXiv API.
+        const gptQueryPrompt = `You are an expert academic librarian. Your task is to convert the user's natural language request into a strictly formatted 'search_query' string for the arXiv API. 
+CRITICAL LANGUAGE RULE: arXiv primarily indexes papers in English. You MUST translate the user's query into English keywords UNLESS the user explicitly specifies a different language or clearly intends to find regional papers. If they just type in another language casually, translate their core technical intent to English for the best results.
 Do NOT use double quotes. Use valid arXiv prefixes: ti (title), abs (abstract), au (author).
 Use logical operators AND, OR, ANDNOT. 
-If the user's prompt is very vague, extract the main keywords and use "abs:" or "all:".
-Only return the RAW query string. No markdown, no explanations, no wrapping quotes.
+If the user's prompt is very vague or broad, extract the main keywords and use "abs:" or "all:".
+Only return the RAW query string. No markdown, no explanations.
 
 User Prompt: ${prompt}
 Optional Filters applied in settings: 
@@ -38,12 +39,16 @@ Generate the arXiv search_query:`;
             },
             body: JSON.stringify({
                 model: "gpt-5-mini-2025-08-07",
-                temperature: 0.8,
                 messages: [{ role: "user", content: gptQueryPrompt }]
             })
         });
 
         const completion = await openAiRes.json();
+        
+        if (completion.error) {
+            console.error("OpenAI Error:", completion.error);
+        }
+
         const arxivQuery = completion.choices?.[0]?.message?.content?.trim() || `all:${prompt}`;
 
         // 2. Build arXiv API URL
@@ -72,6 +77,7 @@ Generate the arXiv search_query:`;
             const summaryMatch = /<summary[^>]*>([\s\S]*?)<\/summary>/i.exec(entryXml);
             const publishedMatch = /<published[^>]*>([\s\S]*?)<\/published>/i.exec(entryXml);
             const idMatch = /<id[^>]*>([\s\S]*?)<\/id>/i.exec(entryXml);
+            const doiMatch = /<arxiv:doi[^>]*>([\s\S]*?)<\/arxiv:doi>/i.exec(entryXml);
 
             // Clean up text: replace CDATA sections, remove HTML tags, compress newlines
             const cleanHtml = (str: string) => str
@@ -85,6 +91,7 @@ Generate the arXiv search_query:`;
             const publishedDate = publishedMatch ? publishedMatch[1].trim() : "";
             const year = publishedDate ? new Date(publishedDate).getFullYear() : 0;
             const url = idMatch ? idMatch[1].trim() : "";
+            const doi = doiMatch ? doiMatch[1].trim() : undefined;
 
             // Filter by year if necessary
             if (settings.scholarYearFrom && settings.scholarYearFrom !== "Any") {
@@ -107,7 +114,8 @@ Generate the arXiv search_query:`;
                 summary,
                 authors: authorsList,
                 year,
-                url
+                url,
+                doi
             });
         }
 

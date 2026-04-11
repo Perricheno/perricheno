@@ -72,6 +72,7 @@ export interface ScholarArticle {
     authors: string[];
     year: number;
     url: string;
+    doi?: string;
 }
 
 export interface AgentSession {
