@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { supabase } from "@/lib/supabase";
 import { AgentSettings, ScholarArticle } from "@/app/agent/types";
+import { verifySession } from '@/lib/session';
 
 export async function POST(req: Request) {
     try {
         const { sessionId } = await req.json();
         
         // Auth check
-        const headersList = await headers();
-        const authHeader = headersList.get("authorization");
-        if (!authHeader?.startsWith("Bearer ")) return NextResponse.json({ error: "Missing token" }, { status: 401 });
-        const token = authHeader.split(" ")[1];
-
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const userId = await verifySession();
+        if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         // Get session
         const { data: session } = await supabase.from('agent_sessions').select('*').eq('id', sessionId).single();
@@ -64,22 +59,30 @@ Generate the arXiv search_query:`;
         }
         const xmlText = await response.text();
 
-        // 4. Custom Regex Parser (no external dependencies required)
+        // 4. Custom Bulletproof XML Parser (zero external dependencies)
         let articles: ScholarArticle[] = [];
-        const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+        const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
         let entryMatch;
 
         while ((entryMatch = entryRegex.exec(xmlText)) !== null) {
             const entryXml = entryMatch[1];
 
-            const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(entryXml);
-            const summaryMatch = /<summary>([\s\S]*?)<\/summary>/.exec(entryXml);
-            const publishedMatch = /<published>([\s\S]*?)<\/published>/.exec(entryXml);
-            const idMatch = /<id>([\s\S]*?)<\/id>/.exec(entryXml);
+            // Robust regex to capture tags even if they have attributes like <title type="html">
+            const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(entryXml);
+            const summaryMatch = /<summary[^>]*>([\s\S]*?)<\/summary>/i.exec(entryXml);
+            const publishedMatch = /<published[^>]*>([\s\S]*?)<\/published>/i.exec(entryXml);
+            const idMatch = /<id[^>]*>([\s\S]*?)<\/id>/i.exec(entryXml);
 
-            const title = titleMatch ? titleMatch[1].replace(/\n/g, ' ').trim() : "Untitled";
-            const summary = summaryMatch ? summaryMatch[1].replace(/\n/g, ' ').trim() : "No abstract available.";
-            const publishedDate = publishedMatch ? publishedMatch[1] : "";
+            // Clean up text: replace CDATA sections, remove HTML tags, compress newlines
+            const cleanHtml = (str: string) => str
+                .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') // Extract CDATA contents
+                .replace(/<[^>]+>/g, '') // Strip remaining HTML tags
+                .replace(/\s+/g, ' ') // Clean up newlines & multi-spaces
+                .trim();
+
+            const title = titleMatch ? cleanHtml(titleMatch[1]) : "Untitled";
+            const summary = summaryMatch ? cleanHtml(summaryMatch[1]) : "No abstract available.";
+            const publishedDate = publishedMatch ? publishedMatch[1].trim() : "";
             const year = publishedDate ? new Date(publishedDate).getFullYear() : 0;
             const url = idMatch ? idMatch[1].trim() : "";
 
@@ -90,11 +93,12 @@ Generate the arXiv search_query:`;
                 }
             }
 
-            const authorRegex = /<author>[\s\S]*?<name>([\s\S]*?)<\/name>[\s\S]*?<\/author>/g;
+            // Extract all authors smoothly
+            const authorRegex = /<author[^>]*>[\s\S]*?<name[^>]*>([\s\S]*?)<\/name>[\s\S]*?<\/author>/gi;
             let authorsList: string[] = [];
             let authorMatch;
             while ((authorMatch = authorRegex.exec(entryXml)) !== null) {
-                authorsList.push(authorMatch[1].trim());
+                if (authorMatch[1]) authorsList.push(cleanHtml(authorMatch[1]));
             }
             if (authorsList.length === 0) authorsList.push("Unknown");
 

@@ -48,12 +48,9 @@ export default function ScholarClient({ initialSession, sessions: initialSession
     const performSearch = async () => {
         setIsSearching(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Unauthorized");
-
             const res = await fetch('/api/agent/scholar/search', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId: currentSessionId })
             });
 
