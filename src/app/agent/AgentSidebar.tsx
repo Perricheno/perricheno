@@ -75,10 +75,12 @@ export function AgentSidebar({
                                                 new Date(s.updated_at).toLocaleDateString()
                                             )}
                                             <span className={`px-1.5 py-0.5 rounded-sm uppercase text-[9px] font-bold tracking-wider ${
-                                                (s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics')
-                                                    ? (isActive ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600') 
-                                                    : (isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500')
-                                            }`}>{(s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics') ? 'Agent' : 'Report'}</span>
+                                                s.doc_type === 'chat'
+                                                    ? (isActive ? 'bg-white/20 text-white' : 'bg-purple-500/10 text-purple-600')
+                                                    : (s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics')
+                                                        ? (isActive ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600') 
+                                                        : (isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500')
+                                            }`}>{s.doc_type === 'chat' ? 'Chat' : (s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics') ? 'Agent' : 'Report'}</span>
                                             {s.share_id && <span className="px-1.5 py-0.5 rounded-sm bg-blue-500/20 text-blue-100 uppercase text-[9px] font-bold tracking-wider">Shared</span>}
                                         </div>
                                     </div>

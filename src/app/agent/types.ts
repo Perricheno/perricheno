@@ -1,6 +1,14 @@
-export type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study" | "data_analytics" | "data-analytics";
+export type DocType = "research" | "assignment" | "report" | "lab_report" | "literature_review" | "diploma" | "case_study" | "data_analytics" | "data-analytics" | "chat";
 export type Style = "simple" | "medium" | "phd";
 export type Language = "en" | "ru";
+
+export interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    files?: { name: string; type: string }[];
+    tokens?: number;
+    created_at: string;
+}
 
 export interface AgentSettings {
     useTemplate: boolean;

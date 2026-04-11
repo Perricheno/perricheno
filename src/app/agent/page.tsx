@@ -8,7 +8,7 @@ import {
     IconClock, IconLetterCase, IconSettings,
     IconSchool, IconSearch, IconCertificate, IconChartPie,
     IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
-    IconPlus, IconLock
+    IconPlus, IconLock, IconRobot
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -72,7 +72,7 @@ export default function AgentPage() {
 
     // Agent Mode States
     const [isAgentMode, setIsAgentMode] = useState(true);
-    const [agentSubMode, setAgentSubMode] = useState<"data_analytics">("data_analytics");
+    const [agentSubMode, setAgentSubMode] = useState<"data_analytics" | "chat">("data_analytics");
     const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string}[]>([]);
 
     // Suggestion step state (Data Analytics)
@@ -121,8 +121,9 @@ export default function AgentPage() {
         { id: "report", label: "Report", icon: IconChartPie },
     ];
 
-    const AGENT_MODES: { id: "data_analytics"; label: string; icon: any }[] = [
+    const AGENT_MODES: { id: "data_analytics" | "chat"; label: string; icon: any }[] = [
         { id: "data_analytics", label: "Data Analytics", icon: IconDatabase },
+        { id: "chat", label: "Chat", icon: IconRobot },
     ];
 
     // ─── Generate (Agent/Report mode) → create session → redirect ───
@@ -131,6 +132,31 @@ export default function AgentPage() {
         if (!prompt.trim()) return;
 
         if (!isAgentMode) {
+            // Chat mode: create session and redirect
+            if (agentSubMode === 'chat') {
+                try {
+                    const res = await fetch('/api/agent/chat/sessions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ initialMessage: prompt })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Send the first message immediately after redirect
+                        const sessionId = data.sessionId;
+                        // Store the message temporarily so the chat page can pick it up
+                        sessionStorage.setItem('pendingChatMessage', JSON.stringify({
+                            sessionId,
+                            message: prompt,
+                            files: agentDataFiles
+                        }));
+                        router.push(`/agent/chat/${sessionId}`);
+                    }
+                } catch (err: any) {
+                    setError(err.message);
+                }
+                return;
+            }
             handleAgentGenerate();
             return;
         }
