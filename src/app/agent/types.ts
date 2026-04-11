@@ -4,8 +4,8 @@ export type Language = "en" | "ru";
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
-    content: string;
-    files?: { name: string; type: string }[];
+    content: string | any[];
+    files?: { name: string; type: string; content?: string }[];
     tokens?: number;
     created_at: string;
 }

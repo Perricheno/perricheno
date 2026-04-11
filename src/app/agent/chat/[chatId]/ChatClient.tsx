@@ -313,8 +313,8 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
 
                     {messages.map((msg, idx) => {
                         const isMsgArray = Array.isArray(msg.content);
-                        const textContent = isMsgArray ? msg.content.find((i: any) => i.type === 'text')?.text || '' : msg.content;
-                        const imageContent = isMsgArray ? msg.content.filter((i: any) => i.type === 'image_url') : [];
+                        const textContent = isMsgArray ? (msg.content as any[]).find((i: any) => i.type === 'text')?.text || '' : msg.content;
+                        const imageContent = isMsgArray ? (msg.content as any[]).filter((i: any) => i.type === 'image_url') : [];
 
                         return (
                         <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
