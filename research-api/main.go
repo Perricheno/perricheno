@@ -67,19 +67,23 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		req.MaxResults = 10
 	}
 
-	// Prepare plain query for OpenAlex
 	plainQuery := "science"
-	if req.Query != "" {
-		plainQuery = req.Query
+	if strings.TrimSpace(req.Query) != "" {
+		plainQuery = strings.TrimSpace(req.Query)
 	}
-	openAlexEncoded := url.QueryEscape(plainQuery)
 
-	// Prepare keywords for arXiv
-	arxivQuery := "all:" + plainQuery
+	// arXiv: prefer title + abstract matches over a raw all-field sweep.
+	// `all:` pulls matches from full text including references, which floods
+	// results with off-topic papers. Scoping to ti/abs dramatically improves
+	// relevance for natural-language queries.
+	arxivQuery := fmt.Sprintf(`(ti:"%s" OR abs:"%s")`, plainQuery, plainQuery)
 	if req.Authors != "" && req.Authors != "None" {
-		arxivQuery = fmt.Sprintf("(%s) AND au:%s", arxivQuery, req.Authors)
+		arxivQuery = fmt.Sprintf(`%s AND au:"%s"`, arxivQuery, req.Authors)
 	}
 	arxivEncoded := url.QueryEscape(arxivQuery)
+
+	// OpenAlex handles the raw query internally via ?search=, URL-encoded.
+	openAlexEncoded := url.QueryEscape(plainQuery)
 
 	var articles []ScholarArticle
 	var err error
@@ -106,17 +110,29 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func fetchOpenAlex(encodedQuery string, req SearchRequest) ([]ScholarArticle, error) {
-	urlStr := fmt.Sprintf("https://api.openalex.org/works?search=%s&per-page=%d&mailto=admin@perricheno.com", encodedQuery, req.MaxResults)
+	// Explicit sort by relevance. Without &sort, OpenAlex orders by cited_by_count
+	// when filters are applied, which surfaces highly-cited but off-topic works.
+	// `&select` trims payload and guarantees abstract_inverted_index is returned.
+	urlStr := fmt.Sprintf(
+		"https://api.openalex.org/works?search=%s&per-page=%d&sort=relevance_score:desc&select=id,title,abstract_inverted_index,publication_year,doi,open_access,authorships&mailto=admin@perricheno.com",
+		encodedQuery, req.MaxResults,
+	)
 
+	// Build filter chain. OpenAlex uses comma-separated filters within a single &filter= param.
+	filters := []string{}
 	if req.YearFrom != "" && req.YearFrom != "Any" {
 		year, err := strconv.Atoi(req.YearFrom)
 		if err == nil {
-			urlStr += fmt.Sprintf("&filter=publication_year:>%d", year-1)
+			filters = append(filters, fmt.Sprintf("publication_year:>%d", year-1))
 		}
 	}
-
 	if req.Authors != "" && req.Authors != "None" {
-		urlStr += fmt.Sprintf(",author.id:%s", url.QueryEscape(req.Authors))
+		// raw_author_name.search matches author names as text. `author.id:` requires
+		// an OpenAlex author ID (e.g. A5012345), which end users don't have.
+		filters = append(filters, "raw_author_name.search:"+url.QueryEscape(req.Authors))
+	}
+	if len(filters) > 0 {
+		urlStr += "&filter=" + strings.Join(filters, ",")
 	}
 
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -235,7 +251,11 @@ func reconstructAbstract(invertedIndex map[string]any) string {
 }
 
 func fetchArxiv(encodedQuery string, req SearchRequest) ([]ScholarArticle, error) {
-	urlStr := fmt.Sprintf("http://export.arxiv.org/api/query?search_query=%s&max_results=%d&sortBy=submittedDate&sortOrder=descending", encodedQuery, req.MaxResults)
+	// sortBy=relevance is arXiv's semantic ranker. The previous `submittedDate`
+	// sort returned the newest papers that merely contained the term, not the
+	// papers that best matched the topic — the root cause of irrelevant hits.
+	// HTTPS endpoint avoids occasional 301s from the plaintext host.
+	urlStr := fmt.Sprintf("https://export.arxiv.org/api/query?search_query=%s&max_results=%d&sortBy=relevance&sortOrder=descending", encodedQuery, req.MaxResults)
 
 	client := &http.Client{Timeout: 30 * time.Second}
 	hReq, _ := http.NewRequest("GET", urlStr, nil)
