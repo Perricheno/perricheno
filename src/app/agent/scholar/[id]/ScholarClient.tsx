@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, IconMenu2, IconFileText, IconCode } from "@tabler/icons-react";
+import { useState, useEffect, useMemo } from "react";
+import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, IconMenu2, IconFileText, IconCode, IconSearch, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { AgentSession, ScholarArticle } from "../../types";
 import { AgentSidebar } from "../../AgentSidebar";
@@ -31,6 +31,36 @@ export default function ScholarClient({ initialSession, sessions: initialSession
     const [articles, setArticles] = useState<ScholarArticle[]>(parseArticles(initialSession.visuals_json));
     const [error, setError] = useState("");
     const [queryUsed, setQueryUsed] = useState("");
+
+    // ── Client-side filters (applied over already-fetched results) ──
+    type SortKey = "relevance" | "year_desc" | "year_asc";
+    const [filterText, setFilterText] = useState("");
+    const [filterMinYear, setFilterMinYear] = useState<string>("Any");
+    const [sortKey, setSortKey] = useState<SortKey>("relevance");
+
+    const filteredArticles = useMemo(() => {
+        const needle = filterText.trim().toLowerCase();
+        const minYear = filterMinYear === "Any" ? 0 : parseInt(filterMinYear, 10) || 0;
+
+        let out = articles.filter(a => {
+            if (minYear && (a.year || 0) < minYear) return false;
+            if (!needle) return true;
+            const hay = `${a.title} ${a.summary} ${(a.authors || []).join(" ")}`.toLowerCase();
+            return hay.includes(needle);
+        });
+
+        if (sortKey === "year_desc") out = [...out].sort((a, b) => (b.year || 0) - (a.year || 0));
+        else if (sortKey === "year_asc") out = [...out].sort((a, b) => (a.year || 0) - (b.year || 0));
+        return out;
+    }, [articles, filterText, filterMinYear, sortKey]);
+
+    const yearOptions = useMemo(() => {
+        const years = articles.map(a => a.year).filter(y => typeof y === "number" && y > 0) as number[];
+        if (years.length === 0) return ["Any"];
+        const min = Math.min(...years);
+        const buckets = ["Any", "2023", "2020", "2015", "2010"].filter(v => v === "Any" || parseInt(v, 10) >= min);
+        return buckets;
+    }, [articles]);
     
     // Sidebar State
     const [sessions, setSessions] = useState<AgentSession[]>(initialSessions);
@@ -143,10 +173,12 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                         </div>
                     ) : (
                         <div className="max-w-4xl w-full mx-auto p-4 md:p-8 space-y-6">
-                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
                                 <div>
                                     <h1 className="text-2xl font-black tracking-tight text-[var(--foreground)]">Search Results</h1>
-                                    <p className="text-sm text-gray-500 mt-1 font-medium">Found {articles.length} papers matching your criteria.</p>
+                                    <p className="text-sm text-gray-500 mt-1 font-medium">
+                                        Showing {filteredArticles.length} of {articles.length} papers.
+                                    </p>
                                 </div>
                                 {queryUsed && (
                                     <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-2 text-[11px] font-mono text-gray-500 max-w-xs truncate shadow-sm" title={queryUsed}>
@@ -155,15 +187,75 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                 )}
                             </div>
 
-                            {articles.length === 0 ? (
+                            {/* Filter bar — monochrome, matches settings panel style */}
+                            {articles.length > 0 && (
+                                <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-6">
+                                    {/* Text filter */}
+                                    <div className="flex-1 relative">
+                                        <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        <input
+                                            type="text"
+                                            value={filterText}
+                                            onChange={(e) => setFilterText(e.target.value)}
+                                            placeholder="Filter by title, author, abstract…"
+                                            className="w-full pl-9 pr-8 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--foreground)] transition-colors placeholder:text-gray-400"
+                                        />
+                                        {filterText && (
+                                            <button
+                                                onClick={() => setFilterText("")}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-black/5 transition-colors"
+                                                aria-label="Clear filter"
+                                            >
+                                                <IconX className="w-3.5 h-3.5 text-gray-400" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Min year */}
+                                    <div className="flex flex-col gap-1 md:min-w-[180px]">
+                                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Year From</label>
+                                        <select
+                                            value={filterMinYear}
+                                            onChange={(e) => setFilterMinYear(e.target.value)}
+                                            className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--foreground)] transition-colors cursor-pointer"
+                                        >
+                                            {yearOptions.map((v) => (
+                                                <option key={v} value={v}>{v === "Any" ? "Any year" : `${v}+`}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Sort */}
+                                    <div className="flex flex-col gap-1 md:min-w-[200px]">
+                                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Sort</label>
+                                        <select
+                                            value={sortKey}
+                                            onChange={(e) => setSortKey(e.target.value as SortKey)}
+                                            className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--foreground)] transition-colors cursor-pointer"
+                                        >
+                                            <option value="relevance">Relevance</option>
+                                            <option value="year_desc">Year ↓ (newest)</option>
+                                            <option value="year_asc">Year ↑ (oldest)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filteredArticles.length === 0 ? (
                                 <div className="text-center py-20 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-sm">
                                     <IconBook2 className="w-12 h-12 text-gray-300 mx-auto mb-4" stroke={1.5} />
-                                    <h3 className="text-lg font-bold text-[var(--foreground)] mb-1">No articles found</h3>
-                                    <p className="text-sm text-gray-500">Try adjusting your topic or relaxing the filters in settings.</p>
+                                    <h3 className="text-lg font-bold text-[var(--foreground)] mb-1">
+                                        {articles.length === 0 ? "No articles found" : "Nothing matches your filters"}
+                                    </h3>
+                                    <p className="text-sm text-gray-500">
+                                        {articles.length === 0
+                                            ? "Try adjusting your topic or relaxing the filters in settings."
+                                            : "Clear the filter text or lower the minimum year."}
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="flex flex-col space-y-4">
-                                    {articles.map((article, idx) => (
+                                    {filteredArticles.map((article, idx) => (
                                         <div key={idx} className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 hover:border-[var(--foreground)] transition-colors shadow-sm relative group overflow-hidden">
                                             <div className="absolute top-0 left-0 w-1 h-full bg-[var(--foreground)] opacity-0 group-hover:opacity-100 transition-opacity" />
                                             <div className="flex items-start justify-between gap-4">

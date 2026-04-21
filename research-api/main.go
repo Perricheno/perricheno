@@ -377,8 +377,14 @@ func fetchArxiv(encodedQuery string, req SearchRequest) ([]ScholarArticle, error
 	return articles, nil
 }
 
-// cleanLatex strips common LaTeX macro wrappers and math delimiters to make abstracts readable as plain text.
+// htmlTagRe strips inline markup (JATS/HTML) that OpenAlex leaks into abstracts:
+// <sup>, </sup>, <jats:p>, <i>, <b>, etc.
+var htmlTagRe = regexp.MustCompile(`<[^>]+>`)
+
+// cleanLatex strips common LaTeX macro wrappers, math delimiters, and inline
+// HTML/JATS tags to make abstracts readable as plain text.
 func cleanLatex(s string) string {
+	s = htmlTagRe.ReplaceAllString(s, "")
 	s = strings.ReplaceAll(s, "$", "")
 	s = strings.ReplaceAll(s, "\\dots", "...")
 	s = strings.ReplaceAll(s, "\\ldots", "...")
@@ -397,5 +403,7 @@ func cleanLatex(s string) string {
 		s = re.ReplaceAllString(s, "$1")
 	}
 
-	return s
+	// Collapse whitespace introduced by tag removal.
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
 }
