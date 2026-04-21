@@ -24,10 +24,23 @@ export interface AgentSettings {
     supervisorName: string;
     // New fields for Context-Aware Generation
     taskDescription: string;
-    taskFileText: string; 
+    taskFileText: string;
     referenceLinks: string[];
+    /** @deprecated Kept for legacy (pre-pipeline) calls. */
     referenceFilesText: string[];
+    /** @deprecated Kept for legacy (pre-pipeline) calls. */
     referenceFileNames: string[];
+    /** ids of parsed PDFs in agent_uploads (new staged pipeline). */
+    uploadIds: string[];
+    /** Per-upload display metadata kept in sync with uploadIds. */
+    uploadMeta: {
+        id: string;
+        filename: string;
+        charCount: number;
+        imageCount: number;
+        pageCount: number;
+        ocrUsed: boolean;
+    }[];
     runtime: 'R' | 'Python';
     
     // Literature Search specific settings
@@ -54,6 +67,8 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     referenceLinks: [],
     referenceFilesText: [],
     referenceFileNames: [],
+    uploadIds: [],
+    uploadMeta: [],
     runtime: 'R',
     scholarMaxArticles: 10,
     scholarYearFrom: 'Any',

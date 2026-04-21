@@ -1,441 +1,230 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { createAgentSession, updateAgentSession, getAgentSession, checkAndDeductUsage, getActiveAgentSessionsCount, sendTelegramNotification, updateTelegramNotification, toggleAgentSessionShare, getUserById } from '@/lib/db';
+import {
+    createAgentSession, updateAgentSession, getAgentSession,
+    checkAndDeductUsage, getActiveAgentSessionsCount,
+    sendTelegramNotification, updateTelegramNotification,
+    getUserById, getAgentUploadsByIds,
+} from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
+import { runPipeline } from '@/lib/agent/pipeline';
+import type { PipelineSettings, DocType } from '@/lib/agent/pipeline/types';
 
-// Increase body size limit — rImages base64 payloads can be very large
-export const maxDuration = 120;
+export const maxDuration = 600; // orchestrator may run for several minutes
 export const dynamic = 'force-dynamic';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+// ── Background orchestration ──
+// Persists progress to agent_sessions.stage_json so the UI can poll it.
 
-// ── Settings type ──
-interface GenerateSettings {
-    prompt: string;
-    type: string;
-    useTemplate: boolean;
-    style: 'simple' | 'medium' | 'phd';
-    wordCount: number;
-    columns: 1 | 2;
-    useReferences: boolean;
-    language: 'en' | 'ru';
-    authorName?: string;
-    courseName?: string;
-    dateStr?: string;
-    groupName?: string;
-    supervisorName?: string;
-    // Context fields
-    taskDescription?: string;
-    taskFileText?: string;
-    referenceLinks?: string[];
-    referenceFilesText?: string[];
-    // For edits/fixes/visuals
-    currentTex?: string;
-    currentBib?: string;
-    errorLog?: string;
-    visuals?: { image: string, chart_type: string, code: string, language: string }[];
-    useDbImages?: boolean;
-}
-
-function buildSystemPrompt(s: GenerateSettings): string {
-    const isRussian = s.language === 'ru';
-
-    const styleDesc = {
-        simple: 'Simple and clear. Use basic vocabulary, short sentences, minimal jargon. Suitable for undergraduate assignments.',
-        medium: 'Standard academic style. Well-structured arguments, proper terminology, balanced depth. Suitable for coursework and reports.',
-        phd: 'Advanced research-grade writing. Dense academic prose, sophisticated analysis, extensive literature engagement, nuanced arguments. PhD/journal-quality.',
-    }[s.style];
-
-    const langPackages = isRussian
-        ? `\\usepackage[T2A]{fontenc}\n\\usepackage[utf8]{inputenc}\n\\usepackage[russian]{babel}`
-        : `\\usepackage[T1]{fontenc}\n\\usepackage[utf8]{inputenc}`;
-
-    const columnClass = s.columns === 2 ? 'twocolumn' : '';
-    const docClass = columnClass ? `\\documentclass[${columnClass}]{article}` : `\\documentclass{article}`;
-
-    // Build author/course/date block
-    let metaBlock = '';
-    const authorLine = s.authorName || 'Student';
-    const dateLine = s.dateStr || '\\today';
-    if (s.courseName || s.groupName || s.supervisorName) {
-        const parts: string[] = [];
-        if (s.courseName) parts.push(`\\textbf{${isRussian ? 'Курс' : 'Course'}:} ${s.courseName}`);
-        if (s.groupName) parts.push(`\\textbf{${isRussian ? 'Группа' : 'Group'}:} ${s.groupName}`);
-        if (s.supervisorName) parts.push(`\\textbf{${isRussian ? 'Преподаватель' : 'Supervisor'}:} ${s.supervisorName}`);
-        metaBlock = parts.join(' \\qquad ');
-    }
-
-    const refInstructions = s.useReferences
-        ? `REFERENCES: Include \\usepackage[style=apa, backend=biber]{biblatex} and \\addbibresource{references.bib}.
-Use \\textcite{key} and \\parencite{key}. Every citation key MUST match an entry in references_bib.
-If user provided reference data (links/files), use them to generate REAL entries in references_bib.
-Otherwise, generate 10-20 plausible academic references in references_bib field.`
-        : `REFERENCES: Do NOT include biblatex. Set references_bib to null.`;
-
-    const templateSection = s.useTemplate
-        ? `
-\\geometry{lmargin=0.6in,rmargin=0.6in,tmargin=0.75in,bmargin=0.75in,footskip=20pt${s.columns === 2 ? ',columnsep=0.3in' : ''}}
-\\pagestyle{fancy}
-\\fancyhf{}
-\\fancyhead[L]{${s.courseName || (isRussian ? 'Отчет' : 'Report')}}
-\\fancyhead[R]{${dateLine}}
-\\fancyfoot[C]{\\thepage}
-
-\\newcommand{\\styledtitle}[1]{\\noindent\\colorbox{black}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{\\centering\\textcolor{white}{\\sffamily\\bfseries\\MakeUppercase{#1}}}}}
-\\titleformat{\\section}{\\normalfont}{}{0em}{\\styledtitle}
-\\titleformat{\\subsection}{\\normalfont\\normalsize\\sffamily\\bfseries}{}{0em}{}
-\\hypersetup{colorlinks=true,linkcolor=black,filecolor=black,urlcolor=blue,citecolor=black}
-
-TITLE BLOCK (use this exact pattern${s.columns === 2 ? ', wrapped in \\twocolumn[\\begin{@twocolumnfalse}...\\end{@twocolumnfalse}]' : ''}):
-Title, author "${authorLine}", affiliation "Astana IT University"${metaBlock ? `, metadata: ${metaBlock}` : ''}, date ${dateLine}.
-Then \\noindent\\textbf{${isRussian ? 'Аннотация' : 'Abstract'}} \\\\ followed by italic abstract text.`
-        : `CREATE YOUR OWN TEMPLATE: Author: "${authorLine}", Affiliation: "Astana IT University" ${metaBlock ? `, Metadata: ${metaBlock}` : ''}`;
-
-    let modeContext = '';
-    if (s.type === 'assignment') {
-        modeContext = `MODE: Assignment. Adhere STRICTLY to the provided task requirements. Ensure the tone is appropriate for student work but maintains academic rigor.`;
-    } else if (s.type === 'diploma') {
-        modeContext = `MODE: Thesis / Diploma. Create a highly structured, deep academic document. Use sophisticated vocabulary and extensive sections. Focus on the depth of the topic.`;
-    }
-
-    return `You are "Perricheno LaTeX Agent" — an expert academic LaTeX document generator.
-
-══════════════════════════
-OUTPUT FORMAT
-══════════════════════════
-
-Output ONLY valid JSON. No markdown fences, no commentary:
-{"main_tex": "...", "references_bib": "..." }
-
-Escape backslashes properly in JSON (e.g., "\\\\documentclass{article}"). Use \\n for newlines.
-
-══════════════════════════
-WRITING STYLE
-══════════════════════════
-
-${styleDesc}
-Target word count: approximately ${s.wordCount} words of body text.
-Language: ${isRussian ? 'Russian (write everything in Russian)' : 'English'}
-
-══════════════════════════
-${refInstructions}
-
-══════════════════════════
-CRITICAL LATEX RULES
-══════════════════════════
-
-1. ${s.columns === 2 ? 'TITLE BLOCK must be wrapped: \\twocolumn[\\begin{@twocolumnfalse}...\\end{@twocolumnfalse}]. NEVER nest other environments incorrectly inside it.' : 'Standard single-column document layout.'}
-2. BRACE MATCHING: Every { must have matching }. Count carefully.
-3. SECTIONS: Use \\& not & in section names.
-4. ${s.useReferences ? 'Every \\textcite{key} must match entries in references_bib.' : 'No citations needed.'}
-5. No \\lipsum. Write REAL content.
-6. Tables/code/formulas OPTIONAL — only if relevant.
-7. Properly escape: & → \\& , % → \\% , # → \\# , _ → \\_
-${templateSection}
-
-══════════════════════════
-VISUALS / IMAGES
-══════════════════════════
-
-When integrating figures:
-1. Use the [images/] directory: \\includegraphics[width=0.9\\linewidth]{images/filename.png}.
-2. Always use the provided filenames from the message context (e.g., images/fig_1_bar.png).
-3. Place figures inside a [figure] environment with [H] or [ht] placement.
-4. Provide a descriptive \\caption and a unique \\label.
-5. Ensure the preamble contains \\usepackage{graphicx} and optionally \\graphicspath{{images/}}.
-
-══════════════════════════
-EDITING & ERROR FIXING
-══════════════════════════
-
-When editing: apply changes, return FULL updated files.
-When fixing errors: analyze each error, fix code, return FULL corrected files.`;
-}
-
-function buildMessages(s: GenerateSettings) {
-    const systemPrompt = buildSystemPrompt(s);
-    const messages: any[] = [{ role: "system", content: systemPrompt }];
-
-    let contextData = '';
-    if (s.taskDescription) contextData += `\nASSIGNMENT TASK DESCRIPTION:\n${s.taskDescription}`;
-    if (s.taskFileText) contextData += `\nATTACHED TASK FILE CONTEXT:\n${s.taskFileText}`;
-    if (s.referenceLinks && s.referenceLinks.length > 0) contextData += `\nREFERENCE LINKS:\n${s.referenceLinks.join('\n')}`;
-    if (s.referenceFilesText && s.referenceFilesText.length > 0) {
-        contextData += `\nREFERENCE ARTICLES DATA:\n${s.referenceFilesText.join('\n---\n')}`;
-    }
-
-    if (s.errorLog && s.currentTex) {
-        messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
-        messages.push({ role: "user", content: `Fix ALL compilation errors:\n\n${s.errorLog}\n\nReturn FULL corrected JSON.` });
-    } else if (s.visuals && s.visuals.length > 0 && s.currentTex) {
-        const figureList = s.visuals.map((v, i) => `- images/fig_${i + 1}_${v.chart_type}.png (${v.chart_type} chart)`).join('\n');
-        messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
-        messages.push({ role: "user", content: `Integrate the following figures into the report:\n${figureList}\n\nUser instructions: ${s.prompt}\n\nReturn FULL updated JSON with correct \\includegraphics paths.` });
-    } else if (s.currentTex) {
-        messages.push({ role: "assistant", content: JSON.stringify({ main_tex: s.currentTex, references_bib: s.currentBib || null }) });
-        messages.push({ role: "user", content: `Edit the document. Changes: ${s.prompt}\n\nReturn FULL updated JSON.` });
-    } else {
-        messages.push({
-            role: "user",
-            content: `Generate a complete LaTeX document.${contextData ? `\n\nCONTEXT DATA:\n${contextData}` : ''}\n\nType: ${s.type}\nTopic: ${s.prompt}\n\nOutput ONLY raw JSON.`
-        });
-    }
-
-    return messages;
-}
-
-async function runAgentTaskBackground(sessionId: string, messages: any[], userId: number) {
+async function runBackground(
+    sessionId: string,
+    userId: number,
+    settings: PipelineSettings,
+) {
     try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
-                messages,
-                stream: true,
-            })
-        });
+        const uploads = settings.uploadIds && settings.uploadIds.length > 0
+            ? await getAgentUploadsByIds(settings.uploadIds, userId)
+            : [];
 
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error("OpenAI API Error:", errBody);
-            await updateAgentSession(sessionId, { status: "error", error_msg: `API error: ${errBody.slice(0, 200)}` });
-            
-            const session = await getAgentSession(sessionId);
-            if (session && session.tg_message_id) {
-                await updateTelegramNotification(userId, session.tg_message_id, `❌ *Ошибка генерации*: ${session.title}\n\nПроизошла ошибка API (${errBody.slice(0, 50)}...). Попробуйте еще раз.`);
-            }
-            return;
-        }
-
-        const decoder = new TextDecoder();
-        const reader = response.body!.getReader();
-        let buffer = "";
-        let accumulated = "";
-        let lastDbUpdate = Date.now();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || !trimmed.startsWith('data: ')) continue;
-                const data = trimmed.slice(6);
-                if (data === '[DONE]') continue;
-
-                try {
-                    const parsed = JSON.parse(data);
-                    const content = parsed.choices?.[0]?.delta?.content;
-                    if (content) {
-                        accumulated += content;
-                    }
-                } catch {}
-            }
-
-            // Sync stream progress to db every 150ms max for a smoother UI experience
-            if (Date.now() - lastDbUpdate > 150) {
-                await updateAgentSession(sessionId, { stream_text: accumulated });
-                
-                // Also update Telegram every 2.5 seconds (to avoid rate limits)
-                if (Date.now() - lastDbUpdate > 2500) {
-                    const session = await getAgentSession(sessionId);
-                    if (session && session.tg_message_id) {
-                        await updateTelegramNotification(userId, session.tg_message_id, 
-                            `⚡ *Процесс генерации*: ${session.title}\n\n` +
-                            `✍️ Обработано: ~${accumulated.length} символов\n` +
-                            `⏳ Пожалуйста, подождите...`
-                        );
-                    }
-                }
-                lastDbUpdate = Date.now();
+        // Normalize images_json to arrays (Supabase may hand back jsonb as object or string).
+        for (const u of uploads) {
+            if (typeof u.images_json === 'string') {
+                try { u.images_json = JSON.parse(u.images_json); } catch { u.images_json = []; }
             }
         }
 
-        // Final db sync
-        await updateAgentSession(sessionId, { stream_text: accumulated });
+        const writeProgress = async (progress: any) => {
+            await updateAgentSession(sessionId, { stage_json: progress });
+        };
 
-        let clean = accumulated.trim();
-        if (clean.startsWith("```json")) clean = clean.substring(7);
-        if (clean.startsWith("```")) clean = clean.substring(3);
-        if (clean.endsWith("```")) clean = clean.replace(/```\s*$/, "");
-        
-        let finalData: { main_tex?: string, references_bib?: string } = {};
-        try {
-            finalData = JSON.parse(clean);
-            if (!finalData.main_tex) throw new Error("Invalid output — missing main_tex");
-        } catch (e: any) {
-            await updateAgentSession(sessionId, { status: "error", error_msg: "AI generated invalid JSON: " + e.message });
-            
-            const session = await getAgentSession(sessionId);
-            if (session) {
-                await sendTelegramNotification(userId, `❌ *Ошибка генерации*: ${session.title}\n\nНейросеть вернула некорректный формат данных. Пожалуйста, попробуйте изменить запрос.`);
-            }
-            return;
-        }
+        const result = await runPipeline({ settings, uploads, writeProgress });
 
-        // Success Update
+        // Final persist.
         await updateAgentSession(sessionId, {
-            status: "done",
-            main_tex: finalData.main_tex,
-            references_bib: finalData.references_bib || null,
+            status: result.status,
+            main_tex: result.mainTex,
+            references_bib: result.referencesBib,
             stream_text: null,
-            error_msg: null
+            error_msg: result.compiled ? null : (result.errorLog?.slice(0, 500) ?? 'Compilation unresolved after retries'),
         });
 
-        // Notify telegram with final stats and links
+        // Token-accurate billing across all stages.
+        if (result.totalTokens > 0) {
+            // Convert model-reported tokens to characters for the existing quota
+            // system. 1 token ≈ 4 chars of English, ≈ 2.2 for Russian. We use 3.
+            const charEquivalent = result.totalTokens * 3;
+            await checkAndDeductUsage(userId, 'chars', charEquivalent);
+        }
+
+        // Telegram notification.
         const session = await getAgentSession(sessionId);
-        if (session && session.tg_message_id) {
+        if (session?.tg_message_id) {
             const user = await getUserById(userId);
             const remaining = user ? (user.purchased_chars + 15000 - user.daily_chars_used) : 0;
             const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://perricheno.ru'}/agent/shared/${session.share_id}`;
-            
-            await updateTelegramNotification(userId, session.tg_message_id, 
-                `✅ *Генерация завершена*: ${session.title}\n\n` +
-                `📊 *Статистика*:\n` +
-                `• Использовано: ~${clean.length} символов\n` +
-                `• Остаток на балансе: ${remaining} символов\n\n` +
-                `🔗 *Ссылки для скачивания*:\n` +
-                `• [Посмотреть PDF и ZIP](${pdfUrl})\n\n` +
-                `Ваш отчет доступен в истории сессий.`
+            const label = result.compiled ? '✅ *Генерация завершена*' : '⚠️ *Готово, требует внимания*';
+            const detail = result.compiled
+                ? `• Разделов: ${result.sections.length}\n• Слов: ~${result.sections.reduce((a, s) => a + s.wordCount, 0)}\n• Токенов: ${result.totalTokens.toLocaleString()}`
+                : `Документ собран, но LaTeX не скомпилировался с первых попыток. Вы можете открыть его и исправить вручную.`;
+            await updateTelegramNotification(userId, session.tg_message_id,
+                `${label}: ${session.title}\n\n📊 *Статистика*:\n${detail}\n• Остаток: ${remaining} символов\n\n🔗 [Открыть](${pdfUrl})`
             );
         }
-
-        // Exact Character Billing Mapping (Prompt + Completion)
-        const promptChars = JSON.stringify(messages).length;
-        const completionChars = clean.length;
-        await checkAndDeductUsage(userId, 'chars', promptChars + completionChars);
-
     } catch (err: any) {
-        console.error("Background Agent Error:", err);
-        await updateAgentSession(sessionId, { status: "error", error_msg: err.message || "Unexpected background error." });
+        console.error('[generate] background error:', err);
+        await updateAgentSession(sessionId, {
+            status: 'error',
+            error_msg: String(err?.message || err).slice(0, 500),
+            stream_text: null,
+        });
+        const session = await getAgentSession(sessionId);
+        if (session?.tg_message_id) {
+            await updateTelegramNotification(userId, session.tg_message_id,
+                `❌ *Ошибка генерации*: ${session.title}\n\n${String(err?.message || err).slice(0, 200)}`
+            );
+        }
     }
 }
 
+// ── Request handler ──
+
 export async function POST(req: Request) {
     const userId = await verifySession();
-    if (!userId) {
-        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+
+    if (!process.env.OPENAI_API_KEY) {
+        return NextResponse.json({ error: 'OpenAI API Key is not configured.' }, { status: 500 });
     }
 
     const precheck = await checkAndDeductUsage(userId, 'chars', 0);
     if (precheck.remaining <= 0) {
-        return NextResponse.json({ error: "LIMIT_REACHED", details: "Characters limit reached." }, { status: 402 });
+        return NextResponse.json({ error: 'LIMIT_REACHED', details: 'Characters limit reached.' }, { status: 402 });
     }
 
-    if (!OPENAI_API_KEY) {
-        return NextResponse.json({ error: "OpenAI API Key is not configured." }, { status: 500 });
+    const activeCount = await getActiveAgentSessionsCount(userId);
+    if (activeCount >= 3) {
+        return NextResponse.json({
+            error: 'Достигнут лимит одновременных генераций (макс. 3). Дождитесь завершения текущих задач.',
+        }, { status: 429 });
     }
 
-    try {
-        const body = await req.json();
+    let body: any;
+    try { body = await req.json(); }
+    catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }); }
 
-        const settings: GenerateSettings = {
-            prompt: body.prompt || '',
-            type: body.type || 'research',
-            useTemplate: body.useTemplate ?? true,
-            style: body.style || 'medium',
-            wordCount: body.wordCount || 2000,
-            columns: body.columns || 2,
-            useReferences: body.useReferences ?? true,
-            language: body.language || 'en',
-            authorName: body.authorName,
-            courseName: body.courseName,
-            dateStr: body.dateStr,
-            groupName: body.groupName,
-            supervisorName: body.supervisorName,
-            taskDescription: body.taskDescription,
-            taskFileText: body.taskFileText,
-            referenceLinks: body.referenceLinks,
-            referenceFilesText: body.referenceFilesText,
-            currentTex: body.currentTex,
-            currentBib: body.currentBib,
-            errorLog: body.errorLog,
-            visuals: body.visuals,
-            useDbImages: body.useDbImages,
-        };
+    // ── Regeneration / edit / error-fix paths take the legacy single-call shape. ──
+    // These are small, targeted operations (the user edited a section or fed back
+    // a compile error) — running the full 5-stage pipeline would be overkill.
+    // We fall back to a tiny direct call.
+    if (body.currentTex || body.errorLog) {
+        return handleLegacyEdit(userId, body);
+    }
 
-        if (!settings.prompt && !settings.errorLog) {
-            return NextResponse.json({ error: "Prompt or error log is required." }, { status: 400 });
-        }
+    // ── New pipeline path. ──
+    const settings: PipelineSettings = {
+        prompt: String(body.prompt || '').trim(),
+        docType: (body.type || 'research') as DocType,
+        style: body.style || 'medium',
+        wordCount: Math.max(300, Math.min(30_000, Number(body.wordCount) || 2000)),
+        columns: body.columns === 1 ? 1 : 2,
+        useTemplate: body.useTemplate ?? true,
+        useReferences: body.useReferences ?? false,
+        language: body.language === 'ru' ? 'ru' : 'en',
+        authorName: body.authorName,
+        courseName: body.courseName,
+        dateStr: body.dateStr,
+        groupName: body.groupName,
+        supervisorName: body.supervisorName,
+        taskDescription: body.taskDescription,
+        taskFileText: body.taskFileText,
+        referenceLinks: Array.isArray(body.referenceLinks) ? body.referenceLinks : undefined,
+        uploadIds: Array.isArray(body.uploadIds) ? body.uploadIds : undefined,
+    };
 
-        // --- CONCURRENCY LIMIT ---
-        const activeCount = await getActiveAgentSessionsCount(userId);
-        if (activeCount >= 3) {
-            return NextResponse.json({ 
-                error: `Достигнут лимит одновременных генераций (макс. 3). Дождитесь завершения текущих задач.` 
-            }, { status: 429 });
-        }
-        // -------------------------
+    if (!settings.prompt) return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
 
-        let sessionId = body.sessionId;
+    const sessionId = uuidv4();
+    const shortTitle = settings.prompt.slice(0, 50).trim();
+    const shareId = uuidv4().split('-')[0];
 
-        // If useDbImages, load visuals from the database instead of from the request body
-        if (settings.useDbImages && sessionId) {
-            const existingSession = await getAgentSession(sessionId);
-            if (existingSession?.visuals_json) {
-                try {
-                    settings.visuals = JSON.parse(existingSession.visuals_json);
-                } catch (e) {
-                    console.error("Failed to parse visuals_json from DB:", e);
-                }
-            }
-        }
+    const tgMsgId = await sendTelegramNotification(
+        userId,
+        `🚀 *Начало генерации*: ${shortTitle}\n\nПайплайн из 5 стадий. Это может занять несколько минут.`,
+    );
 
-        const messages = buildMessages(settings);
+    await createAgentSession({
+        id: sessionId,
+        user_id: userId,
+        title: shortTitle + (settings.prompt.length > 50 ? '…' : ''),
+        doc_type: settings.docType,
+        status: 'generating',
+        stream_text: null,
+        share_id: shareId,
+        tg_message_id: tgMsgId || undefined,
+        settings_json: JSON.stringify(settings),
+    });
 
-        const shortTitle = settings.prompt.slice(0, 50).trim() || "Generated Document";
+    // Fire and forget. The client will poll /api/agent/sessions/[id] for stage_json.
+    runBackground(sessionId, userId, settings).catch(e => console.error('[generate] bg crash:', e));
 
-        if (!sessionId) {
-            sessionId = uuidv4();
-            // Automatically generate a share_id for links
-            const tempShareId = uuidv4().split('-')[0];
+    return NextResponse.json({ sessionId });
+}
 
-            // Notify Telegram Start
-            const msgId = await sendTelegramNotification(userId, `🚀 *Начало генерации*: ${shortTitle}\n\nВаш документ обрабатывается. Это может занять до 2 минут.`);
+// ── Legacy thin path: edits and error-fix on an existing session. ──
 
-            await createAgentSession({
-                id: sessionId,
-                user_id: userId,
-                title: shortTitle + (settings.prompt.length > 50 ? '...' : ''),
-                doc_type: settings.type,
-                status: 'generating',
-                stream_text: '',
-                share_id: tempShareId,
-                tg_message_id: msgId || undefined,
-                settings_json: JSON.stringify(settings),
-            });
-        } else {
-            const existing = await getAgentSession(sessionId);
-            const shareId = existing?.share_id || uuidv4().split('-')[0];
+async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
+    const { chatCompletion, parseJsonLoose } = await import('@/lib/agent/pipeline/llm');
 
-            // Notify Telegram Re-Start
-            const msgId = await sendTelegramNotification(userId, `🔄 *Перегенерация документа*: ${shortTitle}\n\nПрименяем ваши изменения...`);
+    const lang = body.language === 'ru' ? 'Russian' : 'English';
+    const sys = `You are a LaTeX editor. Return ONLY JSON: {"main_tex": "...", "references_bib": "..."}. No fences, no commentary. Language: ${lang}.`;
 
-            await updateAgentSession(sessionId, { 
-                status: 'generating', 
-                stream_text: '', 
+    let userMsg: string;
+    if (body.errorLog && body.currentTex) {
+        userMsg = `Fix ALL compilation errors and return full corrected files.\n\nERROR LOG:\n${body.errorLog}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
+    } else if (body.currentTex) {
+        userMsg = `Apply these changes to the document and return full updated files.\n\nCHANGE REQUEST:\n${body.prompt || '(none)'}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
+    } else {
+        return NextResponse.json({ error: 'Legacy path requires currentTex.' }, { status: 400 });
+    }
+
+    const sessionId = body.sessionId;
+    if (!sessionId) return NextResponse.json({ error: 'sessionId required for edit' }, { status: 400 });
+
+    await updateAgentSession(sessionId, { status: 'generating', error_msg: null, stream_text: null });
+
+    (async () => {
+        try {
+            const r = await chatCompletion(
+                [
+                    { role: 'system', content: sys },
+                    { role: 'user', content: userMsg },
+                ],
+                { jsonMode: true, maxTokens: 16_000, temperature: 0.2, timeoutMs: 180_000 },
+            );
+
+            const parsed: any = parseJsonLoose(r.text);
+            const { normalizeLatexText, ensureRussianPreamble } = await import('@/lib/agent/stages');
+            const mainTex = ensureRussianPreamble(normalizeLatexText(parsed.main_tex || ''), body.language === 'ru' ? 'ru' : 'en');
+            const refs = typeof parsed.references_bib === 'string' && parsed.references_bib.trim()
+                ? normalizeLatexText(parsed.references_bib)
+                : null;
+
+            await updateAgentSession(sessionId, {
+                status: 'done',
+                main_tex: mainTex,
+                references_bib: refs,
+                stream_text: null,
                 error_msg: null,
-                share_id: shareId,
-                tg_message_id: msgId || undefined,
-                settings_json: JSON.stringify(settings) 
+            });
+
+            if (r.totalTokens > 0) await checkAndDeductUsage(userId, 'chars', r.totalTokens * 3);
+        } catch (e: any) {
+            await updateAgentSession(sessionId, {
+                status: 'error',
+                error_msg: String(e?.message || e).slice(0, 500),
             });
         }
+    })().catch(e => console.error('[generate-legacy] bg:', e));
 
-        // Fire and forget
-        runAgentTaskBackground(sessionId, messages, userId);
-
-        return NextResponse.json({ sessionId });
-
-    } catch (err: any) {
-        console.error("Agent Error:", err);
-        return NextResponse.json({ error: err.message || "Unexpected error." }, { status: 500 });
-    }
+    return NextResponse.json({ sessionId });
 }

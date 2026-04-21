@@ -96,6 +96,22 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Staged-pipeline progress (new path). Populated by polling stage_json.
+    const [stageProgress, setStageProgress] = useState<{
+        current_stage: number;
+        total_stages: number;
+        label: string;
+        progress?: { done: number; total: number };
+        completed_stages: number[];
+        files?: { name: string; status: "ok" | "failed" | "pending"; claims?: number; error?: string }[];
+        retries?: Record<string, number>;
+    } | null>(() => {
+        const raw = (initialSession as any).stage_json;
+        if (!raw) return null;
+        if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return null; } }
+        return raw;
+    });
+
     // Agent Mode States
     const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string}[]>([]);
     const [agentLogs, setAgentLogs] = useState<{type: string, message: string}[]>([]);
@@ -171,7 +187,15 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                 targetStreamText.current = session.stream_text;
             }
 
-            if (session.status === 'done') {
+            // New pipeline: structured progress in stage_json.
+            if (session.stage_json) {
+                const sp = typeof session.stage_json === 'string'
+                    ? (() => { try { return JSON.parse(session.stage_json); } catch { return null; } })()
+                    : session.stage_json;
+                if (sp) setStageProgress(sp);
+            }
+
+            if (session.status === 'done' || session.status === 'needs_attention') {
                 setMainTex(session.main_tex || "");
                 setReferencesBib(session.references_bib || null);
                 setVisuals(session.visuals_json ? JSON.parse(session.visuals_json) : []);
@@ -179,9 +203,12 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                 stopTimer();
                 setActiveTab("tex");
                 setPhase("done");
+                if (session.status === 'needs_attention') {
+                    setError(session.error_msg || "Document assembled but failed to compile on automatic retries. Open it and review.");
+                }
                 loadSessions();
             } else if (session.status === 'generating') {
-                pollRef.current = setTimeout(pollSessionStatus, 400);
+                pollRef.current = setTimeout(pollSessionStatus, 1500);
             }
         } catch (e: any) {
             stopTimer();
@@ -236,15 +263,24 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                     if (session.stream_text) {
                         targetStreamText.current = session.stream_text;
                     }
-                    if (session.status === 'done') {
+                    if (session.stage_json) {
+                        const sp = typeof session.stage_json === 'string'
+                            ? (() => { try { return JSON.parse(session.stage_json); } catch { return null; } })()
+                            : session.stage_json;
+                        if (sp) setStageProgress(sp);
+                    }
+                    if (session.status === 'done' || session.status === 'needs_attention') {
                         setMainTex(session.main_tex || "");
                         setReferencesBib(session.references_bib);
                         stopTimer();
                         setActiveTab("tex");
                         setPhase("done");
+                        if (session.status === 'needs_attention') {
+                            setError(session.error_msg || "Document assembled but failed to compile on automatic retries. Open it and review.");
+                        }
                         loadSessions();
                     } else if (session.status === 'generating') {
-                        pollRef.current = setTimeout(pollStatus, 400);
+                        pollRef.current = setTimeout(pollStatus, 1500);
                     }
                 } catch (e: any) {
                     stopTimer();
@@ -377,26 +413,116 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
     // ─── STREAMING ───
     if (phase === "streaming") {
+        const STAGE_LABELS = ["Plan", "Extract", "Draft", "Assemble", "Validate"];
+        const sp = stageProgress;
+        const current = sp?.current_stage ?? 0;
+        const completed = new Set(sp?.completed_stages ?? []);
+
         return (
-            <div className="w-full h-full flex flex-col font-sans bg-[#FBFBFC] p-4 md:p-6 overflow-hidden relative">
+            <div className="w-full h-full flex flex-col font-sans bg-[#FBFBFC] p-4 md:p-6 overflow-y-auto relative">
                 <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
-                
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full flex flex-col items-center justify-center">
-                    <div className="flex gap-4 mb-8">
-                        {[0, 1, 2, 3, 4].map((i) => (
-                            <motion.div
-                                key={i}
-                                className="w-3 h-3 bg-black rounded-full"
-                                animate={{ y: [0, -12, 0], scale: [1, 1.1, 1] }}
-                                transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
-                            />
-                        ))}
+
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl mx-auto my-auto pt-8 md:pt-0">
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#A1A1AA] mb-3">
+                            {isAgentMode ? `${docType.replace("_", " ")} • ${settings.style}` : 'Analytics Console'}
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-black break-words">
+                            {topic}
+                        </h2>
+                        <div className="text-[11px] font-mono text-gray-400 mt-3 tabular-nums">
+                            {elapsedTime.toFixed(1)}s
+                        </div>
                     </div>
-                    <div className="text-[12px] font-black tracking-[0.4em] text-black uppercase mb-3 ml-1 text-center">
-                        Generating
-                    </div>
-                    <div className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-[0.2em] text-center">
-                        {isAgentMode ? 'Analytics Console' : `${docType.replace("_", " ")} • ${settings.style}`}
+
+                    {/* Stepper */}
+                    <div className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm">
+                        <div className="flex items-start justify-between mb-8 relative">
+                            {/* connector line */}
+                            <div className="absolute top-3 left-6 right-6 h-px bg-gray-100" />
+                            {STAGE_LABELS.map((label, idx) => {
+                                const stageNum = idx + 1;
+                                const isDone = completed.has(stageNum);
+                                const isActive = current === stageNum && !isDone;
+                                return (
+                                    <div key={label} className="flex flex-col items-center relative z-10 flex-1">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-colors ${
+                                            isDone ? 'bg-black text-white'
+                                                : isActive ? 'bg-white border-2 border-black text-black'
+                                                : 'bg-white border border-gray-200 text-gray-300'
+                                        }`}>
+                                            {isDone ? <IconCheck className="w-3 h-3" stroke={3} /> : stageNum}
+                                        </div>
+                                        <div className={`mt-2 text-[9px] font-bold uppercase tracking-widest ${
+                                            isActive ? 'text-black' : isDone ? 'text-gray-500' : 'text-gray-300'
+                                        }`}>
+                                            {label}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Current label + progress bar */}
+                        <div className="border-t border-gray-100 pt-6">
+                            <div className="flex items-center gap-3 mb-3">
+                                <IconLoader2 className="w-4 h-4 animate-spin text-black" />
+                                <div className="text-[13px] font-medium text-black flex-1 truncate">
+                                    {sp?.label || "Starting…"}
+                                </div>
+                                {sp?.progress && (
+                                    <div className="text-[11px] font-mono text-gray-400 tabular-nums shrink-0">
+                                        {sp.progress.done} / {sp.progress.total}
+                                    </div>
+                                )}
+                            </div>
+                            {sp?.progress && (
+                                <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-black rounded-full transition-[width] duration-500 ease-out"
+                                        style={{ width: `${Math.min(100, (sp.progress.done / Math.max(1, sp.progress.total)) * 100)}%` }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Files status */}
+                        {sp?.files && sp.files.length > 0 && (
+                            <div className="border-t border-gray-100 pt-6 mt-6">
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                                    Reference Files
+                                </div>
+                                <div className="space-y-1.5">
+                                    {sp.files.map((f, i) => (
+                                        <div key={i} className="flex items-center gap-3 text-[12px]" title={f.error}>
+                                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                                f.status === 'ok' ? 'bg-emerald-500'
+                                                    : f.status === 'failed' ? 'bg-red-400'
+                                                    : 'bg-gray-300 animate-pulse'
+                                            }`} />
+                                            <span className="font-medium text-gray-700 truncate flex-1">{f.name}</span>
+                                            <span className="text-[10px] font-mono text-gray-400 tabular-nums shrink-0">
+                                                {f.status === 'ok' && typeof f.claims === 'number' ? `${f.claims} claims`
+                                                    : f.status === 'failed' ? 'failed'
+                                                    : '…'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Retry badge */}
+                        {sp?.retries && Object.keys(sp.retries).length > 0 && (
+                            <div className="border-t border-gray-100 pt-4 mt-6 flex flex-wrap gap-2">
+                                {Object.entries(sp.retries).map(([k, v]) => (
+                                    <span key={k} className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 bg-amber-50 text-amber-700 rounded">
+                                        {k.replace(/_/g, ' ')} · {v}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>

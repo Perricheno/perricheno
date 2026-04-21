@@ -531,6 +531,88 @@ export async function deleteAllOtherSessions(userId: number, currentSessionId: s
     await supabase.from('sessions').delete().eq('user_id', userId).neq('id', currentSessionId);
 }
 
+// ─── Agent uploads (staged pipeline) ───
+// Short-lived (24h) server-side cache of parsed PDF bundles.
+// The client uploads a PDF once; generate calls reference these ids.
+
+export interface AgentUpload {
+    id: string;
+    user_id: number;
+    filename: string;
+    text_content: string;
+    images_json: { dataUrl: string; contentType: string; bytes: number }[] | string;
+    char_count: number;
+    image_count: number;
+    page_count: number;
+    ocr_used: boolean;
+    created_at: string;
+    expires_at: string;
+}
+
+export async function createAgentUpload(data: {
+    user_id: number;
+    filename: string;
+    text_content: string;
+    images: { dataUrl: string; contentType: string; bytes: number }[];
+    page_count: number;
+    ocr_used: boolean;
+}): Promise<AgentUpload> {
+    const { data: row, error } = await supabase.from('agent_uploads').insert({
+        user_id: data.user_id,
+        filename: data.filename,
+        text_content: data.text_content,
+        images_json: data.images,
+        char_count: data.text_content.length,
+        image_count: data.images.length,
+        page_count: data.page_count,
+        ocr_used: data.ocr_used,
+    }).select('*').single();
+    if (error) throw error;
+    return row as AgentUpload;
+}
+
+export async function getAgentUpload(id: string, userId: number): Promise<AgentUpload | undefined> {
+    const { data } = await supabase.from('agent_uploads')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+    return data ? (data as AgentUpload) : undefined;
+}
+
+export async function getAgentUploadsByIds(ids: string[], userId: number): Promise<AgentUpload[]> {
+    if (!ids || ids.length === 0) return [];
+    const { data } = await supabase.from('agent_uploads')
+        .select('*')
+        .in('id', ids)
+        .eq('user_id', userId)
+        .gt('expires_at', new Date().toISOString());
+    return (data || []) as AgentUpload[];
+}
+
+// Sum of text sizes for the user's still-valid uploads — used to enforce the
+// 200 000-character hard cap before accepting a new ingest.
+export async function getUserActiveUploadsCharTotal(userId: number): Promise<number> {
+    const { data } = await supabase.from('agent_uploads')
+        .select('char_count')
+        .eq('user_id', userId)
+        .gt('expires_at', new Date().toISOString());
+    if (!data) return 0;
+    return data.reduce((acc: number, row: any) => acc + (row.char_count || 0), 0);
+}
+
+export async function deleteAgentUpload(id: string, userId: number): Promise<void> {
+    await supabase.from('agent_uploads').delete().eq('id', id).eq('user_id', userId);
+}
+
+export async function deleteExpiredAgentUploads(): Promise<number> {
+    const { count } = await supabase.from('agent_uploads')
+        .delete({ count: 'exact' })
+        .lt('expires_at', new Date().toISOString());
+    return count || 0;
+}
+
 export async function getReferralStats(userId: number) {
     const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('referred_by', userId);
     

@@ -19,11 +19,12 @@ export async function GET(req: Request, context: RouteContext) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
         session: {
             id: session.id,
             status: session.status,
             stream_text: session.stream_text,
+            stage_json: (session as any).stage_json ?? null,
             error_msg: session.error_msg,
             main_tex: session.main_tex,
             references_bib: session.references_bib,
@@ -32,7 +33,7 @@ export async function GET(req: Request, context: RouteContext) {
             doc_type: session.doc_type,
             title: session.title,
             updated_at: session.updated_at
-        } 
+        }
     });
 }
 

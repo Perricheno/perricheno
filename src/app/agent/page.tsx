@@ -148,10 +148,12 @@ export default function AgentPage() {
                         // Send the first message immediately after redirect
                         const sessionId = data.sessionId;
                         // Store the message temporarily so the chat page can pick it up
+                        // Only the prompt survives the redirect. If the user had
+                        // files on the landing, they'll re-attach in chat — chat
+                        // now requires server-side ingest via /api/agent/attach.
                         sessionStorage.setItem('pendingChatMessage', JSON.stringify({
                             sessionId,
                             message: prompt,
-                            files: agentDataFiles
                         }));
                         router.push(`/agent/chat/${sessionId}`);
                     }
@@ -331,16 +333,61 @@ export default function AgentPage() {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
+
+        // ─── Agent mode: PDFs only, ingested server-side. ───
+        // All parsing (text + images + OCR fallback) runs on the server via
+        // /api/agent/ingest-pdf. The client just uploads the file and keeps
+        // the returned uploadId. No local extraction.
+        if (isAgentMode) {
+            for (const file of files) {
+                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                if (ext !== 'pdf') {
+                    setError(`Only PDF files are accepted in agent mode (rejected: ${file.name}).`);
+                    continue;
+                }
+                try {
+                    const fd = new FormData();
+                    fd.append('file', file, file.name);
+                    fd.append('filename', file.name);
+                    const res = await fetch('/api/agent/ingest-pdf', { method: 'POST', body: fd });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+                        if (res.status === 413 && err?.error === 'TOTAL_CHAR_CAP') {
+                            setError(`File would exceed the 200,000-character total cap. Remaining budget: ${err.remaining?.toLocaleString() ?? 0}.`);
+                        } else {
+                            setError(err?.error || err?.message || `Upload failed (HTTP ${res.status}).`);
+                        }
+                        continue;
+                    }
+                    const meta = await res.json();
+                    setSettings(s => ({
+                        ...s,
+                        uploadIds: [...s.uploadIds, meta.uploadId],
+                        uploadMeta: [...s.uploadMeta, {
+                            id: meta.uploadId,
+                            filename: meta.filename,
+                            charCount: meta.charCount,
+                            imageCount: meta.imageCount,
+                            pageCount: meta.pageCount,
+                            ocrUsed: meta.ocrUsed,
+                        }],
+                    }));
+                } catch (err: any) {
+                    console.error(`[ingest] ${file.name}:`, err);
+                    setError(err?.message || 'Upload failed.');
+                }
+            }
+            e.target.value = '';
+            return;
+        }
+
+        // ─── Data-analytics / chat modes: legacy client-side extraction. ───
         for (const file of files) {
             const ext = file.name.split('.').pop()?.toLowerCase() || '';
             const binaryFormats = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
             let text = '';
 
             if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-                if (isAgentMode) {
-                    alert("Images are currently only supported in Chat mode.");
-                    continue;
-                }
                 try {
                     const reader = new FileReader();
                     const base64Promise = new Promise<string>((resolve) => {
@@ -395,28 +442,29 @@ export default function AgentPage() {
                 text = await file.text();
             }
 
-            if (!isAgentMode) {
-                setAgentDataFiles(prev => [...prev, { name: file.name, type: ext, content: text }]);
-            } else {
-                setSettings(s => ({ 
-                    ...s, 
-                    referenceFilesText: [...s.referenceFilesText, text],
-                    referenceFileNames: [...s.referenceFileNames, file.name]
-                }));
-            }
+            // Agent-mode branch above already handled its files and returned; we
+            // only reach here for data-analytics / chat, which keep the legacy
+            // client-side text extraction.
+            setAgentDataFiles(prev => [...prev, { name: file.name, type: ext, content: text }]);
         }
     };
 
-    const removeFile = (idx: number) => {
+    const removeFile = async (idx: number) => {
         if (!isAgentMode) {
             setAgentDataFiles(prev => prev.filter((_, i) => i !== idx));
-        } else {
-            setSettings(s => ({
-                ...s,
-                referenceFilesText: s.referenceFilesText.filter((_, i) => i !== idx),
-                referenceFileNames: s.referenceFileNames.filter((_, i) => i !== idx)
-            }));
+            return;
         }
+        const target = settings.uploadMeta[idx];
+        if (target) {
+            // Best-effort: drop the server-side cached upload too.
+            fetch(`/api/agent/ingest-pdf?id=${encodeURIComponent(target.id)}`, { method: 'DELETE' })
+                .catch(() => {});
+        }
+        setSettings(s => ({
+            ...s,
+            uploadIds: s.uploadIds.filter((_, i) => i !== idx),
+            uploadMeta: s.uploadMeta.filter((_, i) => i !== idx),
+        }));
     };
 
     const handleLinkAdd = () => {
@@ -739,21 +787,34 @@ export default function AgentPage() {
                 </div>
 
                 {/* Attached files */}
-                {(!isAgentMode ? agentDataFiles.length > 0 : settings.referenceFileNames.length > 0) && (
+                {(!isAgentMode ? agentDataFiles.length > 0 : settings.uploadMeta.length > 0) && (
                     <div className="w-full mt-3 flex flex-wrap gap-2">
-                        {(!isAgentMode ? agentDataFiles : settings.referenceFileNames).map((file: any, idx) => (
-                            <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[200px]">
-                                {(!isAgentMode && file.type && file.type.match(/^(jpg|jpeg|png|webp)$/i)) ? (
-                                    <img src={file.content} alt={file.name} className="w-5 h-5 object-cover rounded shadow-sm" />
-                                ) : (
-                                    <IconFileText className="w-3.5 h-3.5 text-[#999]" />
-                                )}
-                                <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{!isAgentMode ? file.name : file}</span>
-                                <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors">
-                                    <IconX className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        ))}
+                        {!isAgentMode ? (
+                            agentDataFiles.map((file: any, idx) => (
+                                <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[200px]">
+                                    {file.type && file.type.match(/^(jpg|jpeg|png|webp)$/i) ? (
+                                        <img src={file.content} alt={file.name} className="w-5 h-5 object-cover rounded shadow-sm" />
+                                    ) : (
+                                        <IconFileText className="w-3.5 h-3.5 text-[#999]" />
+                                    )}
+                                    <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{file.name}</span>
+                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors">
+                                        <IconX className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            ))
+                        ) : (
+                            settings.uploadMeta.map((u, idx) => (
+                                <div key={u.id} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]" title={`${u.charCount.toLocaleString()} chars · ${u.imageCount} images · ${u.pageCount} pages${u.ocrUsed ? " · OCR" : ""}`}>
+                                    <IconFileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
+                                    <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
+                                    <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
+                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors shrink-0">
+                                        <IconX className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 )}
 

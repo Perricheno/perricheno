@@ -124,14 +124,14 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 <input
                     type="range"
                     min={500}
-                    max={6000}
-                    step={250}
+                    max={30000}
+                    step={500}
                     value={settings.wordCount}
                     onChange={(e) => updateSetting("wordCount", Number(e.target.value))}
                     className="w-full h-1.5 bg-[var(--border)] rounded-full appearance-none cursor-pointer accent-[var(--foreground)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[var(--foreground)] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-gray-300 font-mono">
-                    <span>500</span><span>2000</span><span>4000</span><span>6000</span>
+                    <span>500</span><span>5k</span><span>15k</span><span>30k</span>
                 </div>
             </div>
 
