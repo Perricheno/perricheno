@@ -37,10 +37,13 @@ export interface IngestedPdf {
 
 async function stirlingMultipart(endpoint: string, pdfBuffer: Buffer, filename: string, extra?: Record<string, string>): Promise<Response> {
     const form = new FormData();
-    // Wrap in Uint8Array — Node 22+ tightened Blob's BlobPart type so raw
-    // Buffer (whose backing buffer is ArrayBufferLike, not ArrayBuffer) is no
-    // longer assignable directly.
-    const blob = new Blob([new Uint8Array(pdfBuffer.buffer, pdfBuffer.byteOffset, pdfBuffer.byteLength)], { type: "application/pdf" });
+    // Node 22+ tightened Blob's BlobPart type: Buffer and Uint8Array<ArrayBufferLike>
+    // both have `buffer: ArrayBufferLike`, which is no longer assignable to the
+    // required ArrayBuffer-backed view. Copy into a freshly-allocated ArrayBuffer
+    // to produce a Uint8Array<ArrayBuffer>.
+    const fresh = new Uint8Array(new ArrayBuffer(pdfBuffer.byteLength));
+    fresh.set(pdfBuffer);
+    const blob = new Blob([fresh], { type: "application/pdf" });
     form.append("fileInput", blob, filename);
     if (extra) for (const [k, v] of Object.entries(extra)) form.append(k, v);
 
