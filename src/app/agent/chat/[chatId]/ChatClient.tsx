@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import {
     IconArrowRight, IconLoader2, IconPaperclip,
     IconX, IconMenu2, IconFileText, IconTrash,
@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useRouter } from "next/navigation";
 import { AgentSession } from "../../types";
 import { AgentBillingModal } from "../../AgentBillingModal";
@@ -74,11 +75,22 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
     const currentSessionId = initialSession.id;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const pendingHandled = useRef(false);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Use scrollTop = scrollHeight on the container directly. scrollIntoView on
+    // a tail sentinel can miss first render and stutter during rapid streaming
+    // updates. useLayoutEffect runs before paint so there's no visible jump.
+    useLayoutEffect(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        // If the user has scrolled up more than ~200px, don't yank them back.
+        const threshold = 200;
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (distanceFromBottom < threshold) {
+            el.scrollTop = el.scrollHeight;
+        }
     }, [messages, streamingText]);
 
     useEffect(() => {
@@ -367,10 +379,33 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
         return -1;
     })();
 
-    const copyMessage = (text: string, idx: number) => {
-        navigator.clipboard.writeText(text);
-        setCopiedIdx(idx);
-        setTimeout(() => setCopiedIdx(null), 2000);
+    // Clipboard with execCommand fallback — navigator.clipboard isn't available
+    // on http:// origins (only secure contexts), which breaks local previews.
+    const copyMessage = async (text: string, idx: number) => {
+        let ok = false;
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                ok = true;
+            }
+        } catch {}
+        if (!ok) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.top = '-9999px';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch {}
+        }
+        if (ok) {
+            setCopiedIdx(idx);
+            setTimeout(() => setCopiedIdx(null), 2000);
+        }
     };
 
     const handleSelectSession = (s: AgentSession) => {
@@ -484,7 +519,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                 </div>
 
                 {/* Messages — only scrollable region */}
-                <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-6 w-full max-w-4xl mx-auto">
+                <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-6 w-full max-w-4xl mx-auto">
                     {messages.length === 0 && !isStreaming && (
                         <div className="flex flex-col items-center justify-center h-full text-center select-none pt-10">
                             <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 opacity-20 mb-4" />
@@ -547,7 +582,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                     }`}>
                                         {msg.role === 'assistant' ? (
                                             <div className="prose prose-sm max-w-none leading-relaxed prose-headings:font-bold prose-headings:text-[#1a1a1a] prose-p:text-[#1a1a1a] prose-a:text-blue-600 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-mono prose-pre:bg-[#1a1a1a] prose-pre:text-gray-200 prose-pre:rounded-xl">
-                                                <ReactMarkdown>{textContent || (msg.aborted ? '_(stopped)_' : '')}</ReactMarkdown>
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{textContent || (msg.aborted ? '_(stopped)_' : '')}</ReactMarkdown>
                                             </div>
                                         ) : (
                                             <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{textContent}</p>
@@ -595,7 +630,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                             <div className="max-w-[85%] md:max-w-[75%] py-2 text-[#1a1a1a]">
                                 {streamingText ? (
                                     <div className="prose prose-sm max-w-none leading-relaxed prose-headings:font-bold prose-headings:text-[#1a1a1a] prose-p:text-[#1a1a1a] prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-pre:bg-[#1a1a1a] prose-pre:text-gray-200 prose-pre:rounded-xl">
-                                        <ReactMarkdown>{streamingText}</ReactMarkdown>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingText}</ReactMarkdown>
                                         <span className="inline-block w-1.5 h-4 bg-black animate-pulse ml-0.5" />
                                     </div>
                                 ) : (
