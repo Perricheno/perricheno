@@ -652,7 +652,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                                placeholder="Спроси Perricheno"
+                                placeholder="Ask Perricheno…"
                                 className="w-full text-[15px] font-medium text-[#1a1a1a] bg-transparent outline-none placeholder:text-gray-400 resize-none max-h-[150px] leading-relaxed"
                                 rows={1}
                                 disabled={isStreaming}

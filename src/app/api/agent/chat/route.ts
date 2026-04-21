@@ -248,14 +248,16 @@ export async function POST(req: Request) {
                         aborted: aborted || undefined,
                     };
                     history.push(assistantRow);
+                    const msg = message ?? '';
+                    const newTitle = await maybeAutoTitle(session.title, msg, history);
                     await updateAgentSession(sessionId, {
                         stream_text: JSON.stringify(history),
                         status: 'done',
-                        title: await maybeAutoTitle(session.title, message, history),
+                        title: newTitle,
                     });
 
                     // Billing: real tokens × 3 chars/token equivalence + flat image cost.
-                    const inputTokens = usage?.prompt_tokens ?? Math.ceil(message.length / 3);
+                    const inputTokens = usage?.prompt_tokens ?? Math.ceil(msg.length / 3);
                     const outputTokens = usage?.completion_tokens ?? Math.ceil(fullResponse.length / 3);
                     const totalChars = (inputTokens + outputTokens) * 3 + imageTokensBudget * 3;
                     if (totalChars > 0) await checkAndDeductUsage(userId, 'chars', totalChars);
@@ -267,6 +269,10 @@ export async function POST(req: Request) {
                         promptTokens: inputTokens,
                         completionTokens: outputTokens,
                     })}\n\n`));
+
+                    // Fire-and-forget smart-title refresh once the chat has real
+                    // substance. Doesn't block the stream close.
+                    generateSmartTitleIfNeeded(sessionId, history, newTitle).catch(() => {});
                 } catch (persistErr) {
                     console.error('[chat] persist failed:', persistErr);
                 }
@@ -295,4 +301,43 @@ async function maybeAutoTitle(current: string, firstMsg: string, history: ChatMe
     if (current && current !== 'New Chat') return current;
     const seed = firstMsg.trim().slice(0, 80).replace(/\s+/g, ' ');
     return seed || 'Chat';
+}
+
+// Fire-and-forget AI title. Called once history hits ~3 exchanges and the
+// title is still the naive first-message seed. Short call, cheap model tier.
+async function generateSmartTitleIfNeeded(sessionId: string, history: ChatMessageRow[], currentTitle: string): Promise<void> {
+    if (history.length < 6) return;                           // at least 3 exchanges
+    if (!currentTitle) return;
+    // Only replace if the current title is the naive seed (= first user msg prefix).
+    const firstUser = history.find(m => m.role === 'user');
+    if (!firstUser) return;
+    const naiveSeed = firstUser.content.trim().slice(0, 80).replace(/\s+/g, ' ');
+    if (currentTitle !== naiveSeed && currentTitle !== 'New Chat') return;
+
+    try {
+        // Condense the conversation to the first 4 turns; plenty for titling.
+        const snippet = history.slice(0, 4).map(m => `${m.role.toUpperCase()}: ${m.content.slice(0, 400)}`).join('\n');
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({
+                model: 'gpt-5-mini-2025-08-07',
+                max_tokens: 20,
+                temperature: 0.3,
+                messages: [
+                    { role: 'system', content: 'Produce a 3-6 word title summarizing this chat. No punctuation, no quotes, no prefix. Match the conversation language.' },
+                    { role: 'user', content: snippet },
+                ],
+            }),
+            signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) return;
+        const j = await res.json();
+        const title = String(j?.choices?.[0]?.message?.content || '').trim().replace(/^["'«»]|["'«»]$/g, '').slice(0, 80);
+        if (title && title.length > 2) {
+            await updateAgentSession(sessionId, { title });
+        }
+    } catch (e) {
+        console.warn('[chat] title generation failed:', (e as any)?.message);
+    }
 }
