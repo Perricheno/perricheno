@@ -199,7 +199,7 @@ async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
                     { role: 'system', content: sys },
                     { role: 'user', content: userMsg },
                 ],
-                { jsonMode: true, maxTokens: 16_000, temperature: 0.2, timeoutMs: 180_000 },
+                { jsonMode: true, timeoutMs: 180_000 },
             );
 
             const parsed: any = parseJsonLoose(r.text);
