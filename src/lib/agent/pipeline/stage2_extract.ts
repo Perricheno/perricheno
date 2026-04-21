@@ -133,8 +133,6 @@ export async function runStage2(
         try {
             const r = await withRetry(() => chatCompletion(messages, {
                 jsonMode: true,
-                maxTokens: 2500,
-                temperature: 0.2,
                 timeoutMs: 90_000,
             }), 2, 1000);
 

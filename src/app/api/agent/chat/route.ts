@@ -322,8 +322,6 @@ async function generateSmartTitleIfNeeded(sessionId: string, history: ChatMessag
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
             body: JSON.stringify({
                 model: 'gpt-5-mini-2025-08-07',
-                max_tokens: 20,
-                temperature: 0.3,
                 messages: [
                     { role: 'system', content: 'Produce a 3-6 word title summarizing this chat. No punctuation, no quotes, no prefix. Match the conversation language.' },
                     { role: 'user', content: snippet },

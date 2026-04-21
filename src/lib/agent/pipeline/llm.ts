@@ -18,11 +18,8 @@ export interface ChatMessage {
 }
 
 export interface ChatOpts {
-    maxTokens?: number;
     jsonMode?: boolean;           // force JSON object response
-    temperature?: number;
     timeoutMs?: number;
-    stop?: string[];
 }
 
 export interface ChatResult {
@@ -56,9 +53,6 @@ export async function chatCompletion(messages: ChatMessage[], opts: ChatOpts = {
         model: MODEL,
         messages,
     };
-    if (opts.maxTokens) body.max_tokens = opts.maxTokens;
-    if (opts.temperature !== undefined) body.temperature = opts.temperature;
-    if (opts.stop) body.stop = opts.stop;
     if (opts.jsonMode) body.response_format = { type: "json_object" };
 
     const controller = new AbortController();

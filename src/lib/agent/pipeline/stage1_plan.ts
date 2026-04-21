@@ -166,7 +166,7 @@ export async function runStage1(
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt },
             ],
-            { jsonMode: true, maxTokens: 4000, temperature: 0.3, timeoutMs: 60_000 },
+            { jsonMode: true, timeoutMs: 60_000 },
         ), 2, 800);
 
         const parsed = parseJsonLoose(r.text);

@@ -102,8 +102,6 @@ async function repair(mainTex: string, referencesBib: string | null, errorLog: s
     Promise<{ mainTex: string; referencesBib: string | null; tokens: number }> {
     const r = await chatCompletion(buildRepairMessages(mainTex, referencesBib, errorLog, lang), {
         jsonMode: true,
-        maxTokens: 16_000,
-        temperature: 0.1,
         timeoutMs: 180_000,
     });
 

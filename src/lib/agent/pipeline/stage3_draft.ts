@@ -103,13 +103,7 @@ export async function runStage3(
             { role: "user", content: userPrompt },
         ];
 
-        // Generous per-section cap. Typical gpt-5-mini output limit handles this
-        // in one call; chatCompletionLong continues if it trips anyway.
-        const maxTokens = Math.min(16_000, Math.max(1500, section.wordTarget * 4));
-
         const r = await chatCompletionLong(messages, {
-            maxTokens,
-            temperature: 0.6,
             timeoutMs: 180_000,
         });
 
