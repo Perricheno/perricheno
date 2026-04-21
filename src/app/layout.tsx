@@ -8,8 +8,8 @@ import { ToastProvider } from "@/components/ToastContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Perricheno",
-  description: "Student. Analyst. DevOps Engineer.",
+  title: "Perricheno — Academic AI Workspace",
+  description: "Research, write, cite, and visualize. Generate LaTeX papers, search arXiv and OpenAlex, and produce publication-ready figures in one place.",
   manifest: "/manifest.json",
   icons: {
     icon: "/newlogo.png",
