@@ -110,7 +110,9 @@ export async function POST(req: Request) {
         }
         
         // Create session immediately
+        const sessionId = crypto.randomUUID();
         const session = await createAgentSession({
+            id: sessionId,
             user_id: userId,
             title: prompt.slice(0, 100),
             doc_type: 'data_analytics',
@@ -125,6 +127,10 @@ export async function POST(req: Request) {
                 updated_at: new Date().toISOString(),
             }),
         });
+        
+        if (!session || !session.id) {
+            throw new Error("Failed to create session");
+        }
         
         // Start background pipeline (fire-and-forget)
         const settings: AnalyticsSettings = {
