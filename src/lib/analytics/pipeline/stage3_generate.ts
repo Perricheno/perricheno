@@ -82,11 +82,15 @@ function buildUserPrompt(
 ): string {
     const verifiedData = verifications.filter(v => v.verified);
     
-    // Build data context with SAMPLE (10 rows) + filename
+    // Build data context with MINIMAL SAMPLE to avoid token limit
     const dataContext = verifiedData.map(v => {
         const upload = uploads.find(u => u.id === v.uploadId);
+        
+        // CRITICAL: Only take first 10 LINES to avoid 860K token limit!
         const fullText = upload?.text_content || "";
-        const sample = getSmartSample(fullText, v.filename);
+        const lines = fullText.split('\n');
+        const first10Lines = lines.slice(0, 11).join('\n'); // header + 10 rows
+        const sample = first10Lines;
         
         return `━━━ ${v.filename} ━━━
 Type: ${v.dataType}
@@ -96,7 +100,7 @@ ${v.columns?.length ? `Available Columns: ${v.columns.join(", ")}` : ''}
 
 Summary: ${v.summary}
 
-DATA SAMPLE (first 10 rows):
+DATA SAMPLE (first few rows):
 ${sample}
 
 IMPORTANT: The full file is available at: ${v.filename}
