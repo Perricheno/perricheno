@@ -390,19 +390,31 @@ export default function AgentPage() {
                 
                 const meta = await res.json();
                 
+                console.log('[processFiles] API response:', meta);
+                console.log('[processFiles] uploadId:', meta.uploadId);
+                
+                // Validate that we have an uploadId
+                if (!meta.uploadId) {
+                    console.error('[processFiles] ERROR: No uploadId in response!', meta);
+                    setError(`Upload failed: No uploadId returned for ${file.name}`);
+                    continue;
+                }
+                
                 // Update state based on mode
                 setSettings((s: any) => ({
                     ...s,
                     uploadIds: [...s.uploadIds, meta.uploadId],
                     uploadMeta: [...s.uploadMeta, {
                         id: meta.uploadId,
-                        filename: meta.filename,
+                        filename: meta.filename || file.name,
                         charCount: meta.charCount || 0,
                         imageCount: meta.imageCount || 0,
                         pageCount: meta.pageCount || 1,
                         ocrUsed: meta.ocrUsed || false,
                     }],
                 }));
+                
+                console.log('[processFiles] File added to state:', meta.filename);
                 
             } catch (err: any) {
                 console.error(`[upload] ${file.name}:`, err);
@@ -443,7 +455,7 @@ export default function AgentPage() {
             return;
         }
         const target = settings.uploadMeta[idx];
-        if (target) {
+        if (target && target.id) {
             // Best-effort: drop the server-side cached upload too.
             fetch(`/api/agent/ingest-pdf?id=${encodeURIComponent(target.id)}`, { method: 'DELETE' })
                 .catch(() => {});
