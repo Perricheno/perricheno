@@ -8,7 +8,7 @@ import {
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
-    IconSparkles, IconCreditCard, IconBraces
+    IconSparkles, IconCreditCard, IconBraces, IconBook2
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -40,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
         links: [
             { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
             { href: "/agent", icon: IconSparkles, label: "AI Agent" },
+            { href: "/citations", icon: IconBook2, label: "Citations" },
             { href: "/space", icon: IconBraces, label: "Space" },
             { href: "/pdf", icon: IconFileTypePdf, label: "PDF Tools" },
         ]
