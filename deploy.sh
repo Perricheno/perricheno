@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# ─── Ultra-fast, stable, zero-downtime deploy ───
+# ─── Ultra-fastest, stable, zero-downtime deploy ───
 # Optimized for speed and reliability with parallel builds and smart caching
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
