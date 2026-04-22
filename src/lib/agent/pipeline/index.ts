@@ -82,7 +82,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     totalTokens += t2;
 
     // Mark per-file statuses after extraction.
-    const fileStatus = new Map(refs.map(r => [r.uploadId, r]));
+    let fileStatus = new Map(refs.map(r => [r.uploadId, r]));
     progress.files = uploads.map(u => {
         const r = fileStatus.get(u.id);
         if (!r) return { name: u.filename, status: "pending" as const };
@@ -94,7 +94,37 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         };
     });
 
-    // ── Stage 2.5: Verify (NEW) ──
+    // ── Stage 2.7: DOI Enrichment (NEW) ──
+    let enrichedRefs = refs;
+    if (settings.useReferences && refs.some(r => r.status === "ok" && r.metadata?.doi)) {
+        progress = touch(progress, {
+            current_stage: 3,
+            label: "Enriching metadata via CrossRef API",
+            completed_stages: [1, 2],
+            progress: { done: 0, total: refs.filter(r => r.status === "ok" && r.metadata?.doi).length },
+        });
+        await writeProgress(progress);
+
+        const { runStage2_7 } = await import("./stage2_7_enrich_doi");
+        const { enrichedRefs: enriched, enrichedCount } = await runStage2_7(
+            refs,
+            async (done: number, total: number, current?: string) => {
+                progress = touch(progress, {
+                    progress: { done, total },
+                    label: `Enriching ${current ?? "reference"} (${done}/${total})`,
+                });
+                await writeProgress(progress);
+            },
+        );
+        enrichedRefs = enriched;
+        
+        // Update fileStatus map with enriched refs
+        fileStatus = new Map(enrichedRefs.map(r => [r.uploadId, r]));
+        
+        console.log(`[Pipeline] DOI enrichment: ${enrichedCount} references improved`);
+    }
+
+    // ── Stage 2.5: Verify ──
     let verifications: VerificationResult[] = [];
     if (settings.useReferences && refs.some(r => r.status === "ok")) {
         progress = touch(progress, {
@@ -146,11 +176,11 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     });
     await writeProgress(progress);
 
-    // ── Stage 3: Draft (with enhanced context) ──
+    // ── Stage 3: Draft (with enhanced context from enriched refs) ──
     const { sections, tokensUsed: t3, anyTruncated } = await runStage3(
         settings,
         plan,
-        refs,
+        enrichedRefs,  // Use enriched refs with accurate metadata
         uploads,
         verifications,
         async (done: number, total: number, heading: string) => {
@@ -176,7 +206,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     await writeProgress(progress);
 
     // ── Stage 4: Assemble (no LLM, no tokens) ──
-    const assembled = runStage4(settings, plan, refs, sections);
+    const assembled = runStage4(settings, plan, enrichedRefs, sections);
 
     progress = touch(progress, {
         current_stage: 5,
