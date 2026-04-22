@@ -28,7 +28,7 @@ export async function POST(req: Request, { params }: Ctx) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
         body: JSON.stringify({
-            model: 'gpt-5-mini',
+            model: 'gpt-5-mini-2025-08-07',
             messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
         }),
     });
