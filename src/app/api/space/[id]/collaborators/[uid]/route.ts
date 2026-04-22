@@ -15,7 +15,12 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     if (!role) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const targetUid = parseInt(uid, 10);
-    // Owner can remove anyone; editors can only remove themselves
+
+    // Owner can remove anyone except themselves (must transfer ownership first)
+    // Non-owners can only remove themselves (leave)
+    if (role === 'owner' && userId === targetUid) {
+        return NextResponse.json({ error: 'Owner cannot leave; transfer ownership first' }, { status: 403 });
+    }
     if (role !== 'owner' && userId !== targetUid) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

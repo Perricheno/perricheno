@@ -245,7 +245,7 @@ export async function createSpace(
         space_id: space.id,
         path,
         content,
-        mime_type: path.endsWith('.bib') ? 'text/plain' : 'text/plain',
+        mime_type: 'text/plain',
         size_bytes: Buffer.byteLength(content, 'utf8'),
     }));
     if (fileRows.length > 0) {
@@ -288,9 +288,6 @@ export async function getSpace(id: string, userId: number): Promise<Space | null
             .eq('user_id', userId)
             .maybeSingle();
         if (!collab) return null;
-        (data as any)._role = collab.role;
-    } else {
-        (data as any)._role = 'owner';
     }
     return data as Space;
 }
@@ -409,13 +406,13 @@ export async function renameSpaceFile(spaceId: string, oldPath: string, newPath:
     const texFiles = (await getSpaceFilesWithContent(spaceId)).filter(f => f.path.endsWith('.tex') && f.content);
     const oldBase = oldPath.replace(/\.tex$/, '');
     const newBase = newPath.replace(/\.tex$/, '');
-    for (const f of texFiles) {
-        if (!f.content) continue;
+    await Promise.all(texFiles.map(async f => {
+        if (!f.content) return;
         const updated = f.content
             .replace(new RegExp(`\\\\input\\{${escapeRegex(oldBase)}\\}`, 'g'), `\\input{${newBase}}`)
             .replace(new RegExp(`\\\\include\\{${escapeRegex(oldBase)}\\}`, 'g'), `\\include{${newBase}}`);
         if (updated !== f.content) await upsertSpaceFile(spaceId, f.path, updated);
-    }
+    }));
     await touchSpace(spaceId);
 }
 

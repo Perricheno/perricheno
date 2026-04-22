@@ -34,7 +34,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
     const slug = space.title.replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 40);
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
         status: 200,
         headers: {
             'Content-Type': 'application/zip',

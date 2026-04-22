@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
+import { getUserRoleInSpace } from '@/lib/space-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,10 @@ export async function POST(req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!OPENAI_API_KEY) return NextResponse.json({ error: 'AI not configured' }, { status: 503 });
+
+    const { id } = await params;
+    const role = await getUserRoleInSpace(id, userId);
+    if (!role) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const { log, code, filename } = await req.json() as { log: string; code: string; filename: string };
     if (!log) return NextResponse.json({ error: 'log required' }, { status: 400 });

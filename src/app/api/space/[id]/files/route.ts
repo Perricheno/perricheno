@@ -23,7 +23,7 @@ export async function GET(_req: Request, { params }: Ctx) {
         mime_type: f.mime_type,
         size_bytes: f.size_bytes,
         updated_at: f.updated_at,
-        is_binary: !!f.content_b64,
+        is_binary: f.is_binary,
     }));
     return NextResponse.json({ files: listing });
 }

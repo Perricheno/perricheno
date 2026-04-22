@@ -69,7 +69,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const router = useRouter();
     const [space, setSpace] = useState<Space>(initialSpace);
     const [files, setFiles]  = useState<FileEntry[]>(
-        initialFiles.map(f => ({ path: f.path, mime_type: f.mime_type, size_bytes: f.size_bytes, updated_at: f.updated_at, is_binary: !!f.content_b64 }))
+        initialFiles.map(f => ({ path: f.path, mime_type: f.mime_type, size_bytes: f.size_bytes, updated_at: f.updated_at, is_binary: f.is_binary }))
     );
 
     // Tabs
@@ -178,12 +178,10 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
         setCompileStatus('compiling');
         setLogOpen(false);
 
-        // Save active tab first
-        if (activeTab) {
-            const tab = tabs.find(t => t.path === activeTab);
-            if (tab && tab.content !== tab.savedContent) {
-                await saveFile(tab.path, tab.content);
-            }
+        // Save all dirty tabs before compiling
+        const dirty = tabs.filter(t => t.content !== t.savedContent);
+        if (dirty.length > 0) {
+            await Promise.all(dirty.map((t: EditorTab) => saveFile(t.path, t.content)));
         }
 
         try {
