@@ -129,7 +129,7 @@ export async function POST(req: Request) {
         columns: body.columns === 1 ? 1 : 2,
         useTemplate: body.useTemplate ?? true,
         useReferences: body.useReferences ?? false,
-        language: body.language === 'ru' ? 'ru' : 'en',
+        language: typeof body.language === 'string' && body.language ? body.language.slice(0, 10).toLowerCase() : 'en',
         authorName: body.authorName,
         courseName: body.courseName,
         dateStr: body.dateStr,

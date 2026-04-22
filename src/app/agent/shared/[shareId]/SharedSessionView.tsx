@@ -23,7 +23,7 @@ export default function SharedSessionView({ title, docType, mainTex, referencesB
     const displayedFilename = activeTab === "tex" ? "main.tex" : "references.bib";
 
     const downloadFile = (content: string, filename: string) => {
-        const blob = new Blob([content], { type: "text/plain" });
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a"); a.href = url; a.download = filename;
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);

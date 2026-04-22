@@ -80,23 +80,37 @@ export function normalizeLatexText(raw: string): string {
     return s;
 }
 
-// ── Russian-package injection ──
-// If the document contains Cyrillic but the preamble is missing T2A / babel,
-// pdflatex will refuse to compile. Inject the packages non-destructively.
+// Shared iso-639-1 → babel language name mapping.
+export const BABEL_LANG_MAP: Record<string, string> = {
+    ru: "russian",    uk: "ukrainian", kk: "kazakh",    bg: "bulgarian",
+    sr: "serbian",    mk: "macedonian", be: "belarusian",
+    de: "german",     fr: "french",    es: "spanish",   it: "italian",
+    pt: "portuguese", nl: "dutch",     pl: "polish",    cs: "czech",
+    sk: "slovak",     hu: "hungarian", ro: "romanian",  el: "greek",
+    tr: "turkish",    sv: "swedish",   no: "norsk",     da: "danish",
+    fi: "finnish",    en: "english",
+};
 
-export function ensureRussianPreamble(tex: string, language: "en" | "ru"): string {
+const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
+
+// ── Language-package injection ──
+// If the document contains Cyrillic (or targets a Cyrillic-script language)
+// but the preamble is missing T2A / babel, inject the packages non-destructively.
+
+export function ensureRussianPreamble(tex: string, language: string): string {
     const hasCyrillic = /[\u0400-\u04FF]/.test(tex);
-    if (!hasCyrillic && language !== "ru") return tex;
+    if (!hasCyrillic && !CYRILLIC_LANGS.has(language)) return tex;
 
     const hasT2A = /\\usepackage\s*\[[^\]]*T2A[^\]]*\]\s*\{fontenc\}/.test(tex);
-    const hasBabel = /\\usepackage\s*\[[^\]]*russian[^\]]*\]\s*\{babel\}/.test(tex);
+    const hasBabel = /\\usepackage\s*\[[^\]]*\]\s*\{babel\}/.test(tex);
     const hasInputenc = /\\usepackage\s*\[[^\]]*utf8[^\]]*\]\s*\{inputenc\}/.test(tex);
     if (hasT2A && hasBabel && hasInputenc) return tex;
 
+    const babelLang = BABEL_LANG_MAP[language] ?? "russian";
     const additions: string[] = [];
     if (!hasInputenc) additions.push("\\usepackage[utf8]{inputenc}");
     if (!hasT2A)      additions.push("\\usepackage[T2A]{fontenc}");
-    if (!hasBabel)    additions.push("\\usepackage[russian,english]{babel}");
+    if (!hasBabel)    additions.push(`\\usepackage[${babelLang},english]{babel}`);
 
     const block = additions.join("\n") + "\n";
     const m = tex.match(/\\documentclass[^\n]*\n/);

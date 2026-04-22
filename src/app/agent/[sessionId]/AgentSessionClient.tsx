@@ -655,7 +655,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <button onClick={() => {
-                                        const blob = new Blob([activeTab === "tex" ? mainTex : referencesBib!], { type: "text/plain" });
+                                        const blob = new Blob([activeTab === "tex" ? mainTex : referencesBib!], { type: "text/plain;charset=utf-8" });
                                         const url = URL.createObjectURL(blob); const a = document.createElement("a");
                                         a.href = url; a.download = activeTab === "tex" ? "main.tex" : "references.bib";
                                         a.click(); URL.revokeObjectURL(url);

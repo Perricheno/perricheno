@@ -101,7 +101,7 @@ export function CodeEditorModal({ image, index, onClose, onSave, sessionId }: Pr
     const downloadCode = () => {
         const a = document.createElement("a");
         const ext = isPython ? 'py' : 'R';
-        a.href = URL.createObjectURL(new Blob([code], { type: "text/plain" }));
+        a.href = URL.createObjectURL(new Blob([code], { type: "text/plain;charset=utf-8" }));
         a.download = `fig_${index + 1}_${image.chart_type}.${ext}`;
         a.click();
     };

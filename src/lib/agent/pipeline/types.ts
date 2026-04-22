@@ -12,7 +12,7 @@ export interface PipelineSettings {
     columns: 1 | 2;
     useTemplate: boolean;
     useReferences: boolean;
-    language: "en" | "ru";
+    language: string;
     authorName?: string;
     courseName?: string;
     dateStr?: string;
@@ -36,7 +36,7 @@ export interface Plan {
     sections: PlanSection[];
     totalWordTarget: number;
     docType: DocType;
-    language: "en" | "ru";
+    language: string;
 }
 
 export interface ExtractedRef {

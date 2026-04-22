@@ -6,8 +6,10 @@
 
 import JSZip from "jszip";
 import { chatCompletion, parseJsonLoose, type ChatMessage } from "./llm";
-import { normalizeLatexText, ensureRussianPreamble } from "../stages";
+import { normalizeLatexText, ensureRussianPreamble, BABEL_LANG_MAP } from "../stages";
 import type { AssembledDoc, PipelineSettings } from "./types";
+
+const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
 const COMPILER_URL = process.env.LATEX_COMPILER_URL;
 const COMPILER_KEY = process.env.LATEX_COMPILER_KEY;
@@ -66,7 +68,14 @@ async function compile(mainTex: string, referencesBib: string | null): Promise<{
 // One tightly-scoped LLM call that receives the broken LaTeX plus the compiler
 // error log and is asked to return corrected full files.
 
-function buildRepairMessages(mainTex: string, referencesBib: string | null, errorLog: string, lang: "en" | "ru"): ChatMessage[] {
+function buildRepairMessages(mainTex: string, referencesBib: string | null, errorLog: string, lang: string): ChatMessage[] {
+    const isCyrillic = CYRILLIC_LANGS.has(lang);
+    const babelLang = BABEL_LANG_MAP[lang];
+    const langNote = isCyrillic
+        ? `${babelLang ?? "Russian"} (Cyrillic); ensure T2A fontenc and babel[${babelLang ?? "russian"}] are present`
+        : babelLang
+            ? `${babelLang}; ensure babel[${babelLang}] is present`
+            : "English";
     const system = `You are a LaTeX debugging expert. You will receive a document that failed to compile with pdflatex, along with the compiler's error log. Return corrected files.
 
 Output ONLY valid JSON:
@@ -77,7 +86,7 @@ Rules:
 - Preserve content. Do not paraphrase prose. Minimal surgical edits only.
 - Escape specials properly in prose: & → \\&, % → \\%, _ → \\_, # → \\#.
 - Keep braces, environments, and math delimiters balanced.
-- Language is ${lang === "ru" ? "Russian; ensure T2A fontenc and babel[russian] are present" : "English"}.
+- Language is ${langNote}.
 - Return both files in full. Do not return diffs.
 - No markdown fences, no commentary.`;
 
@@ -98,7 +107,7 @@ Rules:
     ];
 }
 
-async function repair(mainTex: string, referencesBib: string | null, errorLog: string, lang: "en" | "ru"):
+async function repair(mainTex: string, referencesBib: string | null, errorLog: string, lang: string):
     Promise<{ mainTex: string; referencesBib: string | null; tokens: number }> {
     const r = await chatCompletion(buildRepairMessages(mainTex, referencesBib, errorLog, lang), {
         jsonMode: true,

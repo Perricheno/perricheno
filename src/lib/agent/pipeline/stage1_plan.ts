@@ -5,7 +5,16 @@
 
 import { chatCompletion, parseJsonLoose, LlmError } from "./llm";
 import type { Plan, PlanSection, PipelineSettings, DocType } from "./types";
-import { withRetry } from "../stages";
+import { withRetry, BABEL_LANG_MAP } from "../stages";
+
+const LANG_DISPLAY_NAMES: Record<string, string> = {
+    en: "English", ru: "Russian", uk: "Ukrainian", kk: "Kazakh",
+    de: "German", fr: "French", es: "Spanish", it: "Italian",
+    pt: "Portuguese", nl: "Dutch", pl: "Polish", cs: "Czech",
+    sk: "Slovak", hu: "Hungarian", ro: "Romanian", el: "Greek",
+    tr: "Turkish", sv: "Swedish", no: "Norwegian", da: "Danish",
+    fi: "Finnish", bg: "Bulgarian", sr: "Serbian",
+};
 
 // Max words per section before we force a split into sub-sections.
 const MAX_WORDS_PER_SECTION = 4000;
@@ -21,7 +30,7 @@ const DEFAULT_OUTLINES: Record<DocType, string[]> = {
     case_study:        ["Introduction", "Case Background", "Analysis", "Discussion", "Recommendations", "Conclusion"],
 };
 
-function localizedHeadings(docType: DocType, lang: "en" | "ru"): string[] {
+function localizedHeadings(docType: DocType, lang: string): string[] {
     const en = DEFAULT_OUTLINES[docType] ?? DEFAULT_OUTLINES.research;
     if (lang === "en") return en;
     const map: Record<string, string> = {
@@ -71,7 +80,7 @@ function buildFallbackPlan(s: PipelineSettings, filenames: string[]): Plan {
     };
 }
 
-function splitOversizedSections(sections: PlanSection[], lang: "en" | "ru"): PlanSection[] {
+function splitOversizedSections(sections: PlanSection[], lang: string): PlanSection[] {
     const out: PlanSection[] = [];
     for (const sec of sections) {
         if (sec.wordTarget <= MAX_WORDS_PER_SECTION) { out.push(sec); continue; }
@@ -90,7 +99,7 @@ function splitOversizedSections(sections: PlanSection[], lang: "en" | "ru"): Pla
 }
 
 function buildSystemPrompt(s: PipelineSettings, filenames: string[]): string {
-    const lang = s.language === "ru" ? "Russian" : "English";
+    const lang = LANG_DISPLAY_NAMES[s.language] ?? s.language;
     const styleNotes = {
         simple: "Undergraduate-level clarity. Short sentences, plain vocabulary.",
         medium: "Standard academic style. Clear structure, proper terminology.",

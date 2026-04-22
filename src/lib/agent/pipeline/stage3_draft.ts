@@ -6,6 +6,16 @@
 
 import { chatCompletionLong, type ChatMessage } from "./llm";
 import type { ExtractedRef, Plan, PlanSection, SectionDraft, PipelineSettings } from "./types";
+import { BABEL_LANG_MAP } from "../stages";
+
+const LANG_DISPLAY_NAMES: Record<string, string> = {
+    en: "English", ru: "Russian", uk: "Ukrainian", kk: "Kazakh",
+    de: "German", fr: "French", es: "Spanish", it: "Italian",
+    pt: "Portuguese", nl: "Dutch", pl: "Polish", cs: "Czech",
+    sk: "Slovak", hu: "Hungarian", ro: "Romanian", el: "Greek",
+    tr: "Turkish", sv: "Swedish", no: "Norwegian", da: "Danish",
+    fi: "Finnish", bg: "Bulgarian", sr: "Serbian",
+};
 
 const PREVIOUS_CONTEXT_CHARS = 1500;
 
@@ -23,7 +33,7 @@ function buildRefBundle(refs: ExtractedRef[]): string {
 }
 
 function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean): string {
-    const lang = s.language === "ru" ? "Russian" : "English";
+    const lang = LANG_DISPLAY_NAMES[s.language] ?? s.language;
     const styleDesc = {
         simple: "Simple and clear. Basic vocabulary, short sentences.",
         medium: "Standard academic style. Well-structured, proper terminology.",

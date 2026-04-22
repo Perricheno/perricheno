@@ -11,7 +11,10 @@ import {
     ensureRussianPreamble,
     findUnresolvedCitations,
     checkLatexStructure,
+    BABEL_LANG_MAP,
 } from "../stages";
+
+const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
 function buildPreamble(s: PipelineSettings): string {
     const columnClass = s.columns === 2 ? "[twocolumn]" : "";
@@ -20,9 +23,15 @@ function buildPreamble(s: PipelineSettings): string {
         "\\usepackage[utf8]{inputenc}",
     ];
 
-    if (s.language === "ru") {
+    const isCyrillic = CYRILLIC_LANGS.has(s.language);
+    if (isCyrillic) {
         lines.push("\\usepackage[T2A]{fontenc}");
-        lines.push("\\usepackage[russian,english]{babel}");
+        const babelLang = BABEL_LANG_MAP[s.language] ?? "russian";
+        lines.push(`\\usepackage[${babelLang},english]{babel}`);
+    } else if (s.language !== "en") {
+        lines.push("\\usepackage[T1]{fontenc}");
+        const babelLang = BABEL_LANG_MAP[s.language];
+        if (babelLang) lines.push(`\\usepackage[${babelLang},english]{babel}`);
     } else {
         lines.push("\\usepackage[T1]{fontenc}");
     }
@@ -86,7 +95,7 @@ function buildSectionBlock(sections: SectionDraft[]): string {
     return sections.map(sec => `\\section{${sec.heading}}\n\n${sec.body.trim()}\n`).join("\n");
 }
 
-function stubMissingBibEntries(missingKeys: string[], lang: "en" | "ru"): string {
+function stubMissingBibEntries(missingKeys: string[], lang: string): string {
     if (missingKeys.length === 0) return "";
     const note = lang === "ru" ? "Автоматически сгенерированная заглушка" : "Auto-generated placeholder";
     return missingKeys.map(k => `@misc{${k},
