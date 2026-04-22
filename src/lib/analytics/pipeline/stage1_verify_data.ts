@@ -1,4 +1,4 @@
-вер// Stage 1 — Data Verification
+// Stage 1 — Data Verification
 // Ensures uploaded files contain REAL, usable data before proceeding.
 // Prevents AI from generating synthetic/mock data.
 
