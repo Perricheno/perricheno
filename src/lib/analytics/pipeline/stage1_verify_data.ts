@@ -219,26 +219,45 @@ async function simpleVerify(upload: AgentUpload): Promise<DataVerification> {
         };
     }
     
-    // Try to extract column names for CSV/TSV
+    // Try to extract column names for CSV/TSV/XLSX
+    // Note: XLSX files are now converted to CSV automatically
     let columns: string[] | undefined;
+    let rowCount: number | undefined;
     
-    if (ext === 'csv' || ext === 'tsv') {
+    if (ext === 'csv' || ext === 'tsv' || ext === 'xlsx' || ext === 'xls') {
         try {
             let text = upload.text_content || "";
             
-            // If in Storage, download first line only
+            // If in Storage, download (XLSX will be auto-converted to CSV)
             if (upload.storage_path && !text) {
                 const fullText = await downloadTextFromStorage(upload.storage_path);
-                text = fullText.split('\n')[0]; // Only first line
+                
+                // Extract columns from first line
+                const lines = fullText.split('\n').filter(l => l.trim());
+                if (lines.length > 0) {
+                    const delimiter = ext === 'tsv' ? '\t' : ',';
+                    columns = lines[0].split(delimiter)
+                        .map(c => c.trim().replace(/^["']|["']$/g, ''))
+                        .filter(Boolean);
+                    
+                    rowCount = lines.length - 1; // Exclude header
+                }
             } else if (text) {
-                text = text.split('\n')[0]; // Only first line
+                // Extract from DB text
+                const lines = text.split('\n').filter(l => l.trim());
+                if (lines.length > 0) {
+                    const delimiter = ext === 'tsv' ? '\t' : ',';
+                    columns = lines[0].split(delimiter)
+                        .map(c => c.trim().replace(/^["']|["']$/g, ''))
+                        .filter(Boolean);
+                    
+                    rowCount = lines.length - 1;
+                }
             }
             
-            // Parse columns
-            const delimiter = ext === 'tsv' ? '\t' : ',';
-            columns = text.split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-            
-            console.log(`[Stage1] Extracted ${columns.length} columns from ${upload.filename}`);
+            if (columns && columns.length > 0) {
+                console.log(`[Stage1] Extracted ${columns.length} columns, ${rowCount || 0} rows from ${upload.filename}`);
+            }
         } catch (e) {
             console.warn(`[Stage1] Failed to extract columns from ${upload.filename}:`, e);
         }
@@ -250,8 +269,10 @@ async function simpleVerify(upload: AgentUpload): Promise<DataVerification> {
         filename: upload.filename,
         verified: true,
         dataType: 'tabular',
+        rowCount,
+        columnCount: columns?.length,
         columns,
-        summary: `Data file ready for analysis (${ext.toUpperCase()} format)${columns ? ` with ${columns.length} columns` : ''}`,
+        summary: `Data file ready for analysis (${ext.toUpperCase()} format)${columns ? ` with ${columns.length} columns` : ''}${rowCount ? ` and ${rowCount} rows` : ''}`,
         warnings: [],
     };
 }

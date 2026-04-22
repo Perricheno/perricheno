@@ -36,11 +36,17 @@ Return ONLY valid JSON:
 
 Rules:
 - ONLY recommend charts that can be created with the ACTUAL data provided
-- dataColumns MUST be real column names from the data
-- priority: 1-5 (5=most important, 1=optional)
-- Recommend 2-5 charts maximum
+- dataColumns MUST be real column names from the data (case-sensitive!)
+- priority: 1-5 (5=most important/insightful, 1=optional/supplementary)
+- Recommend 2-5 charts maximum (focus on quality over quantity)
 - DO NOT recommend charts if data doesn't support them
 - Consider data type: tabular vs text vs image
+- Match chart type to data characteristics:
+  * Categorical data → bar, pie, treemap
+  * Time series → line, area
+  * Distributions → histogram, boxplot, violin
+  * Correlations → scatter, heatmap
+  * Comparisons → bar, lollipop, dumbbell
 
 CRITICAL: You MUST use the actual column names and data structure provided. NO synthetic data.
 
