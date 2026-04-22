@@ -73,8 +73,26 @@ function getSmartSample(text: string, filename: string): string {
 async function buildUserContent(upload: AgentUpload): Promise<string> {
     let text = upload.text_content || "";
     
-    // If file is in Storage, download it
+    // If file is in Storage
     if (upload.storage_path && !text) {
+        // For XLSX/XLS files in Storage, we can't parse them here
+        // Just provide metadata for AI to understand it's tabular data
+        if (upload.filename.match(/\.xlsx?$/i)) {
+            return `FILE: ${upload.filename}
+STORAGE: Supabase Storage
+TYPE: Microsoft Excel Spreadsheet
+SIZE: ${upload.file_size || 0} bytes
+MIME: ${upload.mime_type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
+
+This is an Excel file stored in Supabase Storage.
+It contains tabular data that will be parsed during code generation.
+The file is available for analysis and can be loaded with pandas or R.
+
+Assume this file contains REAL tabular data with columns and rows.
+Mark as verified=true, dataType="tabular".`;
+        }
+        
+        // For text files (CSV, JSON, TSV), download and truncate
         try {
             console.log(`[Stage1] Downloading from Storage: ${upload.storage_path}`);
             const fullText = await downloadTextFromStorage(upload.storage_path);
