@@ -93,8 +93,24 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                         </div>
                     </div>
                 </>
+            ) : agentSubMode === "data_analytics" ? (
+                <>
+                    {/* Data Analytics: Only Runtime */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Scientific Runtime</label>
+                        <SegmentedControl
+                            options={[{ label: "R (Statistics)", value: "R" }, { label: "Python (Data Science)", value: "Python" }]}
+                            value={settings.runtime}
+                            onChange={(v) => updateSetting("runtime", v)}
+                        />
+                        <p className="text-[10px] text-gray-400 mt-2">
+                            Choose the programming language for data visualization and analysis.
+                        </p>
+                    </div>
+                </>
             ) : (
                 <>
+                    {/* Document Generation: Full settings */}
                     {/* Row 1: Language + Style */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">

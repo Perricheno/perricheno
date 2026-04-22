@@ -56,7 +56,10 @@ function buildUserPrompt(
     
     const dataContext = verifiedData.map(v => {
         const upload = uploads.find(u => u.id === v.uploadId);
-        const preview = upload?.text_content?.slice(0, 3000) || "";
+        // CRITICAL: Only first 10 lines to avoid token limit
+        const fullText = upload?.text_content || "";
+        const lines = fullText.split('\n');
+        const preview = lines.slice(0, 11).join('\n'); // header + 10 rows
         
         return `━━━ ${v.filename} ━━━
 Type: ${v.dataType}
