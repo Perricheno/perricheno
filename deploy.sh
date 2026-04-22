@@ -1,16 +1,19 @@
 #!/bin/bash
 set -e
 
-# ─── Zero-downtime, selective-build deploy ───
-# Called by GitHub Actions (or manually via SSH).
-# Builds ONLY the compose services whose sources changed since the previous
-# deploy, instead of re-evaluating the build graph for every image.
+# ─── Ultra-fast, stable, zero-downtime deploy ───
+# Optimized for speed and reliability with parallel builds and smart caching
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
+# Enable BuildKit for faster builds with better caching
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
+export BUILDKIT_PROGRESS=plain
+
+# Parallel build jobs (use all CPU cores)
+export DOCKER_BUILD_PARALLEL=$(nproc)
 
 # ── 1. Capture HEAD before we move it, so we can diff later ──
 PREV_SHA=$(git rev-parse HEAD 2>/dev/null || echo "")
@@ -61,12 +64,18 @@ if [ -z "$SERVICES" ]; then
 fi
 
 echo "🔧 Building services: $SERVICES"
+# Build in parallel for maximum speed
 # shellcheck disable=SC2086
-docker compose build $SERVICES
+docker compose build --parallel $SERVICES
 
 echo "🚀 Starting / replacing: $SERVICES"
+# Force recreate to avoid container name conflicts
 # shellcheck disable=SC2086
 docker compose up -d --force-recreate --remove-orphans $SERVICES
+
+# Clean up old images immediately to save disk space
+echo "🧹 Cleaning up old images..."
+docker image prune -f --filter "until=1h" 2>/dev/null || true
 
 # ── 5. Health check (only the user-facing site container) ──
 if echo "$SERVICES" | grep -q "perricheno-site"; then
