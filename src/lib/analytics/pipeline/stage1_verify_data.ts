@@ -1,4 +1,4 @@
-// Stage 1 — Data Verification
+вер// Stage 1 — Data Verification
 // Ensures uploaded files contain REAL, usable data before proceeding.
 // Prevents AI from generating synthetic/mock data.
 
@@ -77,7 +77,13 @@ async function buildUserContent(upload: AgentUpload): Promise<string> {
     if (upload.storage_path && !text) {
         try {
             console.log(`[Stage1] Downloading from Storage: ${upload.storage_path}`);
-            text = await downloadTextFromStorage(upload.storage_path);
+            const fullText = await downloadTextFromStorage(upload.storage_path);
+            
+            // CRITICAL: Only take first 10 lines to avoid token limit!
+            const lines = fullText.split('\n');
+            text = lines.slice(0, 11).join('\n'); // header + 10 rows
+            
+            console.log(`[Stage1] Truncated ${fullText.length} chars to ${text.length} chars (first 10 lines)`);
         } catch (e: any) {
             console.error(`[Stage1] Failed to download from Storage:`, e);
             return `FILE: ${upload.filename}
@@ -87,14 +93,18 @@ MIME: ${upload.mime_type || 'unknown'}
 
 This file is stored in Supabase Storage but could not be downloaded.`;
         }
+    } else if (text) {
+        // CRITICAL: If text from DB, also truncate to first 10 lines!
+        const lines = text.split('\n');
+        text = lines.slice(0, 11).join('\n');
     }
     
     const hasImages = Array.isArray(upload.images_json) && upload.images_json.length > 0;
     
-    // Get smart sample based on file type
-    const sample = getSmartSample(text, upload.filename);
+    // Get smart sample based on file type (already truncated)
+    const sample = text;
     
-    // Check for common data file indicators
+    // Check for common data file indicators (on truncated text)
     const looksLikeCSV = text.includes(',') && text.split('\n').length > 2;
     const looksLikeTSV = text.includes('\t') && text.split('\n').length > 2;
     const looksLikeJSON = text.trim().startsWith('{') || text.trim().startsWith('[');
