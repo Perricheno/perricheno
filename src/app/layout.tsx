@@ -30,6 +30,12 @@ export const viewport: Viewport = {
 };
 
 import MinimalSidebar from "@/components/MinimalSidebar";
+import { initializeServer } from "@/lib/server-init";
+
+// Initialize server tasks (runs once)
+if (typeof window === 'undefined') {
+  initializeServer();
+}
 
 export default function RootLayout({
   children,

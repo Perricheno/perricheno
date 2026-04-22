@@ -78,12 +78,16 @@ function buildUserPrompt(
     plan: ChartPlan,
     verifications: DataVerification[],
     uploads: AgentUpload[],
-    runtime: Runtime
+    runtime: Runtime,
+    fileMap?: Map<string, string>
 ): string {
     const verifiedData = verifications.filter(v => v.verified);
     
     // Build data context with ONLY METADATA (no text_content!)
     const dataContext = verifiedData.map(v => {
+        // Get filepath from fileMap (if available)
+        const filepath = fileMap?.get(v.uploadId) || v.filename;
+        
         return `━━━ ${v.filename} ━━━
 Type: ${v.dataType}
 ${v.rowCount ? `Rows: ${v.rowCount}` : ''}
@@ -92,9 +96,9 @@ ${v.columns?.length ? `Available Columns: ${v.columns.join(", ")}` : ''}
 
 Summary: ${v.summary}
 
-IMPORTANT: The full file is available at: ${v.filename}
+IMPORTANT: The full file is available at: ${filepath}
 You MUST load the full file in your code using:
-${runtime === 'Python' ? `df = pd.read_csv('${v.filename}')` : `data <- read.csv('${v.filename}')`}
+${runtime === 'Python' ? `df = pd.read_csv('${filepath}')` : `data <- read.csv('${filepath}')`}
 `;
     }).join("\n\n");
     
@@ -203,6 +207,7 @@ export async function runStage3(
     uploads: AgentUpload[],
     runtime: Runtime,
     onProgress?: (done: number, total: number, chartType: string) => void,
+    fileMap?: Map<string, string>, // uploadId -> filepath on disk
 ): Promise<{ charts: GeneratedChart[]; tokensUsed: number }> {
     const charts: GeneratedChart[] = [];
     let totalTokens = 0;
@@ -220,7 +225,7 @@ export async function runStage3(
             onProgress?.(i, plans.length, plan.chartType);
             
             // Generate code with AI
-            const userPrompt = buildUserPrompt(plan, verifications, uploads, runtime);
+            const userPrompt = buildUserPrompt(plan, verifications, uploads, runtime, fileMap);
             
             const messages: ChatMessage[] = [
                 { role: "system", content: systemPrompt },

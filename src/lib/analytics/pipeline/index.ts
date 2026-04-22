@@ -14,6 +14,7 @@ export interface RunAnalyticsPipelineInput {
     settings: AnalyticsSettings;
     uploads: AgentUpload[];
     writeProgress: ProgressWriter;
+    fileMap?: Map<string, string>; // uploadId -> filepath on disk
 }
 
 function touch(p: StageProgress, patch: Partial<StageProgress>): StageProgress {
@@ -23,7 +24,7 @@ function touch(p: StageProgress, patch: Partial<StageProgress>): StageProgress {
 export async function runAnalyticsPipeline(
     input: RunAnalyticsPipelineInput
 ): Promise<AnalyticsPipelineResult> {
-    const { settings, uploads, writeProgress } = input;
+    const { settings, uploads, writeProgress, fileMap } = input;
     let totalTokens = 0;
 
     let progress: StageProgress = {
@@ -104,7 +105,8 @@ export async function runAnalyticsPipeline(
                 label: `Generating ${chartType} (${done}/${total})`,
             });
             await writeProgress(progress);
-        }
+        },
+        fileMap // Pass fileMap to Stage 3
     );
     totalTokens += t3;
 

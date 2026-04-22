@@ -17,6 +17,7 @@ services:
       - .env
     volumes:
       - db-data:/app/db
+      - analytics-data:/tmp/analytics-data
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/" ]
       interval: 15s
@@ -39,6 +40,8 @@ services:
       dockerfile: Dockerfile
     container_name: r-compiler
     restart: always
+    volumes:
+      - analytics-data:/tmp/analytics-data
     # NO ports exposed — internal only via Docker network
     healthcheck:
       test: [ "CMD", "Rscript", "-e", "tryCatch(readLines(url('http://127.0.0.1:8000/health')), error=function(e) quit(status=1))" ]
@@ -55,6 +58,8 @@ services:
       dockerfile: Dockerfile
     container_name: python-compiler
     restart: always
+    volumes:
+      - analytics-data:/tmp/analytics-data
     # NO ports exposed — internal only via Docker network
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')" ]
@@ -125,6 +130,11 @@ services:
 
 volumes:
   db-data:
+  analytics-data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
 
 networks:
   cloudflare:

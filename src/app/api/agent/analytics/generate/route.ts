@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
 import { checkAndDeductUsage, getAgentUploadsByIds, createAgentSession, updateAgentSession } from '@/lib/db';
 import { runAnalyticsPipeline } from '@/lib/analytics/pipeline';
+import { saveFilesToDisk, deleteFiles } from '@/lib/analytics/fileManager';
 import type { AnalyticsSettings } from '@/lib/analytics/pipeline/types';
 import type { StageProgress } from '@/lib/agent/stages';
 
@@ -26,8 +27,13 @@ async function runBackground(
             throw new Error("No uploads found");
         }
         
+        // Save files to shared volume for R/Python compilers
+        console.log(`[Analytics-BG] Saving ${uploads.length} files to disk...`);
+        const fileMap = await saveFilesToDisk(uploads);
+        const savedFiles = Array.from(fileMap.values());
+        
         // CRITICAL: Clear text_content to avoid sending huge data to OpenAI
-        // Files are accessed by filename on the server, not by text_content
+        // Files are now on disk, accessible by compilers
         uploads.forEach(u => {
             u.text_content = null;
         });
@@ -40,12 +46,24 @@ async function runBackground(
             });
         };
         
-        // Run pipeline
-        const result = await runAnalyticsPipeline({
-            settings,
-            uploads,
-            writeProgress,
-        });
+        let result;
+        try {
+            // Run pipeline with fileMap
+            result = await runAnalyticsPipeline({
+                settings,
+                uploads,
+                writeProgress,
+                fileMap, // Pass fileMap to pipeline
+            });
+            
+            // Clean up files after pipeline completes
+            await deleteFiles(savedFiles);
+            console.log(`[Analytics-BG] Cleaned up ${savedFiles.length} temporary files`);
+        } catch (error) {
+            // Clean up files even if pipeline fails
+            await deleteFiles(savedFiles);
+            throw error;
+        }
         
         // Deduct usage
         await checkAndDeductUsage(userId, 'chars', result.totalTokens * 3);  // tokens → chars
