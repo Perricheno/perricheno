@@ -203,7 +203,7 @@ function validateVerification(raw: any, uploadId: string, filename: string): Dat
 }
 
 // Simple file-based verification WITHOUT OpenAI to avoid rate limits
-function simpleVerify(upload: AgentUpload): DataVerification {
+async function simpleVerify(upload: AgentUpload): Promise<DataVerification> {
     const ext = upload.filename.split('.').pop()?.toLowerCase() || '';
     
     // Check if it's a data file
@@ -219,13 +219,39 @@ function simpleVerify(upload: AgentUpload): DataVerification {
         };
     }
     
+    // Try to extract column names for CSV/TSV
+    let columns: string[] | undefined;
+    
+    if (ext === 'csv' || ext === 'tsv') {
+        try {
+            let text = upload.text_content || "";
+            
+            // If in Storage, download first line only
+            if (upload.storage_path && !text) {
+                const fullText = await downloadTextFromStorage(upload.storage_path);
+                text = fullText.split('\n')[0]; // Only first line
+            } else if (text) {
+                text = text.split('\n')[0]; // Only first line
+            }
+            
+            // Parse columns
+            const delimiter = ext === 'tsv' ? '\t' : ',';
+            columns = text.split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+            
+            console.log(`[Stage1] Extracted ${columns.length} columns from ${upload.filename}`);
+        } catch (e) {
+            console.warn(`[Stage1] Failed to extract columns from ${upload.filename}:`, e);
+        }
+    }
+    
     // All data files are assumed valid
     return {
         uploadId: upload.id,
         filename: upload.filename,
         verified: true,
         dataType: 'tabular',
-        summary: `Data file ready for analysis (${ext.toUpperCase()} format)`,
+        columns,
+        summary: `Data file ready for analysis (${ext.toUpperCase()} format)${columns ? ` with ${columns.length} columns` : ''}`,
         warnings: [],
     };
 }
@@ -240,13 +266,13 @@ export async function runStage1(
     
     console.log(`[Analytics-Stage1] Verifying ${uploads.length} files (simple mode - no AI)`);
     
-    // Simple verification without OpenAI
-    const results = uploads.map((upload, index) => {
-        const result = simpleVerify(upload);
-        console.log(`[Analytics-Stage1] ${upload.filename}: verified=${result.verified}, type=${result.dataType}`);
+    // Simple verification without OpenAI (with column extraction)
+    const results = await Promise.all(uploads.map(async (upload, index) => {
+        const result = await simpleVerify(upload);
+        console.log(`[Analytics-Stage1] ${upload.filename}: verified=${result.verified}, type=${result.dataType}, cols=${result.columns?.length || 0}`);
         onProgress?.(index + 1, uploads.length, upload.filename);
         return result;
-    });
+    }));
     
     const verifiedCount = results.filter(r => r.verified).length;
     console.log(`[Analytics-Stage1] Verification complete: ${verifiedCount}/${results.length} files have usable data`);
