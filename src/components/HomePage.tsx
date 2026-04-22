@@ -114,7 +114,7 @@ const FEATURES = [
     {
         icon: IconFileText,
         title: "Research Writer",
-        desc: "Full LaTeX documents — research papers, theses, reports — compiled straight to PDF with real citations.",
+        desc: "Full LaTeX documents — research papers, theses, reports - compiled straight to PDF with real citations.",
     },
     {
         icon: IconBook2,
