@@ -121,7 +121,7 @@ export function CodeEditorModal({ image, index, onClose, onSave, sessionId }: Pr
                             {image.language}
                         </span>
                         <span className="text-sm font-black uppercase tracking-widest text-black">
-                            {image.chart_type.replace("_", " ")}
+                            {(image.chart_type || (image as any).chartType || 'chart').replace("_", " ")}
                         </span>
                     </div>
 

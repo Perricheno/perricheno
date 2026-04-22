@@ -485,7 +485,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
 
                             <div className="absolute top-4 left-4 flex gap-2">
                                 <span className="px-2 py-1 bg-black text-white rounded text-[8px] font-black uppercase tracking-widest shadow-sm">
-                                    {img.chart_type.replace("_", " ")}
+                                    {(img.chart_type || (img as any).chartType || 'chart').replace("_", " ")}
                                 </span>
                             </div>
                             

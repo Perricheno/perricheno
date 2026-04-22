@@ -124,6 +124,9 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     const [suggestReasoning, setSuggestReasoning] = useState("");
     const [isSuggesting, setIsSuggesting] = useState(false);
     const [analyticsPrompt, setAnalyticsPrompt] = useState("");
+    
+    // Debug view state
+    const [showDebug, setShowDebug] = useState(false);
 
     const EXPECTED_CHARS = settings.wordCount * 6;
 
@@ -476,6 +479,16 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                         {sp.progress.done} / {sp.progress.total}
                                     </div>
                                 )}
+                                {/* Debug toggle button */}
+                                <button
+                                    onClick={() => setShowDebug(!showDebug)}
+                                    className="w-5 h-5 rounded flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-400 hover:text-black shrink-0"
+                                    title="Toggle debug info"
+                                >
+                                    <svg className={`w-3 h-3 transition-transform duration-300 ${showDebug ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
                             </div>
                             {sp?.progress && (
                                 <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden">
@@ -485,6 +498,26 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                     />
                                 </div>
                             )}
+                            
+                            {/* Expandable debug view */}
+                            <motion.div
+                                initial={false}
+                                animate={{
+                                    height: showDebug ? 'auto' : 0,
+                                    opacity: showDebug ? 1 : 0,
+                                }}
+                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                className="overflow-hidden"
+                            >
+                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                    <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                        Stage Data
+                                    </div>
+                                    <pre className="text-[10px] font-mono text-gray-600 whitespace-pre-wrap break-all">
+                                        {JSON.stringify(sp, null, 2)}
+                                    </pre>
+                                </div>
+                            </motion.div>
                         </div>
 
                         {/* Files status */}

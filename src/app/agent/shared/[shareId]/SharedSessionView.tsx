@@ -101,7 +101,7 @@ export default function SharedSessionView({ title, docType, mainTex, referencesB
                             return (
                                 <div key={i} onClick={() => setSelectedImage(i)} className="group cursor-pointer rounded-2xl overflow-hidden border border-gray-100 hover:border-black transition-all bg-white shadow-sm hover:shadow-xl">
                                     <img src={imgSrc} alt={img.chart_type} className="w-full" />
-                                    <div className="px-4 py-3 text-[10px] text-gray-400 font-black uppercase tracking-widest group-hover:text-black transition-colors">{img.chart_type.replace("_", " ")}</div>
+                                    <div className="px-4 py-3 text-[10px] text-gray-400 font-black uppercase tracking-widest group-hover:text-black transition-colors">{(img.chart_type || (img as any).chartType || 'chart').replace("_", " ")}</div>
                                 </div>
                             );
                         })}
