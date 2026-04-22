@@ -12,7 +12,7 @@ import type { AgentUpload } from "@/lib/db";
 import { concurrentMap, withRetry } from "../stages";
 
 const CONCURRENCY = 3;
-const TEXT_PREVIEW_CHARS = 8000; // More generous than Stage 2 for verification
+// NO LIMIT - send full text to ensure model sees everything
 
 export interface VerificationQuestion {
     question: string;
@@ -81,8 +81,8 @@ No markdown fences. No commentary. JSON only.`;
 function buildUserContent(upload: AgentUpload, ref: ExtractedRef): ChatContentPart[] {
     const parts: ChatContentPart[] = [];
     
-    // Text content (more generous preview for verification)
-    const text = (upload.text_content || "").slice(0, TEXT_PREVIEW_CHARS);
+    // Send FULL text without any truncation
+    const text = upload.text_content || "";
     const meta = ref.metadata || {};
     
     const header = [

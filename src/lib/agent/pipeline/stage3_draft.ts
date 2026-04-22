@@ -19,7 +19,7 @@ const LANG_DISPLAY_NAMES: Record<string, string> = {
 };
 
 const PREVIOUS_CONTEXT_CHARS = 1500;
-const TEXT_EXCERPT_CHARS = 3000; // Per reference in draft context
+// NO LIMIT - send full text from each reference
 
 // Enhanced reference bundle with full context from verification
 function buildEnhancedRefBundle(
@@ -69,10 +69,9 @@ function buildEnhancedRefBundle(
             ref.relevantQuotes.forEach(q => bundle.push(`  "${q}"`));
         }
         
-        // Full text excerpt (raw content for deep understanding)
+        // FULL TEXT (no truncation - send everything)
         if (upload.text_content && upload.text_content.length > 100) {
-            const excerpt = upload.text_content.slice(0, TEXT_EXCERPT_CHARS);
-            bundle.push(`\n📄 FULL TEXT EXCERPT (${excerpt.length} chars):\n${excerpt}${upload.text_content.length > TEXT_EXCERPT_CHARS ? "..." : ""}`);
+            bundle.push(`\n📄 FULL TEXT (${upload.text_content.length} chars):\n${upload.text_content}`);
         }
         
         // Images indicator
@@ -166,15 +165,12 @@ function collectSectionImages(
     section: PlanSection,
     refs: ExtractedRef[],
     uploads: AgentUpload[],
-    maxImages: number = 6, // Limit to avoid token explosion
 ): ChatContentPart[] {
     const images: ChatContentPart[] = [];
     
     if (!section.refFocus || section.refFocus.length === 0) return images;
     
     for (const filename of section.refFocus) {
-        if (images.length >= maxImages) break;
-        
         const ref = refs.find(r => r.filename === filename && r.status === "ok");
         if (!ref) continue;
         
@@ -185,9 +181,8 @@ function collectSectionImages(
             ? upload.images_json
             : (typeof upload.images_json === "string" ? JSON.parse(upload.images_json) : []);
         
-        // Add up to 2 images per reference
-        for (const img of uploadImages.slice(0, 2)) {
-            if (images.length >= maxImages) break;
+        // Add ALL images from this reference (no limit)
+        for (const img of uploadImages) {
             if (img?.dataUrl) {
                 images.push({
                     type: "image_url",
