@@ -42,14 +42,29 @@ Return ONLY valid JSON:
   "bib_entry": "complete BibTeX block"
 }
 
+CRITICAL METADATA EXTRACTION RULES:
+1. **Title**: Look at the FIRST PAGE - usually the largest text at the top. Extract the EXACT title.
+2. **Authors**: Look IMMEDIATELY after the title - usually formatted as "FirstName LastName" or "F. LastName". Extract ALL authors in "Last, First" format.
+3. **Year**: Look for publication year in:
+   - Header/footer of first page
+   - Copyright notice (e.g., "© 2023")
+   - Date in abstract or introduction
+   - Conference/journal info
+4. **Venue**: Look for:
+   - Journal name (e.g., "Nature", "Science", "IEEE Transactions")
+   - Conference name (e.g., "NeurIPS 2023", "CVPR")
+   - Publisher info
+5. **DOI**: Look for "DOI:" or "https://doi.org/" in header/footer
+
 The document being written will have these sections: ${sectionHeadings.map(h => `"${h}"`).join(", ") || "(unknown)"}.
 Focus key_claims and quotes on information useful for those sections.
 
 The bib_entry must:
-- Use a stable citation key you invent (lowercase_snake_case, include year if known)
+- Use a stable citation key: authorlastname_year (e.g., smith_2023)
 - Be a full @article{…} or @inproceedings{…} or @book{…} block
-- Include title, author (use " and " between authors), year, and venue/journal when known
-- Include doi = {…} when known
+- Include REAL title, author (use " and " between authors), year, and venue/journal
+- Include doi = {…} when found
+- NEVER use "Unknown", "Anonymous", "n.d." - if you can't find metadata, look harder in the first 2 pages
 
 Figures are sent alongside the text. Reference them only if they convey information not in the text.
 
