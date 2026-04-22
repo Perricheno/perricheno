@@ -39,7 +39,7 @@ export interface ChartPlan {
 }
 
 export interface GeneratedChart {
-    chartType: ChartType;
+    chart_type: ChartType;  // snake_case for frontend compatibility
     image: string;  // base64
     code: string;
     runtime: Runtime;

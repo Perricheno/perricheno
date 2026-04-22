@@ -276,7 +276,7 @@ export async function runStage3(
             }
             
             charts.push({
-                chartType: plan.chartType,
+                chart_type: plan.chartType,  // snake_case for frontend
                 image: compileResult.image,
                 code: cleanedCode,
                 runtime,
