@@ -66,7 +66,7 @@ docker compose build $SERVICES
 
 echo "🚀 Starting / replacing: $SERVICES"
 # shellcheck disable=SC2086
-docker compose up -d --remove-orphans $SERVICES
+docker compose up -d --force-recreate --remove-orphans $SERVICES
 
 # ── 5. Health check (only the user-facing site container) ──
 if echo "$SERVICES" | grep -q "perricheno-site"; then
