@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconX, IconLoader2, IconUserPlus } from "@tabler/icons-react";
+import { IconX, IconLoader2, IconUserPlus, IconSparkles, IconCheck, IconCopy } from "@tabler/icons-react";
 import type { Space, SpaceFile, Compiler } from "@/lib/space-db";
 
 import TopBar from "./components/TopBar";
 import FileTree, { type FileEntry } from "./components/FileTree";
-import LatexEditor from "./components/LatexEditor";
+import LatexEditor, { type SelectionInfo } from "./components/LatexEditor";
 import PdfPreview from "./components/PdfPreview";
 import CompilerLog from "./components/CompilerLog";
 
@@ -112,6 +112,10 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     // New-file prompt
     const [newFilePrompt, setNewFilePrompt] = useState<{ parent: string } | null>(null);
     const [newFileName, setNewFileName]     = useState("");
+
+    // AI inline edit menu
+    const [aiSelection, setAiSelection]           = useState<SelectionInfo | null>(null);
+    const [aiReplacement, setAiReplacement]       = useState<{ from: number; to: number; text: string } | null>(null);
 
     // Auto-compile timer
     const autoCompileTimer = useRef<NodeJS.Timeout | null>(null);
@@ -485,6 +489,8 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                                         goToLine={goToLine}
                                         readOnly={readOnly}
                                         onCursorChange={setCursorInfo}
+                                        onSelectionChange={setAiSelection}
+                                        applyReplacement={aiReplacement}
                                     />
                                 </div>
                                 {/* Status bar */}
@@ -703,7 +709,184 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* AI inline edit menu */}
+            <AnimatePresence>
+                {aiSelection && !readOnly && (
+                    <AiEditMenu
+                        selection={aiSelection}
+                        spaceId={space.id}
+                        onApply={(text) => {
+                            setAiReplacement({ from: aiSelection.from, to: aiSelection.to, text });
+                            setAiSelection(null);
+                            setTimeout(() => setAiReplacement(null), 100);
+                        }}
+                        onClose={() => setAiSelection(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
+    );
+}
+
+// ── AI Inline Edit Menu ────────────────────────────────────────────────────
+
+const AI_ACTIONS = [
+    { id: 'fix',       label: 'Fix errors' },
+    { id: 'rewrite',   label: 'Rewrite' },
+    { id: 'shorten',   label: 'Shorten' },
+    { id: 'expand',    label: 'Expand' },
+    { id: 'translate', label: 'Translate' },
+    { id: 'explain',   label: 'Explain' },
+] as const;
+
+function AiEditMenu({ selection, spaceId, onApply, onClose }: {
+    selection: SelectionInfo;
+    spaceId: string;
+    onApply: (text: string) => void;
+    onClose: () => void;
+}) {
+    const [loading, setLoading]       = useState<string | null>(null);
+    const [result, setResult]         = useState<string | null>(null);
+    const [activeAction, setActive]   = useState<string | null>(null);
+    const [custom, setCustom]         = useState('');
+    const [showCustom, setShowCustom] = useState(false);
+    const [copied, setCopied]         = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Position: float above the cursor, anchored to viewport
+    const MENU_W = 280;
+    const MENU_H = 200; // approx
+    const left = Math.min(Math.max(8, selection.x - MENU_W / 2), window.innerWidth - MENU_W - 8);
+    const top  = selection.y - MENU_H - 12 < 8
+        ? selection.y + 24   // below cursor if no room above
+        : selection.y - MENU_H - 12;
+
+    // Close on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose]);
+
+    const run = async (action: string, prompt?: string) => {
+        setLoading(action); setResult(null); setActive(action);
+        const res = await fetch(`/api/space/${spaceId}/ai-edit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, text: selection.text, customPrompt: prompt }),
+        });
+        const data = await res.json();
+        setResult(data.result ?? data.error ?? 'No result');
+        setLoading(null);
+    };
+
+    const copy = () => {
+        if (!result) return;
+        navigator.clipboard.writeText(result);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <motion.div
+            ref={menuRef}
+            initial={{ opacity: 0, scale: 0.95, y: 4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 4 }}
+            transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+            style={{ position: 'fixed', left, top, width: MENU_W, zIndex: 60 }}
+            className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden"
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                <div className="flex items-center gap-1.5">
+                    <IconSparkles className="w-3.5 h-3.5 text-violet-500" />
+                    <span className="text-[11px] font-bold text-gray-700">AI Edit</span>
+                </div>
+                <button onClick={onClose} className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    <IconX className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
+            {/* Action buttons */}
+            {!result && (
+                <div className="p-2 space-y-1">
+                    <div className="grid grid-cols-3 gap-1">
+                        {AI_ACTIONS.map(a => (
+                            <button
+                                key={a.id}
+                                onClick={() => run(a.id)}
+                                disabled={loading !== null}
+                                className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                                    activeAction === a.id && loading
+                                        ? 'bg-violet-50 text-violet-600'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                } disabled:opacity-50`}
+                            >
+                                {loading === a.id
+                                    ? <IconLoader2 className="w-3 h-3 animate-spin" />
+                                    : a.label
+                                }
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Custom prompt */}
+                    {showCustom ? (
+                        <div className="flex gap-1 mt-1">
+                            <input
+                                autoFocus
+                                value={custom}
+                                onChange={e => setCustom(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter' && custom.trim()) run('custom', custom.trim()); if (e.key === 'Escape') setShowCustom(false); }}
+                                placeholder="Custom instruction…"
+                                className="flex-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-[11px] text-gray-900 outline-none focus:border-violet-400 transition-colors"
+                            />
+                            <button
+                                onClick={() => custom.trim() && run('custom', custom.trim())}
+                                disabled={!custom.trim() || loading !== null}
+                                className="px-2 py-1 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-[11px] font-bold transition-colors disabled:opacity-40"
+                            >Go</button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setShowCustom(true)}
+                            className="w-full text-left px-2 py-1 text-[11px] text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >+ Custom…</button>
+                    )}
+                </div>
+            )}
+
+            {/* Result */}
+            {result && (
+                <div className="p-2 space-y-2">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 max-h-32 overflow-y-auto">
+                        <p className="text-[11px] text-gray-800 whitespace-pre-wrap leading-relaxed">{result}</p>
+                    </div>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={() => onApply(result)}
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-black hover:bg-gray-800 text-white text-[11px] font-bold transition-colors"
+                        >
+                            <IconCheck className="w-3 h-3" /> Apply
+                        </button>
+                        <button
+                            onClick={copy}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 text-[11px] transition-colors"
+                        >
+                            {copied ? <IconCheck className="w-3 h-3 text-emerald-500" /> : <IconCopy className="w-3 h-3" />}
+                        </button>
+                        <button
+                            onClick={() => { setResult(null); setActive(null); }}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 text-[11px] transition-colors"
+                        >Back</button>
+                    </div>
+                </div>
+            )}
+        </motion.div>
     );
 }
 
