@@ -36,29 +36,65 @@ CRITICAL: If data is unusable, set verified=false and explain why in warnings.
 No markdown fences. JSON only.`;
 }
 
+function getSmartSample(text: string, filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    
+    // For CSV/TSV: take header + first 10 rows
+    if (ext === 'csv' || ext === 'tsv') {
+        const lines = text.split('\n');
+        const sample = lines.slice(0, 11).join('\n'); // header + 10 rows
+        const remaining = lines.length - 11;
+        return sample + (remaining > 0 ? `\n\n... (${remaining} more rows)` : '');
+    }
+    
+    // For Excel (stored as base64): extract first 10 rows after parsing
+    if (ext === 'xlsx' || ext === 'xls') {
+        if (text.startsWith('[EXCEL_FILE:')) {
+            return `[Excel file detected - will be parsed during code generation]\nFilename: ${filename}\nSize: ${text.length} chars (base64 encoded)`;
+        }
+    }
+    
+    // For JSON: take first 10 lines
+    if (ext === 'json') {
+        const lines = text.split('\n');
+        const sample = lines.slice(0, 10).join('\n');
+        const remaining = lines.length - 10;
+        return sample + (remaining > 0 ? `\n\n... (${remaining} more lines)` : '');
+    }
+    
+    // For other text files: take first 10 lines
+    const lines = text.split('\n');
+    const sample = lines.slice(0, 10).join('\n');
+    const remaining = lines.length - 10;
+    return sample + (remaining > 0 ? `\n\n... (${remaining} more lines)` : '');
+}
+
 function buildUserContent(upload: AgentUpload): string {
     const text = upload.text_content || "";
     const hasImages = Array.isArray(upload.images_json) && upload.images_json.length > 0;
+    
+    // Get smart sample based on file type
+    const sample = getSmartSample(text, upload.filename);
     
     // Check for common data file indicators
     const looksLikeCSV = text.includes(',') && text.split('\n').length > 2;
     const looksLikeTSV = text.includes('\t') && text.split('\n').length > 2;
     const looksLikeJSON = text.trim().startsWith('{') || text.trim().startsWith('[');
+    const looksLikeExcel = text.startsWith('[EXCEL_FILE:');
     
     return `FILE: ${upload.filename}
 PAGES: ${upload.page_count}${upload.ocr_used ? " (OCR)" : ""}
-SIZE: ${text.length} chars
+FULL_SIZE: ${text.length} chars
 HAS_IMAGES: ${hasImages}
 
-CONTENT PREVIEW (first 5000 chars):
-${text.slice(0, 5000)}
-
-${text.length > 5000 ? `\n... (${text.length - 5000} more chars)` : ''}
+CONTENT SAMPLE (smart preview):
+${sample}
 
 ANALYSIS HINTS:
 - Looks like CSV: ${looksLikeCSV}
 - Looks like TSV: ${looksLikeTSV}
 - Looks like JSON: ${looksLikeJSON}
+- Looks like Excel: ${looksLikeExcel}
 - Has images: ${hasImages}
 
 Analyze this file and determine if it contains REAL data for visualization.`;

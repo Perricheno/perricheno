@@ -774,10 +774,10 @@ export default function AgentPage() {
                 {uploadingFiles.length > 0 && (
                     <div className="w-full mt-3 flex flex-wrap gap-2">
                         {uploadingFiles.map((filename, idx) => (
-                            <div key={idx} className="flex items-center gap-2 pr-3 pl-3 py-1.5 bg-blue-50 rounded-[12px] shadow-sm border border-blue-200 max-w-[260px]">
-                                <IconLoader2 className="w-3.5 h-3.5 text-blue-500 animate-spin shrink-0" />
-                                <span className="text-[12px] font-medium text-blue-700 truncate">{filename}</span>
-                                <span className="text-[10px] text-blue-500 shrink-0">Uploading...</span>
+                            <div key={idx} className="flex items-center gap-2 pr-3 pl-3 py-1.5 bg-[#f5f5f5] rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]">
+                                <IconLoader2 className="w-3.5 h-3.5 text-[#666] animate-spin shrink-0" />
+                                <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{filename}</span>
+                                <span className="text-[10px] text-[#999] shrink-0">Uploading...</span>
                             </div>
                         ))}
                     </div>
@@ -795,7 +795,7 @@ export default function AgentPage() {
                                         <IconFileText className="w-3.5 h-3.5 text-[#999]" />
                                     )}
                                     <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{file.name}</span>
-                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors">
+                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors">
                                         <IconX className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -806,7 +806,7 @@ export default function AgentPage() {
                                     <IconFileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
                                     <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
                                     <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
-                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors shrink-0">
+                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
                                         <IconX className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
