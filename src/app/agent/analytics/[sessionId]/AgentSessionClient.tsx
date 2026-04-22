@@ -5,28 +5,102 @@ import {
     IconArrowRight, IconLoader2, IconPaperclip,
     IconFileText, IconBook, IconPackage, IconDownload,
     IconX, IconPencil, IconCheck, IconEye, IconBug,
-    IconClock, IconLetterCase, IconSettings,
-    IconSchool, IconSearch, IconCertificate, IconChartPie,
-    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
-    IconPlus, IconLock
+    IconClock, IconSettings, IconChartPie,
+    IconDatabase, IconPlus, IconLock, IconRefresh,
+    IconTrash, IconUpload, IconFile, IconAlertTriangle,
+    IconPlayerPlay, IconCloudUpload
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
-import JSZip from "jszip";
-import ReactMarkdown from "react-markdown";
 import { useAdmin } from "@/components/AdminContext";
 import { useRouter } from "next/navigation";
 
 import { DocType, AgentSettings, DEFAULT_SETTINGS, CodeImage, AgentSession } from "../../types";
-import { AgentSettingsPanel } from "../../AgentSettingsPanel";
 import { AgentSidebar } from "../../AgentSidebar";
 import { AgentVisualizations } from "../../AgentVisualizations";
 import { CodeEditorModal } from "../../CodeEditorModal";
 import { AgentBillingModal } from "../../AgentBillingModal";
 
+interface UploadMeta {
+    id: string;
+    filename: string;
+    charCount: number;
+    imageCount: number;
+    pageCount: number;
+    ocrUsed: boolean;
+    expires_at?: string;
+}
+
 interface Props {
     initialSession: AgentSession;
     sessions: AgentSession[];
     userId: number;
+}
+
+// ── TTL countdown hook ──
+function useCountdown(expiresAt: string | undefined) {
+    const [remaining, setRemaining] = useState<string>("");
+    const [expired, setExpired] = useState(false);
+
+    useEffect(() => {
+        if (!expiresAt) { setRemaining(""); return; }
+        const update = () => {
+            const diff = new Date(expiresAt).getTime() - Date.now();
+            if (diff <= 0) { setExpired(true); setRemaining("Expired"); return; }
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            setRemaining(`${h}h ${m}m ${s}s`);
+            setExpired(false);
+        };
+        update();
+        const interval = setInterval(update, 1000);
+        return () => clearInterval(interval);
+    }, [expiresAt]);
+
+    return { remaining, expired };
+}
+
+function FileCard({ file, onDelete }: { file: UploadMeta; onDelete: () => void }) {
+    const { remaining, expired } = useCountdown(file.expires_at);
+    
+    const ext = file.filename.split('.').pop()?.toLowerCase() ?? '';
+    const isData = ['csv', 'tsv', 'xlsx', 'xls', 'json'].includes(ext);
+    
+    return (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+            expired ? 'bg-red-50/50 border-red-200' : 'bg-white border-gray-100 hover:border-gray-200'
+        }`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                isData ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+            }`}>
+                {isData ? <IconDatabase className="w-4 h-4" /> : <IconFileText className="w-4 h-4" />}
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-black truncate">{file.filename}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] font-mono text-gray-400">
+                        {file.charCount > 0 ? `${Math.round(file.charCount / 1000)}k chars` : ext.toUpperCase()}
+                    </span>
+                    {file.pageCount > 1 && (
+                        <span className="text-[10px] font-mono text-gray-400">· {file.pageCount} pages</span>
+                    )}
+                    {file.ocrUsed && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded">OCR</span>
+                    )}
+                </div>
+            </div>
+            {/* TTL Timer */}
+            {remaining && (
+                <div className={`flex items-center gap-1 shrink-0 ${expired ? 'text-red-500' : 'text-gray-400'}`}>
+                    <IconClock className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-mono tabular-nums">{remaining}</span>
+                </div>
+            )}
+            <button onClick={onDelete} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 transition-colors shrink-0 opacity-0 group-hover:opacity-100" title="Remove file">
+                <IconTrash className="w-3.5 h-3.5" />
+            </button>
+        </div>
+    );
 }
 
 export default function AgentSessionClient({ initialSession, sessions: initialSessions, userId }: Props) {
@@ -42,61 +116,49 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     const [topic, setTopic] = useState(initialSession.title);
 
     // Parse initial data
-    const initDocType = (initialSession.doc_type === 'data-analytics' ? 'data_analytics' : initialSession.doc_type) as DocType;
-    const initIsAnalytics = initDocType === 'data_analytics';
     let initSettings = DEFAULT_SETTINGS;
     if (initialSession.settings_json) {
         try { initSettings = JSON.parse(initialSession.settings_json); } catch(e) {}
     }
 
-    let initVisuals = [];
+    let initVisuals: CodeImage[] = [];
     if (initialSession.visuals_json) {
         try { initVisuals = JSON.parse(initialSession.visuals_json); } catch(e) {}
     }
 
-    const [docType, setDocType] = useState<DocType>(initDocType);
-    const [isAnalyticsSession, setIsAnalyticsSession] = useState(initIsAnalytics);
-    const [isAgentMode, setIsAgentMode] = useState(!initIsAnalytics);
     const [settings, setSettings] = useState<AgentSettings>(initSettings);
 
     // Determine initial phase
     const getInitialPhase = () => {
         if (initialSession.status === 'generating') return 'streaming' as const;
-        if (initialSession.status === 'done' || initialSession.status === 'error') return 'done' as const;
         return 'done' as const;
     };
-    const [phase, setPhase] = useState<"idle" | "suggesting" | "streaming" | "done">(getInitialPhase());
+    const [phase, setPhase] = useState<"idle" | "streaming" | "done">(getInitialPhase());
 
     // Output state
-    const [mainTex, setMainTex] = useState(initialSession.main_tex || "");
-    const [referencesBib, setReferencesBib] = useState<string | null>(initialSession.references_bib || null);
     const [visuals, setVisuals] = useState<CodeImage[]>(initVisuals);
-    const [error, setError] = useState<string | null>(initialSession.status === 'error' ? (initialSession.error_msg || "Session failed") : null);
+    const [error, setError] = useState<string | null>(initialSession.status === 'error' ? (initialSession.error_msg || "Pipeline failed") : null);
 
     // UI states
-    const [settingsOpen, setSettingsOpen] = useState(false);
-    const [detailsOpen, setDetailsOpen] = useState(false);
     const [billingOpen, setBillingOpen] = useState(false);
-    const [viewerOpen, setViewerOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<"tex" | "bib">("tex");
-    const [isEditing, setIsEditing] = useState(false);
+    const [isRerunning, setIsRerunning] = useState(false);
+    const [editMode, setEditMode] = useState(false);
     const [editPrompt, setEditPrompt] = useState("");
-    const [isFixingErrors, setIsFixingErrors] = useState(false);
-    const [errorLogInput, setErrorLogInput] = useState("");
-    const [isCompiling, setIsCompiling] = useState(false);
+
+    // Upload state
+    const [uploadMeta, setUploadMeta] = useState<UploadMeta[]>(initSettings.uploadMeta ?? []);
+    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Editor modal
     const [activeEditorIndex, setActiveEditorIndex] = useState<number | null>(null);
 
-    // Streaming state
-    const [streamText, setStreamText] = useState("");
-    const [streamChars, setStreamChars] = useState(0);
-    const [displayStreamText, setDisplayStreamText] = useState("");
-    const targetStreamText = useRef("");
+    // Streaming / polling state
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Staged-pipeline progress (new path). Populated by polling stage_json.
+    // Staged-pipeline progress
     const [stageProgress, setStageProgress] = useState<{
         current_stage: number;
         total_stages: number;
@@ -112,49 +174,44 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         return raw;
     });
 
-    // Agent Mode States
-    const [agentDataFiles, setAgentDataFiles] = useState<{name: string, content: string}[]>([]);
-    const [agentLogs, setAgentLogs] = useState<{type: string, message: string}[]>([]);
-    const [agentSteps, setAgentSteps] = useState<{label: string, status: "pending" | "running" | "done" | "error"}[]>([]);
-    const pollRef = useRef<NodeJS.Timeout | null>(null);
-    const streamBoxRef = useRef<HTMLDivElement>(null);
-
-    // Suggestion states
-    const [suggestedCharts, setSuggestedCharts] = useState<string[]>([]);
-    const [suggestReasoning, setSuggestReasoning] = useState("");
-    const [isSuggesting, setIsSuggesting] = useState(false);
-    const [analyticsPrompt, setAnalyticsPrompt] = useState("");
-    
-    // Debug view state
     const [showDebug, setShowDebug] = useState(false);
 
-    const EXPECTED_CHARS = settings.wordCount * 6;
-
+    // Load upload metadata with TTL on mount
     useEffect(() => {
-        if (streamBoxRef.current) streamBoxRef.current.scrollTop = streamBoxRef.current.scrollHeight;
-    }, [displayStreamText]);
+        loadUploadMeta();
+    }, []);
 
-    // Typing effect for stream
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (displayStreamText.length < targetStreamText.current.length) {
-                const nextChar = targetStreamText.current[displayStreamText.length];
-                setDisplayStreamText(prev => prev + nextChar);
-                setStreamChars(prev => prev + 1);
-            }
-        }, 15);
-        return () => clearInterval(interval);
-    }, [displayStreamText]);
-
-    // If session is still generating, start polling immediately
+    // If session is still generating, start polling
     useEffect(() => {
         if (initialSession.status === 'generating') {
             startTimer();
             pollSessionStatus();
         }
         return () => { if (pollRef.current) clearTimeout(pollRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const loadUploadMeta = async () => {
+        if (!initSettings.uploadIds || initSettings.uploadIds.length === 0) return;
+        try {
+            const res = await fetch(`/api/agent/uploads?ids=${initSettings.uploadIds.join(',')}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.uploads) {
+                    setUploadMeta(data.uploads.map((u: any) => ({
+                        id: u.id,
+                        filename: u.filename,
+                        charCount: u.char_count || 0,
+                        imageCount: u.image_count || 0,
+                        pageCount: u.page_count || 1,
+                        ocrUsed: u.ocr_used || false,
+                        expires_at: u.expires_at,
+                    })));
+                }
+            }
+        } catch (e) {
+            // Use fallback from settings
+        }
+    };
 
     const loadSessions = async () => {
         try {
@@ -183,14 +240,10 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
             const { session } = await statusRes.json();
 
             if (session.status === 'error') {
-                throw new Error(session.error_msg || "Background Agent crashed.");
+                throw new Error(session.error_msg || "Pipeline crashed.");
             }
 
-            if (session.stream_text) {
-                targetStreamText.current = session.stream_text;
-            }
-
-            // New pipeline: structured progress in stage_json.
+            // Stage progress
             if (session.stage_json) {
                 const sp = typeof session.stage_json === 'string'
                     ? (() => { try { return JSON.parse(session.stage_json); } catch { return null; } })()
@@ -199,15 +252,12 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
             }
 
             if (session.status === 'done' || session.status === 'needs_attention') {
-                setMainTex(session.main_tex || "");
-                setReferencesBib(session.references_bib || null);
                 setVisuals(session.visuals_json ? JSON.parse(session.visuals_json) : []);
                 setSettings(session.settings_json ? JSON.parse(session.settings_json) : DEFAULT_SETTINGS);
                 stopTimer();
-                setActiveTab("tex");
                 setPhase("done");
                 if (session.status === 'needs_attention') {
-                    setError(session.error_msg || "Document assembled but failed to compile on automatic retries. Open it and review.");
+                    setError(session.error_msg || "Pipeline completed with issues.");
                 }
                 loadSessions();
             } else if (session.status === 'generating') {
@@ -220,129 +270,143 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         }
     };
 
-    const streamGenerate = useCallback(async (body: Record<string, any>, topicText: string) => {
+    // ── Re-run pipeline ──
+    const handleRerun = async (newPrompt?: string) => {
         if (!user) { setShowLogin(true); return; }
-
+        setIsRerunning(true);
         setError(null);
-        setPhase("streaming");
-        setTopic(topicText);
-        setStreamText("");
-        setDisplayStreamText("");
-        targetStreamText.current = "";
-        setStreamChars(0);
-        setIsEditing(false);
-        setIsFixingErrors(false);
-        startTimer();
+        setEditMode(false);
 
         try {
-            body.sessionId = currentSessionId;
-            
-            const res = await fetch('/api/agent/generate', {
+            // Validate uploads still exist
+            const validUploads = uploadMeta.filter(u => !u.expires_at || new Date(u.expires_at).getTime() > Date.now());
+            if (validUploads.length === 0 && settings.uploadIds.length > 0) {
+                throw new Error("All uploaded files have expired. Please upload new data files.");
+            }
+
+            const res = await fetch('/api/agent/analytics/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({
+                    prompt: newPrompt || topic,
+                    runtime: settings.runtime,
+                    uploadIds: validUploads.map(u => u.id),
+                    existingSessionId: currentSessionId,
+                })
             });
 
             if (!res.ok) {
-                if (res.status === 402) {
-                    setBillingOpen(true);
-                    throw new Error("Quota exceeded! Please buy tokens to continue.");
-                }
-                const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
+                if (res.status === 402) { setBillingOpen(true); return; }
+                const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || `HTTP ${res.status}`);
             }
 
-            const { sessionId } = await res.json();
-
-            const pollStatus = async () => {
-                try {
-                    const statusRes = await fetch(`/api/agent/sessions/${sessionId}`);
-                    if (!statusRes.ok) throw new Error("Status check failed");
-                    const { session } = await statusRes.json();
-
-                    if (session.status === 'error') {
-                        throw new Error(session.error_msg || "Background Agent crashed.");
-                    }
-                    if (session.stream_text) {
-                        targetStreamText.current = session.stream_text;
-                    }
-                    if (session.stage_json) {
-                        const sp = typeof session.stage_json === 'string'
-                            ? (() => { try { return JSON.parse(session.stage_json); } catch { return null; } })()
-                            : session.stage_json;
-                        if (sp) setStageProgress(sp);
-                    }
-                    if (session.status === 'done' || session.status === 'needs_attention') {
-                        setMainTex(session.main_tex || "");
-                        setReferencesBib(session.references_bib);
-                        stopTimer();
-                        setActiveTab("tex");
-                        setPhase("done");
-                        if (session.status === 'needs_attention') {
-                            setError(session.error_msg || "Document assembled but failed to compile on automatic retries. Open it and review.");
-                        }
-                        loadSessions();
-                    } else if (session.status === 'generating') {
-                        pollRef.current = setTimeout(pollStatus, 1500);
-                    }
-                } catch (e: any) {
-                    stopTimer();
-                    setError(e.message);
-                    setPhase("done");
-                }
-            };
-            pollStatus();
-        } catch (err: any) {
-            stopTimer();
-            setError(err.message);
-            setPhase("done");
+            const data = await res.json();
+            // If same session, just start polling
+            setPhase("streaming");
+            setVisuals([]);
+            setStageProgress(null);
+            startTimer();
+            
+            // Poll new or same session
+            const sid = data.sessionId || currentSessionId;
+            if (sid !== currentSessionId) {
+                router.push(`/agent/analytics/${sid}`);
+            } else {
+                pollSessionStatus();
+            }
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setIsRerunning(false);
         }
-    }, [user, setShowLogin, currentSessionId, settings, visuals]);
+    };
 
-    const handleEdit = () => {
+    const handleEditSubmit = () => {
         if (!editPrompt.trim()) return;
-        const text = editPrompt;
+        handleRerun(editPrompt.trim());
         setEditPrompt("");
-        streamGenerate({ prompt: text, type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib }, topic + " → edit");
     };
 
-    const fixErrors = () => {
-        if (!errorLogInput.trim() || !mainTex) return;
-        const log = errorLogInput;
-        setErrorLogInput("");
-        streamGenerate({ errorLog: log, type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib }, topic + " → fix");
+    // ── File Upload ──
+    const processFiles = async (files: File[]) => {
+        for (const file of files) {
+            setUploadingFiles(prev => [...prev, file.name]);
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                const res = await fetch('/api/agent/attach', { method: 'POST', body: fd });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    setError(err?.error || `Upload failed (HTTP ${res.status})`);
+                    continue;
+                }
+                const meta = await res.json();
+                if (!meta.uploadId) {
+                    setError(`Upload failed: No ID returned for ${file.name}`);
+                    continue;
+                }
+                const newMeta: UploadMeta = {
+                    id: meta.uploadId,
+                    filename: meta.filename || file.name,
+                    charCount: meta.charCount || 0,
+                    imageCount: meta.imageCount || 0,
+                    pageCount: meta.pageCount || 1,
+                    ocrUsed: meta.ocrUsed || false,
+                    expires_at: meta.expires_at,
+                };
+                setUploadMeta(prev => [...prev, newMeta]);
+                setSettings(s => ({
+                    ...s,
+                    uploadIds: [...s.uploadIds, meta.uploadId],
+                    uploadMeta: [...(s.uploadMeta || []), newMeta],
+                }));
+            } catch (err: any) {
+                setError(err?.message || 'Upload failed.');
+            } finally {
+                setUploadingFiles(prev => prev.filter(f => f !== file.name));
+            }
+        }
     };
 
-    const handleAddVisualsToReport = (images: CodeImage[]) => {
-        if (!mainTex || images.length === 0) return;
-        setViewerOpen(false);
-        streamGenerate({ 
-            prompt: "Please integrate the attached R figures into the report.", 
-            type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib, useDbImages: true
-        }, topic + " → add visuals");
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        await processFiles(files);
+        e.target.value = '';
     };
 
-    // Navigate to a different session
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        await processFiles(Array.from(e.dataTransfer.files));
+    };
+
+    const removeUpload = async (id: string) => {
+        try {
+            await fetch(`/api/agent/attach?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        } catch {}
+        setUploadMeta(prev => prev.filter(u => u.id !== id));
+        setSettings(s => ({
+            ...s,
+            uploadIds: s.uploadIds.filter(uid => uid !== id),
+            uploadMeta: (s.uploadMeta || []).filter((u: any) => u.id !== id),
+        }));
+    };
+
+    // Navigation
     const handleSelectSession = (s: AgentSession) => {
         setSidebarOpen(false);
-        if (s.doc_type === 'chat') {
-            router.push(`/agent/chat/${s.id}`);
-        } else if (s.doc_type === 'literature_search') {
-            router.push(`/agent/scholar/${s.id}`);
-        } else if (s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics') {
-            router.push(`/agent/analytics/${s.id}`);
-        } else {
-            router.push(`/agent/research/${s.id}`);
-        }
+        if (s.doc_type === 'chat') router.push(`/agent/chat/${s.id}`);
+        else if (s.doc_type === 'literature_search') router.push(`/citations`);
+        else if (s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics') router.push(`/agent/analytics/${s.id}`);
+        else router.push(`/agent/research/${s.id}`);
     };
 
-    const handleNewSession = () => {
-        router.push('/agent');
-    };
+    const handleNewSession = () => router.push('/agent');
 
     const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!confirm("Delete this document?")) return;
+        if (!confirm("Delete this analysis?")) return;
         await fetch(`/api/agent/sessions/${id}`, { method: 'DELETE' });
         setSessions(prev => prev.filter(s => s.id !== id));
         if (currentSessionId === id) router.push('/agent');
@@ -353,73 +417,15 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         const res = await fetch(`/api/agent/sessions/${id}/share`, { method: 'POST' });
         if (res.ok) {
             const data = await res.json();
-            if (data.shared) {
-                window.prompt("Share link:", window.location.origin + data.share_url);
-            } else {
-                alert("Unshared");
-            }
+            if (data.shared) window.prompt("Share link:", window.location.origin + data.share_url);
+            else alert("Unshared");
             loadSessions();
         }
     };
 
-    const buildZipBlob = async (): Promise<Blob> => {
-        const zip = new JSZip();
-        zip.file("main.tex", mainTex);
-        if (referencesBib) zip.file("references.bib", referencesBib);
-        visuals.forEach((img, i) => {
-            const cleanBase64 = img.image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
-            try {
-                const binary = atob(cleanBase64);
-                const bytes = new Uint8Array(binary.length);
-                for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
-                const ext = img.language === 'Python' ? 'py' : 'R';
-                const chartType = img.chart_type || (img as any).chartType || 'chart';
-                zip.file(`images/fig_${i + 1}_${chartType}.png`, bytes);
-                if (img.code) zip.file(`images/fig_${i + 1}_${chartType}.${ext}`, img.code);
-            } catch (e) {
-                console.error("Failed to decode visual image base64:", e);
-            }
-        });
-        return await zip.generateAsync({ type: "blob" });
-    };
-
-    const downloadZip = async () => {
-        const blob = await buildZipBlob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `latex_project_${Date.now()}.zip`;
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    };
-
-    const compilePdf = async () => {
-        if (!mainTex) return;
-        setIsCompiling(true);
-        setError(null);
-        try {
-            const blob = await buildZipBlob();
-            const formData = new FormData();
-            formData.append("file", blob, "project.zip");
-            const res = await fetch("/api/agent/compile-pdf", { method: "POST", body: formData });
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `Server Error ${res.status}`);
-            }
-            const pdfBlob = await res.blob();
-            const url = URL.createObjectURL(pdfBlob);
-            const a = document.createElement("a");
-            a.href = url; a.download = `compiled_research_${Date.now()}.pdf`;
-            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-        } catch (e: any) {
-            console.error(e);
-            setError(e.message || "Failed to compile PDF via server.");
-        } finally {
-            setIsCompiling(false);
-        }
-    };
-
-    // ─── STREAMING ───
+    // ─── STREAMING (Pipeline in progress) ───
     if (phase === "streaming") {
-        const STAGE_LABELS = ["Plan", "Extract", "Draft", "Assemble", "Validate"];
+        const STAGE_LABELS = ["Analyze", "Extract", "Generate", "Compile", "Validate"];
         const sp = stageProgress;
         const current = sp?.current_stage ?? 0;
         const completed = new Set(sp?.completed_stages ?? []);
@@ -431,8 +437,8 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl mx-auto my-auto pt-8 md:pt-0">
                     {/* Header */}
                     <div className="text-center mb-10">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#A1A1AA] mb-3">
-                            {isAgentMode ? `${docType.replace("_", " ")} • ${settings.style}` : 'Analytics Console'}
+                        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-3">
+                            Data Analytics · {settings.runtime}
                         </div>
                         <h2 className="text-2xl md:text-3xl font-black tracking-tight text-black break-words">
                             {topic}
@@ -445,7 +451,6 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                     {/* Stepper */}
                     <div className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm">
                         <div className="flex items-start justify-between mb-8 relative">
-                            {/* connector line */}
                             <div className="absolute top-3 left-6 right-6 h-px bg-gray-100" />
                             {STAGE_LABELS.map((label, idx) => {
                                 const stageNum = idx + 1;
@@ -470,24 +475,20 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             })}
                         </div>
 
-                        {/* Current label + progress bar */}
+                        {/* Current label + progress */}
                         <div className="border-t border-gray-100 pt-6">
                             <div className="flex items-center gap-3 mb-3">
                                 <IconLoader2 className="w-4 h-4 animate-spin text-black" />
                                 <div className="text-[13px] font-medium text-black flex-1 truncate">
-                                    {sp?.label || "Starting…"}
+                                    {sp?.label || "Starting analytics pipeline…"}
                                 </div>
                                 {sp?.progress && (
                                     <div className="text-[11px] font-mono text-gray-400 tabular-nums shrink-0">
                                         {sp.progress.done} / {sp.progress.total}
                                     </div>
                                 )}
-                                {/* Debug toggle button */}
-                                <button
-                                    onClick={() => setShowDebug(!showDebug)}
-                                    className="w-5 h-5 rounded flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-400 hover:text-black shrink-0"
-                                    title="Toggle debug info"
-                                >
+                                <button onClick={() => setShowDebug(!showDebug)}
+                                    className="w-5 h-5 rounded flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-400 hover:text-black shrink-0" title="Debug">
                                     <svg className={`w-3 h-3 transition-transform duration-300 ${showDebug ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                                     </svg>
@@ -495,40 +496,29 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             </div>
                             {sp?.progress && (
                                 <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-black rounded-full transition-[width] duration-500 ease-out"
-                                        style={{ width: `${Math.min(100, (sp.progress.done / Math.max(1, sp.progress.total)) * 100)}%` }}
-                                    />
+                                    <div className="h-full bg-black rounded-full transition-[width] duration-500 ease-out"
+                                        style={{ width: `${Math.min(100, (sp.progress.done / Math.max(1, sp.progress.total)) * 100)}%` }} />
                                 </div>
                             )}
-                            
-                            {/* Expandable debug view */}
-                            <motion.div
-                                initial={false}
-                                animate={{
-                                    height: showDebug ? 'auto' : 0,
-                                    opacity: showDebug ? 1 : 0,
-                                }}
-                                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                className="overflow-hidden"
-                            >
-                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                    <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                        Stage Data
-                                    </div>
-                                    <pre className="text-[10px] font-mono text-gray-600 whitespace-pre-wrap break-all">
-                                        {JSON.stringify(sp, null, 2)}
-                                    </pre>
-                                </div>
-                            </motion.div>
+
+                            {/* Debug panel */}
+                            <AnimatePresence>
+                                {showDebug && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                            <pre className="text-[10px] font-mono text-gray-600 whitespace-pre-wrap break-all">
+                                                {JSON.stringify(sp, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
-                        {/* Files status */}
+                        {/* Files being processed */}
                         {sp?.files && sp.files.length > 0 && (
                             <div className="border-t border-gray-100 pt-6 mt-6">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                                    Reference Files
-                                </div>
+                                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Data Files</div>
                                 <div className="space-y-1.5">
                                     {sp.files.map((f, i) => (
                                         <div key={i} className="flex items-center gap-3 text-[12px]" title={f.error}>
@@ -539,9 +529,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                             }`} />
                                             <span className="font-medium text-gray-700 truncate flex-1">{f.name}</span>
                                             <span className="text-[10px] font-mono text-gray-400 tabular-nums shrink-0">
-                                                {f.status === 'ok' && typeof f.claims === 'number' ? `${f.claims} claims`
-                                                    : f.status === 'failed' ? 'failed'
-                                                    : '…'}
+                                                {f.status === 'ok' ? 'ready' : f.status === 'failed' ? 'failed' : '…'}
                                             </span>
                                         </div>
                                     ))}
@@ -549,12 +537,12 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             </div>
                         )}
 
-                        {/* Retry badge */}
+                        {/* Retries */}
                         {sp?.retries && Object.keys(sp.retries).length > 0 && (
                             <div className="border-t border-gray-100 pt-4 mt-6 flex flex-wrap gap-2">
                                 {Object.entries(sp.retries).map(([k, v]) => (
                                     <span key={k} className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 bg-amber-50 text-amber-700 rounded">
-                                        {k.replace(/_/g, ' ')} · {v}
+                                        {k.replace(/_/g, ' ')} · {v as number}
                                     </span>
                                 ))}
                             </div>
@@ -566,150 +554,160 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     }
 
     // ─── DONE ───
+    const hasVisuals = visuals.length > 0;
+    const hasExpiredFiles = uploadMeta.some(u => u.expires_at && new Date(u.expires_at).getTime() < Date.now());
+    const activeFiles = uploadMeta.filter(u => !u.expires_at || new Date(u.expires_at).getTime() > Date.now());
+
     return (
-        <div className="w-full h-full flex flex-col items-center justify-start py-10 font-sans bg-[#FBFBFC] p-6 relative overflow-y-auto">
+        <div className="w-full h-full flex flex-col items-center justify-start font-sans bg-[#FBFBFC] relative overflow-y-auto"
+            onDrop={handleDrop}
+            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={e => { e.preventDefault(); setIsDragging(false); }}>
+            
             <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-4xl pt-8 md:pt-0">
-                {/* Header Section */}
-                <div className="text-center mb-10 max-w-2xl mx-auto">
-                    {error ? (
-                        <>
-                            <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
-                                <IconX className="w-10 h-10 text-black" stroke={2.5} />
-                            </div>
-                            <h2 className="text-2xl font-black mb-3 text-black">Process Interrupted</h2>
-                            <p className="text-sm text-[#A1A1AA] font-bold uppercase tracking-widest mb-8">{error}</p>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
-                                <IconCheck className="w-10 h-10 text-black" stroke={2.5} />
-                            </div>
-                            <h2 className="text-3xl font-black mb-4 break-words text-black tracking-tight">{topic}</h2>
-                            <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] text-[#D4D4D8] mb-8 font-black uppercase tracking-[0.25em]">
-                                <span className="text-black">{docType.replace("_", " ")}</span>
-                                <span>•</span>
-                                <span>{settings.style}</span>
-                                {referencesBib && <><span>•</span><span className="text-black">Refs Attached</span></>}
-                                {mainTex && <><span>•</span><span className="text-emerald-500 font-bold tabular-nums">~{mainTex.length.toLocaleString()} Chars</span></>}
-                            </div>
-                        </>
-                    )}
+            {/* Drag overlay */}
+            {isDragging && (
+                <div className="fixed inset-0 z-50 bg-black/5 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+                    <div className="flex flex-col items-center gap-3 pointer-events-none">
+                        <IconCloudUpload className="w-16 h-16 text-black" stroke={1.5} />
+                        <p className="text-sm font-bold text-black">Drop data files here</p>
+                    </div>
+                </div>
+            )}
 
-                    {/* Actions */}
-                    {isAnalyticsSession ? (
-                        <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
-                            <button onClick={handleNewSession} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
-                                <IconPlus className="w-4 h-4" /> New Analysis
-                            </button>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
-                                <button onClick={() => setViewerOpen(true)} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
-                                    <IconEye className="w-4 h-4" /> View LaTeX
-                                </button>
-                                <button onClick={downloadZip} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-black rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-xl active:scale-95">
-                                    <IconPackage className="w-4 h-4" /> Project ZIP
-                                </button>
-                                <button onClick={compilePdf} disabled={isCompiling} className="flex items-center gap-2 px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-5">
-                                    {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconFileText className="w-4 h-4" />}
-                                    {isCompiling ? "Compiling..." : "Generate PDF"}
-                                </button>
+            <div className="w-full max-w-5xl px-6 py-8 md:py-12">
+                {/* Header */}
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-2">
+                                Data Analytics · {settings.runtime}
                             </div>
-                        </>
-                    )}
-
-                    {/* Edit / Fix */}
-                    {!isAnalyticsSession && (
-                        <div className="flex items-center justify-center gap-6">
-                            <button onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isEditing ? 'text-black' : 'text-gray-300 hover:text-black'}`}>
-                                <IconPencil className="w-3.5 h-3.5" stroke={2.5} /> Modify
-                            </button>
-                            <div className="w-1 h-1 rounded-full bg-gray-100" />
-                            <button onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isFixingErrors ? 'text-black underline' : 'text-gray-300 hover:text-black'}`}>
-                                <IconBug className="w-3.5 h-3.5" stroke={2.5} /> Fix Errors
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Inputs */}
-                    <AnimatePresence>
-                        {isEditing && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
-                                <div className="relative border border-gray-100 rounded-[24px] bg-white shadow-2xl focus-within:border-black transition-all p-2">
-                                    <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); } }} placeholder="Direct the modification..." className="w-full bg-transparent px-5 py-4 pr-14 outline-none resize-none text-[15px] font-bold text-black placeholder:text-gray-100 min-h-[64px] max-h-32" rows={1} autoFocus />
-                                    <button onClick={handleEdit} disabled={!editPrompt.trim()} className="absolute right-4 bottom-4 p-2.5 rounded-xl bg-black text-white disabled:opacity-5 transition-all active:scale-90"><IconArrowRight className="w-4 h-4" /></button>
+                            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-black break-words mb-1">{topic}</h1>
+                            {error && (
+                                <div className="flex items-center gap-2 mt-2">
+                                    <IconAlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                                    <p className="text-sm text-amber-600">{error}</p>
+                                    <button onClick={() => setError(null)} className="text-amber-400 hover:text-amber-600"><IconX className="w-3.5 h-3.5" /></button>
                                 </div>
-                            </motion.div>
-                        )}
-                        {isFixingErrors && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
-                                <div className="border border-gray-100 rounded-[24px] bg-white shadow-2xl overflow-hidden p-2">
-                                    <div className="px-5 py-2 text-[9px] font-black text-black uppercase tracking-[0.3em]">Compiler Log</div>
-                                    <textarea value={errorLogInput} onChange={e => setErrorLogInput(e.target.value)} placeholder="Paste the log here..." className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[12px] font-mono text-black min-h-[120px] max-h-[200px]" rows={4} autoFocus />
-                                    <div className="px-2 pt-2 flex justify-end">
-                                        <button onClick={fixErrors} disabled={!errorLogInput.trim()} className="px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all flex items-center gap-2">Identify & Solve <IconBug className="w-4 h-4" /></button>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => setEditMode(!editMode)}
+                                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                                    editMode ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                                }`}>
+                                <IconPencil className="w-3.5 h-3.5" /> Modify
+                            </button>
+                            <button onClick={() => handleRerun()} disabled={isRerunning || activeFiles.length === 0}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-black text-white hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-30"
+                                title={activeFiles.length === 0 ? "Upload data files first" : "Re-run pipeline"}>
+                                {isRerunning ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconRefresh className="w-3.5 h-3.5" />}
+                                Re-run
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Edit prompt */}
+                    <AnimatePresence>
+                        {editMode && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                <div className="mt-4 bg-white border border-gray-200 rounded-2xl p-2 shadow-sm">
+                                    <div className="flex items-center gap-2">
+                                        <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)}
+                                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSubmit(); } }}
+                                            placeholder="Describe what to change... (e.g. 'add correlation matrix', 'use log scale', 'focus on column X')"
+                                            className="flex-1 text-[14px] text-black bg-transparent outline-none placeholder:text-gray-300 py-3 px-3 resize-none min-h-[48px] max-h-[120px]" rows={1} autoFocus />
+                                        <button onClick={handleEditSubmit} disabled={!editPrompt.trim() || isRerunning}
+                                            className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center disabled:opacity-10 transition-all hover:bg-gray-800 active:scale-95 shrink-0">
+                                            {isRerunning ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
+                                        </button>
                                     </div>
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </div>
+                </motion.div>
 
-                {/* Visualizations component */}
-                <AgentVisualizations
-                    topic={topic}
-                    language={settings.language}
-                    visuals={visuals}
-                    setVisuals={setVisuals}
-                    sessionId={currentSessionId}
-                    openEditor={setActiveEditorIndex}
-                    onAddVisualsToReport={handleAddVisualsToReport}
-                    runtime={settings.runtime}
-                    setRuntime={(r) => setSettings(s => ({ ...s, runtime: r }))}
-                />
-            </motion.div>
+                {/* Data Files Section */}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                            Data Files
+                            <span className="ml-2 text-black">{uploadMeta.length}</span>
+                        </h2>
+                        <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white border border-gray-200 hover:border-gray-400 transition-colors cursor-pointer">
+                            <IconUpload className="w-3.5 h-3.5" /> Add File
+                            <input type="file" className="hidden" multiple accept=".csv,.xlsx,.xls,.json,.tsv,.txt,.pdf,.docx,.doc,.png,.jpg,.jpeg,.webp" onChange={handleFileUpload} />
+                        </label>
+                    </div>
 
-            {/* LaTeX Viewer Modal */}
-            <AnimatePresence>
-                {viewerOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setViewerOpen(false)} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md" />
-                        <motion.div initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0 }} transition={{ type: "spring", damping: 35, stiffness: 400 }} className="fixed inset-x-0 bottom-0 z-[100] h-[90vh] md:inset-6 md:h-auto md:rounded-[40px] bg-white border border-gray-100 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden">
-                            <div className="h-20 bg-white border-b border-gray-50 flex items-center justify-between px-8 shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <button onClick={() => setActiveTab("tex")} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "tex" ? "bg-black text-white shadow-xl" : "text-gray-300 hover:text-black border border-transparent hover:border-gray-50"}`}>
-                                        <IconFileText className="w-4 h-4" /> Main Body
-                                    </button>
-                                    {referencesBib && (
-                                        <button onClick={() => setActiveTab("bib")} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "bib" ? "bg-black text-white shadow-xl" : "text-gray-300 hover:text-black border border-transparent hover:border-gray-50"}`}>
-                                            <IconBook className="w-4 h-4" /> Bibliography
-                                        </button>
-                                    )}
+                    {uploadMeta.length === 0 && uploadingFiles.length === 0 ? (
+                        <div className="bg-white border border-dashed border-gray-200 rounded-xl p-8 text-center">
+                            <IconDatabase className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                            <p className="text-sm font-medium text-gray-300 mb-1">No data files attached</p>
+                            <p className="text-xs text-gray-300">Upload CSV, Excel, JSON, or other data files to analyze</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2 group">
+                            {uploadMeta.map(file => (
+                                <FileCard key={file.id} file={file} onDelete={() => removeUpload(file.id)} />
+                            ))}
+                            {uploadingFiles.map((filename, idx) => (
+                                <div key={`uploading-${idx}`} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-100">
+                                    <IconLoader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />
+                                    <span className="text-[13px] font-medium text-gray-500 truncate">{filename}</span>
+                                    <span className="text-[10px] text-gray-400 ml-auto shrink-0">Uploading...</span>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <button onClick={() => {
-                                        const blob = new Blob([activeTab === "tex" ? mainTex : referencesBib!], { type: "text/plain;charset=utf-8" });
-                                        const url = URL.createObjectURL(blob); const a = document.createElement("a");
-                                        a.href = url; a.download = activeTab === "tex" ? "main.tex" : "references.bib";
-                                        a.click(); URL.revokeObjectURL(url);
-                                    }} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#D4D4D8] hover:text-black transition-all border border-transparent hover:border-gray-50 rounded-xl">
-                                        <IconDownload className="w-4 h-4 inline mr-2" /> Download
-                                    </button>
-                                    <button onClick={() => setViewerOpen(false)} className="p-3 text-gray-300 hover:text-black transition-colors"><IconX className="w-6 h-6" /></button>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-auto bg-[#FBFBFC]">
-                                <pre className="m-0 p-10 w-full min-h-full whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-[#52525B]" tabIndex={0}>
-                                    <code>{activeTab === "tex" ? mainTex : referencesBib}</code>
-                                </pre>
-                            </div>
-                        </motion.div>
-                    </>
+                            ))}
+                        </div>
+                    )}
+
+                    {hasExpiredFiles && (
+                        <div className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                            <IconAlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                            <p className="text-[12px] text-amber-700">Some files have expired. Upload new files before re-running the pipeline.</p>
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* Visualizations */}
+                {hasVisuals && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                        <AgentVisualizations
+                            topic={topic}
+                            language={settings.language}
+                            visuals={visuals}
+                            setVisuals={setVisuals}
+                            sessionId={currentSessionId}
+                            openEditor={setActiveEditorIndex}
+                            onAddVisualsToReport={() => {}}
+                            runtime={settings.runtime}
+                            setRuntime={(r) => setSettings(s => ({ ...s, runtime: r }))}
+                        />
+                    </motion.div>
                 )}
-            </AnimatePresence>
+
+                {/* Empty state when no visuals yet */}
+                {!hasVisuals && !error && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+                        className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm">
+                        <IconChartPie className="w-14 h-14 text-gray-200 mx-auto mb-4" stroke={1.5} />
+                        <h3 className="text-lg font-bold text-gray-300 mb-2">No visualizations yet</h3>
+                        <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
+                            Upload data files and run the analytics pipeline to generate charts and insights.
+                        </p>
+                        <button onClick={() => handleRerun()} disabled={activeFiles.length === 0 || isRerunning}
+                            className="px-6 py-3 bg-black text-white rounded-xl text-[12px] font-bold hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-2 mx-auto">
+                            {isRerunning ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconPlayerPlay className="w-4 h-4" />}
+                            Run Analytics Pipeline
+                        </button>
+                    </motion.div>
+                )}
+            </div>
+
+            {/* Code Editor Modal */}
             <AnimatePresence>
                 {activeEditorIndex !== null && visuals[activeEditorIndex] && (
                     <CodeEditorModal
@@ -730,11 +728,11 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                     />
                 )}
             </AnimatePresence>
-            
-            <AgentBillingModal 
-                isOpen={billingOpen} 
-                onClose={() => setBillingOpen(false)} 
-                totalSessions={sessions.length} 
+
+            <AgentBillingModal
+                isOpen={billingOpen}
+                onClose={() => setBillingOpen(false)}
+                totalSessions={sessions.length}
             />
         </div>
     );
