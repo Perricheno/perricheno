@@ -82,16 +82,8 @@ function buildUserPrompt(
 ): string {
     const verifiedData = verifications.filter(v => v.verified);
     
-    // Build data context with MINIMAL SAMPLE to avoid token limit
+    // Build data context with ONLY METADATA (no text_content!)
     const dataContext = verifiedData.map(v => {
-        const upload = uploads.find(u => u.id === v.uploadId);
-        
-        // CRITICAL: Only take first 10 LINES to avoid 860K token limit!
-        const fullText = upload?.text_content || "";
-        const lines = fullText.split('\n');
-        const first10Lines = lines.slice(0, 11).join('\n'); // header + 10 rows
-        const sample = first10Lines;
-        
         return `━━━ ${v.filename} ━━━
 Type: ${v.dataType}
 ${v.rowCount ? `Rows: ${v.rowCount}` : ''}
@@ -100,11 +92,9 @@ ${v.columns?.length ? `Available Columns: ${v.columns.join(", ")}` : ''}
 
 Summary: ${v.summary}
 
-DATA SAMPLE (first few rows):
-${sample}
-
 IMPORTANT: The full file is available at: ${v.filename}
-You MUST load the full file in your code using this filename.
+You MUST load the full file in your code using:
+${runtime === 'Python' ? `df = pd.read_csv('${v.filename}')` : `data <- read.csv('${v.filename}')`}
 `;
     }).join("\n\n");
     
