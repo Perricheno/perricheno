@@ -364,122 +364,59 @@ export default function AgentPage() {
         }
     };
 
+    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
 
-        // ─── Agent mode: PDFs only, ingested server-side. ───
-        // All parsing (text + images + OCR fallback) runs on the server via
-        // /api/agent/ingest-pdf. The client just uploads the file and keeps
-        // the returned uploadId. No local extraction.
-        if (isAgentMode) {
-            for (const file of files) {
-                const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                if (ext !== 'pdf') {
-                    setError(`Only PDF files are accepted in agent mode (rejected: ${file.name}).`);
-                    continue;
-                }
-                try {
-                    const fd = new FormData();
-                    fd.append('file', file, file.name);
-                    fd.append('filename', file.name);
-                    const res = await fetch('/api/agent/ingest-pdf', { method: 'POST', body: fd });
-                    if (!res.ok) {
-                        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-                        if (res.status === 413 && err?.error === 'TOTAL_CHAR_CAP') {
-                            setError(`File would exceed the 200,000-character total cap. Remaining budget: ${err.remaining?.toLocaleString() ?? 0}.`);
-                        } else {
-                            setError(err?.error || err?.message || `Upload failed (HTTP ${res.status}).`);
-                        }
-                        continue;
-                    }
-                    const meta = await res.json();
-                    setSettings(s => ({
-                        ...s,
-                        uploadIds: [...s.uploadIds, meta.uploadId],
-                        uploadMeta: [...s.uploadMeta, {
-                            id: meta.uploadId,
-                            filename: meta.filename,
-                            charCount: meta.charCount,
-                            imageCount: meta.imageCount,
-                            pageCount: meta.pageCount,
-                            ocrUsed: meta.ocrUsed,
-                        }],
-                    }));
-                } catch (err: any) {
-                    console.error(`[ingest] ${file.name}:`, err);
-                    setError(err?.message || 'Upload failed.');
-                }
-            }
-            e.target.value = '';
-            return;
-        }
-
-        // ─── Data-analytics / chat modes: legacy client-side extraction. ───
+        // ─── ALL modes now use server-side ingestion ───
         for (const file of files) {
             const ext = file.name.split('.').pop()?.toLowerCase() || '';
-            const binaryFormats = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'];
-            let text = '';
-
-            if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-                try {
-                    const reader = new FileReader();
-                    const base64Promise = new Promise<string>((resolve) => {
-                        reader.onload = (e) => resolve(e.target?.result as string);
-                    });
-                    reader.readAsDataURL(file);
-                    text = await base64Promise;
-                } catch (err) {
-                    console.error("Image read failed", err);
+            
+            // Show uploading indicator
+            setUploadingFiles(prev => [...prev, file.name]);
+            
+            try {
+                // Use /api/agent/attach for all file types
+                const fd = new FormData();
+                fd.append('file', file);
+                
+                const res = await fetch('/api/agent/attach', { 
+                    method: 'POST', 
+                    body: fd 
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+                    setError(err?.error || err?.message || `Upload failed (HTTP ${res.status}).`);
+                    continue;
                 }
-            } else if (binaryFormats.includes(ext)) {
-                try {
-                    const formData = new FormData();
-                    formData.append('fileInput', file);
-                    
-                    if (ext === 'pdf') {
-                        let res = await fetch('/api/pdf-proxy?type=pdf-to-text', { method: 'POST', body: formData });
-                        if (res.ok) text = await res.text();
-                        if (!text || text.trim().length < 20) {
-                            const ocrForm = new FormData();
-                            ocrForm.append('fileInput', file);
-                            ocrForm.append('languages', 'eng');
-                            ocrForm.append('sidecar', 'true');
-                            ocrForm.append('skipText', 'true');
-                            const ocrRes = await fetch('/api/pdf-proxy?type=ocr-pdf', { method: 'POST', body: ocrForm });
-                            if (ocrRes.ok) {
-                                const ocrBlob = await ocrRes.blob();
-                                const textForm2 = new FormData();
-                                textForm2.append('fileInput', ocrBlob, file.name);
-                                const textRes2 = await fetch('/api/pdf-proxy?type=pdf-to-text', { method: 'POST', body: textForm2 });
-                                if (textRes2.ok) {
-                                    const ocrText = await textRes2.text();
-                                    if (ocrText.trim().length > text.trim().length) text = ocrText;
-                                }
-                            }
-                        }
-                    } else {
-                        const convRes = await fetch('/api/pdf-proxy?type=file-to-pdf', { method: 'POST', body: formData });
-                        if (convRes.ok) {
-                            const pdfBlob = await convRes.blob();
-                            const textForm = new FormData();
-                            textForm.append('fileInput', pdfBlob, file.name.replace(/\.[^.]+$/, '.pdf'));
-                            const textRes = await fetch('/api/pdf-proxy?type=pdf-to-text', { method: 'POST', body: textForm });
-                            text = textRes.ok ? await textRes.text() : '';
-                        }
-                    }
-                } catch (err) {
-                    console.error(`File extraction failed for ${file.name}:`, err);
-                }
-                if (!text || text.trim().length < 10) continue;
-            } else {
-                text = await file.text();
+                
+                const meta = await res.json();
+                
+                setSettings((s: any) => ({
+                    ...s,
+                    uploadIds: [...s.uploadIds, meta.uploadId],
+                    uploadMeta: [...s.uploadMeta, {
+                        id: meta.uploadId,
+                        filename: meta.filename,
+                        charCount: meta.charCount || 0,
+                        imageCount: meta.imageCount || 0,
+                        pageCount: meta.pageCount || 1,
+                        ocrUsed: meta.ocrUsed || false,
+                    }],
+                }));
+                
+            } catch (err: any) {
+                console.error(`[upload] ${file.name}:`, err);
+                setError(err?.message || 'Upload failed.');
+            } finally {
+                // Remove from uploading list
+                setUploadingFiles(prev => prev.filter(f => f !== file.name));
             }
-
-            // Agent-mode branch above already handled its files and returned; we
-            // only reach here for data-analytics / chat, which keep the legacy
-            // client-side text extraction.
-            setAgentDataFiles(prev => [...prev, { name: file.name, type: ext, content: text }]);
         }
+        
+        e.target.value = '';
     };
 
     const removeFile = async (idx: number) => {
@@ -832,6 +769,19 @@ export default function AgentPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* Uploading files indicator */}
+                {uploadingFiles.length > 0 && (
+                    <div className="w-full mt-3 flex flex-wrap gap-2">
+                        {uploadingFiles.map((filename, idx) => (
+                            <div key={idx} className="flex items-center gap-2 pr-3 pl-3 py-1.5 bg-blue-50 rounded-[12px] shadow-sm border border-blue-200 max-w-[260px]">
+                                <IconLoader2 className="w-3.5 h-3.5 text-blue-500 animate-spin shrink-0" />
+                                <span className="text-[12px] font-medium text-blue-700 truncate">{filename}</span>
+                                <span className="text-[10px] text-blue-500 shrink-0">Uploading...</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Attached files */}
                 {(!isAgentMode ? agentDataFiles.length > 0 : settings.uploadMeta.length > 0) && (
