@@ -211,7 +211,7 @@ export default function AgentPage() {
                     }
                     
                     const data = await res.json();
-                    router.push(`/agent/${data.sessionId}`);
+                    router.push(`/agent/analytics/${data.sessionId}`);
                 } catch (err: any) {
                     setError(err.message);
                 } finally {
@@ -239,7 +239,7 @@ export default function AgentPage() {
             }
 
             const { sessionId } = await res.json();
-            router.push(`/agent/${sessionId}`);
+            router.push(`/agent/research/${sessionId}`);
         } catch (err: any) {
             setError(err.message);
         } finally {

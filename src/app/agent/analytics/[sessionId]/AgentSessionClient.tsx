@@ -16,12 +16,12 @@ import ReactMarkdown from "react-markdown";
 import { useAdmin } from "@/components/AdminContext";
 import { useRouter } from "next/navigation";
 
-import { DocType, AgentSettings, DEFAULT_SETTINGS, CodeImage, AgentSession } from "../types";
-import { AgentSettingsPanel } from "../AgentSettingsPanel";
-import { AgentSidebar } from "../AgentSidebar";
-import { AgentVisualizations } from "../AgentVisualizations";
-import { CodeEditorModal } from "../CodeEditorModal";
-import { AgentBillingModal } from "../AgentBillingModal";
+import { DocType, AgentSettings, DEFAULT_SETTINGS, CodeImage, AgentSession } from "../../types";
+import { AgentSettingsPanel } from "../../AgentSettingsPanel";
+import { AgentSidebar } from "../../AgentSidebar";
+import { AgentVisualizations } from "../../AgentVisualizations";
+import { CodeEditorModal } from "../../CodeEditorModal";
+import { AgentBillingModal } from "../../AgentBillingModal";
 
 interface Props {
     initialSession: AgentSession;
