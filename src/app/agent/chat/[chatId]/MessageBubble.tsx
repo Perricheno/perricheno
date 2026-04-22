@@ -39,7 +39,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
 
     return (
         <div className="flex items-start gap-3 px-4 py-4 bg-[#FAFAFA]">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#666] flex items-center justify-center shrink-0">
                 <IconRobot className="w-4 h-4 text-white" stroke={2} />
             </div>
             <div className="flex-1 pt-1">
@@ -129,7 +129,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
                             
                             // Inline code
                             return (
-                                <code className="px-1.5 py-0.5 bg-[#f0f0f0] text-[#e01e5a] rounded text-sm font-mono">
+                                <code className="px-1.5 py-0.5 bg-[#f0f0f0] text-[#1a1a1a] rounded text-sm font-mono">
                                     {children}
                                 </code>
                             );
@@ -142,17 +142,17 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
                             </blockquote>
                         ),
                         
-                        // Links
-                        a: ({ href, children }) => (
-                            <a
-                                href={href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-700 underline"
-                            >
-                                {children}
-                            </a>
-                        ),
+        // Links
+        a: ({ href, children }) => (
+            <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#1a1a1a] hover:text-[#666] underline"
+            >
+                {children}
+            </a>
+        ),
                         
                         // Tables
                         table: ({ children }) => (
@@ -186,7 +186,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
                 </ReactMarkdown>
                 
                 {isStreaming && (
-                    <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1" />
+                    <span className="inline-block w-2 h-4 bg-black animate-pulse ml-1" />
                 )}
             </div>
         </div>

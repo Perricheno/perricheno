@@ -143,21 +143,30 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: `Data file too large (> ${MAX_DATA_BYTES} bytes)` }, { status: 413 });
         }
         
-        const text = await file.text();
+        let text: string;
+        
+        try {
+            // For Excel files, just store the raw bytes as base64
+            // The Analytics Pipeline will parse them
+            if (filename.match(/\.xlsx?$/i)) {
+                const buf = Buffer.from(await file.arrayBuffer());
+                text = `[EXCEL_FILE:${buf.toString('base64')}]`;
+            } else {
+                // For text-based files (CSV, JSON, TSV, TXT)
+                text = await file.text();
+            }
+        } catch (e: any) {
+            return NextResponse.json({ 
+                error: "Failed to read file", 
+                details: String(e?.message || e).slice(0, 200) 
+            }, { status: 500 });
+        }
+        
         const charCount = text.length;
         
-        // Check total cap
-        const existing = await getUserActiveUploadsCharTotal(userId);
-        if (existing + charCount > TOTAL_CHAR_CAP) {
-            return NextResponse.json({
-                error: "TOTAL_CHAR_CAP",
-                message: `Upload would exceed the ${TOTAL_CHAR_CAP.toLocaleString()}-character cap.`,
-                fileChars: charCount,
-                alreadyUsed: existing,
-                remaining: Math.max(0, TOTAL_CHAR_CAP - existing),
-            }, { status: 413 });
-        }
-
+        // For data analytics, don't enforce TOTAL_CHAR_CAP
+        // (data files are used differently than PDFs)
+        
         const row = await createAgentUpload({
             user_id: userId,
             filename,
