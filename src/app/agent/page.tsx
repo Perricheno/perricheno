@@ -816,34 +816,18 @@ export default function AgentPage() {
                 )}
 
                 {/* Attached files */}
-                {(!isAgentMode ? agentDataFiles.length > 0 : settings.uploadMeta.length > 0) && (
+                {settings.uploadMeta.length > 0 && (
                     <div className="w-full mt-3 flex flex-wrap gap-2">
-                        {!isAgentMode ? (
-                            agentDataFiles.map((file: any, idx) => (
-                                <div key={idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[200px]">
-                                    {file.type && file.type.match(/^(jpg|jpeg|png|webp)$/i) ? (
-                                        <img src={file.content} alt={file.name} className="w-5 h-5 object-cover rounded shadow-sm" />
-                                    ) : (
-                                        <IconFileText className="w-3.5 h-3.5 text-[#999]" />
-                                    )}
-                                    <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{file.name}</span>
-                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors">
-                                        <IconX className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            ))
-                        ) : (
-                            settings.uploadMeta.map((u, idx) => (
-                                <div key={u.id} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]" title={`${u.charCount.toLocaleString()} chars · ${u.imageCount} images · ${u.pageCount} pages${u.ocrUsed ? " · OCR" : ""}`}>
-                                    <IconFileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
-                                    <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
-                                    <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
-                                    <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
-                                        <IconX className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            ))
-                        )}
+                        {settings.uploadMeta.map((u, idx) => (
+                            <div key={u.id} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]" title={`${u.charCount.toLocaleString()} chars · ${u.imageCount} images · ${u.pageCount} pages${u.ocrUsed ? " · OCR" : ""}`}>
+                                <IconFileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
+                                <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
+                                <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
+                                <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
+                                    <IconX className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 )}
 

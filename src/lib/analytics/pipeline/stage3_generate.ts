@@ -16,13 +16,17 @@ function buildSystemPrompt(runtime: Runtime): string {
         return `You are an expert Python data visualization programmer.
 
 CRITICAL RULES:
-1. Use ONLY the REAL data provided - NO synthetic/mock data
-2. Use ONLY the column names specified in the plan
-3. Import: matplotlib.pyplot as plt, seaborn as sns, pandas as pd, numpy as np
-4. Modern Pandas: NEVER use inplace=True (deprecated)
-5. Use plt.tight_layout() to prevent overlap
-6. NO plt.show() - compiler captures output
-7. Set style: sns.set_style("whitegrid")
+1. Load data from the provided filename using pd.read_csv() or appropriate method
+2. Use ONLY the REAL data from the file - NO synthetic/mock data
+3. Use ONLY the column names specified in the plan
+4. Import: matplotlib.pyplot as plt, seaborn as sns, pandas as pd, numpy as np
+5. Modern Pandas: NEVER use inplace=True (deprecated)
+6. Use plt.tight_layout() to prevent overlap
+7. NO plt.show() - compiler captures output
+8. Set style: sns.set_style("whitegrid")
+
+IMPORTANT: You will receive a filename - load the FULL file using pd.read_csv(filename) or similar.
+DO NOT parse inline data - use the filename to load the complete dataset.
 
 Output ONLY executable Python code. NO markdown fences. NO comments explaining what you're doing.`;
     }
@@ -30,14 +34,44 @@ Output ONLY executable Python code. NO markdown fences. NO comments explaining w
     return `You are an expert R data visualization programmer.
 
 CRITICAL RULES:
-1. Use ONLY the REAL data provided - NO synthetic/mock data
-2. Use ONLY the column names specified in the plan
-3. Use library() for packages (auto-installer handles installation)
-4. Use theme_minimal() for clean visuals
-5. Last expression MUST be the plot object
-6. NO Cairo() or png() calls
+1. Load data from the provided filename using read.csv() or appropriate method
+2. Use ONLY the REAL data from the file - NO synthetic/mock data
+3. Use ONLY the column names specified in the plan
+4. Use library() for packages (auto-installer handles installation)
+5. Use theme_minimal() for clean visuals
+6. Last expression MUST be the plot object
+7. NO Cairo() or png() calls
+
+IMPORTANT: You will receive a filename - load the FULL file using read.csv(filename) or similar.
+DO NOT parse inline data - use the filename to load the complete dataset.
 
 Output ONLY executable R code. NO markdown fences. NO comments explaining what you're doing.`;
+}
+
+function getSmartSample(text: string, filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    
+    // For CSV/TSV: take header + first 10 rows
+    if (ext === 'csv' || ext === 'tsv') {
+        const lines = text.split('\n');
+        const sample = lines.slice(0, 11).join('\n'); // header + 10 rows
+        const remaining = lines.length - 11;
+        return sample + (remaining > 0 ? `\n... (${remaining} more rows)` : '');
+    }
+    
+    // For JSON: take first 10 lines
+    if (ext === 'json') {
+        const lines = text.split('\n');
+        const sample = lines.slice(0, 10).join('\n');
+        const remaining = lines.length - 10;
+        return sample + (remaining > 0 ? `\n... (${remaining} more lines)` : '');
+    }
+    
+    // For other text files: take first 10 lines
+    const lines = text.split('\n');
+    const sample = lines.slice(0, 10).join('\n');
+    const remaining = lines.length - 10;
+    return sample + (remaining > 0 ? `\n... (${remaining} more lines)` : '');
 }
 
 function buildUserPrompt(
@@ -48,10 +82,11 @@ function buildUserPrompt(
 ): string {
     const verifiedData = verifications.filter(v => v.verified);
     
-    // Build data context with FULL text
+    // Build data context with SAMPLE (10 rows) + filename
     const dataContext = verifiedData.map(v => {
         const upload = uploads.find(u => u.id === v.uploadId);
         const fullText = upload?.text_content || "";
+        const sample = getSmartSample(fullText, v.filename);
         
         return `━━━ ${v.filename} ━━━
 Type: ${v.dataType}
@@ -61,8 +96,11 @@ ${v.columns?.length ? `Available Columns: ${v.columns.join(", ")}` : ''}
 
 Summary: ${v.summary}
 
-FULL DATA:
-${fullText}
+DATA SAMPLE (first 10 rows):
+${sample}
+
+IMPORTANT: The full file is available at: ${v.filename}
+You MUST load the full file in your code using this filename.
 `;
     }).join("\n\n");
     
