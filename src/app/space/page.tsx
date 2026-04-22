@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     IconPlus, IconSearch, IconFileText, IconLoader2,
     IconDots, IconTrash, IconCopy, IconShare, IconEdit,
-    IconClock, IconUsers, IconBrandLatex,
+    IconClock, IconUsers, IconBraces,
 } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
 import type { Space } from "@/lib/space-db";
@@ -60,7 +60,7 @@ export default function SpaceDashboard() {
             <div className="min-h-screen bg-[#FBFBFC] flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center mx-auto mb-5">
-                        <IconBrandLatex className="w-8 h-8 text-black" />
+                        <IconBraces className="w-8 h-8 text-black" />
                     </div>
                     <h1 className="text-2xl font-black text-black mb-2">Perricheno Space</h1>
                     <p className="text-sm text-gray-400 mb-6">Professional LaTeX editor with collaboration</p>
@@ -164,7 +164,7 @@ function EmptyState({ onNew, hasSearch }: { onNew: () => void; hasSearch: boolea
             className="flex flex-col items-center justify-center py-24 text-center"
         >
             <div className="w-20 h-20 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center mb-6">
-                <IconBrandLatex className="w-10 h-10 text-gray-300" />
+                <IconBraces className="w-10 h-10 text-gray-300" />
             </div>
             {hasSearch ? (
                 <>

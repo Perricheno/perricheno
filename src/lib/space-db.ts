@@ -26,8 +26,9 @@ export interface SpaceFile {
     id: string;
     space_id: string;
     path: string;
-    content: string | null;
-    content_b64: string | null;
+    content?: string | null;
+    content_b64?: string | null;
+    is_binary: boolean;
     mime_type: string;
     size_bytes: number;
     created_at: string;
@@ -354,7 +355,7 @@ export async function disableSpaceSharing(id: string, userId: number): Promise<v
 export async function getSpaceFiles(spaceId: string): Promise<SpaceFile[]> {
     const { data } = await supabase
         .from('space_files')
-        .select('*')
+        .select('id, space_id, path, is_binary, mime_type, size_bytes, created_at, updated_at')
         .eq('space_id', spaceId)
         .order('path');
     return (data ?? []) as SpaceFile[];
@@ -382,7 +383,7 @@ export async function upsertSpaceFile(spaceId: string, path: string, content: st
 export async function upsertSpaceFileBinary(spaceId: string, path: string, contentB64: string, mimeType: string): Promise<void> {
     const sizeBytes = Math.round(contentB64.length * 0.75);
     await supabase.from('space_files').upsert(
-        { space_id: spaceId, path, content: null, content_b64: contentB64, mime_type: mimeType, size_bytes: sizeBytes, updated_at: new Date().toISOString() },
+        { space_id: spaceId, path, content: null, content_b64: contentB64, is_binary: true, mime_type: mimeType, size_bytes: sizeBytes, updated_at: new Date().toISOString() },
         { onConflict: 'space_id,path' }
     );
     await touchSpace(spaceId);
@@ -417,7 +418,7 @@ export async function createSpaceVersion(spaceId: string, userId: number, label:
     const files = await getSpaceFiles(spaceId);
     const snapshot: Record<string, string> = {};
     for (const f of files) {
-        if (f.content !== null) snapshot[f.path] = f.content;
+        if (f.content != null) snapshot[f.path] = f.content;
     }
     const { data, error } = await supabase
         .from('space_versions')

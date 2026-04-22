@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { IconBrandLatex, IconLoader2, IconCheck, IconAlertTriangle, IconLogin } from "@tabler/icons-react";
+import { IconBraces, IconLoader2, IconCheck, IconAlertTriangle, IconLogin } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
 
 interface InviteInfo {
@@ -58,7 +58,7 @@ export default function InvitePage() {
                 {/* Logo */}
                 <div className="flex items-center justify-center mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-md flex items-center justify-center">
-                        <IconBrandLatex className="w-6 h-6 text-black" />
+                        <IconBraces className="w-6 h-6 text-black" />
                     </div>
                 </div>
 

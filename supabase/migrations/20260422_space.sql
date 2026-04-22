@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS space_files (
     path         TEXT NOT NULL,
     content      TEXT,
     content_b64  TEXT,
+    is_binary    BOOLEAN NOT NULL DEFAULT false,
     mime_type    TEXT NOT NULL DEFAULT 'text/plain',
     size_bytes   INTEGER NOT NULL DEFAULT 0,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -65,8 +66,23 @@ CREATE TABLE IF NOT EXISTS space_invites (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_spaces_owner      ON spaces(owner_id);
-CREATE INDEX IF NOT EXISTS idx_space_files_space  ON space_files(space_id);
+CREATE INDEX IF NOT EXISTS idx_spaces_owner         ON spaces(owner_id);
+CREATE INDEX IF NOT EXISTS idx_space_files_space    ON space_files(space_id);
 CREATE INDEX IF NOT EXISTS idx_space_versions_space ON space_versions(space_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_space_collab_space ON space_collaborators(space_id);
-CREATE INDEX IF NOT EXISTS idx_space_collab_user  ON space_collaborators(user_id);
+CREATE INDEX IF NOT EXISTS idx_space_collab_space   ON space_collaborators(space_id);
+CREATE INDEX IF NOT EXISTS idx_space_collab_user    ON space_collaborators(user_id);
+CREATE INDEX IF NOT EXISTS idx_space_invites_token  ON space_invites(token);
+
+-- Auto-update spaces.updated_at whenever a file changes
+CREATE OR REPLACE FUNCTION touch_space_on_file_change()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE spaces SET updated_at = now() WHERE id = NEW.space_id;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_touch_space_on_file ON space_files;
+CREATE TRIGGER trg_touch_space_on_file
+    AFTER INSERT OR UPDATE ON space_files
+    FOR EACH ROW EXECUTE FUNCTION touch_space_on_file_change();
