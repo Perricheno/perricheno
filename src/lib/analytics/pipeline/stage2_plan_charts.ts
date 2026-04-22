@@ -54,13 +54,8 @@ function buildUserPrompt(
 ): string {
     const verifiedData = verifications.filter(v => v.verified);
     
+    // CRITICAL: Don't use text_content at all! Use only metadata from verifications
     const dataContext = verifiedData.map(v => {
-        const upload = uploads.find(u => u.id === v.uploadId);
-        // CRITICAL: Only first 10 lines to avoid token limit
-        const fullText = upload?.text_content || "";
-        const lines = fullText.split('\n');
-        const preview = lines.slice(0, 11).join('\n'); // header + 10 rows
-        
         return `━━━ ${v.filename} ━━━
 Type: ${v.dataType}
 ${v.rowCount ? `Rows: ${v.rowCount}` : ''}
@@ -69,8 +64,7 @@ ${v.columns?.length ? `Column Names: ${v.columns.join(", ")}` : ''}
 
 Summary: ${v.summary}
 
-Data Preview (first 3000 chars):
-${preview}
+This file is available for analysis and visualization.
 `;
     }).join("\n\n");
     
