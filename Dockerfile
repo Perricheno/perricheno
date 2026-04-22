@@ -15,6 +15,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# Skip TypeScript type checking in Docker build (CI already checks it)
+ENV NEXT_SKIP_TYPE_CHECK=true
+# Skip ESLint in Docker build (CI already checks it)
+ENV NEXT_SKIP_LINT=true
 
 RUN \
   --mount=type=cache,target=/app/.next/cache \
