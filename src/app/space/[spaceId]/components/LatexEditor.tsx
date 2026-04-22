@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import CodeMirror, { type ReactCodeMirrorRef, type Statistics } from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { markdown } from "@codemirror/lang-markdown";
 import { indentUnit, foldGutter } from "@codemirror/language";
@@ -67,10 +67,12 @@ export default function LatexEditor({ content, onChange, onCursorChange, readOnl
                 value={content}
                 onChange={onChange}
                 readOnly={readOnly}
-                onStatistics={stats => {
+                onStatistics={(stats: Statistics) => {
                     if (!onCursorChange) return;
                     const words = content.trim() ? content.trim().split(/\s+/).length : 0;
-                    onCursorChange({ line: stats.line.number, col: stats.cursor - stats.line.from + 1, words, chars: content.length });
+                    const s = stats as any;
+                    const cursorPos: number = s.cursor ?? s.indexContent ?? 0;
+                    onCursorChange({ line: stats.line.number, col: cursorPos - stats.line.from + 1, words, chars: content.length });
                 }}
                 height="100%"
                 theme={[oneDark, perrichenoTheme]}
