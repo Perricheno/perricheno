@@ -5,7 +5,6 @@ import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, Icon
 import { useRouter } from "next/navigation";
 import { AgentSession, ScholarArticle } from "../../types";
 import { AgentSidebar } from "../../AgentSidebar";
-import { supabase } from "@/lib/supabase";
 
 interface Props {
     initialSession: AgentSession;
@@ -112,7 +111,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
     const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setSessions(prev => prev.filter(s => s.id !== id));
-        await supabase.from('agent_sessions').delete().eq('id', id);
+        await fetch(`/api/agent/scholar/sessions/${id}`, { method: 'DELETE' });
         if (id === currentSessionId) {
             router.push('/agent');
         }
