@@ -641,8 +641,10 @@ export default function AgentPage() {
             {/* Suggesting overlay */}
             <AnimatePresence>
                 {isSuggesting && (
-                    <motion.div 
+                    <motion.div
+                        key="suggesting-overlay"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
                         className="absolute inset-0 z-30 bg-[#FBFBFC]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
                     >
                         <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center">
@@ -653,8 +655,10 @@ export default function AgentPage() {
                     </motion.div>
                 )}
                 {isGenerating && (
-                    <motion.div 
+                    <motion.div
+                        key="generating-overlay"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
                         className="absolute inset-0 z-30 bg-[#FBFBFC]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
                     >
                         <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center">
@@ -720,26 +724,36 @@ export default function AgentPage() {
 
                                 <AnimatePresence>
                                     {modeOpen && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, y: 4, scale: 0.97 }} 
-                                            animate={{ opacity: 1, y: 0, scale: 1 }} 
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 4, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 4, scale: 0.97 }}
                                             transition={{ duration: 0.15 }}
                                             className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl border border-[#e5e5e5] shadow-lg py-1 z-50"
                                         >
-                                            {(!isAgentMode ? AGENT_MODES : MODES).map((m: any) => (
-                                                <button 
-                                                    key={m.id}
-                                                    onClick={() => { if(!isAgentMode) { setAgentSubMode(m.id); } else { setDocType(m.id); } setModeOpen(false); }}
-                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${(!isAgentMode ? m.id === agentSubMode : m.id === docType) ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
+                                            <AnimatePresence mode="wait" initial={false}>
+                                                <motion.div
+                                                    key={isAgentMode ? "doc-modes" : "agent-modes"}
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 4 }}
+                                                    transition={{ duration: 0.12 }}
                                                 >
-                                                    <m.icon className="w-4 h-4 shrink-0" stroke={2} />
-                                                    <span>{m.label}</span>
-                                                    {(!isAgentMode ? m.id === agentSubMode : m.id === docType) && (
-                                                        <IconCheck className="w-4 h-4 ml-auto text-[#1a1a1a]" stroke={2.5} />
-                                                    )}
-                                                </button>
-                                            ))}
+                                                    {(!isAgentMode ? AGENT_MODES : MODES).map((m: any) => (
+                                                        <button
+                                                            key={m.id}
+                                                            onClick={() => { if(!isAgentMode) { setAgentSubMode(m.id); } else { setDocType(m.id); } setModeOpen(false); }}
+                                                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${(!isAgentMode ? m.id === agentSubMode : m.id === docType) ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
+                                                        >
+                                                            <m.icon className="w-4 h-4 shrink-0" stroke={2} />
+                                                            <span>{m.label}</span>
+                                                            {(!isAgentMode ? m.id === agentSubMode : m.id === docType) && (
+                                                                <IconCheck className="w-4 h-4 ml-auto text-[#1a1a1a]" stroke={2.5} />
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </motion.div>
+                                            </AnimatePresence>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -835,9 +849,11 @@ export default function AgentPage() {
                 <AnimatePresence>
                     {settingsOpen && (
                         <motion.div
+                            key="settings-panel"
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                             className="w-full overflow-hidden"
                         >
                             <AgentSettingsPanel

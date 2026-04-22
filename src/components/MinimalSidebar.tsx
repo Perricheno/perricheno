@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-    IconHome, IconTerminal2, IconChartBar, 
+import {
+    IconHome, IconTerminal2, IconChartBar,
     IconRobot, IconFileTypePdf, IconListCheck,
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
-    IconSparkles, IconCreditCard
+    IconSparkles, IconCreditCard, IconBrandLatex
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -40,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
         links: [
             { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
             { href: "/agent", icon: IconSparkles, label: "AI Agent" },
+            { href: "/space", icon: IconBrandLatex, label: "Space" },
             { href: "/pdf", icon: IconFileTypePdf, label: "PDF Tools" },
         ]
     },

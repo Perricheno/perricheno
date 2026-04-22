@@ -170,9 +170,11 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 <AnimatePresence>
                     {detailsOpen && (
                         <motion.div
+                            key="details-panel"
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                             className="overflow-hidden"
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
