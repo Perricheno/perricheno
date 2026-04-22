@@ -18,7 +18,16 @@ export const maxDuration = 120;
 const TOTAL_CHAR_CAP = 200_000;
 const MAX_PDF_BYTES = 40 * 1024 * 1024;      // 40 MB
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;    // 10 MB
+const MAX_DATA_BYTES = 20 * 1024 * 1024;     // 20 MB for CSV/Excel
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const DATA_MIMES = new Set([
+    "text/csv",
+    "text/plain",
+    "application/json",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/tab-separated-values",
+]);
 
 function isPdf(file: Blob, name: string): boolean {
     if (file.type === "application/pdf") return true;
@@ -28,6 +37,11 @@ function isPdf(file: Blob, name: string): boolean {
 function isImage(file: Blob, name: string): boolean {
     if (IMAGE_MIMES.has(file.type)) return true;
     return /\.(png|jpe?g|webp)$/i.test(name);
+}
+
+function isDataFile(file: Blob, name: string): boolean {
+    if (DATA_MIMES.has(file.type)) return true;
+    return /\.(csv|xlsx?|json|tsv|txt)$/i.test(name);
 }
 
 export async function POST(req: Request) {
@@ -123,7 +137,50 @@ export async function POST(req: Request) {
         });
     }
 
-    return NextResponse.json({ error: "Unsupported file type. Accepted: PDF, PNG, JPEG, WebP." }, { status: 415 });
+    // ── Data file path (CSV, Excel, JSON, etc.) ──
+    if (isDataFile(file, filename)) {
+        if (file.size > MAX_DATA_BYTES) {
+            return NextResponse.json({ error: `Data file too large (> ${MAX_DATA_BYTES} bytes)` }, { status: 413 });
+        }
+        
+        const text = await file.text();
+        const charCount = text.length;
+        
+        // Check total cap
+        const existing = await getUserActiveUploadsCharTotal(userId);
+        if (existing + charCount > TOTAL_CHAR_CAP) {
+            return NextResponse.json({
+                error: "TOTAL_CHAR_CAP",
+                message: `Upload would exceed the ${TOTAL_CHAR_CAP.toLocaleString()}-character cap.`,
+                fileChars: charCount,
+                alreadyUsed: existing,
+                remaining: Math.max(0, TOTAL_CHAR_CAP - existing),
+            }, { status: 413 });
+        }
+
+        const row = await createAgentUpload({
+            user_id: userId,
+            filename,
+            text_content: text,
+            images: [],
+            page_count: 1,
+            ocr_used: false,
+        });
+
+        return NextResponse.json({
+            uploadId: row.id,
+            kind: "data",
+            filename: row.filename,
+            charCount: row.char_count,
+            imageCount: 0,
+            pageCount: 1,
+            ocrUsed: false,
+        });
+    }
+
+    return NextResponse.json({ 
+        error: "Unsupported file type. Accepted: PDF, PNG, JPEG, WebP, CSV, Excel, JSON, TSV, TXT." 
+    }, { status: 415 });
 }
 
 export async function DELETE(req: Request) {
