@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { getSpace, getSpaceFiles, getUserRoleInSpace } from '@/lib/space-db';
+import { getSpace, getSpaceFilesWithContent, getUserRoleInSpace } from '@/lib/space-db';
 import JSZip from 'jszip';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     const space = await getSpace(id, userId);
     if (!space) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const files = await getSpaceFiles(id);
+    const files = await getSpaceFilesWithContent(id);
     const zip = new JSZip();
 
     for (const file of files) {

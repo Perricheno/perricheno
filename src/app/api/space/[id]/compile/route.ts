@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { getSpace, getSpaceFiles, getUserRoleInSpace, updateSpace } from '@/lib/space-db';
+import { getSpace, getSpaceFilesWithContent, getUserRoleInSpace, updateSpace } from '@/lib/space-db';
 import JSZip from 'jszip';
 
 export const dynamic = 'force-dynamic';
@@ -33,15 +33,15 @@ export async function POST(_req: Request, { params }: Ctx) {
         return NextResponse.json({ error: 'Compiler not configured' }, { status: 503 });
     }
 
-    const files = await getSpaceFiles(id);
+    const files = await getSpaceFilesWithContent(id);
     if (files.length === 0) return NextResponse.json({ error: 'No files to compile' }, { status: 400 });
 
     // Build ZIP
     const zip = new JSZip();
     for (const f of files) {
-        if (f.content !== null) {
+        if (f.content != null) {
             zip.file(f.path, f.content);
-        } else if (f.content_b64) {
+        } else if (f.content_b64 != null) {
             zip.file(f.path, f.content_b64, { base64: true });
         }
     }

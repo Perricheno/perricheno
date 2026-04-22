@@ -324,7 +324,7 @@ export async function deleteSpace(id: string, userId: number): Promise<void> {
 export async function duplicateSpace(id: string, userId: number): Promise<Space | null> {
     const original = await getSpace(id, userId);
     if (!original) return null;
-    const files = await getSpaceFiles(id);
+    const files = await getSpaceFilesWithContent(id);
     const newSpace = await supabase
         .from('spaces')
         .insert({ owner_id: userId, title: `${original.title} (copy)`, compiler: original.compiler, main_file: original.main_file })
@@ -356,6 +356,15 @@ export async function getSpaceFiles(spaceId: string): Promise<SpaceFile[]> {
     const { data } = await supabase
         .from('space_files')
         .select('id, space_id, path, is_binary, mime_type, size_bytes, created_at, updated_at')
+        .eq('space_id', spaceId)
+        .order('path');
+    return (data ?? []) as SpaceFile[];
+}
+
+export async function getSpaceFilesWithContent(spaceId: string): Promise<SpaceFile[]> {
+    const { data } = await supabase
+        .from('space_files')
+        .select('*')
         .eq('space_id', spaceId)
         .order('path');
     return (data ?? []) as SpaceFile[];
@@ -397,7 +406,7 @@ export async function deleteSpaceFile(spaceId: string, path: string): Promise<vo
 export async function renameSpaceFile(spaceId: string, oldPath: string, newPath: string): Promise<void> {
     await supabase.from('space_files').update({ path: newPath, updated_at: new Date().toISOString() }).eq('space_id', spaceId).eq('path', oldPath);
     // Update \input / \include references in all .tex files
-    const texFiles = (await getSpaceFiles(spaceId)).filter(f => f.path.endsWith('.tex') && f.content);
+    const texFiles = (await getSpaceFilesWithContent(spaceId)).filter(f => f.path.endsWith('.tex') && f.content);
     const oldBase = oldPath.replace(/\.tex$/, '');
     const newBase = newPath.replace(/\.tex$/, '');
     for (const f of texFiles) {
@@ -415,7 +424,7 @@ function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
 // ── Versions ───────────────────────────────────────────────────────────────
 
 export async function createSpaceVersion(spaceId: string, userId: number, label: string, message?: string): Promise<SpaceVersion> {
-    const files = await getSpaceFiles(spaceId);
+    const files = await getSpaceFilesWithContent(spaceId);
     const snapshot: Record<string, string> = {};
     for (const f of files) {
         if (f.content != null) snapshot[f.path] = f.content;
