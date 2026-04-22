@@ -6,10 +6,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   
   // Skip type checking in production builds (faster CI/CD)
-  // Type checking is done separately in CI
   typescript: {
     ignoreBuildErrors: process.env.NEXT_SKIP_TYPE_CHECK === 'true',
   },
+  
+  // Disable source maps in production for faster builds
+  productionBrowserSourceMaps: false,
   
   experimental: {
     optimizePackageImports: ["@tabler/icons-react"],

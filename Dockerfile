@@ -20,9 +20,14 @@ ENV NEXT_SKIP_TYPE_CHECK=true
 # Skip ESLint in Docker build (CI already checks it)
 ENV NEXT_SKIP_LINT=true
 
+# Use all available CPU cores for faster build
+ENV UV_THREADPOOL_SIZE=128
+# Disable source maps in production for faster build
+ENV GENERATE_SOURCEMAP=false
+
 RUN \
   --mount=type=cache,target=/app/.next/cache \
-  npm run build
+  npm run build -- --experimental-build-mode=compile
 
 # 3. Production image
 FROM node:20-alpine AS runner
