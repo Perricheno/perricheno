@@ -45,7 +45,6 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
             <div className="flex-1 pt-1">
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
-                    className="prose prose-sm max-w-none"
                     components={{
                         // Paragraphs
                         p: ({ children }) => (
