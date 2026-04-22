@@ -70,7 +70,7 @@ export default function LatexEditor({ content, onChange, onCursorChange, readOnl
                 onStatistics={stats => {
                     if (!onCursorChange) return;
                     const words = content.trim() ? content.trim().split(/\s+/).length : 0;
-                    onCursorChange({ line: stats.line.number, col: stats.column + 1, words, chars: content.length });
+                    onCursorChange({ line: stats.line.number, col: stats.cursor - stats.line.from + 1, words, chars: content.length });
                 }}
                 height="100%"
                 theme={[oneDark, perrichenoTheme]}

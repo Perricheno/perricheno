@@ -107,6 +107,15 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const autoCompileTimer = useRef<NodeJS.Timeout | null>(null);
     const [autoCompile, setAutoCompile] = useState(space.auto_compile);
 
+    // Cleanup timers and object URLs on unmount
+    useEffect(() => {
+        return () => {
+            if (autoCompileTimer.current) clearTimeout(autoCompileTimer.current);
+            (Object.values(saveTimers.current) as ReturnType<typeof setTimeout>[]).forEach(clearTimeout);
+            setPdfUrl((prev: string | null) => { if (prev) URL.revokeObjectURL(prev); return null; });
+        };
+    }, []);
+
     // ── Open file ───────────────────────────────────────────────────────────
 
     const openFile = useCallback(async (path: string) => {

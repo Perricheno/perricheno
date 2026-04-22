@@ -4,9 +4,15 @@ import { getSpaceFile, upsertSpaceFile, deleteSpaceFile, getUserRoleInSpace } fr
 
 export const dynamic = 'force-dynamic';
 
+const MAX_TEXT_BYTES = 2 * 1024 * 1024; // 2 MB
+
 type Ctx = { params: Promise<{ id: string; path: string[] }> };
 
 function joinPath(segments: string[]) { return segments.join('/'); }
+
+function isValidPath(p: string) {
+    return p.length > 0 && !p.startsWith('/') && !p.includes('../') && !p.includes('\0');
+}
 
 // GET — file content
 export async function GET(_req: Request, { params }: Ctx) {
@@ -29,6 +35,9 @@ export async function PUT(req: Request, { params }: Ctx) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { id, path } = await params;
 
+    const filePath = joinPath(path);
+    if (!isValidPath(filePath)) return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+
     const role = await getUserRoleInSpace(id, userId);
     if (!role || role === 'viewer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -36,7 +45,11 @@ export async function PUT(req: Request, { params }: Ctx) {
     try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
     const content = String(body.content ?? '');
-    await upsertSpaceFile(id, joinPath(path), content, body.mime_type);
+    if (new TextEncoder().encode(content).length > MAX_TEXT_BYTES) {
+        return NextResponse.json({ error: 'File too large (max 2 MB)' }, { status: 413 });
+    }
+
+    await upsertSpaceFile(id, filePath, content, body.mime_type);
     return NextResponse.json({ ok: true });
 }
 
