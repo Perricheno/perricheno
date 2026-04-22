@@ -9,8 +9,10 @@ import type { Space, SpaceFile, Compiler } from "@/lib/space-db";
 import TopBar from "./components/TopBar";
 import FileTree, { type FileEntry } from "./components/FileTree";
 import LatexEditor, { type SelectionInfo } from "./components/LatexEditor";
+import YjsLatexEditor from "./components/YjsLatexEditor";
 import PdfPreview from "./components/PdfPreview";
 import CompilerLog from "./components/CompilerLog";
+import { useYjsSpace } from "./hooks/useYjsSpace";
 
 // ── Tab ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +123,9 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const autoCompileTimer = useRef<NodeJS.Timeout | null>(null);
     const [autoCompile, setAutoCompile] = useState(space.auto_compile);
 
+    // Yjs real-time collaboration
+    const { ydoc, provider, status: yjsStatus, synced } = useYjsSpace(space.id);
+
     // Cleanup timers and object URLs on unmount
     useEffect(() => {
         return () => {
@@ -146,7 +151,14 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
         const content = file.content ?? '';
         setTabs(prev => [...prev, { path, content, savedContent: content }]);
         setActiveTab(path);
-    }, [tabs, files, space.id]);
+        // Seed Yjs text if already synced (first opener initializes from Supabase)
+        if (ydoc && synced) {
+            const yText = ydoc.getText(path);
+            if (yText.length === 0 && content) {
+                ydoc.transact(() => { yText.insert(0, content); });
+            }
+        }
+    }, [tabs, files, space.id, ydoc, synced]);
 
     // Open main file on mount
     useEffect(() => {
@@ -254,6 +266,34 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [handleCompile]);
+
+    // Seed Yjs text when sync completes (handles files opened before sync was ready)
+    useEffect(() => {
+        if (!ydoc || !activeTab || !synced) return;
+        const yText = ydoc.getText(activeTab);
+        if (yText.length > 0) return;
+        const tab = tabs.find((t: EditorTab) => t.path === activeTab);
+        if (tab?.content) {
+            ydoc.transact(() => { yText.insert(0, tab.content); });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ydoc, synced, activeTab]);
+
+    // Observe Yjs changes → keep React tab state + Supabase in sync
+    useEffect(() => {
+        if (!ydoc || !activeTab || readOnly) return;
+        const yText = ydoc.getText(activeTab);
+        const handler = () => {
+            const content = yText.toString();
+            setTabs((prev: EditorTab[]) => prev.map((t: EditorTab) => t.path === activeTab ? { ...t, content } : t));
+            if (saveTimers.current[activeTab]) clearTimeout(saveTimers.current[activeTab]);
+            saveTimers.current[activeTab] = setTimeout(() => {
+                saveFile(activeTab, content);
+            }, 800);
+        };
+        yText.observe(handler);
+        return () => yText.unobserve(handler);
+    }, [ydoc, activeTab, readOnly, saveFile]);
 
     // ── File ops ────────────────────────────────────────────────────────────
 
@@ -483,15 +523,26 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                         {activeTabData ? (
                             <div className="flex flex-col h-full">
                                 <div className="flex-1 overflow-hidden">
-                                    <LatexEditor
-                                        content={activeTabData.content}
-                                        onChange={val => handleContentChange(activeTabData.path, val)}
-                                        goToLine={goToLine}
-                                        readOnly={readOnly}
-                                        onCursorChange={setCursorInfo}
-                                        onSelectionChange={setAiSelection}
-                                        applyReplacement={aiReplacement}
-                                    />
+                                    {ydoc && provider && synced ? (
+                                        <YjsLatexEditor
+                                            yText={ydoc.getText(activeTabData.path)}
+                                            provider={provider}
+                                            readOnly={readOnly}
+                                            onCursorChange={setCursorInfo}
+                                            onSelectionChange={setAiSelection}
+                                            goToLine={goToLine}
+                                        />
+                                    ) : (
+                                        <LatexEditor
+                                            content={activeTabData.content}
+                                            onChange={val => handleContentChange(activeTabData.path, val)}
+                                            goToLine={goToLine}
+                                            readOnly={readOnly}
+                                            onCursorChange={setCursorInfo}
+                                            onSelectionChange={setAiSelection}
+                                            applyReplacement={aiReplacement}
+                                        />
+                                    )}
                                 </div>
                                 {/* Status bar */}
                                 <div className="flex items-center gap-3 px-3 py-0.5 bg-[#1a1a1a] border-t border-[#2a2a2a] shrink-0">
@@ -506,6 +557,16 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                                     <span className="text-[10px] text-gray-600 font-mono">
                                         {cursorInfo.chars.toLocaleString()} chars
                                     </span>
+                                    <span className="text-[10px] text-gray-700">·</span>
+                                    {yjsStatus === 'connected' && synced && (
+                                        <span className="text-[10px] text-emerald-500 font-mono">● live</span>
+                                    )}
+                                    {yjsStatus === 'connecting' && (
+                                        <span className="text-[10px] text-amber-500 font-mono">● sync…</span>
+                                    )}
+                                    {yjsStatus === 'disconnected' && (
+                                        <span className="text-[10px] text-red-400 font-mono">● offline</span>
+                                    )}
                                     {readOnly && (
                                         <>
                                             <span className="text-[10px] text-gray-700">·</span>
@@ -717,9 +778,19 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                         selection={aiSelection}
                         spaceId={space.id}
                         onApply={(text) => {
-                            setAiReplacement({ from: aiSelection.from, to: aiSelection.to, text });
-                            setAiSelection(null);
-                            setTimeout(() => setAiReplacement(null), 100);
+                            if (ydoc && activeTab && synced) {
+                                // Apply through Yjs so all peers see the change
+                                const yText = ydoc.getText(activeTab);
+                                ydoc.transact(() => {
+                                    yText.delete(aiSelection.from, aiSelection.to - aiSelection.from);
+                                    yText.insert(aiSelection.from, text);
+                                });
+                                setAiSelection(null);
+                            } else {
+                                setAiReplacement({ from: aiSelection.from, to: aiSelection.to, text });
+                                setAiSelection(null);
+                                setTimeout(() => setAiReplacement(null), 100);
+                            }
                         }}
                         onClose={() => setAiSelection(null)}
                     />

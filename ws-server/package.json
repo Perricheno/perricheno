@@ -1,0 +1,14 @@
+{
+  "name": "ws-server",
+  "version": "1.0.0",
+  "description": "Yjs WebSocket server for Space real-time collaboration",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.18.0",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.20"
+  }
+}
