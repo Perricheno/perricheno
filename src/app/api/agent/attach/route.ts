@@ -188,11 +188,20 @@ export async function POST(req: Request) {
         let text: string;
         
         try {
-            // For Excel files, just store the raw bytes as base64
-            // The Analytics Pipeline will parse them
+            // For Excel files, convert to CSV
             if (filename.match(/\.xlsx?$/i)) {
+                const XLSX = await import('xlsx');
                 const buf = Buffer.from(await file.arrayBuffer());
-                text = `[EXCEL_FILE:${buf.toString('base64')}]`;
+                const workbook = XLSX.read(buf, { type: 'buffer' });
+                
+                // Get first sheet
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                
+                // Convert to CSV
+                text = XLSX.utils.sheet_to_csv(worksheet);
+                
+                console.log(`[attach] Converted XLSX to CSV: ${filename} (${text.length} chars)`);
             } else {
                 // For text-based files (CSV, JSON, TSV, TXT)
                 text = await file.text();

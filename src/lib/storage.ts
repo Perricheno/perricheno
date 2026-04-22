@@ -100,9 +100,32 @@ export async function downloadFromStorage(path: string): Promise<ArrayBuffer> {
 
 /**
  * Download file as text (for CSV, JSON, etc.)
+ * Automatically converts XLSX to CSV
  */
 export async function downloadTextFromStorage(path: string): Promise<string> {
     const buffer = await downloadFromStorage(path);
+    
+    // Check if it's an XLSX file
+    if (path.match(/\.xlsx?$/i)) {
+        try {
+            const XLSX = await import('xlsx');
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            
+            // Get first sheet
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convert to CSV
+            const csv = XLSX.utils.sheet_to_csv(worksheet);
+            
+            console.log(`[Storage] Converted XLSX to CSV: ${path} (${csv.length} chars)`);
+            return csv;
+        } catch (e) {
+            console.error('[Storage] XLSX conversion failed:', e);
+            // Fallback to text decode
+        }
+    }
+    
     const decoder = new TextDecoder('utf-8');
     return decoder.decode(buffer);
 }
