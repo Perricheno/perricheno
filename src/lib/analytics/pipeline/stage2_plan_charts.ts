@@ -110,13 +110,16 @@ function validatePlans(raw: any, verifications: DataVerification[]): ChartPlan[]
             ? p.dataColumns.map(String).filter(Boolean)
             : [];
         
-        // Validate that columns exist in data (if tabular)
+        // Validate that columns exist in data (if tabular and columns are known)
         const hasTabularData = verifications.some(v => v.dataType === 'tabular');
-        if (hasTabularData && dataColumns.length > 0) {
+        const hasKnownColumns = allColumns.size > 0;
+        
+        if (hasTabularData && hasKnownColumns && dataColumns.length > 0) {
             const validColumns = dataColumns.filter((col: string) => allColumns.has(col));
             if (validColumns.length === 0) {
                 console.warn(`[Stage2] Chart ${chartType} references non-existent columns: ${dataColumns.join(", ")}`);
-                continue;  // Skip this plan
+                // Don't skip - XLSX files don't have columns extracted yet
+                // continue;
             }
         }
         
