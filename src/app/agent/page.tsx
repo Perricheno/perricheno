@@ -365,14 +365,10 @@ export default function AgentPage() {
     };
 
     const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+    const [isDragging, setIsDragging] = useState(false);
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-
-        // ─── ALL modes now use server-side ingestion ───
+    const processFiles = async (files: File[]) => {
         for (const file of files) {
-            const ext = file.name.split('.').pop()?.toLowerCase() || '';
-            
             // Show uploading indicator
             setUploadingFiles(prev => [...prev, file.name]);
             
@@ -394,6 +390,7 @@ export default function AgentPage() {
                 
                 const meta = await res.json();
                 
+                // Update state based on mode
                 setSettings((s: any) => ({
                     ...s,
                     uploadIds: [...s.uploadIds, meta.uploadId],
@@ -415,8 +412,29 @@ export default function AgentPage() {
                 setUploadingFiles(prev => prev.filter(f => f !== file.name));
             }
         }
-        
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        await processFiles(files);
         e.target.value = '';
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files);
+        await processFiles(files);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
     };
 
     const removeFile = async (idx: number) => {
@@ -664,7 +682,21 @@ export default function AgentPage() {
                 </div>
 
                 {/* Input Container */}
-                <div className="w-full bg-white rounded-2xl border border-[#e5e5e5] shadow-sm focus-within:border-[#c0c0c0] focus-within:shadow-md transition-all">
+                <div 
+                    className="w-full bg-white rounded-2xl border border-[#e5e5e5] shadow-sm focus-within:border-[#c0c0c0] focus-within:shadow-md transition-all relative"
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                >
+                    {/* Drag & Drop Overlay */}
+                    {isDragging && (
+                        <div className="absolute inset-0 z-50 bg-[#1a1a1a]/5 backdrop-blur-sm rounded-2xl border-2 border-dashed border-[#1a1a1a] flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-2">
+                                <IconPlus className="w-12 h-12 text-[#1a1a1a]" stroke={2.5} />
+                                <p className="text-sm font-bold text-[#1a1a1a]">Drop files here</p>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Textarea */}
                     <div className="px-5 pt-4 pb-2">
