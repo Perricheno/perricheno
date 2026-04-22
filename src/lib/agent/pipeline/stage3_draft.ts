@@ -4,8 +4,9 @@
 // Long sections use the chatCompletionLong() continuation fallback so a
 // 25 000-word thesis is never bottlenecked by a per-call token cap.
 
-import { chatCompletionLong, type ChatMessage } from "./llm";
-import type { ExtractedRef, Plan, PlanSection, SectionDraft, PipelineSettings } from "./types";
+import { chatCompletionLong, type ChatMessage, type ChatContentPart } from "./llm";
+import type { ExtractedRef, Plan, PlanSection, SectionDraft, PipelineSettings, VerificationResult } from "./types";
+import type { AgentUpload } from "@/lib/db";
 import { BABEL_LANG_MAP } from "../stages";
 
 const LANG_DISPLAY_NAMES: Record<string, string> = {
@@ -18,7 +19,77 @@ const LANG_DISPLAY_NAMES: Record<string, string> = {
 };
 
 const PREVIOUS_CONTEXT_CHARS = 1500;
+const TEXT_EXCERPT_CHARS = 3000; // Per reference in draft context
 
+// Enhanced reference bundle with full context from verification
+function buildEnhancedRefBundle(
+    refs: ExtractedRef[],
+    uploads: AgentUpload[],
+    verifications: VerificationResult[],
+): string {
+    const ok = refs.filter(r => r.status === "ok" && (r.relevanceScore ?? 0) >= 3);
+    if (ok.length === 0) return "";
+    
+    const bundle: string[] = [];
+    
+    for (const ref of ok) {
+        const upload = uploads.find(u => u.id === ref.uploadId);
+        const verify = verifications.find(v => v.uploadId === ref.uploadId);
+        
+        if (!upload) continue;
+        
+        const meta = ref.metadata ?? {};
+        const authors = (meta.authors ?? []).join(", ");
+        
+        // Header with metadata
+        bundle.push(`━━━ [${ref.bibKey}] ${meta.title || ref.filename} ━━━`);
+        if (authors) bundle.push(`Authors: ${authors}`);
+        if (meta.year) bundle.push(`Year: ${meta.year}`);
+        if (meta.venue) bundle.push(`Venue: ${meta.venue}`);
+        
+        // Verification summary (comprehensive understanding)
+        if (verify?.verified && verify.contentSummary) {
+            bundle.push(`\n📋 SUMMARY:\n${verify.contentSummary}`);
+        }
+        
+        // Key topics for context
+        if (verify?.keyTopics && verify.keyTopics.length > 0) {
+            bundle.push(`\n🏷️ KEY TOPICS: ${verify.keyTopics.slice(0, 8).join(", ")}`);
+        }
+        
+        // Key claims (structured facts)
+        if (ref.keyClaims && ref.keyClaims.length > 0) {
+            bundle.push(`\n💡 KEY CLAIMS:`);
+            ref.keyClaims.forEach(c => bundle.push(`  • ${c}`));
+        }
+        
+        // Relevant quotes (direct citations)
+        if (ref.relevantQuotes && ref.relevantQuotes.length > 0) {
+            bundle.push(`\n📝 QUOTES:`);
+            ref.relevantQuotes.forEach(q => bundle.push(`  "${q}"`));
+        }
+        
+        // Full text excerpt (raw content for deep understanding)
+        if (upload.text_content && upload.text_content.length > 100) {
+            const excerpt = upload.text_content.slice(0, TEXT_EXCERPT_CHARS);
+            bundle.push(`\n📄 FULL TEXT EXCERPT (${excerpt.length} chars):\n${excerpt}${upload.text_content.length > TEXT_EXCERPT_CHARS ? "..." : ""}`);
+        }
+        
+        // Images indicator
+        const imgCount = Array.isArray(upload.images_json) 
+            ? upload.images_json.length 
+            : 0;
+        if (imgCount > 0) {
+            bundle.push(`\n🖼️ Contains ${imgCount} figure(s) - images are provided separately for visual analysis`);
+        }
+        
+        bundle.push(""); // Separator
+    }
+    
+    return bundle.join("\n");
+}
+
+// Legacy function for backward compatibility (when verifications not available)
 function buildRefBundle(refs: ExtractedRef[]): string {
     const ok = refs.filter(r => r.status === "ok" && (r.relevanceScore ?? 0) >= 3);
     if (ok.length === 0) return "";
@@ -90,13 +161,61 @@ function buildUserPrompt(
     ].filter(Boolean).join("\n");
 }
 
+// Collect images from relevant references for a section
+function collectSectionImages(
+    section: PlanSection,
+    refs: ExtractedRef[],
+    uploads: AgentUpload[],
+    maxImages: number = 6, // Limit to avoid token explosion
+): ChatContentPart[] {
+    const images: ChatContentPart[] = [];
+    
+    if (!section.refFocus || section.refFocus.length === 0) return images;
+    
+    for (const filename of section.refFocus) {
+        if (images.length >= maxImages) break;
+        
+        const ref = refs.find(r => r.filename === filename && r.status === "ok");
+        if (!ref) continue;
+        
+        const upload = uploads.find(u => u.id === ref.uploadId);
+        if (!upload) continue;
+        
+        const uploadImages = Array.isArray(upload.images_json)
+            ? upload.images_json
+            : (typeof upload.images_json === "string" ? JSON.parse(upload.images_json) : []);
+        
+        // Add up to 2 images per reference
+        for (const img of uploadImages.slice(0, 2)) {
+            if (images.length >= maxImages) break;
+            if (img?.dataUrl) {
+                images.push({
+                    type: "image_url",
+                    image_url: {
+                        url: img.dataUrl,
+                        detail: "high", // High detail for better understanding
+                    },
+                });
+            }
+        }
+    }
+    
+    return images;
+}
+
 export async function runStage3(
     settings: PipelineSettings,
     plan: Plan,
     refs: ExtractedRef[],
+    uploads: AgentUpload[],
+    verifications: VerificationResult[],
     onProgress?: (done: number, total: number, heading: string) => void,
 ): Promise<{ sections: SectionDraft[]; tokensUsed: number; anyTruncated: boolean }> {
-    const refBundle = buildRefBundle(refs);
+    // Use enhanced bundle if verifications available, otherwise fallback to legacy
+    const refBundle = verifications.length > 0
+        ? buildEnhancedRefBundle(refs, uploads, verifications)
+        : buildRefBundle(refs);
+    
     const systemPrompt = buildSystemPrompt(settings, !!refBundle);
 
     const drafts: SectionDraft[] = [];
@@ -104,14 +223,29 @@ export async function runStage3(
     let anyTruncated = false;
     let runningTail = "";
 
+    console.log(`[Stage3] Starting draft with ${verifications.length > 0 ? "ENHANCED" : "legacy"} ref bundle (${refBundle.length} chars)`);
+
     for (let i = 0; i < plan.sections.length; i++) {
         const section = plan.sections[i];
-        const userPrompt = buildUserPrompt(settings, plan, section, refBundle, runningTail);
+        const userPromptText = buildUserPrompt(settings, plan, section, refBundle, runningTail);
+        
+        // Collect images from relevant references
+        const sectionImages = collectSectionImages(section, refs, uploads);
+        
+        // Build multimodal message if images available
+        const userContent: string | ChatContentPart[] = sectionImages.length > 0
+            ? [
+                { type: "text", text: userPromptText },
+                ...sectionImages,
+            ]
+            : userPromptText;
 
         const messages: ChatMessage[] = [
             { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
+            { role: "user", content: userContent },
         ];
+
+        console.log(`[Stage3] Section ${i + 1}/${plan.sections.length}: "${section.heading}" (${section.wordTarget} words, ${sectionImages.length} images)`);
 
         const r = await chatCompletionLong(messages, {
             timeoutMs: 180_000,
@@ -130,6 +264,8 @@ export async function runStage3(
             truncated: r.truncated,
             tokensUsed: r.totalTokens,
         });
+
+        console.log(`[Stage3] Section complete: ${words} words, ${r.totalTokens} tokens${r.truncated ? " (TRUNCATED)" : ""}`);
 
         // Keep just the tail as continuity context — cheap and effective.
         runningTail = body.slice(-PREVIOUS_CONTEXT_CHARS);

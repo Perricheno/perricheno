@@ -210,7 +210,14 @@ export interface StageProgress {
     label: string;
     progress?: { done: number; total: number };
     completed_stages: number[];
-    files?: { name: string; status: "ok" | "failed" | "pending"; claims?: number; error?: string }[];
+    files?: { 
+        name: string; 
+        status: "ok" | "failed" | "pending"; 
+        claims?: number; 
+        error?: string;
+        verified?: boolean;           // NEW: Stage 2.5 verification passed
+        verificationScore?: number;   // NEW: Average confidence score (0-10)
+    }[];
     retries?: Record<string, number>;
     started_at: string;
     updated_at: string;

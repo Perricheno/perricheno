@@ -75,9 +75,21 @@ export interface AssembledDoc {
     unresolvedCitations: string[];
 }
 
+export interface VerificationResult {
+    uploadId: string;
+    filename: string;
+    verified: boolean;
+    testQuestions: { question: string; answer: string; confidence: number }[];
+    contentSummary: string;
+    keyTopics: string[];
+    warnings: string[];
+    tokensUsed?: number;
+}
+
 export interface PipelineResult {
     plan: Plan;
     refs: ExtractedRef[];
+    verifications: VerificationResult[];  // NEW
     sections: SectionDraft[];
     assembled: AssembledDoc;
     validated: {
