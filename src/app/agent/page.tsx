@@ -819,7 +819,7 @@ export default function AgentPage() {
                 {settings.uploadMeta.length > 0 && (
                     <div className="w-full mt-3 flex flex-wrap gap-2">
                         {settings.uploadMeta.map((u, idx) => (
-                            <div key={u.id} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]" title={`${u.charCount.toLocaleString()} chars · ${u.imageCount} images · ${u.pageCount} pages${u.ocrUsed ? " · OCR" : ""}`}>
+                            <div key={u.id || idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]" title={`${u.charCount.toLocaleString()} chars · ${u.imageCount} images · ${u.pageCount} pages${u.ocrUsed ? " · OCR" : ""}`}>
                                 <IconFileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
                                 <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
                                 <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
