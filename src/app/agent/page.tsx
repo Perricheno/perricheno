@@ -168,7 +168,7 @@ export default function AgentPage() {
                     const res = await fetch('/api/agent/scholar/sessions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt, settings }) // Add settings for maxArticles and limits
+                        body: JSON.stringify({ prompt, settings })
                     });
                     if (!res.ok) {
                         if (res.status === 402) { setBillingOpen(true); return; }
@@ -184,9 +184,42 @@ export default function AgentPage() {
                     setIsGenerating(false);
                 }
                 return;
+            } else if (agentSubMode === 'data_analytics') {
+                // NEW: Analytics Pipeline with proper data verification
+                try {
+                    if (settings.uploadIds.length === 0) {
+                        setError("Please upload data files (CSV, Excel, etc.) before generating visualizations.");
+                        setIsGenerating(false);
+                        return;
+                    }
+                    
+                    const res = await fetch('/api/agent/analytics/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt,
+                            runtime: settings.runtime,
+                            uploadIds: settings.uploadIds
+                        })
+                    });
+                    
+                    if (!res.ok) {
+                        if (res.status === 402) { setBillingOpen(true); return; }
+                        const errData = await res.json().catch(() => ({ error: "Unknown API error" }));
+                        setError(errData.error || `HTTP ${res.status}`);
+                        return;
+                    }
+                    
+                    const data = await res.json();
+                    router.push(`/agent/${data.sessionId}`);
+                } catch (err: any) {
+                    setError(err.message);
+                } finally {
+                    setIsGenerating(false);
+                }
+                return;
             }
             setIsGenerating(false);
-            handleAgentGenerate();
             return;
         }
 
