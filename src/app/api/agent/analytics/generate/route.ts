@@ -26,6 +26,12 @@ async function runBackground(
             throw new Error("No uploads found");
         }
         
+        // CRITICAL: Clear text_content to avoid sending huge data to OpenAI
+        // Files are accessed by filename on the server, not by text_content
+        uploads.forEach(u => {
+            u.text_content = null;
+        });
+        
         // Progress writer
         const writeProgress = async (p: StageProgress) => {
             await updateAgentSession(sessionId, {
