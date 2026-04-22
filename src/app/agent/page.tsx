@@ -122,8 +122,7 @@ export default function AgentPage() {
         { id: "report", label: "Report", icon: IconChartPie },
     ];
 
-    const AGENT_MODES: { id: "data_analytics" | "chat" | "literature_search"; label: string; icon: any }[] = [
-        { id: "literature_search", label: "Literature Search", icon: IconBook2 },
+    const AGENT_MODES: { id: "data_analytics" | "chat"; label: string; icon: any }[] = [
         { id: "data_analytics", label: "Data Analytics", icon: IconDatabase },
         { id: "chat", label: "Chat", icon: IconRobot },
     ];
@@ -479,9 +478,11 @@ export default function AgentPage() {
         if (s.doc_type === 'chat') {
             router.push(`/agent/chat/${s.id}`);
         } else if (s.doc_type === 'literature_search') {
-            router.push(`/agent/scholar/${s.id}`);
+            router.push(`/citations`);
+        } else if (s.doc_type === 'data_analytics' || s.doc_type === 'data-analytics') {
+            router.push(`/agent/analytics/${s.id}`);
         } else {
-            router.push(`/agent/${s.id}`);
+            router.push(`/agent/research/${s.id}`);
         }
     };
 

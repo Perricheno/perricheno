@@ -30,22 +30,27 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'title, bibtex, cite_key are required' }, { status: 400 });
     }
 
-    const citation = await createCitation(userId, {
-        doi:      body.doi      ?? null,
-        arxiv_id: body.arxiv_id ?? null,
-        isbn:     body.isbn     ?? null,
-        title:    body.title,
-        authors:  body.authors  ?? [],
-        year:     body.year     ?? null,
-        venue:    body.venue    ?? null,
-        abstract: body.abstract ?? null,
-        url:      body.url      ?? null,
-        bibtex:   body.bibtex,
-        cite_key: body.cite_key,
-        tags:     body.tags     ?? [],
-        notes:    body.notes    ?? null,
-        starred:  body.starred  ?? false,
-    });
+    try {
+        const citation = await createCitation(userId, {
+            doi:      body.doi      ?? null,
+            arxiv_id: body.arxiv_id ?? null,
+            isbn:     body.isbn     ?? null,
+            title:    body.title,
+            authors:  Array.isArray(body.authors) ? body.authors : [],
+            year:     typeof body.year === 'number' ? body.year : null,
+            venue:    body.venue    ?? null,
+            abstract: body.abstract ?? null,
+            url:      body.url      ?? null,
+            bibtex:   body.bibtex,
+            cite_key: body.cite_key,
+            tags:     Array.isArray(body.tags) ? body.tags : [],
+            notes:    body.notes    ?? null,
+            starred:  body.starred  ?? false,
+        });
 
-    return NextResponse.json({ citation });
+        return NextResponse.json({ citation });
+    } catch (e: any) {
+        console.error('[citations/POST] Error:', e.message);
+        return NextResponse.json({ error: e.message || 'Failed to save citation' }, { status: 500 });
+    }
 }

@@ -24,7 +24,7 @@ export default async function AgentSessionPage({ params }: { params: Promise<{ s
     if (session.doc_type === 'chat') {
         redirect(`/agent/chat/${sessionId}`);
     } else if (session.doc_type === 'literature_search') {
-        redirect(`/agent/scholar/${sessionId}`);
+        redirect(`/citations`);
     } else if (session.doc_type === 'data_analytics' || session.doc_type === 'data-analytics') {
         redirect(`/agent/analytics/${sessionId}`);
     } else {
