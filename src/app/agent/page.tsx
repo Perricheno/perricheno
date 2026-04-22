@@ -390,17 +390,13 @@ export default function AgentPage() {
                 
                 const meta = await res.json();
                 
-                console.log('[processFiles] API response:', meta);
-                console.log('[processFiles] uploadId:', meta.uploadId);
-                
                 // Validate that we have an uploadId
                 if (!meta.uploadId) {
-                    console.error('[processFiles] ERROR: No uploadId in response!', meta);
                     setError(`Upload failed: No uploadId returned for ${file.name}`);
                     continue;
                 }
                 
-                // Update state based on mode
+                // Update state
                 setSettings((s: any) => ({
                     ...s,
                     uploadIds: [...s.uploadIds, meta.uploadId],
@@ -413,8 +409,6 @@ export default function AgentPage() {
                         ocrUsed: meta.ocrUsed || false,
                     }],
                 }));
-                
-                console.log('[processFiles] File added to state:', meta.filename);
                 
             } catch (err: any) {
                 console.error(`[upload] ${file.name}:`, err);

@@ -539,12 +539,15 @@ export interface AgentUpload {
     id: string;
     user_id: number;
     filename: string;
-    text_content: string;
+    text_content: string | null;
     images_json: { dataUrl: string; contentType: string; bytes: number }[] | string;
     char_count: number;
     image_count: number;
     page_count: number;
     ocr_used: boolean;
+    storage_path: string | null;
+    file_size: number | null;
+    mime_type: string | null;
     created_at: string;
     expires_at: string;
 }
@@ -552,20 +555,26 @@ export interface AgentUpload {
 export async function createAgentUpload(data: {
     user_id: number;
     filename: string;
-    text_content: string;
+    text_content: string | null;
     images: { dataUrl: string; contentType: string; bytes: number }[];
     page_count: number;
     ocr_used: boolean;
+    storage_path?: string | null;
+    file_size?: number | null;
+    mime_type?: string | null;
 }): Promise<AgentUpload> {
     const { data: row, error } = await supabase.from('agent_uploads').insert({
         user_id: data.user_id,
         filename: data.filename,
         text_content: data.text_content,
         images_json: data.images,
-        char_count: data.text_content.length,
+        char_count: data.text_content?.length || 0,
         image_count: data.images.length,
         page_count: data.page_count,
         ocr_used: data.ocr_used,
+        storage_path: data.storage_path || null,
+        file_size: data.file_size || null,
+        mime_type: data.mime_type || null,
     }).select('*').single();
     if (error) throw error;
     return row as AgentUpload;

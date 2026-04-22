@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
 import { createAgentUpload, getUserActiveUploadsCharTotal } from "@/lib/db";
 import { ingestPdf } from "@/lib/agent/pdfIngest";
+import { uploadToStorage } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ const TOTAL_CHAR_CAP = 200_000;
 const MAX_PDF_BYTES = 40 * 1024 * 1024;      // 40 MB
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;    // 10 MB
 const MAX_DATA_BYTES = 20 * 1024 * 1024;     // 20 MB for CSV/Excel
+const STORAGE_THRESHOLD = 1 * 1024 * 1024;   // 1 MB - files larger than this go to Storage
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const DATA_MIMES = new Set([
     "text/csv",
@@ -143,6 +145,46 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: `Data file too large (> ${MAX_DATA_BYTES} bytes)` }, { status: 413 });
         }
         
+        // For large files (> 1MB), use Supabase Storage
+        if (file.size > STORAGE_THRESHOLD) {
+            try {
+                console.log(`[attach] Uploading large file to Storage: ${filename} (${file.size} bytes)`);
+                
+                const { path, publicUrl } = await uploadToStorage(userId, file as File);
+                
+                const row = await createAgentUpload({
+                    user_id: userId,
+                    filename,
+                    text_content: null, // Don't store in DB
+                    images: [],
+                    page_count: 1,
+                    ocr_used: false,
+                    storage_path: path,
+                    file_size: file.size,
+                    mime_type: file.type || 'application/octet-stream',
+                });
+
+                return NextResponse.json({
+                    uploadId: row.id,
+                    kind: "data_storage",
+                    filename: row.filename,
+                    charCount: 0,
+                    imageCount: 0,
+                    pageCount: 1,
+                    ocrUsed: false,
+                    fileSize: file.size,
+                    storagePath: path,
+                });
+            } catch (e: any) {
+                console.error('[attach] Storage upload failed:', e);
+                return NextResponse.json({ 
+                    error: "Storage upload failed", 
+                    details: String(e?.message || e).slice(0, 200) 
+                }, { status: 500 });
+            }
+        }
+        
+        // For small files (< 1MB), store in DB as before
         let text: string;
         
         try {

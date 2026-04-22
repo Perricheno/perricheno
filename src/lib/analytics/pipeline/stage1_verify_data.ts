@@ -3,6 +3,7 @@
 // Prevents AI from generating synthetic/mock data.
 
 import { chatCompletion, parseJsonLoose, type ChatMessage } from "@/lib/agent/pipeline/llm";
+import { downloadTextFromStorage } from "@/lib/storage";
 import type { DataVerification } from "./types";
 import type { AgentUpload } from "@/lib/db";
 import { concurrentMap, withRetry } from "@/lib/agent/stages";
@@ -69,8 +70,25 @@ function getSmartSample(text: string, filename: string): string {
     return sample + (remaining > 0 ? `\n\n... (${remaining} more lines)` : '');
 }
 
-function buildUserContent(upload: AgentUpload): string {
-    const text = upload.text_content || "";
+async function buildUserContent(upload: AgentUpload): Promise<string> {
+    let text = upload.text_content || "";
+    
+    // If file is in Storage, download it
+    if (upload.storage_path && !text) {
+        try {
+            console.log(`[Stage1] Downloading from Storage: ${upload.storage_path}`);
+            text = await downloadTextFromStorage(upload.storage_path);
+        } catch (e: any) {
+            console.error(`[Stage1] Failed to download from Storage:`, e);
+            return `FILE: ${upload.filename}
+ERROR: Failed to download file from storage
+SIZE: ${upload.file_size || 0} bytes
+MIME: ${upload.mime_type || 'unknown'}
+
+This file is stored in Supabase Storage but could not be downloaded.`;
+        }
+    }
+    
     const hasImages = Array.isArray(upload.images_json) && upload.images_json.length > 0;
     
     // Get smart sample based on file type
@@ -81,9 +99,11 @@ function buildUserContent(upload: AgentUpload): string {
     const looksLikeTSV = text.includes('\t') && text.split('\n').length > 2;
     const looksLikeJSON = text.trim().startsWith('{') || text.trim().startsWith('[');
     const looksLikeExcel = text.startsWith('[EXCEL_FILE:');
+    const isFromStorage = Boolean(upload.storage_path);
     
     return `FILE: ${upload.filename}
-PAGES: ${upload.page_count}${upload.ocr_used ? " (OCR)" : ""}
+STORAGE: ${isFromStorage ? 'Supabase Storage' : 'Database'}
+${isFromStorage ? `SIZE: ${upload.file_size || 0} bytes` : `PAGES: ${upload.page_count}${upload.ocr_used ? " (OCR)" : ""}`}
 FULL_SIZE: ${text.length} chars
 HAS_IMAGES: ${hasImages}
 
@@ -96,6 +116,7 @@ ANALYSIS HINTS:
 - Looks like JSON: ${looksLikeJSON}
 - Looks like Excel: ${looksLikeExcel}
 - Has images: ${hasImages}
+- From Storage: ${isFromStorage}
 
 Analyze this file and determine if it contains REAL data for visualization.`;
 }
@@ -166,9 +187,10 @@ export async function runStage1(
     let completed = 0;
     
     const results = await concurrentMap(uploads, CONCURRENCY, async (upload) => {
+        const userContent = await buildUserContent(upload);
         const messages: ChatMessage[] = [
             { role: "system", content: systemPrompt },
-            { role: "user", content: buildUserContent(upload) },
+            { role: "user", content: userContent },
         ];
         
         try {
