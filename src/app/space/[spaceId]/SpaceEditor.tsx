@@ -68,9 +68,12 @@ type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
 export default function SpaceEditor({ initialSpace, initialFiles, userId, readOnly = false }: Props) {
     const router = useRouter();
     const [space, setSpace] = useState<Space>(initialSpace);
-    const [files, setFiles]  = useState<FileEntry[]>(
-        initialFiles.map(f => ({ path: f.path, mime_type: f.mime_type, size_bytes: f.size_bytes, updated_at: f.updated_at, is_binary: f.is_binary }))
-    );
+    const [files, setFiles]  = useState<FileEntry[]>(() => {
+        const seen = new Set<string>();
+        return initialFiles
+            .map(f => ({ path: f.path, mime_type: f.mime_type, size_bytes: f.size_bytes, updated_at: f.updated_at, is_binary: f.is_binary }))
+            .filter(f => { if (seen.has(f.path)) return false; seen.add(f.path); return true; });
+    });
 
     // Tabs
     const [tabs, setTabs]           = useState<EditorTab[]>([]);
@@ -99,6 +102,13 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const [inviteOpen, setInviteOpen]     = useState(false);
     const [savingSnapshot, setSavingSnapshot] = useState(false);
 
+    // Delete confirmation modal
+    const [deleteConfirmPath, setDeleteConfirmPath] = useState<string | null>(null);
+
+    // Snapshot message modal
+    const [snapshotModalOpen, setSnapshotModalOpen] = useState(false);
+    const [snapshotMessage, setSnapshotMessage]     = useState('');
+
     // New-file prompt
     const [newFilePrompt, setNewFilePrompt] = useState<{ parent: string } | null>(null);
     const [newFileName, setNewFileName]     = useState("");
@@ -121,13 +131,18 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const openFile = useCallback(async (path: string) => {
         // Already open?
         if (tabs.find(t => t.path === path)) { setActiveTab(path); return; }
+        // Don't open binary files in text editor — they can't be edited and
+        // an accidental save would corrupt the binary data in the DB.
+        const meta = files.find((f: FileEntry) => f.path === path);
+        if (meta?.is_binary) return;
         const res = await fetch(`/api/space/${space.id}/files/${path}`);
         if (!res.ok) return;
         const { file } = await res.json() as { file: SpaceFile };
+        if (file.is_binary) return;
         const content = file.content ?? '';
         setTabs(prev => [...prev, { path, content, savedContent: content }]);
         setActiveTab(path);
-    }, [tabs, space.id]);
+    }, [tabs, files, space.id]);
 
     // Open main file on mount
     useEffect(() => {
@@ -246,12 +261,13 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const confirmNewFile = async () => {
         const path = newFileName.trim();
         if (!path) return;
+        if (files.find((f: FileEntry) => f.path === path)) { setNewFilePrompt(null); await openFile(path); return; }
         await fetch(`/api/space/${space.id}/files`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path, content: '' }),
         });
-        setFiles(prev => [...prev, { path, mime_type: 'text/plain', size_bytes: 0, updated_at: new Date().toISOString(), is_binary: false }]);
+        setFiles(prev => prev.find((f: FileEntry) => f.path === path) ? prev : [...prev, { path, mime_type: 'text/plain', size_bytes: 0, updated_at: new Date().toISOString(), is_binary: false }]);
         setNewFilePrompt(null);
         await openFile(path);
     };
@@ -268,32 +284,64 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
         if (activeTab === oldPath) setActiveTab(newPath);
     };
 
-    const handleDelete = async (path: string) => {
-        if (!confirm(`Delete "${path}"?`)) return;
+    const handleDelete = (path: string) => {
+        setDeleteConfirmPath(path);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmPath) return;
+        const path = deleteConfirmPath;
+        setDeleteConfirmPath(null);
         await fetch(`/api/space/${space.id}/files/${path}`, { method: 'DELETE' });
         setFiles(prev => prev.filter(f => f.path !== path));
         setTabs(prev => prev.filter(t => t.path !== path));
         if (activeTab === path) setActiveTab(tabs.find(t => t.path !== path)?.path ?? null);
     };
 
-    const [uploading, setUploading] = useState<string[]>([]);
+    const [uploading, setUploading] = useState<string | null>(null);
 
     const handleUploadFiles = async (fileList: FileList) => {
         const items = Array.from(fileList);
-        setUploading(items.map(f => f.name));
-        await Promise.all(items.map(async (file) => {
+        for (const file of items) {
+            // ZIP import — extract whole project (e.g. Overleaf export)
+            if (file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
+                setUploading(`Importing ${file.name}…`);
+                const form = new FormData();
+                form.append('file', file);
+                const res = await fetch(`/api/space/${space.id}/files/import-zip`, { method: 'POST', body: form });
+                if (res.ok) {
+                    const data = await res.json() as { imported: string[]; skipped: string[] };
+                    setFiles((prev: FileEntry[]) => {
+                        const seen = new Set(prev.map((f: FileEntry) => f.path));
+                        const added = data.imported
+                            .filter(p => !seen.has(p))
+                            .map(p => {
+                                const ext = p.split('.').pop()?.toLowerCase() ?? '';
+                                const textExts = new Set(['tex','bib','txt','md','cls','sty','cfg','bst','lua']);
+                                const isText = textExts.has(ext);
+                                return { path: p, mime_type: isText ? 'text/plain' : 'application/octet-stream', size_bytes: 0, updated_at: new Date().toISOString(), is_binary: !isText };
+                            });
+                        return [...prev, ...added];
+                    });
+                }
+                setUploading(null);
+                continue;
+            }
+
+            // Regular binary file upload
+            setUploading(`Uploading ${file.name}…`);
             const form = new FormData();
             form.append('file', file);
             const res = await fetch(`/api/space/${space.id}/files/upload`, { method: 'POST', body: form });
             if (res.ok) {
                 const data = await res.json();
                 setFiles(prev => {
-                    if (prev.find(f => f.path === data.path)) return prev;
+                    if (prev.find((f: FileEntry) => f.path === data.path)) return prev;
                     return [...prev, { path: data.path, mime_type: file.type || 'application/octet-stream', size_bytes: file.size, updated_at: new Date().toISOString(), is_binary: true }];
                 });
             }
-        }));
-        setUploading([]);
+        }
+        setUploading(null);
     };
 
     const handleCloseTab = (path: string) => {
@@ -302,14 +350,19 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
         if (activeTab === path) setActiveTab(remaining[remaining.length - 1]?.path ?? null);
     };
 
-    const handleSaveSnapshot = async () => {
+    const handleSaveSnapshot = () => {
         if (savingSnapshot || readOnly) return;
-        const msg = window.prompt('Snapshot message (optional):') ?? '';
+        setSnapshotMessage('');
+        setSnapshotModalOpen(true);
+    };
+
+    const confirmSaveSnapshot = async () => {
+        setSnapshotModalOpen(false);
         setSavingSnapshot(true);
         await fetch(`/api/space/${space.id}/versions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ label: `Checkpoint – ${new Date().toLocaleTimeString()}`, message: msg || undefined }),
+            body: JSON.stringify({ label: `Checkpoint – ${new Date().toLocaleTimeString()}`, message: snapshotMessage || undefined }),
         });
         setSavingSnapshot(false);
     };
@@ -505,7 +558,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
 
             {/* Upload progress toast */}
             <AnimatePresence>
-                {uploading.length > 0 && (
+                {uploading && (
                     <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -513,7 +566,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                         className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2a2a2a] border border-[#3a3a3a] rounded-xl px-4 py-2.5 flex items-center gap-2.5 shadow-2xl"
                     >
                         <IconLoader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                        <span className="text-[12px] text-white">Uploading {uploading.length} file{uploading.length > 1 ? 's' : ''}…</span>
+                        <span className="text-[12px] text-white">{uploading}</span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -522,31 +575,27 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
             <AnimatePresence>
                 {newFilePrompt !== null && (
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center"
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
                         onClick={e => { if (e.target === e.currentTarget) setNewFilePrompt(null); }}
                     >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96 }}
-                            transition={{ duration: 0.15 }}
-                            className="bg-[#1e1e1e] border border-[#333] rounded-2xl p-5 w-80 shadow-2xl"
+                            initial={{ opacity: 0, scale: 0.97, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.15 }}
+                            className="bg-white border border-gray-200 rounded-2xl p-5 w-80 shadow-xl"
                         >
-                            <h3 className="text-[13px] font-bold text-white mb-3">New file</h3>
+                            <h3 className="text-[13px] font-bold text-gray-900 mb-3">New file</h3>
                             <input
                                 autoFocus
                                 value={newFileName}
                                 onChange={e => setNewFileName(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') confirmNewFile(); if (e.key === 'Escape') setNewFilePrompt(null); }}
                                 placeholder="filename.tex"
-                                className="w-full px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg text-[13px] text-white outline-none focus:border-blue-500 transition-colors font-mono"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] text-gray-900 outline-none focus:border-gray-400 transition-colors font-mono"
                             />
                             <div className="flex gap-2 mt-3 justify-end">
-                                <button onClick={() => setNewFilePrompt(null)} className="px-3 py-1.5 rounded-lg text-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                                <button onClick={confirmNewFile} className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[12px] font-bold transition-colors">Create</button>
+                                <button onClick={() => setNewFilePrompt(null)} className="px-3 py-1.5 rounded-lg text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button onClick={confirmNewFile} className="px-4 py-1.5 rounded-lg bg-black hover:bg-gray-800 text-white text-[12px] font-bold transition-colors">Create</button>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -598,6 +647,62 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                     />
                 )}
             </AnimatePresence>
+
+            {/* Delete confirmation modal */}
+            <AnimatePresence>
+                {deleteConfirmPath !== null && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
+                        onClick={e => { if (e.target === e.currentTarget) setDeleteConfirmPath(null); }}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.97, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.15 }}
+                            className="bg-white border border-gray-200 rounded-2xl p-5 w-80 shadow-xl"
+                        >
+                            <h3 className="text-[13px] font-bold text-gray-900 mb-1">Delete file?</h3>
+                            <p className="text-[12px] text-gray-500 font-mono mb-1 truncate">"{deleteConfirmPath}"</p>
+                            <p className="text-[11px] text-gray-400 mb-4">This cannot be undone.</p>
+                            <div className="flex gap-2 justify-end">
+                                <button onClick={() => setDeleteConfirmPath(null)} className="px-3 py-1.5 rounded-lg text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button onClick={confirmDelete} className="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[12px] font-bold transition-colors">Delete</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Snapshot message modal */}
+            <AnimatePresence>
+                {snapshotModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
+                        onClick={e => { if (e.target === e.currentTarget) setSnapshotModalOpen(false); }}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.97, y: 6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.15 }}
+                            className="bg-white border border-gray-200 rounded-2xl p-5 w-80 shadow-xl"
+                        >
+                            <h3 className="text-[13px] font-bold text-gray-900 mb-3">Save snapshot</h3>
+                            <input
+                                autoFocus
+                                value={snapshotMessage}
+                                onChange={e => setSnapshotMessage(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') confirmSaveSnapshot(); if (e.key === 'Escape') setSnapshotModalOpen(false); }}
+                                placeholder="Message (optional)"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] text-gray-900 outline-none focus:border-gray-400 transition-colors"
+                            />
+                            <div className="flex gap-2 mt-3 justify-end">
+                                <button onClick={() => setSnapshotModalOpen(false)} className="px-3 py-1.5 rounded-lg text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button onClick={confirmSaveSnapshot} className="px-4 py-1.5 rounded-lg bg-black hover:bg-gray-800 text-white text-[12px] font-bold transition-colors">Save</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -613,9 +718,9 @@ interface Collaborator {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-    owner:  'bg-amber-500/15 text-amber-400',
-    editor: 'bg-blue-500/15 text-blue-400',
-    viewer: 'bg-gray-500/15 text-gray-400',
+    owner:  'bg-amber-50 text-amber-600',
+    editor: 'bg-blue-50 text-blue-600',
+    viewer: 'bg-gray-100 text-gray-500',
 };
 
 function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: {
@@ -653,34 +758,34 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
+            <motion.div initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-md bg-[#1e1e1e] border border-[#333] rounded-2xl shadow-2xl overflow-hidden">
+                className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a]">
-                    <h2 className="text-[13px] font-black text-white uppercase tracking-widest">Project Settings</h2>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 className="text-[13px] font-black text-gray-900 uppercase tracking-widest">Project Settings</h2>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                         <IconX className="w-4 h-4" />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-[#2a2a2a]">
+                <div className="flex border-b border-gray-100">
                     {(['general', 'people'] as const).map(t => (
                         <button
                             key={t}
                             onClick={() => setTab(t)}
                             className={`px-5 py-2.5 text-[12px] font-bold capitalize transition-colors relative ${
-                                tab === t ? 'text-white' : 'text-gray-600 hover:text-gray-400'
+                                tab === t ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
                             }`}
                         >
                             {t}
                             {tab === t && (
                                 <motion.div layoutId="settings-tab-indicator"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"
                                     transition={{ duration: 0.18 }}
                                 />
                             )}
@@ -693,23 +798,23 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                     <>
                         <div className="px-5 py-4 space-y-4">
                             <div>
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Title</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Title</label>
                                 <input value={title} onChange={e => setTitle(e.target.value)}
-                                    className="w-full px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded-xl text-[13px] text-white outline-none focus:border-blue-500 transition-colors" />
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 outline-none focus:border-gray-400 transition-colors" />
                             </div>
                             <div>
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Main file</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Main file</label>
                                 <input value={mainFile} onChange={e => setMainFile(e.target.value)}
-                                    className="w-full px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded-xl text-[13px] text-white font-mono outline-none focus:border-blue-500 transition-colors"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 font-mono outline-none focus:border-gray-400 transition-colors"
                                     placeholder="main.tex" />
                             </div>
                         </div>
-                        <div className="px-5 py-4 border-t border-[#2a2a2a] flex justify-end gap-2">
-                            <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                        <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                            <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Cancel</button>
                             <button
                                 disabled={saving}
                                 onClick={async () => { setSaving(true); await onSave({ title, main_file: mainFile }); setSaving(false); }}
-                                className="px-4 py-2 rounded-xl bg-white text-black text-[12px] font-bold hover:bg-gray-100 transition-colors flex items-center gap-2 disabled:opacity-50">
+                                className="px-4 py-2 rounded-xl bg-black text-white text-[12px] font-bold hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50">
                                 {saving && <IconLoader2 className="w-3.5 h-3.5 animate-spin" />} Save
                             </button>
                         </div>
@@ -721,13 +826,13 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                     <div className="flex flex-col" style={{ minHeight: 220 }}>
                         {!collabsLoaded ? (
                             <div className="flex items-center justify-center flex-1 py-10">
-                                <IconLoader2 className="w-4 h-4 animate-spin text-gray-600" />
+                                <IconLoader2 className="w-4 h-4 animate-spin text-gray-300" />
                             </div>
                         ) : (
                             <>
                                 <div className="overflow-y-auto" style={{ maxHeight: 320 }}>
                                     {collabs.length === 0 ? (
-                                        <p className="text-[12px] text-gray-600 text-center py-8">No collaborators</p>
+                                        <p className="text-[12px] text-gray-400 text-center py-8">No collaborators</p>
                                     ) : (
                                         <div className="py-2">
                                             {collabs.map(c => {
@@ -737,22 +842,22 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                                                 const canRemove = isOwner ? !isSelf : isSelf;
                                                 const removeLabel = isSelf ? 'Leave' : 'Remove';
                                                 return (
-                                                    <div key={c.user_id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-white/3 transition-colors group">
+                                                    <div key={c.user_id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 transition-colors group">
                                                         {/* Avatar */}
-                                                        <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center shrink-0 overflow-hidden border border-[#3a3a3a]">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200">
                                                             {c.photo_url
                                                                 ? <img src={c.photo_url} alt={name} className="w-full h-full object-cover" />
-                                                                : <span className="text-[11px] font-bold text-gray-400">{initials}</span>
+                                                                : <span className="text-[11px] font-bold text-gray-500">{initials}</span>
                                                             }
                                                         </div>
 
                                                         {/* Name + role */}
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-[13px] font-semibold text-white truncate leading-tight">
+                                                            <p className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
                                                                 {name}
-                                                                {isSelf && <span className="ml-1.5 text-[10px] text-gray-600">(you)</span>}
+                                                                {isSelf && <span className="ml-1.5 text-[10px] text-gray-400">(you)</span>}
                                                             </p>
-                                                            {c.username && <p className="text-[11px] text-gray-600 truncate">@{c.username}</p>}
+                                                            {c.username && <p className="text-[11px] text-gray-400 truncate">@{c.username}</p>}
                                                         </div>
 
                                                         {/* Role badge */}
@@ -765,7 +870,7 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                                                             <button
                                                                 onClick={() => removeCollab(c.user_id)}
                                                                 disabled={removing === c.user_id}
-                                                                className="opacity-0 group-hover:opacity-100 ml-1 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-40"
+                                                                className="opacity-0 group-hover:opacity-100 ml-1 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 hover:bg-red-50 transition-all disabled:opacity-40"
                                                             >
                                                                 {removing === c.user_id
                                                                     ? <IconLoader2 className="w-3 h-3 animate-spin" />
@@ -782,10 +887,10 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
 
                                 {/* Invite CTA */}
                                 {isOwner && (
-                                    <div className="px-5 py-3 border-t border-[#2a2a2a] mt-auto">
+                                    <div className="px-5 py-3 border-t border-gray-100 mt-auto">
                                         <button
                                             onClick={() => { onClose(); onOpenInvite(); }}
-                                            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-[#3a3a3a] text-[12px] text-gray-500 hover:text-white hover:border-gray-500 transition-all"
+                                            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-gray-200 text-[12px] text-gray-400 hover:text-gray-900 hover:border-gray-400 transition-all"
                                         >
                                             <IconUserPlus className="w-3.5 h-3.5" />
                                             Invite collaborator
@@ -823,40 +928,40 @@ function ShareModal({ space, onClose, onTogglePublic }: {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
             <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-md bg-[#1e1e1e] border border-[#333] rounded-2xl shadow-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a]">
-                    <h2 className="text-[13px] font-black text-white uppercase tracking-widest">Share Project</h2>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors"><IconX className="w-4 h-4" /></button>
+                className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 className="text-[13px] font-black text-gray-900 uppercase tracking-widest">Share Project</h2>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><IconX className="w-4 h-4" /></button>
                 </div>
                 <div className="px-5 py-5 space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-[13px] font-semibold text-white">Public link</p>
+                            <p className="text-[13px] font-semibold text-gray-900">Public link</p>
                             <p className="text-[11px] text-gray-500 mt-0.5">Anyone with the link can view (read-only)</p>
                         </div>
                         <button
                             onClick={async () => { setLoading(true); await onTogglePublic(!space.is_public); setLoading(false); }}
                             disabled={loading}
-                            className={`w-11 h-6 rounded-full relative transition-colors ${space.is_public ? 'bg-emerald-500' : 'bg-[#3a3a3a]'}`}>
+                            className={`w-11 h-6 rounded-full relative transition-colors ${space.is_public ? 'bg-emerald-500' : 'bg-gray-200'}`}>
                             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${space.is_public ? 'translate-x-5' : 'translate-x-0.5'}`} />
                         </button>
                     </div>
                     {space.is_public && shareUrl && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                            className="flex items-center gap-2 bg-[#2a2a2a] rounded-xl px-3 py-2">
-                            <span className="flex-1 text-[12px] text-gray-400 font-mono truncate">{shareUrl}</span>
-                            <button onClick={copy} className="text-[11px] font-bold text-blue-400 hover:text-blue-300 shrink-0 transition-colors">
+                            className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                            <span className="flex-1 text-[12px] text-gray-700 font-mono truncate">{shareUrl}</span>
+                            <button onClick={copy} className="text-[11px] font-bold text-blue-500 hover:text-blue-700 shrink-0 transition-colors">
                                 {copied ? '✓ Copied' : 'Copy'}
                             </button>
                         </motion.div>
                     )}
                 </div>
-                <div className="px-5 py-4 border-t border-[#2a2a2a] flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Done</button>
+                <div className="px-5 py-4 border-t border-gray-100 flex justify-end">
+                    <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Done</button>
                 </div>
             </motion.div>
         </motion.div>
@@ -866,94 +971,105 @@ function ShareModal({ space, onClose, onTogglePublic }: {
 // ── Invite Modal ───────────────────────────────────────────────────────────
 
 function InviteModal({ spaceId, onClose }: { spaceId: string; onClose: () => void }) {
-    const [email, setEmail]     = useState('');
     const [role, setRole]       = useState<'editor' | 'viewer'>('editor');
     const [loading, setLoading] = useState(false);
-    const [done, setDone]       = useState<string | null>(null);
+    const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+    const [copied, setCopied]   = useState(false);
     const [error, setError]     = useState<string | null>(null);
 
-    const send = async () => {
-        if (!email.includes('@')) { setError('Enter a valid email'); return; }
+    const generate = async () => {
         setLoading(true); setError(null);
         const res = await fetch(`/api/space/${spaceId}/invite`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, role }),
+            body: JSON.stringify({ role }),
         });
         const data = await res.json();
-        if (res.ok) { setDone(data.inviteUrl); }
+        if (res.ok) { setInviteUrl(data.inviteUrl); }
         else { setError(data.error ?? 'Failed to create invite'); }
         setLoading(false);
     };
 
+    const copy = () => {
+        if (!inviteUrl) return;
+        navigator.clipboard.writeText(inviteUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const shareViaTelegram = () => {
+        if (!inviteUrl) return;
+        const text = encodeURIComponent('You are invited to collaborate on a LaTeX project on Perricheno Space');
+        const url = encodeURIComponent(inviteUrl);
+        window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+    };
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
             <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-md bg-[#1e1e1e] border border-[#333] rounded-2xl shadow-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a]">
-                    <h2 className="text-[13px] font-black text-white uppercase tracking-widest">Invite Collaborator</h2>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors"><IconX className="w-4 h-4" /></button>
+                className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 className="text-[13px] font-black text-gray-900 uppercase tracking-widest">Invite Collaborator</h2>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><IconX className="w-4 h-4" /></button>
                 </div>
 
-                {done ? (
-                    <div className="px-5 py-6 space-y-3">
-                        <p className="text-[12px] text-emerald-400 font-bold">Invite link created!</p>
-                        <p className="text-[11px] text-gray-500">Share this link with the collaborator:</p>
-                        <div className="flex items-center gap-2 bg-[#2a2a2a] rounded-xl px-3 py-2">
-                            <span className="flex-1 text-[11px] text-gray-400 font-mono truncate">{done}</span>
-                            <button
-                                onClick={() => navigator.clipboard.writeText(done)}
-                                className="text-[11px] font-bold text-blue-400 hover:text-blue-300 shrink-0 transition-colors"
-                            >Copy</button>
-                        </div>
-                        <div className="flex justify-end pt-1">
-                            <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Done</button>
+                <div className="px-5 py-4 space-y-4">
+                    <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Role</label>
+                        <div className="flex gap-2">
+                            {(['editor', 'viewer'] as const).map(r => (
+                                <button
+                                    key={r}
+                                    onClick={() => { setRole(r); setInviteUrl(null); }}
+                                    className={`flex-1 py-2 rounded-xl text-[12px] font-bold capitalize transition-colors border ${
+                                        role === r ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-500 border-gray-200 hover:text-gray-900 hover:border-gray-400'
+                                    }`}
+                                >{r}</button>
+                            ))}
                         </div>
                     </div>
-                ) : (
-                    <div className="px-5 py-4 space-y-4">
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Email</label>
-                            <input
-                                autoFocus
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && send()}
-                                placeholder="collaborator@email.com"
-                                className="w-full px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded-xl text-[13px] text-white outline-none focus:border-blue-500 transition-colors"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Role</label>
-                            <div className="flex gap-2">
-                                {(['editor', 'viewer'] as const).map(r => (
-                                    <button
-                                        key={r}
-                                        onClick={() => setRole(r)}
-                                        className={`flex-1 py-2 rounded-xl text-[12px] font-bold capitalize transition-colors ${
-                                            role === r ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                                        }`}
-                                    >{r}</button>
-                                ))}
+
+                    {!inviteUrl ? (
+                        <>
+                            {error && <p className="text-[11px] text-red-500">{error}</p>}
+                            <div className="flex gap-2 pt-1">
+                                <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Cancel</button>
+                                <button
+                                    onClick={generate}
+                                    disabled={loading}
+                                    className="flex-1 py-2 rounded-xl bg-black text-white text-[12px] font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {loading && <IconLoader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    Generate link
+                                </button>
                             </div>
-                        </div>
-                        {error && <p className="text-[11px] text-red-400">{error}</p>}
-                        <div className="flex justify-end gap-2 pt-1">
-                            <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                        </>
+                    ) : (
+                        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                                <span className="flex-1 text-[11px] text-gray-700 font-mono truncate">{inviteUrl}</span>
+                                <button onClick={copy} className="text-[11px] font-bold text-blue-500 hover:text-blue-700 shrink-0 transition-colors">
+                                    {copied ? '✓' : 'Copy'}
+                                </button>
+                            </div>
                             <button
-                                onClick={send}
-                                disabled={loading}
-                                className="px-4 py-2 rounded-xl bg-white text-black text-[12px] font-bold hover:bg-gray-100 transition-colors flex items-center gap-2 disabled:opacity-50"
+                                onClick={shareViaTelegram}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#2AABEE] hover:bg-[#229ED9] text-white text-[12px] font-bold transition-colors"
                             >
-                                {loading && <IconLoader2 className="w-3.5 h-3.5 animate-spin" />}
-                                Generate link
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.17 13.915l-2.965-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.983.644z"/>
+                                </svg>
+                                Share via Telegram
                             </button>
-                        </div>
-                    </div>
-                )}
+                            <div className="flex justify-end">
+                                <button onClick={onClose} className="px-4 py-2 rounded-xl text-[12px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">Done</button>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
             </motion.div>
         </motion.div>
     );

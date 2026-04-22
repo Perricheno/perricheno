@@ -18,13 +18,9 @@ export async function POST(req: Request, { params }: Ctx) {
     let body: any;
     try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
-    const email = String(body.email || '').trim().toLowerCase();
-    if (!email || !email.includes('@')) return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
-
     const inviteRole: CollaboratorRole = ['editor', 'viewer'].includes(body.role) ? body.role : 'editor';
-    const invite = await createSpaceInvite(id, email, inviteRole);
+    const invite = await createSpaceInvite(id, inviteRole);
 
-    // In production: send email with invite link
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://perricheno.ru'}/space/invite/${invite.token}`;
     return NextResponse.json({ ok: true, inviteUrl, token: invite.token }, { status: 201 });
 }

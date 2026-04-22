@@ -276,7 +276,7 @@ export default function FileTree({ files, activeFile, mainFile, onOpenFile, onNe
                         transition={{ duration: 0.1 }}
                         className="absolute inset-0 z-20 bg-blue-500/15 border-2 border-dashed border-blue-500/60 rounded-md flex items-center justify-center pointer-events-none"
                     >
-                        <p className="text-[12px] font-bold text-blue-400">Drop files to upload</p>
+                        <p className="text-[12px] font-bold text-blue-400">Drop files or ZIP to import</p>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -286,8 +286,8 @@ export default function FileTree({ files, activeFile, mainFile, onOpenFile, onNe
                 <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Files</span>
                 {!readOnly && (
                     <div className="flex items-center gap-0.5">
-                        <label title="Upload file" className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
-                            <input type="file" multiple className="hidden" onChange={e => e.target.files && onUploadFiles(e.target.files)} />
+                        <label title="Upload files or ZIP project" className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+                            <input type="file" multiple accept="image/*,.pdf,.zip,.tex,.bib,.cls,.sty" className="hidden" onChange={e => e.target.files && onUploadFiles(e.target.files)} />
                             <IconPhoto className="w-3.5 h-3.5" />
                         </label>
                         <button onClick={() => onNewFile()} title="New file"

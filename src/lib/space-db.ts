@@ -61,7 +61,7 @@ export interface SpaceCollaborator {
 export interface SpaceInvite {
     id: string;
     space_id: string;
-    email: string;
+    email?: string | null;
     role: CollaboratorRole;
     token: string;
     created_at: string;
@@ -424,7 +424,12 @@ export async function createSpaceVersion(spaceId: string, userId: number, label:
     const files = await getSpaceFilesWithContent(spaceId);
     const snapshot: Record<string, string> = {};
     for (const f of files) {
-        if (f.content != null) snapshot[f.path] = f.content;
+        if (f.content != null) {
+            snapshot[f.path] = f.content;
+        } else if (f.content_b64 != null) {
+            // Prefix binary files so restoreSpaceVersion can distinguish them
+            snapshot[f.path] = `__b64__:${f.mime_type}:${f.content_b64}`;
+        }
     }
     const { data, error } = await supabase
         .from('space_versions')
@@ -456,8 +461,16 @@ export async function restoreSpaceVersion(versionId: string, spaceId: string, us
     // Save current state as a version first
     await createSpaceVersion(spaceId, userId, `Before restore to "${version.label}"`);
     // Restore files from snapshot
-    for (const [path, content] of Object.entries(version.snapshot)) {
-        await upsertSpaceFile(spaceId, path, content);
+    for (const [path, value] of Object.entries(version.snapshot)) {
+        if (value.startsWith('__b64__:')) {
+            const rest = value.slice('__b64__:'.length);
+            const sep = rest.indexOf(':');
+            const mime = rest.slice(0, sep);
+            const b64  = rest.slice(sep + 1);
+            await upsertSpaceFileBinary(spaceId, path, b64, mime);
+        } else {
+            await upsertSpaceFile(spaceId, path, value);
+        }
     }
 }
 
@@ -498,11 +511,11 @@ export async function getUserRoleInSpace(spaceId: string, userId: number): Promi
     return (data?.role as CollaboratorRole) ?? null;
 }
 
-export async function createSpaceInvite(spaceId: string, email: string, role: CollaboratorRole = 'editor'): Promise<SpaceInvite> {
+export async function createSpaceInvite(spaceId: string, role: CollaboratorRole = 'editor'): Promise<SpaceInvite> {
     const token = uuidv4();
     const { data, error } = await supabase
         .from('space_invites')
-        .insert({ space_id: spaceId, email, role, token })
+        .insert({ space_id: spaceId, role, token })
         .select('*')
         .single();
     if (error || !data) throw new Error(error?.message ?? 'Failed to create invite');
