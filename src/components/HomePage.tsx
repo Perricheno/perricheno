@@ -41,7 +41,7 @@ const PLANS = [
             { text: "AI Code Editing", included: false },
         ],
         cta: "Start free",
-        ctaHref: "/agent",
+        ctaHref: "/billings",
     },
     {
         id: "plus",
@@ -63,7 +63,7 @@ const PLANS = [
             { text: "AI Code Editing", included: false },
         ],
         cta: "Get Plus",
-        ctaHref: "/agent",
+        ctaHref: "/billings",
     },
     {
         id: "pro",
@@ -84,7 +84,7 @@ const PLANS = [
             { text: "30-day chat retention", included: true },
         ],
         cta: "Get Pro",
-        ctaHref: "/agent",
+        ctaHref: "/billings",
     },
     {
         id: "ultra",
@@ -105,7 +105,7 @@ const PLANS = [
             { text: "90-day chat retention", included: true },
         ],
         cta: "Get Ultra",
-        ctaHref: "/agent",
+        ctaHref: "/billings",
     },
 ] as const;
 
