@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
+import { motion, useMotionValue, useSpring, useInView } from "framer-motion";
 import {
     IconArrowUpRight,
     IconFileText,
@@ -17,9 +17,9 @@ import {
     IconBolt,
     IconBrandTelegram,
 } from "@tabler/icons-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, type ReactNode, type ComponentType } from "react";
 
-// ── Plans — mirrors BillingsPage exactly ──
+// ── Plans ──────────────────────────────────────────────────────────────────────
 const PLANS = [
     {
         id: "free",
@@ -28,17 +28,17 @@ const PLANS = [
         priceMonthly: 0,
         priceAnnual: 0,
         highlighted: false,
-        tag: null,
+        tag: null as string | null,
         accent: "#666",
         features: [
-            { text: "50,000 tokens / week", included: true },
-            { text: "150,000 tokens / month", included: true },
-            { text: "Basic Python (5 chart types)", included: true },
-            { text: "Scholar search & PDF tools", included: true },
-            { text: "7-day chat retention", included: true },
-            { text: "ZIP Project Export", included: false },
-            { text: "R Environment (CRAN)", included: false },
-            { text: "AI Code Editing", included: false },
+            { text: "50,000 tokens / week",        included: true  },
+            { text: "150,000 tokens / month",       included: true  },
+            { text: "Basic Python (5 chart types)", included: true  },
+            { text: "Scholar search & PDF tools",   included: true  },
+            { text: "7-day chat retention",         included: true  },
+            { text: "ZIP Project Export",           included: false },
+            { text: "R Environment (CRAN)",         included: false },
+            { text: "AI Code Editing",              included: false },
         ],
         cta: "Start free",
         ctaHref: "/billings",
@@ -50,17 +50,17 @@ const PLANS = [
         priceMonthly: 3.99,
         priceAnnual: 39.00,
         highlighted: false,
-        tag: null,
+        tag: null as string | null,
         accent: "#a8a8a8",
         features: [
-            { text: "150,000 tokens / week", included: true },
-            { text: "450,000 tokens / month", included: true },
-            { text: "Full Python (35+ visualizations)", included: true },
-            { text: "ZIP Project Export unlocked", included: true },
-            { text: "Priority rendering", included: true },
-            { text: "14-day chat retention", included: true },
-            { text: "R Environment", included: false },
-            { text: "AI Code Editing", included: false },
+            { text: "150,000 tokens / week",              included: true  },
+            { text: "450,000 tokens / month",             included: true  },
+            { text: "Full Python (35+ visualizations)",   included: true  },
+            { text: "ZIP Project Export unlocked",        included: true  },
+            { text: "Priority rendering",                 included: true  },
+            { text: "14-day chat retention",              included: true  },
+            { text: "R Environment",                      included: false },
+            { text: "AI Code Editing",                    included: false },
         ],
         cta: "Get Plus",
         ctaHref: "/billings",
@@ -72,16 +72,16 @@ const PLANS = [
         priceMonthly: 7.99,
         priceAnnual: 69.00,
         highlighted: true,
-        tag: "Popular",
+        tag: "Popular" as string | null,
         accent: "#10b981",
         features: [
-            { text: "250,000 tokens / week", included: true },
-            { text: "800,000 tokens / month", included: true },
+            { text: "250,000 tokens / week",        included: true },
+            { text: "800,000 tokens / month",        included: true },
             { text: "R-Infrastructure + Python stack", included: true },
-            { text: "AI Code Editor enabled", included: true },
-            { text: "Share reports via link", included: true },
-            { text: "Exclusive power giveaways", included: true },
-            { text: "30-day chat retention", included: true },
+            { text: "AI Code Editor enabled",        included: true },
+            { text: "Share reports via link",        included: true },
+            { text: "Exclusive power giveaways",     included: true },
+            { text: "30-day chat retention",         included: true },
         ],
         cta: "Get Pro",
         ctaHref: "/billings",
@@ -93,95 +93,111 @@ const PLANS = [
         priceMonthly: 14.99,
         priceAnnual: 149.00,
         highlighted: false,
-        tag: "Best Value",
+        tag: "Best Value" as string | null,
         accent: "#f59e0b",
         features: [
             { text: "800,000 tokens / week (Cap)", included: true },
-            { text: "3,000,000 tokens / month", included: true },
+            { text: "3,000,000 tokens / month",    included: true },
             { text: "AI Edit: Low Cost Mode (÷2)", included: true },
             { text: "2× bonus on referrals & promos", included: true },
-            { text: "Maximum rendering priority", included: true },
-            { text: "All giveaways & events", included: true },
-            { text: "90-day chat retention", included: true },
+            { text: "Maximum rendering priority",  included: true },
+            { text: "All giveaways & events",      included: true },
+            { text: "90-day chat retention",       included: true },
         ],
         cta: "Get Ultra",
         ctaHref: "/billings",
     },
 ] as const;
 
-// ── Features ──
-const FEATURES = [
-    {
-        icon: IconFileText,
-        title: "Research Writer",
-        desc: "Full LaTeX documents — research papers, theses, reports - compiled straight to PDF with real citations.",
-    },
-    {
-        icon: IconBook2,
-        title: "Scholar Search",
-        desc: "Query arXiv and OpenAlex in any language. Relevance-ranked results with abstracts, authors, DOIs.",
-    },
-    {
-        icon: IconChartBar,
-        title: "Data Analytics",
-        desc: "Turn a question into R or Python visualizations. Upload a dataset, pick a chart, get publication-ready figures.",
-    },
-    {
-        icon: IconMessageCircle,
-        title: "Multimodal Chat",
-        desc: "Fast Q&A with text, images, and file context. Perfect for quick explanations, rewrites, and outlines.",
-    },
-    {
-        icon: IconCode,
-        title: "LaTeX Compiler",
-        desc: "Built-in pipeline compiles .tex to PDF with bib, figures, and multi-column layouts. Errors auto-repaired.",
-    },
-    {
-        icon: IconFileTypePdf,
-        title: "PDF Toolkit",
-        desc: "OCR scanned papers, convert PDF ↔ DOCX, extract text for referencing. All in one workspace.",
-    },
-] as const;
+// ── Features ───────────────────────────────────────────────────────────────────
+const FEATURES: { icon: ComponentType<{ className?: string; stroke?: number }>; title: string; desc: string }[] = [
+    { icon: IconFileText,     title: "Research Writer",   desc: "Full LaTeX documents — research papers, theses, reports — compiled straight to PDF with real citations." },
+    { icon: IconBook2,        title: "Scholar Search",    desc: "Query arXiv and OpenAlex in any language. Relevance-ranked results with abstracts, authors, DOIs." },
+    { icon: IconChartBar,     title: "Data Analytics",    desc: "Turn a question into R or Python visualizations. Upload a dataset, pick a chart, get publication-ready figures." },
+    { icon: IconMessageCircle,title: "Multimodal Chat",   desc: "Fast Q&A with text, images, and file context. Perfect for quick explanations, rewrites, and outlines." },
+    { icon: IconCode,         title: "LaTeX Compiler",    desc: "Built-in pipeline compiles .tex to PDF with bib, figures, and multi-column layouts. Errors auto-repaired." },
+    { icon: IconFileTypePdf,  title: "PDF Toolkit",       desc: "OCR scanned papers, convert PDF ↔ DOCX, extract text for referencing. All in one workspace." },
+];
 
-// ── Steps ──
+// ── Steps ──────────────────────────────────────────────────────────────────────
 const STEPS = [
-    { n: "01", title: "Describe the task", desc: "Topic, word count, language, style, references. Attach source files if you have them." },
-    { n: "02", title: "Agent works", desc: "Structure, draft, cite, visualize. Watch progress stream in real time." },
-    { n: "03", title: "Download or iterate", desc: "Compiled PDF, LaTeX source, shareable link. Edit any section on demand." },
-] as const;
+    { n: "01", title: "Describe the task",  desc: "Topic, word count, language, style, references. Attach source files if you have them." },
+    { n: "02", title: "Agent works",        desc: "Structure, draft, cite, visualize. Watch progress stream in real time." },
+    { n: "03", title: "Download or iterate",desc: "Compiled PDF, LaTeX source, shareable link. Edit any section on demand." },
+];
 
-// ── FAQ ──
+// ── FAQ ────────────────────────────────────────────────────────────────────────
 const FAQ = [
-    {
-        q: "How do I sign in?",
-        a: "Through the Telegram Login Widget. No passwords, no email — one tap opens the agent with your account attached.",
-    },
-    {
-        q: "How is usage billed?",
-        a: "The free tier resets daily and weekly. Paid plans are billed monthly or annually (save ~20%). Payment is via CryptoCloud (crypto).",
-    },
-    {
-        q: "Can I use it in Russian?",
-        a: "Yes. Documents can be generated in English or Russian, and Scholar understands any language — queries are translated to English keywords before hitting academic indexes.",
-    },
-    {
-        q: "Do you store my uploaded files?",
-        a: "Uploaded task descriptions and reference files are used only to generate your document. Session text is stored on your account so you can reopen and edit it; you can delete any session at any time.",
-    },
-    {
-        q: "What formats do I get back?",
-        a: "Compiled PDF, the raw LaTeX source (.tex + bib), and a shareable public link. Visuals download as PNG with the R/Python source embedded.",
-    },
-    {
-        q: "Is there an API?",
-        a: "Not publicly yet. If you need programmatic access for a lab or classroom, get in touch.",
-    },
-] as const;
+    { q: "How do I sign in?",             a: "Through the Telegram Login Widget. No passwords, no email — one tap opens the agent with your account attached." },
+    { q: "How is usage billed?",          a: "The free tier resets daily and weekly. Paid plans are billed monthly or annually (save ~20%). Payment is via CryptoCloud (crypto)." },
+    { q: "Can I use it in Russian?",      a: "Yes. Documents can be generated in English or Russian, and Scholar understands any language — queries are translated to English keywords before hitting academic indexes." },
+    { q: "Do you store my uploaded files?",a: "Uploaded task descriptions and reference files are used only to generate your document. Session text is stored on your account so you can reopen and edit it; you can delete any session at any time." },
+    { q: "What formats do I get back?",   a: "Compiled PDF, the raw LaTeX source (.tex + bib), and a shareable public link. Visuals download as PNG with the R/Python source embedded." },
+    { q: "Is there an API?",              a: "Not publicly yet. If you need programmatic access for a lab or classroom, get in touch." },
+];
 
-// ── Social proof logos (text-based) ──
-const LOGOS = ["arXiv", "OpenAlex", "LaTeX", "R CRAN", "Python", "CryptoCloud"] as const;
+const LOGOS = ["arXiv", "OpenAlex", "LaTeX", "R CRAN", "Python", "CryptoCloud"];
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DESIGN SPELL 1: Magnetic Button ──────────────────────────────────────────
+// Follows cursor with spring physics for a premium, interactive feel
+// ══════════════════════════════════════════════════════════════════════════════
+function MagneticButton({ href, className, children }: { href: string; className: string; children: ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+    const sx = useSpring(x, { stiffness: 380, damping: 24 });
+    const sy = useSpring(y, { stiffness: 380, damping: 24 });
+
+    return (
+        <motion.div
+            ref={ref}
+            style={{ x: sx, y: sy, display: "inline-block" }}
+            onMouseMove={(e) => {
+                if (!ref.current) return;
+                const r = ref.current.getBoundingClientRect();
+                x.set((e.clientX - (r.left + r.width / 2)) * 0.28);
+                y.set((e.clientY - (r.top  + r.height / 2)) * 0.28);
+            }}
+            onMouseLeave={() => { x.set(0); y.set(0); }}
+        >
+            <Link href={href} className={className}>{children}</Link>
+        </motion.div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DESIGN SPELL 2: Logo Marquee ──────────────────────────────────────────────
+// Infinite smooth scroll with fade-edge vignette
+// ══════════════════════════════════════════════════════════════════════════════
+function LogoMarquee() {
+    const tripled = [...LOGOS, ...LOGOS, ...LOGOS];
+    return (
+        <div className="relative overflow-hidden">
+            {/* Fade vignette */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10"
+                 style={{ background: "linear-gradient(to right, var(--background), transparent)" }} />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10"
+                 style={{ background: "linear-gradient(to left, var(--background), transparent)" }} />
+            <motion.div
+                animate={{ x: ["0%", "-33.333%"] }}
+                transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
+                className="flex gap-16 w-max"
+            >
+                {tripled.map((l, i) => (
+                    <span key={`${l}-${i}`}
+                          className="text-[13px] font-bold tracking-tight select-none"
+                          style={{ opacity: 0.22 }}>
+                        {l}
+                    </span>
+                ))}
+            </motion.div>
+        </div>
+    );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function SectionLabel({ children }: { children: ReactNode }) {
     return (
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] opacity-40 mb-4">
             {children}
@@ -189,186 +205,279 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     );
 }
 
+function NavLink({ href, children }: { href: string; children: ReactNode }) {
+    return (
+        <a href={href} className="relative group text-[13px] font-medium opacity-60 hover:opacity-100 transition-opacity">
+            {children}
+            <span className="absolute bottom-[-2px] left-0 h-[1px] w-0 bg-current transition-all duration-300 ease-out group-hover:w-full" />
+        </a>
+    );
+}
+
+// ── FAQ Item ───────────────────────────────────────────────────────────────────
 function FaqItem({ q, a }: { q: string; a: string }) {
     const [open, setOpen] = useState(false);
     return (
         <div className="border-b border-[var(--border)]">
             <button
                 onClick={() => setOpen(v => !v)}
-                className="w-full flex items-center justify-between gap-6 py-6 text-left group"
+                className="w-full flex items-center justify-between gap-6 py-6 text-left"
             >
                 <span className="text-base md:text-lg font-medium tracking-tight">{q}</span>
-                <IconChevronDown
-                    className={`w-5 h-5 opacity-40 shrink-0 transition-transform duration-300 ${open ? "rotate-180 opacity-100" : ""}`}
-                />
+                <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.3, ease: [0.16,1,0.3,1] }}>
+                    <IconChevronDown className="w-5 h-5 opacity-40 shrink-0" />
+                </motion.div>
             </button>
-            <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                <div className="overflow-hidden">
-                    <p className="pb-6 text-[15px] leading-[1.8] opacity-70 font-light max-w-2xl">{a}</p>
-                </div>
+            <motion.div
+                initial={false}
+                animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden"
+            >
+                <p className="pb-6 text-[15px] leading-[1.8] opacity-70 font-light max-w-2xl">{a}</p>
+            </motion.div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DESIGN SPELL 3: Rotating gradient border (Pro card) ───────────────────────
+// RAF-driven conic-gradient spins around the pro pricing card border
+// ══════════════════════════════════════════════════════════════════════════════
+function RotatingBorderWrapper({ children }: { children: ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        let raf: number;
+        let angle = 0;
+        const tick = () => {
+            angle = (angle + 0.45) % 360;
+            if (ref.current) {
+                ref.current.style.background =
+                    `conic-gradient(from ${angle}deg at 50% 50%, #059669 0%, #064e3b 25%, #0a0a0a 50%, #064e3b 75%, #059669 100%)`;
+            }
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, []);
+    return (
+        <div ref={ref} className="p-[1.5px] rounded-[18px] relative lg:scale-[1.04] z-10 h-full">
+            <div className="rounded-[16px] bg-[#080808] text-white overflow-hidden h-full">
+                {children}
             </div>
         </div>
     );
 }
 
+// ── Pricing Card ───────────────────────────────────────────────────────────────
 function PricingCard({ plan, isAnnual }: { plan: typeof PLANS[number]; isAnnual: boolean }) {
     const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
     const isFree = plan.priceMonthly === 0;
+    const showSavingBadge = isAnnual && !isFree;
+
+    const cardInner = (
+        <div className="p-8 flex flex-col h-full">
+            {/* Tag badge */}
+            {(plan.tag || showSavingBadge) && (
+                <div className={`absolute top-5 right-5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full z-10 ${
+                    plan.id === "pro"   ? "bg-emerald-500 text-white" :
+                    plan.id === "ultra" ? "bg-amber-400 text-black"  :
+                    "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)]"
+                }`}>
+                    {showSavingBadge ? "2 months free" : plan.tag}
+                </div>
+            )}
+
+            {/* Header */}
+            <div className="mb-6">
+                <p className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
+                    {plan.tagline}
+                </p>
+                <h3 className="text-2xl font-bold tracking-tight">{plan.name}</h3>
+            </div>
+
+            {/* Price */}
+            <div className="mb-8">
+                {isFree ? (
+                    <div className="text-4xl md:text-5xl font-bold tracking-tighter">$0</div>
+                ) : (
+                    <>
+                        <div className="flex items-end gap-1">
+                            <span className={`text-lg font-bold mb-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>$</span>
+                            <span className="text-4xl md:text-5xl font-bold tracking-tighter">{price}</span>
+                            <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ml-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
+                                /{isAnnual ? "yr" : "mo"}
+                            </span>
+                        </div>
+                        {isAnnual && (
+                            <p className={`text-xs mt-1 ${plan.highlighted ? "opacity-40" : "opacity-40"}`}>
+                                ~${(plan.priceAnnual / 12).toFixed(2)}/mo billed annually
+                            </p>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Features */}
+            <ul className="space-y-3 mb-8 flex-1">
+                {plan.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-3 text-[13px]">
+                        {f.included ? (
+                            <IconCheck
+                                className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? "text-emerald-400" : "opacity-60"}`}
+                                stroke={2.5}
+                            />
+                        ) : (
+                            <IconLock className="w-4 h-4 mt-0.5 shrink-0 opacity-20" stroke={2} />
+                        )}
+                        <span className={f.included ? (plan.highlighted ? "opacity-90" : "opacity-80") : "opacity-30"}>
+                            {f.text}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+
+            {/* CTA */}
+            <Link
+                href={plan.ctaHref}
+                className={`w-full text-center py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
+                    plan.highlighted
+                        ? "bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-900/30"
+                        : "bg-[var(--foreground)] text-[var(--background)] hover:opacity-80"
+                }`}
+            >
+                {plan.cta}
+            </Link>
+        </div>
+    );
+
+    if (plan.highlighted) {
+        return <RotatingBorderWrapper>{cardInner}</RotatingBorderWrapper>;
+    }
 
     return (
-        <div
-            className={`relative rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
-                plan.highlighted
-                    ? "bg-black text-white border border-emerald-500/30 shadow-2xl shadow-emerald-900/10 lg:scale-[1.04] z-10"
-                    : "bg-[var(--card)] border border-[var(--border)] hover:border-black/30"
-            }`}
+        <motion.div
+            whileHover={{ y: -3, borderColor: "rgba(0,0,0,0.3)" }}
+            transition={{ duration: 0.22 }}
+            className="relative rounded-2xl flex flex-col overflow-hidden border border-[var(--border)] bg-[var(--card)] h-full"
         >
-            {/* Top accent line */}
-            {plan.highlighted && (
-                <div className="h-[2px] w-full" style={{ background: plan.accent }} />
-            )}
-
-            {/* Tag */}
-            {plan.tag && (
-                <div className={`absolute top-5 right-5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
-                    plan.id === "pro" ? "bg-emerald-500 text-white" :
-                    plan.id === "ultra" ? "bg-amber-400 text-black" :
-                    "bg-gray-200 text-gray-600"
-                }`}>
-                    {isAnnual && !isFree ? "2 months free" : plan.tag}
-                </div>
-            )}
-            {isAnnual && !isFree && !plan.tag && (
-                <div className="absolute top-5 right-5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full bg-amber-400 text-black">
-                    2 months free
-                </div>
-            )}
-
-            <div className="p-8 md:p-8 flex flex-col flex-1">
-                {/* Header */}
-                <div className="mb-6">
-                    <p className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
-                        {plan.tagline}
-                    </p>
-                    <h3 className="text-2xl font-bold tracking-tight">{plan.name}</h3>
-                </div>
-
-                {/* Price */}
-                <div className="mb-8">
-                    {isFree ? (
-                        <div className="text-4xl md:text-5xl font-bold tracking-tighter">$0</div>
-                    ) : (
-                        <div>
-                            <div className="flex items-end gap-1">
-                                <span className={`text-lg font-bold mb-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>$</span>
-                                <span className="text-4xl md:text-5xl font-bold tracking-tighter">{price}</span>
-                                <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ml-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
-                                    /{isAnnual ? "yr" : "mo"}
-                                </span>
-                            </div>
-                            {isAnnual && (
-                                <p className={`text-xs mt-1 ${plan.highlighted ? "opacity-40" : "opacity-40"}`}>
-                                    ~${(plan.priceAnnual / 12).toFixed(2)}/mo billed annually
-                                </p>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-3 mb-8 flex-1">
-                    {plan.features.map((f, i) => (
-                        <li key={i} className="flex items-start gap-3 text-[13px]">
-                            {f.included ? (
-                                <IconCheck className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? "text-emerald-400" : "opacity-60"}`} stroke={2.5} />
-                            ) : (
-                                <IconLock className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? "opacity-20" : "opacity-20"}`} stroke={2} />
-                            )}
-                            <span className={f.included ? (plan.highlighted ? "opacity-90" : "opacity-80") : "opacity-30"}>
-                                {f.text}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-
-                {/* CTA */}
-                <Link
-                    href={plan.ctaHref}
-                    className={`w-full text-center py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95 ${
-                        plan.highlighted
-                            ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-md"
-                            : isFree
-                            ? "bg-black text-white hover:bg-[#1A1A1A]"
-                            : "bg-black text-white hover:bg-[#1A1A1A]"
-                    }`}
-                >
-                    {plan.cta}
-                </Link>
-            </div>
-        </div>
+            {cardInner}
+        </motion.div>
     );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DESIGN SPELL 4: Floating Orbs ─────────────────────────────────────────────
+// Subtle animated glows that drift around the CTA section
+// ══════════════════════════════════════════════════════════════════════════════
+function FloatingOrbs() {
+    const orbs = [
+        { size: 200, color: "#10b98115", left: "12%",  top: "20%",  duration: 7,  delay: 0   },
+        { size: 140, color: "#f59e0b0d", left: "68%",  top: "55%",  duration: 9,  delay: 1.2 },
+        { size: 100, color: "#ffffff08", left: "42%",  top: "70%",  duration: 6,  delay: 0.6 },
+        { size: 80,  color: "#10b98110", left: "82%",  top: "15%",  duration: 8,  delay: 2   },
+    ];
+    return (
+        <>
+            {orbs.map((orb, i) => (
+                <motion.div
+                    key={i}
+                    className="absolute rounded-full pointer-events-none"
+                    style={{
+                        width: orb.size,
+                        height: orb.size,
+                        background: `radial-gradient(circle, ${orb.color} 0%, transparent 70%)`,
+                        left: orb.left,
+                        top: orb.top,
+                        filter: "blur(2px)",
+                    }}
+                    animate={{ x: [0, 18, -10, 0], y: [0, -14, 10, 0], scale: [1, 1.08, 0.95, 1] }}
+                    transition={{ duration: orb.duration, repeat: Infinity, ease: "easeInOut", delay: orb.delay }}
+                />
+            ))}
+        </>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── MAIN PAGE ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
 export default function HomePage() {
     const [isAnnual, setIsAnnual] = useState(true);
     const pricingRef = useRef(null);
 
     return (
-        <div className="min-h-full bg-[var(--background)] text-[var(--foreground)] selection:bg-black selection:text-white">
+        <div className="min-h-full bg-[var(--background)] text-[var(--foreground)] selection:bg-black selection:text-white overflow-x-hidden">
 
-            {/* ── NAV ── */}
+            {/* ── DESIGN SPELL 5: Grain Overlay ─────────────────────────────────
+                Fixed noise SVG filter adds premium texture depth.
+                Mix-blend-mode overlay means it blends with both light & dark modes.
+            ──────────────────────────────────────────────────────────────────── */}
+            <div
+                className="pointer-events-none fixed inset-0 z-[999]"
+                style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
+                    opacity: 0.028,
+                    mixBlendMode: "overlay",
+                }}
+            />
+
+            {/* ── NAV ─────────────────────────────────────────────────────────── */}
             <nav className="sticky top-0 z-30 bg-[var(--background)]/80 backdrop-blur border-b border-[var(--border)]">
                 <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
                     <Link href="/" className="text-sm font-bold tracking-tight">Perricheno</Link>
-                    <div className="hidden md:flex items-center gap-8 text-[13px] font-medium opacity-70">
-                        <a href="#product" className="hover:opacity-100 transition-opacity">Product</a>
-                        <a href="#how" className="hover:opacity-100 transition-opacity">How it works</a>
-                        <a href="#pricing" className="hover:opacity-100 transition-opacity">Pricing</a>
-                        <a href="#faq" className="hover:opacity-100 transition-opacity">FAQ</a>
+                    <div className="hidden md:flex items-center gap-8">
+                        <NavLink href="#product">Product</NavLink>
+                        <NavLink href="#how">How it works</NavLink>
+                        <NavLink href="#pricing">Pricing</NavLink>
+                        <NavLink href="#faq">FAQ</NavLink>
                     </div>
-                    <Link
+                    <MagneticButton
                         href="/agent"
-                        className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-[#1A1A1A] transition-colors"
+                        className="inline-flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:opacity-80 transition-opacity"
                     >
                         Launch Agent <IconArrowUpRight className="w-3.5 h-3.5" />
-                    </Link>
+                    </MagneticButton>
                 </div>
             </nav>
 
             <div className="max-w-7xl mx-auto px-6">
 
-                {/* ── HERO ── */}
+                {/* ── HERO ──────────────────────────────────────────────────── */}
                 <header className="pt-20 md:pt-32 pb-24 md:pb-40">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 22 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
                         className="max-w-4xl"
                     >
-
+                        {/* ── DO NOT MODIFY THIS HEADLINE ── */}
                         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.95] mb-8">
                             Research, write, <br />
-                            analyze, cite, visualize - <br className="hidden md:block" />
+                            analyze, cite, visualize -{" "}
+                            <br className="hidden md:block" />
                             <span className="opacity-30">all in one place.</span>
                         </h1>
+
                         <p className="text-lg md:text-xl leading-relaxed opacity-60 font-light max-w-2xl mb-12">
                             Perricheno turns a topic into a compiled LaTeX paper, with real citations,
                             publication-ready figures, and shareable PDFs. Built for students and researchers
                             who want depth, not boilerplate.
                         </p>
+
                         <div className="flex flex-wrap gap-3 items-center">
-                            <Link
+                            <MagneticButton
                                 href="/agent"
-                                className="inline-flex items-center gap-3 bg-black text-white px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-[#1A1A1A] transition-all active:scale-95 shadow-sm"
+                                className="inline-flex items-center gap-3 bg-[var(--foreground)] text-[var(--background)] px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:opacity-80 transition-all active:scale-95 shadow-sm"
                             >
                                 Launch Agent <IconArrowUpRight className="w-4 h-4" />
-                            </Link>
-                            <a
+                            </MagneticButton>
+                            <MagneticButton
                                 href="#pricing"
-                                className="inline-flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:border-black transition-all"
+                                className="inline-flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:border-current transition-all"
                             >
                                 See pricing
-                            </a>
+                            </MagneticButton>
                             <div className="flex items-center gap-2 pl-2 opacity-50">
                                 <IconBrandTelegram className="w-4 h-4" />
                                 <span className="text-[11px] font-medium">Via Telegram</span>
@@ -377,39 +486,33 @@ export default function HomePage() {
                     </motion.div>
 
                     {/* Stat strip */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3, duration: 0.7 }}
-                        className="mt-20 md:mt-28 grid grid-cols-2 md:grid-cols-4 gap-8 pt-10 border-t border-[var(--border)]"
-                    >
+                    <div className="mt-20 md:mt-28 grid grid-cols-2 md:grid-cols-4 gap-8 pt-10 border-t border-[var(--border)]">
                         {[
                             ["arXiv + OpenAlex", "Search indexes"],
-                            ["R · Python", "Visualization runtimes"],
-                            ["LaTeX", "Native compiler"],
-                            ["EN · RU", "Document languages"],
-                        ].map(([v, l]) => (
-                            <div key={l}>
+                            ["R · Python",        "Visualization runtimes"],
+                            ["LaTeX",             "Native compiler"],
+                            ["EN · RU",           "Document languages"],
+                        ].map(([v, l], i) => (
+                            <motion.div
+                                key={l}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 + i * 0.08, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                            >
                                 <div className="text-lg md:text-2xl font-bold tracking-tight">{v}</div>
                                 <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mt-2">{l}</div>
-                            </div>
-                        ))}
-                    </motion.div>
-                </header>
-
-                {/* ── LOGO BAR ── */}
-                <div className="py-10 border-t border-[var(--border)]">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-6 text-center">Powered by</p>
-                    <div className="flex flex-wrap items-center justify-center gap-8 md:gap-14">
-                        {LOGOS.map(l => (
-                            <span key={l} className="text-[13px] font-bold tracking-tight opacity-25 hover:opacity-50 transition-opacity">
-                                {l}
-                            </span>
+                            </motion.div>
                         ))}
                     </div>
+                </header>
+
+                {/* ── LOGO MARQUEE ────────────────────────────────────────────── */}
+                <div className="py-10 border-t border-[var(--border)]">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-6 text-center">Powered by</p>
+                    <LogoMarquee />
                 </div>
 
-                {/* ── FEATURES ── */}
+                {/* ── FEATURES ────────────────────────────────────────────────── */}
                 <section id="product" className="py-24 md:py-32 border-t border-[var(--border)]">
                     <SectionLabel>Product</SectionLabel>
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 max-w-3xl leading-[1.05]">
@@ -426,18 +529,36 @@ export default function HomePage() {
                                 initial={{ opacity: 0 }}
                                 whileInView={{ opacity: 1 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: i * 0.05 }}
-                                className="bg-[var(--card)] p-8 md:p-10 flex flex-col min-h-[220px] hover:bg-[var(--background)] transition-colors group"
+                                transition={{ delay: i * 0.06 }}
+                                whileHover="hovered"
+                                className="group relative bg-[var(--card)] p-8 md:p-10 flex flex-col min-h-[220px] overflow-hidden cursor-default transition-colors duration-300 hover:bg-[var(--background)]"
                             >
-                                <Icon className="w-6 h-6 mb-6 opacity-70 group-hover:opacity-100 transition-opacity" stroke={1.5} />
+                                {/* DESIGN SPELL: sweep highlight on hover */}
+                                <motion.div
+                                    className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500"
+                                    style={{ background: "linear-gradient(135deg, transparent 40%, rgba(16,185,129,0.04) 100%)" }}
+                                />
+
+                                {/* Icon lifts and brightens on hover */}
+                                <motion.div
+                                    variants={{ hovered: { y: -4, opacity: 1 } }}
+                                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                                    className="w-6 h-6 mb-6 opacity-60"
+                                >
+                                    <Icon className="w-6 h-6" stroke={1.5} />
+                                </motion.div>
+
                                 <h3 className="text-lg font-bold tracking-tight mb-3">{title}</h3>
                                 <p className="text-[14px] leading-relaxed opacity-60 font-light">{desc}</p>
+
+                                {/* Bottom accent line appears on hover */}
+                                <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-emerald-500/40 group-hover:w-full transition-all duration-500 ease-out" />
                             </motion.div>
                         ))}
                     </div>
                 </section>
 
-                {/* ── HOW IT WORKS ── */}
+                {/* ── HOW IT WORKS ────────────────────────────────────────────── */}
                 <section id="how" className="py-24 md:py-32 border-t border-[var(--border)]">
                     <SectionLabel>How it works</SectionLabel>
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 max-w-3xl leading-[1.05]">
@@ -455,11 +576,24 @@ export default function HomePage() {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: i * 0.1 }}
-                                className="relative bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 md:p-10 overflow-hidden group hover:border-black/20 transition-colors"
+                                whileHover={{ y: -4 }}
+                                className="relative bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 md:p-10 overflow-hidden group hover:border-black/20 transition-all duration-300"
                             >
-                                <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-8">{n}</div>
-                                <h3 className="text-xl font-bold tracking-tight mb-3">{title}</h3>
-                                <p className="text-[14px] leading-relaxed opacity-60 font-light">{desc}</p>
+                                {/* ── DESIGN SPELL: Ghost step number ──────────────
+                                    Massive, feather-light number creates depth  */}
+                                <div
+                                    className="absolute -right-5 -bottom-8 font-black leading-none select-none pointer-events-none"
+                                    style={{ fontSize: "clamp(100px, 14vw, 160px)", opacity: 0.04 }}
+                                >
+                                    {n}
+                                </div>
+
+                                <div className="relative z-10">
+                                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-8">{n}</div>
+                                    <h3 className="text-xl font-bold tracking-tight mb-3">{title}</h3>
+                                    <p className="text-[14px] leading-relaxed opacity-60 font-light">{desc}</p>
+                                </div>
+
                                 {/* Step connector arrow (not on last) */}
                                 {i < 2 && (
                                     <div className="hidden md:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-[var(--background)] border border-[var(--border)] rounded-full items-center justify-center">
@@ -471,7 +605,7 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                {/* ── PRICING ── */}
+                {/* ── PRICING ─────────────────────────────────────────────────── */}
                 <section id="pricing" className="py-24 md:py-32 border-t border-[var(--border)]" ref={pricingRef}>
                     <SectionLabel>Pricing</SectionLabel>
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-2 max-w-3xl leading-[1.05]">
@@ -486,20 +620,21 @@ export default function HomePage() {
 
                     {/* Toggle */}
                     <div className="flex items-center gap-4 mb-12">
-                        <span className={`text-sm font-semibold transition-colors ${!isAnnual ? "opacity-100" : "opacity-40"}`}>Monthly</span>
+                        <span className={`text-sm font-semibold transition-opacity ${!isAnnual ? "opacity-100" : "opacity-40"}`}>Monthly</span>
                         <button
                             onClick={() => setIsAnnual(v => !v)}
-                            className="relative w-12 h-6 bg-black rounded-full p-1 transition-colors"
+                            className="relative w-12 h-6 bg-[var(--foreground)] rounded-full p-1"
+                            aria-label="Toggle billing period"
                         >
                             <motion.div
                                 layout
                                 animate={{ x: isAnnual ? 24 : 0 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                className="w-4 h-4 bg-white rounded-full shadow-md"
+                                className="w-4 h-4 bg-[var(--background)] rounded-full shadow-md"
                             />
                         </button>
                         <div className="flex items-center gap-2">
-                            <span className={`text-sm font-semibold transition-colors ${isAnnual ? "opacity-100" : "opacity-40"}`}>Annual</span>
+                            <span className={`text-sm font-semibold transition-opacity ${isAnnual ? "opacity-100" : "opacity-40"}`}>Annual</span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">
                                 Save 20%
                             </span>
@@ -514,38 +649,43 @@ export default function HomePage() {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: i * 0.08 }}
+                                className="flex flex-col"
                             >
                                 <PricingCard plan={plan} isAnnual={isAnnual} />
                             </motion.div>
                         ))}
                     </div>
 
-                    {/* Fine print */}
                     <p className="text-[12px] opacity-40 mt-8 text-center max-w-xl mx-auto">
-                        All plans include core features. Payments processed via CryptoCloud (crypto). 
+                        All plans include core features. Payments processed via CryptoCloud (crypto).
                         Purchased tokens never expire and roll over automatically.
                     </p>
                 </section>
 
-                {/* ── SOCIAL PROOF / CALLOUT ── */}
+                {/* ── SOCIAL PROOF ─────────────────────────────────────────────── */}
                 <section className="py-16 md:py-20 border-t border-[var(--border)]">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
                             { icon: IconSparkles, stat: "LaTeX + PDF", label: "Native compile pipeline", desc: "No copy-pasting into Overleaf. Full compilation with bib and figures." },
-                            { icon: IconBolt, stat: "Real citations", label: "Not hallucinated", desc: "Every reference pulled live from arXiv and OpenAlex with DOIs." },
-                            { icon: IconChartBar, stat: "R + Python", label: "Dual viz engines", desc: "From ggplot2 to matplotlib. Publication-grade charts in one click." },
+                            { icon: IconBolt,     stat: "Real citations", label: "Not hallucinated",      desc: "Every reference pulled live from arXiv and OpenAlex with DOIs." },
+                            { icon: IconChartBar, stat: "R + Python",    label: "Dual viz engines",       desc: "From ggplot2 to matplotlib. Publication-grade charts in one click." },
                         ].map(({ icon: Icon, stat, label, desc }) => (
-                            <div key={stat} className="border border-[var(--border)] rounded-2xl p-8 bg-[var(--card)] hover:bg-[var(--background)] transition-colors">
-                                <Icon className="w-5 h-5 mb-5 opacity-50" stroke={1.5} />
+                            <motion.div
+                                key={stat}
+                                whileHover={{ y: -4 }}
+                                transition={{ duration: 0.22 }}
+                                className="border border-[var(--border)] rounded-2xl p-8 bg-[var(--card)] hover:bg-[var(--background)] transition-colors group"
+                            >
+                                <Icon className="w-5 h-5 mb-5 opacity-50 group-hover:opacity-80 transition-opacity" stroke={1.5} />
                                 <div className="text-2xl font-bold tracking-tight mb-1">{stat}</div>
                                 <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-4">{label}</div>
                                 <p className="text-[14px] leading-relaxed opacity-60 font-light">{desc}</p>
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
                 </section>
 
-                {/* ── FAQ ── */}
+                {/* ── FAQ ──────────────────────────────────────────────────────── */}
                 <section id="faq" className="py-24 md:py-32 border-t border-[var(--border)]">
                     <SectionLabel>FAQ</SectionLabel>
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 max-w-3xl leading-[1.05]">
@@ -554,54 +694,61 @@ export default function HomePage() {
                     <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-16 max-w-3xl leading-[1.05] opacity-30">
                         questions.
                     </h2>
-
                     <div className="max-w-3xl">
-                        {FAQ.map(({ q, a }) => (
-                            <FaqItem key={q} q={q} a={a} />
-                        ))}
+                        {FAQ.map(({ q, a }) => <FaqItem key={q} q={q} a={a} />)}
                     </div>
                 </section>
 
-                {/* ── FINAL CTA ── */}
+                {/* ── FINAL CTA ─────────────────────────────────────────────────── */}
                 <section className="py-24 md:py-32 border-t border-[var(--border)]">
                     <div className="relative bg-black text-white rounded-3xl p-12 md:p-20 text-center overflow-hidden">
+
                         {/* Subtle grid */}
-                        <div className="absolute inset-0 opacity-[0.04]"
+                        <div
+                            className="absolute inset-0 opacity-[0.035]"
                             style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "48px 48px" }}
                         />
-                        {/* Glow */}
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-emerald-500/10 blur-3xl" />
 
-                        <div className="relative">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-6">Ready to start?</p>
-                            <h2 className="text-3xl md:text-5xl font-bold tracking-tighter mb-4 max-w-3xl mx-auto leading-[1.05]">
-                                Stop wrestling with LaTeX.
-                            </h2>
-                            <h2 className="text-3xl md:text-5xl font-bold tracking-tighter mb-8 max-w-3xl mx-auto leading-[1.05] opacity-40">
-                                Start writing.
-                            </h2>
-                            <p className="text-base md:text-lg opacity-50 font-light max-w-xl mx-auto mb-10">
-                                Free to try. No credit card. One Telegram tap and you're in the agent.
-                            </p>
-                            <div className="flex flex-wrap gap-3 justify-center">
-                                <Link
-                                    href="/agent"
-                                    className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-all active:scale-95"
-                                >
-                                    Launch Agent <IconArrowUpRight className="w-4 h-4" />
-                                </Link>
-                                <a
-                                    href="#pricing"
-                                    className="inline-flex items-center gap-3 border border-white/20 text-white px-8 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:border-white/40 transition-all"
-                                >
-                                    View pricing
-                                </a>
-                            </div>
+                        {/* ── DESIGN SPELL: Floating orbs ── */}
+                        <FloatingOrbs />
+
+                        <div className="relative z-10">
+                            <motion.div
+                                initial={{ opacity: 0, y: 16 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                            >
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-6">Ready to start?</p>
+                                <h2 className="text-3xl md:text-5xl font-bold tracking-tighter mb-4 max-w-3xl mx-auto leading-[1.05]">
+                                    Stop wrestling with LaTeX.
+                                </h2>
+                                <h2 className="text-3xl md:text-5xl font-bold tracking-tighter mb-8 max-w-3xl mx-auto leading-[1.05] opacity-40">
+                                    Start writing.
+                                </h2>
+                                <p className="text-base md:text-lg opacity-50 font-light max-w-xl mx-auto mb-10">
+                                    Free to try. No credit card. One Telegram tap and you're in the agent.
+                                </p>
+                                <div className="flex flex-wrap gap-3 justify-center">
+                                    <MagneticButton
+                                        href="/agent"
+                                        className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-all active:scale-95"
+                                    >
+                                        Launch Agent <IconArrowUpRight className="w-4 h-4" />
+                                    </MagneticButton>
+                                    <MagneticButton
+                                        href="#pricing"
+                                        className="inline-flex items-center gap-3 border border-white/20 text-white px-8 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:border-white/50 transition-all"
+                                    >
+                                        View pricing
+                                    </MagneticButton>
+                                </div>
+                            </motion.div>
                         </div>
                     </div>
                 </section>
 
-                {/* ── FOOTER ── */}
+                {/* ── FOOTER ─────────────────────────────────────────────────── */}
                 <footer className="py-16 border-t border-[var(--border)] flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
                     <div>
                         <p className="text-sm font-bold tracking-tight mb-1">Perricheno</p>
@@ -609,12 +756,13 @@ export default function HomePage() {
                             © 2026 Perricheno Inc. · All rights reserved
                         </p>
                     </div>
-                    <div className="flex gap-8 text-[11px] font-bold uppercase tracking-widest opacity-40">
-                        <Link href="/terms" className="hover:opacity-100 transition-opacity">Terms</Link>
-                        <Link href="/privacy" className="hover:opacity-100 transition-opacity">Privacy</Link>
-                        <a href="mailto:support@perricheno.ru" className="hover:opacity-100 transition-opacity">Support</a>
+                    <div className="flex gap-8 text-[11px] font-bold uppercase tracking-widest">
+                        <Link href="/terms"   className="opacity-40 hover:opacity-100 transition-opacity">Terms</Link>
+                        <Link href="/privacy" className="opacity-40 hover:opacity-100 transition-opacity">Privacy</Link>
+                        <a href="mailto:support@perricheno.ru" className="opacity-40 hover:opacity-100 transition-opacity">Support</a>
                     </div>
                 </footer>
+
             </div>
         </div>
     );
