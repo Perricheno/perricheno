@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         }, { status: 413 });
     }
 
-    // Reject empty results explicitly — user needs a clear signal.
+    // Reject empty results explicitly - user needs a clear signal.
     if (bundle.charCount === 0 && bundle.imageCount === 0) {
         return NextResponse.json({
             error: "EMPTY_PDF",

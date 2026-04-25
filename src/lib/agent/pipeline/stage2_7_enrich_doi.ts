@@ -1,4 +1,4 @@
-// Stage 2.7 — DOI Enrichment
+// Stage 2.7 - DOI Enrichment
 // Uses CrossRef API to fetch accurate metadata for references with DOIs.
 // Fixes incomplete/incorrect author names, years, venues, and citation keys.
 

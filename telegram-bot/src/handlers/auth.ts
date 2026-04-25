@@ -80,7 +80,7 @@ export async function handleMe(ctx: any) {
             const text = `👤 *Профиль пользователя*\n\n` +
                          `🆔 ID: \`${u.id}\`\n` +
                          `👤 Имя: *${u.first_name || (tgUser.first_name)}*\n` +
-                         `🔗 Username: @${u.username || tgUser.username || "—"}\n` +
+                         `🔗 Username: @${u.username || tgUser.username || "-"}\n` +
                          `🌟 Тариф: \`${u.account_tier || "free"}\`\n` +
                          `📅 Дата регистрации: \`${createdDate}\`\n\n` +
                          (u.is_banned ? `⚠️ *ВАШ АККАУНТ ЗАМОРОЖЕН АДМИНИСТРАЦИЕЙ* ⚠️\n\n` : '') +

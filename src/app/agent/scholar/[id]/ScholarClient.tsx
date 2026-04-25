@@ -17,7 +17,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
     const [isLoading, setIsLoading] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     
-    // Parse visuals_json safely — could be a JSON string or already an array
+    // Parse visuals_json safely - could be a JSON string or already an array
     const parseArticles = (raw: any): ScholarArticle[] => {
         if (!raw) return [];
         if (Array.isArray(raw)) return raw;
@@ -186,7 +186,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                 )}
                             </div>
 
-                            {/* Filter bar — monochrome, matches settings panel style */}
+                            {/* Filter bar - monochrome, matches settings panel style */}
                             {articles.length > 0 && (
                                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-6">
                                     {/* Text filter */}

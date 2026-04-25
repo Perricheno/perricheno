@@ -1,4 +1,4 @@
-// Stage 3 — Draft.
+// Stage 3 - Draft.
 // Section-by-section generation. Sections are written sequentially so each
 // one can see a lightweight summary of what came before (for continuity).
 // Long sections use the chatCompletionLong() continuation fallback so a
@@ -95,7 +95,7 @@ function buildRefBundle(refs: ExtractedRef[]): string {
     const lines = ok.map(r => {
         const meta = r.metadata ?? {};
         const authors = (meta.authors ?? []).join(", ");
-        const header = `- [${r.bibKey}] "${meta.title ?? r.filename}" (${meta.year ?? "n.d."})${authors ? ` — ${authors}` : ""}`;
+        const header = `- [${r.bibKey}] "${meta.title ?? r.filename}" (${meta.year ?? "n.d."})${authors ? ` - ${authors}` : ""}`;
         const claims = (r.keyClaims ?? []).map(c => `  • ${c}`).join("\n");
         return `${header}\n${claims}`;
     });
@@ -116,7 +116,7 @@ function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean): string 
 
     return `You are writing ONE section of an academic ${s.docType ?? "document"} in ${lang}.
 
-Return ONLY the LaTeX body of that section — plain text and LaTeX commands, NO \\section{...} wrapper (the orchestrator adds it), NO document preamble, NO \\begin{document}.
+Return ONLY the LaTeX body of that section - plain text and LaTeX commands, NO \\section{...} wrapper (the orchestrator adds it), NO document preamble, NO \\begin{document}.
 
 Rules:
 - Style: ${styleDesc}
@@ -147,7 +147,7 @@ function buildUserPrompt(
         `DOCUMENT TOPIC: ${s.prompt}`,
         "",
         `FULL OUTLINE:\n${outline}`,
-        previousSummary ? `\nPREVIOUSLY WRITTEN (tail, for continuity only — do NOT repeat):\n${previousSummary}` : "",
+        previousSummary ? `\nPREVIOUSLY WRITTEN (tail, for continuity only - do NOT repeat):\n${previousSummary}` : "",
         refBundle ? `\nREFERENCE BUNDLE (only these citation keys are valid):\n${refBundle}` : "",
         focusRefs ? `\n${focusRefs}` : "",
         "",
@@ -262,7 +262,7 @@ export async function runStage3(
 
         console.log(`[Stage3] Section complete: ${words} words, ${r.totalTokens} tokens${r.truncated ? " (TRUNCATED)" : ""}`);
 
-        // Keep just the tail as continuity context — cheap and effective.
+        // Keep just the tail as continuity context - cheap and effective.
         runningTail = body.slice(-PREVIOUS_CONTEXT_CHARS);
 
         onProgress?.(i + 1, plan.sections.length, section.heading);

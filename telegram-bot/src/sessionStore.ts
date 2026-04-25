@@ -1,4 +1,4 @@
-// Shared Session Store — Persistence Layer
+// Shared Session Store - Persistence Layer
 // Communicates with Perricheno Site API to store/retrieve sessions in SQLite.
 
 const SITE_INTERNAL_URL = process.env.SITE_INTERNAL_URL || "http://perricheno-site:3000";

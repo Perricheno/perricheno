@@ -148,7 +148,7 @@ export default function AgentPage() {
                         const sessionId = data.sessionId;
                         // Store the message temporarily so the chat page can pick it up
                         // Only the prompt survives the redirect. If the user had
-                        // files on the landing, they'll re-attach in chat — chat
+                        // files on the landing, they'll re-attach in chat - chat
                         // now requires server-side ingest via /api/agent/attach.
                         sessionStorage.setItem('pendingChatMessage', JSON.stringify({
                             sessionId,

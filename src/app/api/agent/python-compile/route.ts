@@ -3,7 +3,7 @@ import { verifySession } from '@/lib/session';
 
 const PYTHON_COMPILER_URL = process.env.PYTHON_COMPILER_URL || 'http://python-compiler:8000';
 
-// POST /api/agent/python-compile — proxy Python code to the internal Python compiler
+// POST /api/agent/python-compile - proxy Python code to the internal Python compiler
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });

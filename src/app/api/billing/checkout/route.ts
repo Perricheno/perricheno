@@ -18,7 +18,7 @@ export const PLANS: Record<string, {
     'plus_year': {
         amount: 39.00,
         name: 'Plus (1 Year)',
-        description: 'Standard plan for 1 year — save ~$9',
+        description: 'Standard plan for 1 year - save ~$9',
     },
     'pro_month': {
         amount: 7.99,
@@ -28,7 +28,7 @@ export const PLANS: Record<string, {
     'pro_year': {
         amount: 79.00,
         name: 'Pro (1 Year)',
-        description: 'Researcher plan for 1 year — save ~$17',
+        description: 'Researcher plan for 1 year - save ~$17',
     },
     'ultra_month': {
         amount: 14.99,
@@ -38,7 +38,7 @@ export const PLANS: Record<string, {
     'ultra_year': {
         amount: 149.00,
         name: 'Ultra (1 Year)',
-        description: 'Ultimate plan for 1 year — save ~$31',
+        description: 'Ultimate plan for 1 year - save ~$31',
     },
     'data_scientist': {
         amount: 25.00,

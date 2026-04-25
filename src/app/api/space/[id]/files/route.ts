@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// GET /api/space/[id]/files — list all files (paths + metadata, no content)
+// GET /api/space/[id]/files - list all files (paths + metadata, no content)
 export async function GET(_req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     if (!role) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const files = await getSpaceFiles(id);
-    // Strip heavy content for listing — clients fetch individual file content separately
+    // Strip heavy content for listing - clients fetch individual file content separately
     const listing = files.map(f => ({
         id: f.id,
         path: f.path,
@@ -28,7 +28,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     return NextResponse.json({ files: listing });
 }
 
-// POST /api/space/[id]/files — create a new text file
+// POST /api/space/[id]/files - create a new text file
 export async function POST(req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

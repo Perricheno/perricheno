@@ -1,4 +1,4 @@
-// Stage 2 — Chart Planning
+// Stage 2 - Chart Planning
 // AI analyzes REAL data and plans which charts to generate.
 // Uses verified data structure to ensure charts use actual columns/metrics.
 

@@ -40,19 +40,19 @@ gh run view <run-id> --repo owner/repo --log-failed
 
 Follow this sequence to investigate a failing CI run:
 
-1. **Check PR status** — identify which checks are failing:
+1. **Check PR status** - identify which checks are failing:
    ```bash
    gh pr checks 55 --repo owner/repo
    ```
-2. **List recent runs** — find the relevant run ID:
+2. **List recent runs** - find the relevant run ID:
    ```bash
    gh run list --repo owner/repo --limit 10
    ```
-3. **View the failed run** — see which jobs and steps failed:
+3. **View the failed run** - see which jobs and steps failed:
    ```bash
    gh run view <run-id> --repo owner/repo
    ```
-4. **Fetch failure logs** — get the detailed output for failed steps:
+4. **Fetch failure logs** - get the detailed output for failed steps:
    ```bash
    gh run view <run-id> --repo owner/repo --log-failed
    ```

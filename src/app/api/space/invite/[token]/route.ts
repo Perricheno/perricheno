@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 type Ctx = { params: Promise<{ token: string }> };
 
-// GET — preview the invite (show role before accepting, do not expose email)
+// GET - preview the invite (show role before accepting, do not expose email)
 export async function GET(_req: Request, { params }: Ctx) {
     const { token } = await params;
     const invite = await getSpaceInviteByToken(token);
@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     return NextResponse.json({ invite: { space_id: invite.space_id, role: invite.role } });
 }
 
-// POST — accept the invite
+// POST - accept the invite
 export async function POST(_req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

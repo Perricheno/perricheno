@@ -14,7 +14,7 @@ function isValidPath(p: string) {
     return p.length > 0 && !p.startsWith('/') && !p.includes('../') && !p.includes('\0');
 }
 
-// GET — file content
+// GET - file content
 export async function GET(_req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     return NextResponse.json({ file });
 }
 
-// PUT — create or update file content
+// PUT - create or update file content
 export async function PUT(req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -53,7 +53,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     return NextResponse.json({ ok: true });
 }
 
-// DELETE — remove file
+// DELETE - remove file
 export async function DELETE(_req: Request, { params }: Ctx) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

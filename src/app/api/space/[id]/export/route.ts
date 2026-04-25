@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: Ctx) {
 
     const { id } = await params;
 
-    // Allow owners/editors/viewers — read is fine
+    // Allow owners/editors/viewers - read is fine
     const role = await getUserRoleInSpace(id, userId);
     if (!role) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

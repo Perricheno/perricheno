@@ -15,7 +15,7 @@ async function apiFetch(action: string, data: any): Promise<any> {
 }
 
 // ═══════════════════════════════════════
-// 💳 handleBilling — Dashboard
+// 💳 handleBilling - Dashboard
 // ═══════════════════════════════════════
 export async function handleBilling(ctx: any) {
     const tgUser = ctx.from;
@@ -65,7 +65,7 @@ export async function handleBilling(ctx: any) {
 }
 
 // ═══════════════════════════════════════
-// 🛒 handleBillingShop — Category selector
+// 🛒 handleBillingShop - Category selector
 // ═══════════════════════════════════════
 export async function handleBillingShop(ctx: any) {
     await ctx.answerCbQuery?.();
@@ -80,7 +80,7 @@ export async function handleBillingShop(ctx: any) {
 }
 
 // ═══════════════════════════════════════
-// 📦 handleBillingCategory — Show packs for category
+// 📦 handleBillingCategory - Show packs for category
 // ═══════════════════════════════════════
 export async function handleBillingCategory(ctx: any, category: string) {
     await ctx.answerCbQuery?.();
@@ -108,7 +108,7 @@ export async function handleBillingCategory(ctx: any, category: string) {
 
         for (const p of packages) {
             const tagStr = p.tag ? ` _(${p.tag})_` : '';
-            lines.push(`${p.emoji} *${p.name}* — $${p.amount}${tagStr}`);
+            lines.push(`${p.emoji} *${p.name}* - $${p.amount}${tagStr}`);
             lines.push(`   └ ${p.description}`);
         }
 
@@ -123,7 +123,7 @@ export async function handleBillingCategory(ctx: any, category: string) {
 }
 
 // ═══════════════════════════════════════
-// 🏷 handleBillingBuy — Pack details + confirm
+// 🏷 handleBillingBuy - Pack details + confirm
 // ═══════════════════════════════════════
 export async function handleBillingBuy(ctx: any, packId: string) {
     await ctx.answerCbQuery?.();
@@ -166,7 +166,7 @@ export async function handleBillingBuy(ctx: any, packId: string) {
 }
 
 // ═══════════════════════════════════════
-// ✅ handleBillingConfirm — Create invoice
+// ✅ handleBillingConfirm - Create invoice
 // ═══════════════════════════════════════
 export async function handleBillingConfirm(ctx: any, packId: string) {
     if (ctx.session?.isProcessing) return ctx.answerCbQuery("⏳ Счёт уже создается...");
@@ -201,7 +201,7 @@ export async function handleBillingConfirm(ctx: any, packId: string) {
 }
 
 // ═══════════════════════════════════════
-// 📜 handleBillingHistory — Transaction list
+// 📜 handleBillingHistory - Transaction list
 // ═══════════════════════════════════════
 export async function handleBillingHistory(ctx: any) {
     await ctx.answerCbQuery?.();
@@ -265,7 +265,7 @@ export async function handleBillingHistory(ctx: any) {
 }
 
 // ═══════════════════════════════════════
-// 🎟 handleBillingPromo — Promo code flow
+// 🎟 handleBillingPromo - Promo code flow
 // ═══════════════════════════════════════
 export async function handleBillingPromoStart(ctx: any) {
     await ctx.answerCbQuery?.();

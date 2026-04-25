@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS citations (
     abstract    TEXT,
     url         TEXT,
 
-    -- BibTeX: always stored — either imported or synthesized
+    -- BibTeX: always stored - either imported or synthesized
     bibtex      TEXT NOT NULL,
     cite_key    TEXT NOT NULL,       -- the @article{KEY,...} key, unique per user
 
@@ -38,7 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_citations_user_doi    ON citations(user_id, doi) 
 CREATE INDEX IF NOT EXISTS idx_citations_user_arxiv  ON citations(user_id, arxiv_id) WHERE arxiv_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_citations_tags        ON citations USING GIN (tags);
 
--- Collections (folders) — optional grouping
+-- Collections (folders) - optional grouping
 CREATE TABLE IF NOT EXISTS citation_collections (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     BIGINT NOT NULL,

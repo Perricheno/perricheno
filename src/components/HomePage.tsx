@@ -111,7 +111,7 @@ const PLANS = [
 
 // ── Features ───────────────────────────────────────────────────────────────────
 const FEATURES: { icon: ComponentType<{ className?: string; stroke?: number }>; title: string; desc: string }[] = [
-    { icon: IconFileText,     title: "Research Writer",   desc: "Full LaTeX documents — research papers, theses, reports — compiled straight to PDF with real citations." },
+    { icon: IconFileText,     title: "Research Writer",   desc: "Full LaTeX documents - research papers, theses, reports - compiled straight to PDF with real citations." },
     { icon: IconBook2,        title: "Scholar Search",    desc: "Query arXiv and OpenAlex in any language. Relevance-ranked results with abstracts, authors, DOIs." },
     { icon: IconChartBar,     title: "Data Analytics",    desc: "Turn a question into R or Python visualizations. Upload a dataset, pick a chart, get publication-ready figures." },
     { icon: IconMessageCircle,title: "Multimodal Chat",   desc: "Fast Q&A with text, images, and file context. Perfect for quick explanations, rewrites, and outlines." },
@@ -128,9 +128,9 @@ const STEPS = [
 
 // ── FAQ ────────────────────────────────────────────────────────────────────────
 const FAQ = [
-    { q: "How do I sign in?",             a: "Through the Telegram Login Widget. No passwords, no email — one tap opens the agent with your account attached." },
+    { q: "How do I sign in?",             a: "Through the Telegram Login Widget. No passwords, no email - one tap opens the agent with your account attached." },
     { q: "How is usage billed?",          a: "The free tier resets daily and weekly. Paid plans are billed monthly or annually (save ~20%). Payment is via CryptoCloud (crypto)." },
-    { q: "Can I use it in Russian?",      a: "Yes. Documents can be generated in English or Russian, and Scholar understands any language — queries are translated to English keywords before hitting academic indexes." },
+    { q: "Can I use it in Russian?",      a: "Yes. Documents can be generated in English or Russian, and Scholar understands any language - queries are translated to English keywords before hitting academic indexes." },
     { q: "Do you store my uploaded files?",a: "Uploaded task descriptions and reference files are used only to generate your document. Session text is stored on your account so you can reopen and edit it; you can delete any session at any time." },
     { q: "What formats do I get back?",   a: "Compiled PDF, the raw LaTeX source (.tex + bib), and a shareable public link. Visuals download as PNG with the R/Python source embedded." },
     { q: "Is there an API?",              a: "Not publicly yet. If you need programmatic access for a lab or classroom, get in touch." },
@@ -615,7 +615,7 @@ export default function HomePage() {
                         Scale when you need to.
                     </h2>
                     <p className="text-base md:text-lg opacity-60 font-light max-w-2xl mb-10">
-                        No hidden fees. Cancel anytime. Annual billing saves ~20% — that's two months free.
+                        No hidden fees. Cancel anytime. Annual billing saves ~20% - that's two months free.
                     </p>
 
                     {/* Toggle */}

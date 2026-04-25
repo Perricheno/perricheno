@@ -1,4 +1,4 @@
-// Stage 4 — Assemble.
+// Stage 4 - Assemble.
 // Deterministic. No LLM calls. Takes the drafted section bodies and stitches
 // them into a complete LaTeX document. Runs UTF-8 normalization, injects
 // Russian-language packages when needed, reconciles \cite keys against the

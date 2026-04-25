@@ -32,7 +32,7 @@ export async function POST(req: Request, { params }: Ctx) {
     const instruction = customPrompt?.trim() || (action ? ACTIONS[action] : null);
     if (!instruction) return NextResponse.json({ error: 'action or customPrompt required' }, { status: 400 });
 
-    const system = `You are a LaTeX expert assistant. Follow the instruction precisely. Output ONLY the result — no preamble, no explanation unless asked.`;
+    const system = `You are a LaTeX expert assistant. Follow the instruction precisely. Output ONLY the result - no preamble, no explanation unless asked.`;
     const user = `Instruction: ${instruction}\n\nSelected text:\n${text.slice(0, 4000)}`;
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {

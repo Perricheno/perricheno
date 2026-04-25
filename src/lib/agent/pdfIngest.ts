@@ -1,4 +1,4 @@
-// Server-side PDF ingestion — text + embedded images via Stirling-PDF
+// Server-side PDF ingestion - text + embedded images via Stirling-PDF
 // (pdf.perricheno.ru). No client-side parsing; everything runs here so the
 // browser stays thin and the service boundary is auditable.
 //

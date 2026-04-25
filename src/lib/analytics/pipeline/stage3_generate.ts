@@ -1,4 +1,4 @@
-// Stage 3 — Generate Charts
+// Stage 3 - Generate Charts
 // Sequential generation of charts using REAL data only.
 // Strict validation that code uses actual columns/data.
 

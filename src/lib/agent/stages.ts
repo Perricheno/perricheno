@@ -1,5 +1,5 @@
 // Utilities shared across the staged agent pipeline.
-// All of this is pure string / control-flow logic — no network, no DB.
+// All of this is pure string / control-flow logic - no network, no DB.
 
 // ── Retry with exponential backoff ──
 
@@ -53,7 +53,7 @@ export function normalizeLatexText(raw: string): string {
 
     let s = raw;
 
-    // Canonical composition — e.g. 'e' + COMBINING ACUTE ACCENT → é.
+    // Canonical composition - e.g. 'e' + COMBINING ACUTE ACCENT → é.
     s = s.normalize("NFC");
 
     // Strip BOM and zero-width spaces/joiners.
@@ -120,7 +120,7 @@ export function ensureRussianPreamble(tex: string, language: string): string {
 }
 
 // ── Escape sanity check ──
-// Flags unescaped specials inside prose (best-effort — LaTeX is context-sensitive).
+// Flags unescaped specials inside prose (best-effort - LaTeX is context-sensitive).
 // Returns a list of offending line numbers; use for logging, not auto-rewriting.
 
 const SPECIAL_UNESCAPED = /(?<!\\)[&%#_$]/g;
@@ -136,7 +136,7 @@ export function findUnescapedSpecials(tex: string): number[] {
         if (/\\begin\s*\{verbatim\}|\\begin\s*\{lstlisting\}|\\begin\s*\{minted\}/.test(line)) inVerbatim = true;
         if (/\\end\s*\{verbatim\}|\\end\s*\{lstlisting\}|\\end\s*\{minted\}/.test(line)) inVerbatim = false;
 
-        // math-mode lines we skip — $ balances are checked elsewhere.
+        // math-mode lines we skip - $ balances are checked elsewhere.
         if (inVerbatim) continue;
 
         SPECIAL_UNESCAPED.lastIndex = 0;

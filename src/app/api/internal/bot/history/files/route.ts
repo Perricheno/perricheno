@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         }
 
         // =====================
-        // ZIP — always works
+        // ZIP - always works
         // =====================
         if (type === "zip") {
             const zip = new JSZip();
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
                         console.log(`[CODE] Session ${sessionId}: visuals_json has ${visuals.length} entries. Fields in first entry: ${Object.keys(visuals[0]).join(', ')}`);
                     }
                     
-                    // Site CodeImage uses 'code', bot uses 'source_code' — check all possible field names
+                    // Site CodeImage uses 'code', bot uses 'source_code' - check all possible field names
                     const visualsWithCode = visuals
                         .map((v: any) => ({ ...v, _code: v.source_code || v.code || v.sourceCode || v.src }))
                         .filter((v: any) => v._code && typeof v._code === 'string' && v._code.length > 5);

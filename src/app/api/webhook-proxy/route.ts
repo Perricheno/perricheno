@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Missing webhookUrl" }, { status: 400 });
         }
 
-        // Remove webhookUrl from the forwarded data — n8n doesn't need it
+        // Remove webhookUrl from the forwarded data - n8n doesn't need it
         formData.delete("webhookUrl");
 
         // Forward to n8n with a generous timeout

@@ -600,7 +600,7 @@ export async function getAgentUploadsByIds(ids: string[], userId: number): Promi
     return (data || []) as AgentUpload[];
 }
 
-// Sum of text sizes for the user's still-valid uploads — used to enforce the
+// Sum of text sizes for the user's still-valid uploads - used to enforce the
 // 200 000-character hard cap before accepting a new ingest.
 export async function getUserActiveUploadsCharTotal(userId: number): Promise<number> {
     const { data } = await supabase.from('agent_uploads')

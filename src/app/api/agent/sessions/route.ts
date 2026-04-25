@@ -3,7 +3,7 @@ import { verifySession } from '@/lib/session';
 import { createAgentSession, getAgentSessionsByUser } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
-// GET /api/agent/sessions — list user's sessions
+// GET /api/agent/sessions - list user's sessions
 export async function GET() {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ sessions });
 }
 
-// POST /api/agent/sessions — create new session
+// POST /api/agent/sessions - create new session
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });

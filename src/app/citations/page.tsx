@@ -411,7 +411,7 @@ export default function CitationsPage() {
                         </div>
                         <div>
                             <h1 className="text-xl font-black text-black tracking-tight">Citation Manager</h1>
-                            <p className="text-xs text-gray-400">Search · Discover · Cite — DOI, arXiv, CrossRef, OpenAlex</p>
+                            <p className="text-xs text-gray-400">Search · Discover · Cite - DOI, arXiv, CrossRef, OpenAlex</p>
                         </div>
                     </div>
 
@@ -673,7 +673,7 @@ export default function CitationsPage() {
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-300 mb-2">Deep Academic Search</h3>
                                     <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
-                                        Search arXiv and OpenAlex for academic papers. Supports queries in any language — auto-translated to English.
+                                        Search arXiv and OpenAlex for academic papers. Supports queries in any language - auto-translated to English.
                                     </p>
                                     <div className="flex flex-wrap justify-center gap-2">
                                         {[

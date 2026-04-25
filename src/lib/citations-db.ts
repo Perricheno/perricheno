@@ -88,7 +88,7 @@ export async function getCitation(userId: number, id: string): Promise<Citation 
 }
 
 export async function createCitation(userId: number, c: NewCitation): Promise<Citation> {
-    // Ensure cite_key is unique for this user — append -2, -3… if collision
+    // Ensure cite_key is unique for this user - append -2, -3… if collision
     const citeKey = await ensureUniqueCiteKey(userId, c.cite_key);
     const payload = { ...c, user_id: userId, cite_key: citeKey };
 

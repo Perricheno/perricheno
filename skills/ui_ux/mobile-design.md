@@ -280,7 +280,7 @@ No debate without justification.
 ---
 
 > **Final Law:**
-> Mobile users are distracted, interrupted, and impatient—often using one hand on a bad network with low battery.
+> Mobile users are distracted, interrupted, and impatient-often using one hand on a bad network with low battery.
 > **Design for that reality, or your app will fail quietly.**
 
 ---

@@ -1,6 +1,6 @@
 // Thin OpenAI wrapper used across pipeline stages.
 // Centralizes: model name, timeout, error surfacing, token accounting,
-// image billing (800 tokens per image — matches product pricing), and the
+// image billing (800 tokens per image - matches product pricing), and the
 // "continue from where you stopped" fallback when max_tokens is hit.
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
@@ -93,7 +93,7 @@ export async function chatCompletion(messages: ChatMessage[], opts: ChatOpts = {
     };
 }
 
-// Robust JSON parsing — models occasionally wrap their reply in ```json fences
+// Robust JSON parsing - models occasionally wrap their reply in ```json fences
 // or trailing commentary even with jsonMode. This strips the most common cases.
 export function parseJsonLoose<T = any>(raw: string): T {
     let s = raw.trim();
@@ -139,7 +139,7 @@ export async function chatCompletionLong(
 
         if (r.finishReason !== "length") break;
 
-        // Hit the cap — ask for a clean continuation. Give the model just enough
+        // Hit the cap - ask for a clean continuation. Give the model just enough
         // trailing context to line up seams, not the whole thing (token-efficient).
         const tail = combined.slice(-1500);
         workingMessages.push({ role: "assistant", content: r.text });

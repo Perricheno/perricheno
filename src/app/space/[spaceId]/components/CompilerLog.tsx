@@ -29,7 +29,7 @@ function parseLog(log: string): LogEntry[] {
         const lineRef = raw.match(/^l\.(\d+)\s+(.*)/);
         if (lineRef && entries.length > 0) {
             const last = entries[entries.length - 1];
-            if (!last.line) { last.line = parseInt(lineRef[1]); last.message += ' — ' + lineRef[2].trim(); }
+            if (!last.line) { last.line = parseInt(lineRef[1]); last.message += ' - ' + lineRef[2].trim(); }
             continue;
         }
         const fileLine = raw.match(/^(\.\/[^\s:]+\.tex):(\d+):\s+(.*)/);
@@ -114,7 +114,7 @@ export default function CompilerLog({ log, spaceId, activeFile, activeCode, onJu
                     ))}
                 </div>
 
-                {/* AI Fix button — only shown when there are errors */}
+                {/* AI Fix button - only shown when there are errors */}
                 {errors.length > 0 && (
                     <button
                         onClick={askAi}

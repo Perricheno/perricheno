@@ -184,7 +184,7 @@ export default function TopBar({
                     </>
                 )}
 
-                {/* Export ZIP — available to all (owners, editors, viewers) */}
+                {/* Export ZIP - available to all (owners, editors, viewers) */}
                 <button
                     onClick={onExport}
                     className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"

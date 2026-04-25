@@ -16,7 +16,7 @@ function detectSourceLang(text: string): string | null {
     if (/[\uAC00-\uD7AF]/.test(text)) return "ko";          // Korean
     if (/[\u0600-\u06FF]/.test(text)) return "ar";          // Arabic
     if (/[\u0590-\u05FF]/.test(text)) return "he";          // Hebrew
-    // Latin but with diacritics — MyMemory can still auto-detect; let it through as English-ish.
+    // Latin but with diacritics - MyMemory can still auto-detect; let it through as English-ish.
     return null;
 }
 

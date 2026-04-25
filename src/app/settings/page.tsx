@@ -161,7 +161,7 @@ export default function SettingsPage() {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-base font-bold truncate text-[#1a1a1a]">{fullUser.username || fullUser.first_name || "User"}</p>
                                     <p className="text-xs text-gray-400">
-                                        {fullUser.isAdmin ? "Admin" : "Member"} · {planLabels[currentPlanId] || 'Free'} Plan · Since {fullUser.created_at ? new Date(fullUser.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "—"}
+                                        {fullUser.isAdmin ? "Admin" : "Member"} · {planLabels[currentPlanId] || 'Free'} Plan · Since {fullUser.created_at ? new Date(fullUser.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "-"}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">

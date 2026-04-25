@@ -37,7 +37,7 @@ export async function GET(req: Request, context: RouteContext) {
     });
 }
 
-// PUT /api/agent/sessions/[id] — update session fields (visuals_json, main_tex, etc.)
+// PUT /api/agent/sessions/[id] - update session fields (visuals_json, main_tex, etc.)
 export async function PUT(req: Request, context: RouteContext) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });

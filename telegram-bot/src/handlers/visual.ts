@@ -40,7 +40,7 @@ export async function handleVisualName(ctx: any) {
     ctx.session.visual.title = name;
     ctx.session.step = 'collecting_visual_data';
 
-    await ctx.reply(`✅ *Название установлено!* — \`${escapeMarkdown(name)}\`\n\nТеперь присылайте данные для визуализации (текст, фото или файлы):`, {
+    await ctx.reply(`✅ *Название установлено!* - \`${escapeMarkdown(name)}\`\n\nТеперь присылайте данные для визуализации (текст, фото или файлы):`, {
         parse_mode: "Markdown",
         ...getVisualActionKeyboard()
     });

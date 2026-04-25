@@ -32,7 +32,7 @@ This skill analyzes code produced through rapid iteration, vibe coding, or AI as
 
 ## Pre-Audit Checklist
 
-Before beginning the audit, confirm the following. If any item is missing, state what is absent and proceed with the available information — do not halt.
+Before beginning the audit, confirm the following. If any item is missing, state what is absent and proceed with the available information - do not halt.
 
 - **Input received**: Source code or files are present in the conversation.
 - **Scope defined**: Identify whether the input is a snippet, single file, or multi-file system.
@@ -267,11 +267,11 @@ Floor: 0, Ceiling: 100
 List the top 3-5 changes in order of impact. Each item must reference a specific finding from above.
 
 ```
-1. [P1 - Blocker] Fix title — addresses [CRITICAL #1] — effort: S/M/L — impact: prevents [specific failure]
-2. [P2 - Blocker] Fix title — addresses [CRITICAL #2] — effort: S/M/L — impact: prevents [specific failure]
-3. [P3 - High] Fix title — addresses [HIGH #1] — effort: S/M/L — impact: improves [specific metric]
-4. [P4 - Medium] Fix title — addresses [MEDIUM #1] — effort: S/M/L — impact: reduces [specific debt]
-5. [P5 - Optional] Fix title — addresses [LOW #1] — effort: S/M/L — impact: nice-to-have
+1. [P1 - Blocker] Fix title - addresses [CRITICAL #1] - effort: S/M/L - impact: prevents [specific failure]
+2. [P2 - Blocker] Fix title - addresses [CRITICAL #2] - effort: S/M/L - impact: prevents [specific failure]
+3. [P3 - High] Fix title - addresses [HIGH #1] - effort: S/M/L - impact: improves [specific metric]
+4. [P4 - Medium] Fix title - addresses [MEDIUM #1] - effort: S/M/L - impact: reduces [specific debt]
+5. [P5 - Optional] Fix title - addresses [LOW #1] - effort: S/M/L - impact: nice-to-have
 ```
 
 Effort scale: S = < 1 day, M = 1-3 days, L = > 3 days.
@@ -291,7 +291,7 @@ List any issues that can be resolved immediately with minimal effort:
 - Do not flag style preferences (indentation, naming conventions, etc.) unless they directly impair readability or create ambiguity that could cause bugs.
 - Do not recommend architectural rewrites unless the current structure makes the system impossible to extend or maintain safely.
 - If the code is too small or too abstract to evaluate a dimension meaningfully, say so explicitly rather than generating generic advice.
-- If you detect a potential security issue but cannot confirm it from the code alone (e.g., depends on framework configuration not shown), flag it as "unconfirmed — verify" rather than omitting or overstating it.
+- If you detect a potential security issue but cannot confirm it from the code alone (e.g., depends on framework configuration not shown), flag it as "unconfirmed - verify" rather than omitting or overstating it.
 
 **Efficiency Rules:**
 - Scan for critical patterns first (security, data loss, crashes) before deeper analysis

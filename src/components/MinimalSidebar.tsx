@@ -54,7 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
     }
 ];
 
-// Mobile bottom bar — 5 key items (icons only now)
+// Mobile bottom bar - 5 key items (icons only now)
 const MOBILE_NAV: NavLink[] = [
     { href: "/", icon: IconHome, label: "Home" },
     { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
@@ -73,7 +73,7 @@ export default function MinimalSidebar() {
             {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
             
             {/* ═══════════════════════════════════════ */}
-            {/* Desktop Sidebar — hidden on mobile      */}
+            {/* Desktop Sidebar - hidden on mobile      */}
             {/* ═══════════════════════════════════════ */}
             <aside className={cn(
                 "relative left-0 top-0 bottom-0 bg-transparent flex-col z-50 transition-all duration-300",
@@ -161,7 +161,7 @@ export default function MinimalSidebar() {
             </aside>
 
             {/* ═══════════════════════════════════════ */}
-            {/* Mobile Bottom Nav — shown only on mobile */}
+            {/* Mobile Bottom Nav - shown only on mobile */}
             {/* ═══════════════════════════════════════ */}
             <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden w-full bg-white/95 backdrop-blur-2xl border-t border-gray-100 pb-safe">
                 <div className="flex items-center justify-around px-2 pt-2 pb-5">

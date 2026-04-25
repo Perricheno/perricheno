@@ -41,10 +41,10 @@ REQUIREMENTS:
 3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles, subtitles, and axis labels.
 4. Include: main title, axis labels, legend if applicable. Add a subtitle explaining the data context slightly.
 5. Use clean, modern aesthetics (theme_minimal or similar).
-6. The script must be completely self-contained — NO external data files. Use tribble or data.frame for data.
+6. The script must be completely self-contained - NO external data files. Use tribble or data.frame for data.
 7. CRITICAL FAIL-SAFE: Do NOT use \`library(X)\` or \`require(X)\`. You MUST load all packages using \`pacman\` like this at the top of your script:
    if (!requireNamespace("pacman", quietly=TRUE)) install.packages("pacman", quiet=TRUE); pacman::p_load(ggplot2, dplyr, ...)
-8. Do NOT include CairoPNG() or dev.off() — they're handled externally.
+8. Do NOT include CairoPNG() or dev.off() - they're handled externally.
 9. The last expression MUST be the plot itself (e.g. print() the ggplot object if using ggplot2).
 
 OUTPUT: Only output the pure R code. NO markdown fences (no \`\`\`R). NO commentary. Just pure executable R code.`;

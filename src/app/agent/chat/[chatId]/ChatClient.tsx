@@ -117,7 +117,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
         } catch {}
     }, [currentSessionId]);
 
-    // ─── File upload — no client-side parsing, everything via /api/agent/attach. ───
+    // ─── File upload - no client-side parsing, everything via /api/agent/attach. ───
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const fileList = e.target.files;
         if (!fileList) return;
@@ -131,7 +131,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                 continue;
             }
 
-            // Optimistic pill — shows spinner while the server parses.
+            // Optimistic pill - shows spinner while the server parses.
             const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
             let preview: string | undefined;
             if (isImage) {
@@ -194,7 +194,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
     };
 
     // ─── Unified streaming turn ───
-    // Used by send / retry / edit — the server decides history truncation from
+    // Used by send / retry / edit - the server decides history truncation from
     // `mode`; the client consumes the SSE stream identically for all three.
     const streamTurn = async (requestBody: Record<string, any>) => {
         setIsStreaming(true);
@@ -308,7 +308,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
     };
 
     // ─── Retry: drop the last assistant row and regenerate. Reuses whatever
-    //    uploads the prior user turn referenced (they may have expired — server
+    //    uploads the prior user turn referenced (they may have expired - server
     //    silently skips missing ids). ───
     const retryLast = async () => {
         if (isStreaming) return;
@@ -343,7 +343,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
         const idx = editingIdx;
         cancelEdit();
 
-        // Client-side truncation mirrors the server — replace the turn, drop everything after.
+        // Client-side truncation mirrors the server - replace the turn, drop everything after.
         setMessages(prev => {
             const trimmed = prev.slice(0, idx);
             return [...trimmed, { ...prev[idx], content: newText, created_at: new Date().toISOString() }];
@@ -354,7 +354,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
             mode: 'edit',
             editIndex: idx,
             message: newText,
-            // No new uploads via edit — the prior turn's files_meta stays pinned to the row
+            // No new uploads via edit - the prior turn's files_meta stays pinned to the row
             // server-side (we didn't mutate history before this call). If user wants to
             // change attachments, they can delete the message and send a new one.
             uploadIds: [],
@@ -379,7 +379,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
         return -1;
     })();
 
-    // Clipboard with execCommand fallback — navigator.clipboard isn't available
+    // Clipboard with execCommand fallback - navigator.clipboard isn't available
     // on http:// origins (only secure contexts), which breaks local previews.
     const copyMessage = async (text: string, idx: number) => {
         let ok = false;
@@ -494,7 +494,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                 )}
             </AnimatePresence>
 
-            {/* Main Chat — full-height column, header+input pinned, only messages scroll */}
+            {/* Main Chat - full-height column, header+input pinned, only messages scroll */}
             <div className="flex-1 flex flex-col min-h-0 w-full relative">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[var(--border)] bg-white shrink-0">
@@ -518,7 +518,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                     </div>
                 </div>
 
-                {/* Messages — only scrollable region */}
+                {/* Messages - only scrollable region */}
                 <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6 space-y-6 w-full max-w-4xl mx-auto">
                     {messages.length === 0 && !isStreaming && (
                         <div className="flex flex-col items-center justify-center h-full text-center select-none pt-10">
@@ -646,7 +646,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                     <div ref={messagesEndRef} className="h-4" />
                 </div>
 
-                {/* Input — pinned to bottom of main column */}
+                {/* Input - pinned to bottom of main column */}
                 <div className="shrink-0 px-4 md:px-8 pt-2 pb-4 md:pb-6 w-full max-w-4xl mx-auto" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
                     <div className="bg-white rounded-[24px] border border-[var(--border)] shadow-sm focus-within:border-gray-400 focus-within:shadow-md transition-all flex flex-col pt-2">
                         {/* Attached Files Preview Inside Input */}

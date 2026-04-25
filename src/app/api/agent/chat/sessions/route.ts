@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
 import { createAgentSession, getAgentSessionsByUser } from '@/lib/db';
 
-// POST — create new chat session
-// GET  — list chat sessions
+// POST - create new chat session
+// GET  - list chat sessions
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });

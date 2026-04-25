@@ -42,7 +42,7 @@ services:
     restart: always
     volumes:
       - analytics-data:/tmp/analytics-data
-    # NO ports exposed — internal only via Docker network
+    # NO ports exposed - internal only via Docker network
     healthcheck:
       test: [ "CMD", "Rscript", "-e", "tryCatch(readLines(url('http://127.0.0.1:8000/health')), error=function(e) quit(status=1))" ]
       interval: 30s
@@ -60,7 +60,7 @@ services:
     restart: always
     volumes:
       - analytics-data:/tmp/analytics-data
-    # NO ports exposed — internal only via Docker network
+    # NO ports exposed - internal only via Docker network
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')" ]
       interval: 30s

@@ -1,4 +1,4 @@
-// Stage 1 — Plan.
+// Stage 1 - Plan.
 // Single LLM call. Turns the user prompt + settings into a structured outline
 // with per-section word budgets. Has a deterministic fallback so the pipeline
 // can proceed even if the model misbehaves.
@@ -88,7 +88,7 @@ function splitOversizedSections(sections: PlanSection[], lang: string): PlanSect
         const each = Math.ceil(sec.wordTarget / parts);
         for (let i = 0; i < parts; i++) {
             out.push({
-                heading: `${sec.heading} — ${lang === "ru" ? "часть" : "Part"} ${i + 1}`,
+                heading: `${sec.heading} - ${lang === "ru" ? "часть" : "Part"} ${i + 1}`,
                 wordTarget: each,
                 tasks: sec.tasks,
                 refFocus: sec.refFocus,
@@ -112,11 +112,11 @@ function buildSystemPrompt(s: PipelineSettings, filenames: string[]): string {
 
 Output ONLY valid JSON:
 {
-  "title": "string — a concise descriptive title",
+  "title": "string - a concise descriptive title",
   "sections": [
     {
       "heading": "string",
-      "wordTarget": <integer — approximate word count for this section>,
+      "wordTarget": <integer - approximate word count for this section>,
       "tasks": ["bullet points describing what must be covered"${hasRefs ? `, 3-6 items` : ``}],
       "refFocus": [${hasRefs ? `"filenames.pdf" from the provided reference list that are most relevant to this section; pick at most 3` : `leave empty`}]
     }

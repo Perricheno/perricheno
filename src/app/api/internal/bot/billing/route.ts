@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
             : null;
 
         // ═══════════════════════════════
-        // ACTION: status — Current billing info
+        // ACTION: status - Current billing info
         // ═══════════════════════════════
         if (action === "status" || !action) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ═══════════════════════════════
-        // ACTION: packages — List available packs
+        // ACTION: packages - List available packs
         // ═══════════════════════════════
         if (action === "packages") {
             const { category } = body;
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ═══════════════════════════════
-        // ACTION: checkout — Create CryptoCloud invoice
+        // ACTION: checkout - Create CryptoCloud invoice
         // ═══════════════════════════════
         if (action === "checkout") {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ═══════════════════════════════
-        // ACTION: transactions — Last N transactions
+        // ACTION: transactions - Last N transactions
         // ═══════════════════════════════
         if (action === "transactions") {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ═══════════════════════════════
-        // ACTION: promo — Apply promo code
+        // ACTION: promo - Apply promo code
         // ═══════════════════════════════
         if (action === "promo") {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ═══════════════════════════════
-        // ACTION: receipt — Generate receipt data
+        // ACTION: receipt - Generate receipt data
         // ═══════════════════════════════
         if (action === "receipt") {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });

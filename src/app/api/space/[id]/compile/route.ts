@@ -9,7 +9,7 @@ export const maxDuration = 120;
 const COMPILER_URL = process.env.LATEX_COMPILER_URL;
 const COMPILER_KEY = process.env.LATEX_COMPILER_KEY;
 
-// Compiler header map — extend when the compile service supports it
+// Compiler header map - extend when the compile service supports it
 const COMPILER_HEADER: Record<string, string> = {
     pdflatex: 'pdflatex',
     xelatex:  'xelatex',

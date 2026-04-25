@@ -231,7 +231,7 @@ Explain why and recommend next steps.
 A/B testing is not about proving ideas right.
 It is about **learning the truth with confidence**.
 
-If you feel tempted to rush, simplify, or “just try it” —
+If you feel tempted to rush, simplify, or “just try it” -
 that is the signal to **slow down and re-check the design**.
 
 ## When to Use

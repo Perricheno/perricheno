@@ -75,7 +75,7 @@ ${hasRealData
 3. The plot must be publication-quality with proper ${isRu ? 'Russian' : 'English'} titles and axis labels.
 4. CRUCIAL: Prevent text overlap! If using x-axis labels, use \`theme(axis.text.x = element_text(angle = 45, hjust = 1))\`.
 5. Ensure a clean visual layout using \`theme_minimal()\` or similar.
-6. The script must be completely self-contained — NO external files.
+6. The script must be completely self-contained - NO external files.
 7. If you use a package (e.g., ggplot2, plotly, ggrepel), use simple \`library(pkgName)\`.
 8. DO NOT include Cairo() or png() calls. 
 9. The last expression MUST be the plot object itself so it renders.
@@ -216,7 +216,7 @@ library <- function(package, ...) {
                 }, { status: 500 });
             }
 
-            // Deduct INPUT (prompt) + OUTPUT (code) — every generation must count
+            // Deduct INPUT (prompt) + OUTPUT (code) - every generation must count
             const inputChars = prompt.length;
             checkAndDeductUsage(userId, 'chars', inputChars + generatedCode.length);
             checkAndDeductUsage(userId, 'visuals', 1);

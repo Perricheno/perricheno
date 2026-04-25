@@ -487,7 +487,7 @@ export async function POST(req: NextRequest) {
                     const compileResult = await compileRes.json();
 
                     if (compileResult.success && compileResult.image) {
-                        // ✅ Success — save to DB
+                        // ✅ Success - save to DB
                         const visualEntry = JSON.stringify([{
                             chart_type: chartType,
                             language: language,
@@ -517,7 +517,7 @@ export async function POST(req: NextRequest) {
                         break;
                     }
 
-                    // ❌ Compilation failed — try self-correction
+                    // ❌ Compilation failed - try self-correction
                     lastError = compileResult.log || `${runtime} execution failed`;
                     console.log(`[Visual] Compile attempt ${attempt + 1} failed: ${lastError.slice(0, 200)}`);
 

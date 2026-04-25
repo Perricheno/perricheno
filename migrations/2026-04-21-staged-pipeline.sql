@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS agent_uploads (
 CREATE INDEX IF NOT EXISTS idx_agent_uploads_user    ON agent_uploads(user_id);
 CREATE INDEX IF NOT EXISTS idx_agent_uploads_expires ON agent_uploads(expires_at);
 
--- 3. Optional housekeeping — drop expired uploads nightly.
+-- 3. Optional housekeeping - drop expired uploads nightly.
 -- If pg_cron is available, schedule it. Otherwise a lightweight
 -- `DELETE ... WHERE expires_at < now()` from the app is fine.
 -- SELECT cron.schedule('cleanup-agent-uploads', '0 3 * * *',

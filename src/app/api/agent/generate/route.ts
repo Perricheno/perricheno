@@ -114,7 +114,7 @@ export async function POST(req: Request) {
 
     // ── Regeneration / edit / error-fix paths take the legacy single-call shape. ──
     // These are small, targeted operations (the user edited a section or fed back
-    // a compile error) — running the full 5-stage pipeline would be overkill.
+    // a compile error) - running the full 5-stage pipeline would be overkill.
     // We fall back to a tiny direct call.
     if (body.currentTex || body.errorLog) {
         return handleLegacyEdit(userId, body);

@@ -8,15 +8,15 @@ const Y = require('yjs');
 const JWT_SECRET = process.env.WS_JWT_SECRET || 'fallback-secret-key-at-least-thirty-two-chars-long';
 const PORT = parseInt(process.env.WS_PORT || '1234', 10);
 
-// In-memory persistence — docs survive reconnects within the same process.
+// In-memory persistence - docs survive reconnects within the same process.
 // Wave 2 will add LevelDB/Supabase persistence for cross-restart durability.
 setPersistence({
     bindState: async (docName, ydoc) => {
-        // No-op for now — doc starts empty on first connection after restart.
+        // No-op for now - doc starts empty on first connection after restart.
         // The clients will re-sync their local state via Yjs provider awareness.
     },
     writeState: async (docName, ydoc) => {
-        // No-op — persistence added in Wave 2
+        // No-op - persistence added in Wave 2
     },
 });
 
@@ -57,7 +57,7 @@ wss.on('connection', (ws, req) => {
         return;
     }
 
-    // Attach user info — used by presence layer (Wave 4)
+    // Attach user info - used by presence layer (Wave 4)
     ws.userId = payload.userId;
     ws.role   = payload.role;
 
@@ -80,6 +80,6 @@ httpServer.listen(PORT, () => {
 });
 
 process.on('SIGTERM', () => {
-    console.log('[ws-server] SIGTERM — shutting down');
+    console.log('[ws-server] SIGTERM - shutting down');
     wss.close(() => httpServer.close(() => process.exit(0)));
 });

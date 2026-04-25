@@ -76,7 +76,7 @@ export default function ChatSettingsModal({ isOpen, onClose, onSettingsChanged }
                         ) : settings ? (
                             <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
-                                {/* Webhook — admin only */}
+                                {/* Webhook - admin only */}
                                 {isEditing && (
                                     <Section title="Webhook">
                                         <div className="flex rounded-lg overflow-hidden border border-white/10 mb-3">
@@ -131,7 +131,7 @@ export default function ChatSettingsModal({ isOpen, onClose, onSettingsChanged }
                                     )}
                                 </Section>
 
-                                {/* Generation — admin only */}
+                                {/* Generation - admin only */}
                                 {isEditing && (
                                     <Section title="Generation">
                                         <div>

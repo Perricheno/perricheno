@@ -28,7 +28,7 @@ export async function handleReferral(ctx: any) {
                          `_Просто скопируйте ссылку выше и отправьте её друзьям._`;
 
             const keyboard = Markup.inlineKeyboard([
-                [Markup.button.url("📢 Поделиться", `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Попробуй Perricheno — ИИ для глубокой визуализации данных!")}`)],
+                [Markup.button.url("📢 Поделиться", `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Попробуй Perricheno - ИИ для глубокой визуализации данных!")}`)],
                 [Markup.button.callback("« Назад", "main_menu")]
             ]);
 

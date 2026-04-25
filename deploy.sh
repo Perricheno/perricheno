@@ -96,5 +96,5 @@ if echo "$SERVICES" | grep -q "perricheno-site"; then
     exit 1
 fi
 
-echo "✅ Deploy complete (site container unchanged — skipping health wait)."
+echo "✅ Deploy complete (site container unchanged - skipping health wait)."
 docker image prune -f --filter "until=1h" 2>/dev/null || true

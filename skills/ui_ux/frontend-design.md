@@ -29,7 +29,7 @@ Every output must satisfy **all four**:
    A named, explicit design stance (e.g. *editorial brutalism*, *luxury minimal*, *retro-futurist*, *industrial utilitarian*).
 
 2. **Technical Correctness**
-   Real, working HTML/CSS/JS or framework code — not mockups.
+   Real, working HTML/CSS/JS or framework code - not mockups.
 
 3. **Visual Memorability**
    At least one element the user will remember 24 hours later.

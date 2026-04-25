@@ -148,12 +148,12 @@ func fetchOpenAlex(encodedQuery string, req SearchRequest) ([]ScholarArticle, er
 
 	var data struct {
 		Results []struct {
-			Title               string         `json:"title"`
-			Abstract            map[string]any `json:"abstract_inverted_index"`
-			Year                int            `json:"publication_year"`
-			ID                  string         `json:"id"`
-			DOI                 string         `json:"doi"`
-			OpenAccess          struct {
+			Title      string         `json:"title"`
+			Abstract   map[string]any `json:"abstract_inverted_index"`
+			Year       int            `json:"publication_year"`
+			ID         string         `json:"id"`
+			DOI        string         `json:"doi"`
+			OpenAccess struct {
 				OAUrl string `json:"oa_url"`
 			} `json:"open_access"`
 			Authorships []struct {
@@ -253,7 +253,7 @@ func reconstructAbstract(invertedIndex map[string]any) string {
 func fetchArxiv(encodedQuery string, req SearchRequest) ([]ScholarArticle, error) {
 	// sortBy=relevance is arXiv's semantic ranker. The previous `submittedDate`
 	// sort returned the newest papers that merely contained the term, not the
-	// papers that best matched the topic — the root cause of irrelevant hits.
+	// papers that best matched the topic - the root cause of irrelevant hits.
 	// HTTPS endpoint avoids occasional 301s from the plaintext host.
 	urlStr := fmt.Sprintf("https://export.arxiv.org/api/query?search_query=%s&max_results=%d&sortBy=relevance&sortOrder=descending", encodedQuery, req.MaxResults)
 
@@ -289,17 +289,19 @@ func fetchArxiv(encodedQuery string, req SearchRequest) ([]ScholarArticle, error
 	// We can use encoding/xml or quick regex-based parser
 	// Using a regex-based parser port of the TS version is often highly resilient to Arxiv HTML embeds
 	xmlText := string(b)
-	
+
 	// Quick parse block
 	var articles []ScholarArticle
 
 	type xmlEntry struct {
-		Title     string   `xml:"title"`
-		Summary   string   `xml:"summary"`
-		Published string   `xml:"published"`
-		ID        string   `xml:"id"`
-		DOI       string   `xml:"doi"`
-		Authors   []struct{ Name string `xml:"name"` } `xml:"author"`
+		Title     string `xml:"title"`
+		Summary   string `xml:"summary"`
+		Published string `xml:"published"`
+		ID        string `xml:"id"`
+		DOI       string `xml:"doi"`
+		Authors   []struct {
+			Name string `xml:"name"`
+		} `xml:"author"`
 	}
 
 	var feed struct {

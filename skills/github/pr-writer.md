@@ -32,7 +32,7 @@ If the output shows any uncommitted changes (modified, added, or untracked files
 ### Step 1: Verify Branch State
 
 ```bash
-# Detect the default branch — note the output for use in subsequent commands
+# Detect the default branch - note the output for use in subsequent commands
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 ```
 

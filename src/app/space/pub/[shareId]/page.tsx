@@ -13,7 +13,7 @@ export default async function PublicSpacePage({ params }: Props) {
 
     const files = await getSpaceFiles(space.id);
 
-    // Read-only view — userId=-1 signals no-write (enforced by API anyway)
+    // Read-only view - userId=-1 signals no-write (enforced by API anyway)
     return (
         <SpaceEditor
             initialSpace={space}

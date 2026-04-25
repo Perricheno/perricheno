@@ -1,4 +1,4 @@
-// Unified attachment endpoint — used by chat (and anywhere else) to upload a
+// Unified attachment endpoint - used by chat (and anywhere else) to upload a
 // PDF or an image and get back an uploadId in agent_uploads. No parsing on the
 // client, no base64 payloads in DB history.
 //

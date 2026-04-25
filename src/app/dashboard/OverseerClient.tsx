@@ -179,7 +179,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                         {/* Telemetry Graph */}
                         <div className="border border-[#e5e5e5] bg-white rounded-lg p-4 shadow-sm w-full">
                             <h3 className="text-[10px] uppercase tracking-widest font-bold text-[#666] mb-4 flex items-center gap-2">
-                                <IconChartLine className="w-3.5 h-3.5" /> Live Inference Latency (ms) — 24h
+                                <IconChartLine className="w-3.5 h-3.5" /> Live Inference Latency (ms) - 24h
                             </h3>
                             <div className="flex items-end gap-1 h-32 w-full pt-4 border-b border-l border-[#e5e5e5] pl-1 relative">
                                 {inferenceLatencies.map((val: number, i: number) => (

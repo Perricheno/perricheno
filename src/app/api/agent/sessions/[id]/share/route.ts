@@ -6,7 +6,7 @@ interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-// POST /api/agent/sessions/[id]/share — toggle share link
+// POST /api/agent/sessions/[id]/share - toggle share link
 export async function POST(req: Request, { params }: RouteParams) {
     const { id } = await params;
     const userId = await verifySession();

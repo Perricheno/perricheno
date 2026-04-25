@@ -76,7 +76,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
         };
     }, [authPhase, authToken, generateLink]);
 
-    // QR code as inline SVG (simple data matrix — no external deps needed)
+    // QR code as inline SVG (simple data matrix - no external deps needed)
     const qrDataUrl = deepLink
         ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(deepLink)}&bgcolor=FFFFFF&color=1A1A1A&margin=8`
         : null;
@@ -177,7 +177,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                             </div>
                         </div>
                     ) : (
-                        /* ── Sign In View — Deep Link Auth ── */
+                        /* ── Sign In View - Deep Link Auth ── */
                         <div className="p-8 pt-10">
                             {/* Header */}
                             <div className="flex flex-col items-center text-center mb-8">

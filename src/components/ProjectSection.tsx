@@ -32,7 +32,7 @@ function parseIframeUrl(input: string): string {
 }
 
 /* ═══════════════════════════════════════════════
-   3D CARD — tilt on hover, idle float, press squeeze
+   3D CARD - tilt on hover, idle float, press squeeze
    ═══════════════════════════════════════════════ */
 const BalatroCard = ({
     children,
@@ -362,7 +362,7 @@ export function ProjectSection() {
                     </AnimatePresence>
                 </div>
 
-                {/* ANALYTICS DASHBOARD — admin-only editing, responsive 16:9 */}
+                {/* ANALYTICS DASHBOARD - admin-only editing, responsive 16:9 */}
                 <motion.div className="mt-20" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
                     <h2 className="text-3xl font-bold mb-6 text-white">Analytics Dashboard</h2>
 
@@ -389,7 +389,7 @@ export function ProjectSection() {
                             )}
                         </div>
 
-                        {/* Dashboard content — edge-to-edge, 16:9 responsive */}
+                        {/* Dashboard content - edge-to-edge, 16:9 responsive */}
                         {currentDash?.iframeUrl ? (
                             <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
                                 <iframe

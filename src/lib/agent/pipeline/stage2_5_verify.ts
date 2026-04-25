@@ -1,4 +1,4 @@
-// Stage 2.5 — Verify.
+// Stage 2.5 - Verify.
 // Verification layer that ensures the model actually "sees" and understands
 // the uploaded references. For each successfully extracted PDF, we ask the
 // model test questions and generate a comprehensive summary. This gives us

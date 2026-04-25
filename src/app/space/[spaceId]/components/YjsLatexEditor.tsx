@@ -56,7 +56,7 @@ export default function YjsLatexEditor({ yText, provider, readOnly, onCursorChan
     const containerRef = useRef<HTMLDivElement>(null);
     const viewRef      = useRef<EditorView | null>(null);
 
-    // Build the editor once per (yText, provider) pair — i.e. once per opened file
+    // Build the editor once per (yText, provider) pair - i.e. once per opened file
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -64,7 +64,7 @@ export default function YjsLatexEditor({ yText, provider, readOnly, onCursorChan
 
         const state = EditorState.create({
             extensions: [
-                // Core Yjs binding — content + remote cursors
+                // Core Yjs binding - content + remote cursors
                 yCollab(yText, provider.awareness, { undoManager }),
 
                 markdown(),

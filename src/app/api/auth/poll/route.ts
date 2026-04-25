@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         if (row.status === "completed" && row.tg_user_data) {
             const tgUser = JSON.parse(row.tg_user_data);
 
-            // Create session — same as normal login flow
+            // Create session - same as normal login flow
             const user = await upsertUser({
                 telegram_id: String(tgUser.id),
                 username: tgUser.username,

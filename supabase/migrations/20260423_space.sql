@@ -1,5 +1,5 @@
 -- ============================================================
--- Perricheno Space — WorkSpace tables
+-- Perricheno Space - WorkSpace tables
 -- ============================================================
 
 -- Projects

@@ -3,7 +3,7 @@ import { verifySession } from '@/lib/session';
 
 const R_COMPILER_URL = process.env.R_COMPILER_URL || 'http://r-compiler:8000';
 
-// POST /api/agent/r-compile — proxy R code to the internal R compiler
+// POST /api/agent/r-compile - proxy R code to the internal R compiler
 export async function POST(req: Request) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });

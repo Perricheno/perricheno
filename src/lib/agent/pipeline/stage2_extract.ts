@@ -1,9 +1,9 @@
-// Stage 2 — Extract.
+// Stage 2 - Extract.
 // Per-file multimodal extraction. One LLM call per uploaded PDF, in parallel
 // with bounded concurrency. Each call receives the PDF's text plus its
 // embedded images, and returns a compact JSON summary plus a BibTeX entry.
 //
-// If a file fails (timeout, parse error, rate-limit), the rest continue —
+// If a file fails (timeout, parse error, rate-limit), the rest continue -
 // Promise.allSettled ensures one bad PDF doesn't tank the whole pipeline.
 //
 // Skipped entirely when useReferences=false.
@@ -38,7 +38,7 @@ Return ONLY valid JSON:
   "doi": "DOI string or null",
   "key_claims": ["short declarative statements, 5–10 items"],
   "relevant_quotes": ["direct quotes ≤200 chars, 3–6 items"],
-  "relevance_score": <integer 0–10 — how relevant to the target sections>,
+  "relevance_score": <integer 0–10 - how relevant to the target sections>,
   "bib_entry": "complete BibTeX block"
 }
 

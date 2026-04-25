@@ -71,7 +71,7 @@ ${hasRealData && !isGarbageData
 }
 2. Chart type to generate: **${chartType.replace("_", " ")}**.
 3. Prevent text overlap! Ensure a clean visual layout using \`theme_minimal()\`. Use viridis for color scales if needed.
-4. The script must be completely self-contained — NO external files.
+4. The script must be completely self-contained - NO external files.
 5. If you use a package (e.g., ggplot2, plotly), use simple \`library(pkgName)\`.
 6. DO NOT include Cairo() or png() calls. 
 7. The last expression MUST be the plot object itself so it renders.

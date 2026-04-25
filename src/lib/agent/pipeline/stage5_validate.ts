@@ -1,4 +1,4 @@
-// Stage 5 — Validate.
+// Stage 5 - Validate.
 // Sends the assembled document to the LaTeX compiler. If compilation fails,
 // asks the model to repair only what's broken and retries. Up to 2 repair
 // cycles. Final output is whatever compiled last; the orchestrator decides
@@ -50,7 +50,7 @@ async function compile(mainTex: string, referencesBib: string | null): Promise<{
 
     const ct = res.headers.get("content-type") || "";
     if (res.ok && !ct.includes("json") && !ct.includes("text")) {
-        // PDF returned — success. Drain the body so sockets close cleanly.
+        // PDF returned - success. Drain the body so sockets close cleanly.
         await res.arrayBuffer();
         return { ok: true };
     }
@@ -157,7 +157,7 @@ export async function runStage5(
             lastLog = r.log;
             onAttempt?.(attempt, "failed");
         } catch (e: any) {
-            // Infrastructure failure (compiler down, network). Surface and bail —
+            // Infrastructure failure (compiler down, network). Surface and bail -
             // repair won't help if we can't even reach the compiler.
             lastLog = String(e?.message || e);
             break;

@@ -140,7 +140,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const openFile = useCallback(async (path: string) => {
         // Already open?
         if (tabs.find(t => t.path === path)) { setActiveTab(path); return; }
-        // Don't open binary files in text editor — they can't be edited and
+        // Don't open binary files in text editor - they can't be edited and
         // an accidental save would corrupt the binary data in the DB.
         const meta = files.find((f: FileEntry) => f.path === path);
         if (meta?.is_binary) return;
@@ -347,7 +347,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const handleUploadFiles = async (fileList: FileList) => {
         const items = Array.from(fileList);
         for (const file of items) {
-            // ZIP import — extract whole project (e.g. Overleaf export)
+            // ZIP import - extract whole project (e.g. Overleaf export)
             if (file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
                 setUploading(`Importing ${file.name}…`);
                 const form = new FormData();

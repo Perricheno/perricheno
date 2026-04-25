@@ -10,7 +10,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const IMAGE_TOKEN_COST = 800;
 
 // Compact shape stored in agent_sessions.stream_text for chat sessions.
-// Base64 payloads live in agent_uploads (referenced by uploadIds), not here —
+// Base64 payloads live in agent_uploads (referenced by uploadIds), not here -
 // history stays small no matter how many PDFs or screenshots the user attaches.
 interface ChatMessageRow {
     role: 'user' | 'assistant';
@@ -143,12 +143,12 @@ export async function POST(req: Request) {
     const windowed = pickWindow(history, PINNED_PREFIX, TAIL_LENGTH);
 
     const apiMessages: any[] = [
-        { role: 'system', content: `You are Perricheno AI — a premium research and analysis assistant. You provide thorough, well-structured, and accurate answers. Use markdown formatting (headers, bold, lists, code blocks) when appropriate. Be concise but comprehensive. Answer in the same language the user writes to you.` },
+        { role: 'system', content: `You are Perricheno AI - a premium research and analysis assistant. You provide thorough, well-structured, and accurate answers. Use markdown formatting (headers, bold, lists, code blocks) when appropriate. Be concise but comprehensive. Answer in the same language the user writes to you.` },
         ...windowed.map(m => ({ role: m.role, content: m.content })),
         { role: 'user', content: currentContent },
     ];
 
-    // ── Persist the user turn up front (unless retry — user row is already
+    // ── Persist the user turn up front (unless retry - user row is already
     // at the tail from the earlier attempt). If the client aborts mid-stream we
     // still want the latest state on record so nothing is lost. ──
     if (!skipAppendUser) {

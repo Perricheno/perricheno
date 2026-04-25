@@ -143,7 +143,7 @@ export function getBillingShopKeyboard() {
 
 export function getBillingPackListKeyboard(packs: { id: string; emoji: string; name: string; amount: number }[]) {
     const buttons = packs.map(p => [
-        Markup.button.callback(`${p.emoji} ${p.name} — $${p.amount}`, `billing_buy_${p.id}`)
+        Markup.button.callback(`${p.emoji} ${p.name} - $${p.amount}`, `billing_buy_${p.id}`)
     ]);
     buttons.push([Markup.button.callback("« Назад к категориям", "billing_shop")]);
     return Markup.inlineKeyboard(buttons);
@@ -182,7 +182,7 @@ export function getSecurityMenu(sessions: any[]) {
     for (const s of sessions) {
         const date = new Date(s.created_at).toLocaleDateString();
         const shortUa = s.user_agent.split(' (')[0];
-        buttons.push([Markup.button.callback(`📍 ${shortUa} — ${s.location} (${date})`, "noop")]);
+        buttons.push([Markup.button.callback(`📍 ${shortUa} - ${s.location} (${date})`, "noop")]);
     }
 
     if (sessions.length > 1) {
