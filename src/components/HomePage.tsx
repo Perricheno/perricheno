@@ -345,18 +345,10 @@ export default function HomePage() {
                         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                         className="max-w-4xl"
                     >
-                        {/* Badge */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1, duration: 0.5 }}
-                            className="inline-flex items-center gap-2 border border-[var(--border)] bg-[var(--card)] rounded-full px-4 py-1.5 mb-8"
-                        >
-                        </motion.div>
 
                         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.95] mb-8">
-                            Research, write, analyze<br />
-                            cite, visualize -<br className="hidden md:block" />
+                            Research, write, <br />
+                            analyze, cite, visualize - <br className="hidden md:block" />
                             <span className="opacity-30">all in one place.</span>
                         </h1>
                         <p className="text-lg md:text-xl leading-relaxed opacity-60 font-light max-w-2xl mb-12">
