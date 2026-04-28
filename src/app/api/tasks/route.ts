@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jwt from 'jose';
 import { getTasksByUserId, createTask, updateTaskStatus, deleteTask, getUserById } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env-938210");
 
@@ -63,7 +63,7 @@ export async function PUT(req: NextRequest) {
             if (text) updates.task_text = text;
             if (remindAt) updates.remind_at = remindAt;
             if (status) updates.status = status;
-            await supabase.from('tasks').update(updates).eq('id', taskId);
+            await prisma.task.update({ where: { id: taskId }, data: updates });
         } else if (status) {
             await updateTaskStatus(taskId, status);
         }

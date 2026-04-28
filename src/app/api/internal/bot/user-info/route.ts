@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing telegram_id" }, { status: 400 });
         }
 
-        const { data: user } = await supabase.from('users').select('*').eq('telegram_id', telegram_id).single();
+        const user = await prisma.user.findFirst({ where: { telegram_id } });
 
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });

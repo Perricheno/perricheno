@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 import { verifySession } from '@/lib/session';
 import { checkAndDeductUsage } from '@/lib/db';
 
@@ -18,15 +18,17 @@ export async function POST(req: NextRequest | Request) {
 
         const sessionId = uuidv4();
 
-        await supabase.from('agent_sessions').insert({
-            id: sessionId,
-            user_id: userId,
-            title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
-            doc_type: 'literature_search',
-            status: 'generating',
-            stream_text: prompt, // Storing initial prompt here temporarily
-            settings_json: settings,
-            visuals_json: [],
+        await prisma.agentSession.create({
+            data: {
+                id: sessionId,
+                user_id: userId,
+                title: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+                doc_type: 'literature_search',
+                status: 'generating',
+                stream_text: prompt, // Storing initial prompt here temporarily
+                settings_json: JSON.stringify(settings),
+                visuals_json: '[]',
+            }
         });
 
         return NextResponse.json({ sessionId });

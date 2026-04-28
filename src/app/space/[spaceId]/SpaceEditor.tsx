@@ -73,7 +73,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
     const [files, setFiles]  = useState<FileEntry[]>(() => {
         const seen = new Set<string>();
         return initialFiles
-            .map(f => ({ path: f.path, mime_type: f.mime_type, size_bytes: f.size_bytes, updated_at: f.updated_at, is_binary: f.is_binary }))
+            .map(f => ({ path: f.path, mime_type: f.mime_type, size_bytes: f.size_bytes, updated_at: f.updated_at instanceof Date ? f.updated_at.toISOString() : String(f.updated_at), is_binary: f.is_binary }))
             .filter(f => { if (seen.has(f.path)) return false; seen.add(f.path); return true; });
     });
 

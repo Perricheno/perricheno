@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -9,16 +9,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     try {
-        const { data: result } = await supabase.from('receipts')
-            .select('id, type, pack_name, amount_text, created_at, user_id')
-            .eq('id', id)
-            .single();
+        const result = await prisma.receipt.findUnique({
+            select: { id: true, type: true, pack_name: true, amount_text: true, created_at: true, user_id: true },
+            where: { id }
+        });
 
         // Fetch user data separately
         let username = 'ANONYMOUS';
         let telegramId = '';
         if (result) {
-            const { data: userData } = await supabase.from('users').select('username, telegram_id').eq('id', result.user_id).single();
+            const userData = await prisma.user.findUnique({ select: { username: true, telegram_id: true }, where: { id: result.user_id } });
             if (userData) {
                 username = userData.username || '';
                 telegramId = userData.telegram_id || '';
@@ -32,17 +32,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             );
         }
 
-        // Fix SQLite space-delimited datetimes
+        // Prisma returns Date object
         let rawDate = result.created_at;
-        if (rawDate && !rawDate.includes('T')) {
-            rawDate = rawDate.replace(' ', 'T');
-        }
-        if (rawDate && !rawDate.endsWith('Z')) {
-            rawDate += 'Z';
-        }
 
         const dateObj = new Date(rawDate);
-        const date = isNaN(dateObj.getTime()) ? result.created_at : dateObj.toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' });
+        const date = isNaN(dateObj.getTime()) ? result.created_at.toString() : dateObj.toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' });
         
         const isFree = result.amount_text === 'Free' || result.amount_text.includes('0.00');
 

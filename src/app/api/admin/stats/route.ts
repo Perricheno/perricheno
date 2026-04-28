@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
 import { getUserById } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 async function verifyAdmin() {
     const userId = await verifySession();
@@ -21,17 +21,20 @@ export async function GET(req: Request) {
 
     try {
         // Global Stats
-        const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const totalUsers = await prisma.user.count();
         
-        let totalChars = 0;
-        const { data: usage } = await supabase.from('usage_logs').select('tokens');
-        if (usage) totalChars = usage.reduce((sum, r) => sum + (r.tokens || 0), 0);
+        const usageAgg = await prisma.usageLog.aggregate({ _sum: { tokens: true } });
+        const totalChars = usageAgg._sum.tokens || 0;
 
-        const { count: totalPurchases } = await supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('is_positive', true).eq('topic', 'Purchased resource pack');
+        const totalPurchases = await prisma.transaction.count({
+            where: { is_positive: true, topic: 'Purchased resource pack' }
+        });
 
-        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-        const { data: recentLogsData } = await supabase.from('usage_logs').select('tokens, created_at').gte('created_at', sevenDaysAgo);
-        const recentLogsResult = recentLogsData || [];
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+        const recentLogsResult = await prisma.usageLog.findMany({
+            where: { created_at: { gte: sevenDaysAgo } },
+            select: { tokens: true, created_at: true }
+        });
 
         // Build 7 day array
         const now = new Date();

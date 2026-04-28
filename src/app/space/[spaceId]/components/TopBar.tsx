@@ -87,7 +87,7 @@ export default function TopBar({
                                 onClick={() => setCompilerMenuOpen(v => !v)}
                                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase tracking-wide"
                             >
-                                {COMPILER_LABELS[space.compiler]}
+                                {COMPILER_LABELS[space.compiler as Compiler] || space.compiler}
                                 <IconChevronDown className="w-3 h-3" />
                             </button>
                             <AnimatePresence>

@@ -46,3 +46,5 @@ build_error.log
 # Telegram Bot
 /telegram-bot/node_modules/
 /telegram-bot/dist/
+
+/src/generated/prisma

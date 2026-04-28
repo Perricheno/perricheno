@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SHOP_ID = process.env.CRYPTOCLOUD_SHOP_ID;
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
             
             // Send fallback to Telegram if token exists
             if (process.env.TELEGRAM_BOT_TOKEN) {
-                const { data: userRow } = await supabase.from('users').select('telegram_id').eq('id', userId).single();
+                const userRow = await prisma.user.findUnique({ select: { telegram_id: true }, where: { id: userId } });
                 if (userRow?.telegram_id) {
                     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         method: "POST",
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
             
             // Send proper generated invoice via Bot
             if (process.env.TELEGRAM_BOT_TOKEN) {
-                const { data: userRow } = await supabase.from('users').select('telegram_id').eq('id', userId).single();
+                const userRow = await prisma.user.findUnique({ select: { telegram_id: true }, where: { id: userId } });
                 if (userRow?.telegram_id) {
                     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
                         method: "POST",

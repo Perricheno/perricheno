@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     // Normalize images_json (Supabase jsonb may be a string).
     for (const u of uploads) {
         if (typeof u.images_json === 'string') {
-            try { u.images_json = JSON.parse(u.images_json); } catch { u.images_json = []; }
+            try { (u as any).images_json = JSON.parse(u.images_json); } catch { (u as any).images_json = []; }
         }
     }
 

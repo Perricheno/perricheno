@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { verifySession } from '@/lib/session';
 import { getUserById } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 import OverseerClient from './OverseerClient';
 
 export default async function OverseerDashboard() {
@@ -12,13 +12,14 @@ export default async function OverseerDashboard() {
     const user = await getUserById(userId);
     if (!user || user.telegram_id !== '1153844209') notFound();
 
-    const { count: totalAgents } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const totalAgents = await prisma.user.count();
     
-    let tokensBurnt = 0;
-    const { data: usage } = await supabase.from('usage_logs').select('tokens');
-    if (usage) tokensBurnt = usage.reduce((sum, row) => sum + (row.tokens || 0), 0);
+    const usageAgg = await prisma.usageLog.aggregate({ _sum: { tokens: true } });
+    const tokensBurnt = usageAgg._sum.tokens || 0;
 
-    const { count: purchases } = await supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('is_positive', true).eq('topic', 'Purchased resource pack');
+    const purchases = await prisma.transaction.count({
+        where: { is_positive: true, topic: 'Purchased resource pack' }
+    });
 
     const stats = {
         totalAgents: totalAgents || 0,
@@ -26,18 +27,20 @@ export default async function OverseerDashboard() {
         purchases: purchases || 0,
     };
 
-    const { data: usersData } = await supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100);
-    const users = usersData || [];
+    const users = await prisma.user.findMany({
+        orderBy: { created_at: 'desc' },
+        take: 100
+    });
     
-    const { data: promoData } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false });
-    const promoCodes = promoData || [];
+    const promoCodes = await prisma.promoCode.findMany({
+        orderBy: { created_at: 'desc' }
+    });
     
     // Simulate complex tracking data for missing components
     const inferenceLatencies = Array.from({length: 24}).map(() => Math.floor(Math.random() * 200 + 400));
     
     // Config state
-    const { data: configsData } = await supabase.from('system_config').select('*');
-    const configsRaw = configsData || [];
+    const configsRaw = await prisma.systemConfig.findMany();
     const config = configsRaw.reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }), {});
 
     return (

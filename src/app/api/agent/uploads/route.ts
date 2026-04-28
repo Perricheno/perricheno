@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,17 +18,18 @@ export async function GET(req: NextRequest) {
     const ids = idsParam.split(',').filter(Boolean);
     if (ids.length === 0) return NextResponse.json({ uploads: [] });
 
-    const { data, error } = await supabase
-        .from('agent_uploads')
-        .select('id, user_id, filename, file_type, char_count, image_count, page_count, ocr_used, storage_path, expires_at, created_at')
-        .in('id', ids)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
-
-    if (error) {
-        console.error('[uploads/GET] Supabase error:', error.message);
+    try {
+        const data = await prisma.agentUpload.findMany({
+            select: { id: true, user_id: true, filename: true, char_count: true, image_count: true, page_count: true, ocr_used: true, storage_path: true, expires_at: true, created_at: true },
+            where: {
+                id: { in: ids },
+                user_id: userId
+            },
+            orderBy: { created_at: 'asc' }
+        });
+        return NextResponse.json({ uploads: data });
+    } catch (error: any) {
+        console.error('[uploads/GET] Prisma error:', error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    return NextResponse.json({ uploads: data ?? [] });
 }

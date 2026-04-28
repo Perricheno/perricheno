@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Check token exists and is pending
-        const { data: row } = await supabase.from('auth_requests').select('status').eq('token', token).single();
+        const row = await prisma.authRequest.findUnique({ select: { status: true }, where: { token } });
 
         if (!row) {
             return NextResponse.json(
@@ -43,19 +43,23 @@ export async function POST(req: NextRequest) {
         const SUPER_ADMINS = ['1153844209', '5934503762'];
 
         // Mark as completed with the user's data
-        await supabase.from('auth_requests').update({ status: 'completed', tg_user_data: JSON.stringify(user) }).eq('token', token);
+        await prisma.authRequest.update({ where: { token }, data: { status: 'completed', tg_user_data: JSON.stringify(user) } });
 
         // Ensure user exists and promote to admin if in SUPER_ADMINS
         if (SUPER_ADMINS.includes(String(user.id))) {
             try {
                 // First, ensure the user record exists in the users table
                 // (This table might be populated by bot initialization or first login)
-                await supabase.from('users').upsert({
-                    telegram_id: String(user.id),
-                    username: user.username || "",
-                    first_name: user.first_name || "",
-                    is_admin: true
-                }, { onConflict: 'telegram_id' });
+                await prisma.user.upsert({
+                    where: { telegram_id: String(user.id) },
+                    update: { is_admin: true },
+                    create: {
+                        telegram_id: String(user.id),
+                        username: user.username || "",
+                        first_name: user.first_name || "",
+                        is_admin: true
+                    }
+                });
                 console.log(`🛡️ Super-admin ${user.id} promoted during login.`);
             } catch (e) {
                 console.error("⚠️ Failed to auto-promote super-admin during verify:", e);

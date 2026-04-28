@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 import { AgentSettings, ScholarArticle } from "@/app/agent/types";
 import { verifySession } from '@/lib/session';
 
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
         const userId = await verifySession();
         if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const { data: session } = await supabase.from('agent_sessions').select('*').eq('id', sessionId).single();
+        const session = await prisma.agentSession.findUnique({ where: { id: sessionId } });
         if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
         const rawPrompt: string = (session.stream_text || "").trim();
@@ -94,10 +94,13 @@ export async function POST(req: Request) {
         const data = await response.json();
         const articles: ScholarArticle[] = data.articles || [];
 
-        await supabase.from('agent_sessions').update({
-            status: 'completed',
-            visuals_json: JSON.stringify(articles),
-        }).eq('id', sessionId);
+        await prisma.agentSession.update({
+            where: { id: sessionId },
+            data: {
+                status: 'completed',
+                visuals_json: JSON.stringify(articles),
+            }
+        });
 
         return NextResponse.json({ articles, query: queryForIndex, originalQuery: rawPrompt });
     } catch (e: any) {

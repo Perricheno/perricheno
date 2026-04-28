@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -9,10 +9,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     try {
-        const { data: result } = await supabase.from('receipts').select('pdf_base64').eq('id', id).single();
+        const result = await prisma.receipt.findUnique({ select: { pdf_base64: true }, where: { id } });
 
         if (!result || !result.pdf_base64) {
-            const { data: exists } = await supabase.from('receipts').select('id').eq('id', id).maybeSingle();
+            const exists = await prisma.receipt.findUnique({ select: { id: true }, where: { id } });
             
             if (exists) {
                 return new NextResponse(

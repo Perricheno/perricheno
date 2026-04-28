@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
     const userId = await verifySession();
@@ -10,17 +10,21 @@ export async function GET(req: Request) {
 
     try {
         // Fetch last 15 transactions - exclude 0 amounts or empty text
-        const { data: transactionsRaw } = await supabase.from('transactions')
-            .select('id, topic, amount_text, is_positive, created_at')
-            .eq('user_id', userId)
-            .not('amount_text', 'in', '("0","0.00","-0","-0.00","")')
-            .order('created_at', { ascending: false })
-            .limit(20);
+        const transactionsRaw = await prisma.transaction.findMany({
+            where: {
+                user_id: userId,
+                NOT: { amount_text: { in: ["0", "0.00", "-0", "-0.00", ""] } }
+            },
+            select: { id: true, topic: true, amount_text: true, is_positive: true, created_at: true },
+            orderBy: { created_at: 'desc' },
+            take: 20
+        });
 
-        const { data: receiptsRaw } = await supabase.from('receipts')
-            .select('id, type, pack_name, amount_text, created_at')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
+        const receiptsRaw = await prisma.receipt.findMany({
+            where: { user_id: userId },
+            select: { id: true, type: true, pack_name: true, amount_text: true, created_at: true },
+            orderBy: { created_at: 'desc' }
+        });
 
         // Format transactions
         const transactions = (transactionsRaw || []).map(tx => {

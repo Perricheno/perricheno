@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserByTelegramId, upsertUser } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
     const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
                 first_name: invitee.first_name
             });
             
-            await supabase.from('users').update({ referred_by: referrer.id }).eq('id', newUser.id);
+            await prisma.user.update({ where: { id: newUser.id }, data: { referred_by: referrer.id } });
 
             // 2. Award tokens to Referrer
             const bonus = 100000;
-            await supabase.from('users').update({ purchased_chars: referrer.purchased_chars + bonus }).eq('id', referrer.id);
+            await prisma.user.update({ where: { id: referrer.id }, data: { purchased_chars: referrer.purchased_chars + bonus } });
 
             // 3. Log transaction
-            await supabase.from('transactions').insert({ user_id: referrer.id, topic: "Referral Bonus", amount_text: `+${bonus.toLocaleString()} chars`, is_positive: true });
+            await prisma.transaction.create({ data: { user_id: referrer.id, topic: "Referral Bonus", amount_text: `+${bonus.toLocaleString()} chars`, is_positive: true } });
 
             return NextResponse.json({ success: true, awarded: true });
         }

@@ -29,7 +29,9 @@ async function runBackground(
         // Normalize images_json to arrays (Supabase may hand back jsonb as object or string).
         for (const u of uploads) {
             if (typeof u.images_json === 'string') {
-                try { u.images_json = JSON.parse(u.images_json); } catch { u.images_json = []; }
+                try { (u as any).images_json = JSON.parse(u.images_json); } catch { (u as any).images_json = []; }
+            } else if (!u.images_json) {
+                (u as any).images_json = [];
             }
         }
 

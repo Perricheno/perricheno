@@ -11,7 +11,7 @@ const COMPILER_COLORS: Record<string, string> = {
     lualatex: "bg-violet-50 text-violet-500",
 };
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string | Date): string {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1)  return "just now";

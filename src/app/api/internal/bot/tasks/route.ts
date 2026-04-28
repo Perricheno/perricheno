@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserByTelegramId } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
     const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -20,17 +20,22 @@ export async function POST(req: NextRequest) {
 
         // 1. Handle Task Reset/Cleanup
         if (action === "reset" && sessionId) {
-            await supabase.from('agent_sessions').update({ status: 'failed', error_msg: 'Manual reset via bot' }).eq('id', sessionId).eq('user_id', user.id);
+            await prisma.agentSession.updateMany({
+                where: { id: sessionId, user_id: user.id },
+                data: { status: 'failed', error_msg: 'Manual reset via bot' }
+            });
             return NextResponse.json({ success: true, message: "Task reset complete." });
         }
 
         // 2. Query Active Tasks
-        const { data: tasksData } = await supabase.from('agent_sessions')
-            .select('id, title, status, created_at')
-            .eq('user_id', user.id)
-            .in('status', ['generating', 'processing', 'extracting'])
-            .order('created_at', { ascending: false });
-        const tasks = tasksData || [];
+        const tasks = await prisma.agentSession.findMany({
+            where: {
+                user_id: user.id,
+                status: { in: ['generating', 'processing', 'extracting'] }
+            },
+            select: { id: true, title: true, status: true, created_at: true },
+            orderBy: { created_at: 'desc' }
+        });
 
         return NextResponse.json({ 
             success: true, 

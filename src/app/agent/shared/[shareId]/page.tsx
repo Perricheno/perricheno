@@ -19,7 +19,7 @@ export default async function SharedSessionPage({ params }: PageProps) {
             mainTex={session.main_tex || ''}
             referencesBib={session.references_bib || null}
             visuals={session.visuals_json ? JSON.parse(session.visuals_json) : []}
-            createdAt={session.created_at}
+            createdAt={session.created_at.toISOString()}
         />
     );
 }

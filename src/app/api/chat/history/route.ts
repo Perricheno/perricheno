@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
-/**
- * Handle persistent chat history and session management
- */
-
-// GET /api/chat/history?sessionId=... - Get messages for a session
-// GET /api/chat/history - Get all sessions for user
 export async function GET(req: NextRequest) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
@@ -16,33 +10,36 @@ export async function GET(req: NextRequest) {
 
     try {
         if (sessionId) {
-            const { data: messages } = await supabase.from('chat_messages')
-                .select('id, role, content, created_at')
-                .eq('session_id', sessionId)
-                .order('created_at', { ascending: true });
+            const messages = await prisma.chatMessage.findMany({
+                where: { session_id: sessionId },
+                select: { id: true, role: true, content: true, created_at: true },
+                orderBy: { created_at: 'asc' }
+            });
 
             return NextResponse.json({ 
-                messages: (messages || []).map(m => ({
+                messages: messages.map((m: any) => ({
                     id: m.id,
                     role: m.role,
                     text: m.content,
-                    timestamp: new Date(m.created_at)
+                    timestamp: m.created_at
                 }))
             });
         } else {
-            const { data: sessions } = await supabase.from('chat_sessions')
-                .select('id, title, created_at')
-                .eq('user_id', userId)
-                .order('updated_at', { ascending: false });
+            const sessions = await prisma.chatSession.findMany({
+                where: { user_id: userId },
+                select: { id: true, title: true, created_at: true },
+                orderBy: { updated_at: 'desc' }
+            });
 
-            return NextResponse.json({ sessions: (sessions || []).map(s => ({ ...s, createdAt: s.created_at })) });
+            return NextResponse.json({ 
+                sessions: sessions.map((s: any) => ({ ...s, createdAt: s.created_at })) 
+            });
         }
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 });
     }
 }
 
-// POST /api/chat/history - Create/Update session or message
 export async function POST(req: NextRequest) {
     const userId = await verifySession();
     if (!userId) return NextResponse.json({ error: "Auth required" }, { status: 401 });
@@ -52,23 +49,38 @@ export async function POST(req: NextRequest) {
         const { action, sessionId, title, message } = body;
 
         if (action === "create_session") {
-            await supabase.from('chat_sessions').insert({ id: sessionId, user_id: userId, title });
+            await prisma.chatSession.create({
+                data: { id: sessionId, user_id: userId, title }
+            });
             return NextResponse.json({ success: true });
         }
 
         if (action === "save_message") {
             const { id, role, text, metadata } = message;
             
-            const { data: session } = await supabase.from('chat_sessions').select('id').eq('id', sessionId).maybeSingle();
-            if (!session) {
-                await supabase.from('chat_sessions').insert({ id: sessionId, user_id: userId, title: title || "New Chat" });
-            }
-
-            await supabase.from('chat_messages').insert({
-                id, session_id: sessionId, role, content: text, metadata_json: JSON.stringify(metadata || {})
+            const session = await prisma.chatSession.findUnique({
+                where: { id: sessionId },
+                select: { id: true }
             });
 
-            await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId);
+            if (!session) {
+                await prisma.chatSession.create({
+                    data: { id: sessionId, user_id: userId, title: title || "New Chat" }
+                });
+            }
+
+            await prisma.$transaction([
+                prisma.chatMessage.create({
+                    data: {
+                        id, session_id: sessionId, role, content: text,
+                        metadata_json: JSON.stringify(metadata || {})
+                    }
+                }),
+                prisma.chatSession.update({
+                    where: { id: sessionId },
+                    data: { updated_at: new Date() }
+                })
+            ]);
 
             return NextResponse.json({ success: true });
         }
@@ -88,7 +100,9 @@ export async function DELETE(req: NextRequest) {
     if (!sessionId) return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
 
     try {
-        await supabase.from('chat_sessions').delete().eq('id', sessionId).eq('user_id', userId);
+        await prisma.chatSession.deleteMany({
+            where: { id: sessionId, user_id: userId }
+        });
         return NextResponse.json({ success: true });
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 });

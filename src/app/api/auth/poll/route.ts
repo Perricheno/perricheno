@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 import { upsertUser } from "@/lib/db";
 import { createSession } from "@/lib/session";
 
@@ -12,7 +12,10 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const { data: row } = await supabase.from('auth_requests').select('status, tg_user_data').eq('token', token).single();
+        const row = await prisma.authRequest.findUnique({
+            select: { status: true, tg_user_data: true },
+            where: { token }
+        });
 
         if (!row) {
             return NextResponse.json({ status: "expired" });
@@ -43,7 +46,7 @@ export async function GET(req: NextRequest) {
             await sendTelegramNotification(user.id, alertText).catch(e => console.error("Notification failed", e));
 
             // Clean up used token
-            await supabase.from('auth_requests').delete().eq('token', token);
+            await prisma.authRequest.delete({ where: { token } });
 
             return NextResponse.json({ status: "completed", user });
         }

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
 import { getUserById } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 async function verifyAdmin() {
     const userId = await verifySession();
@@ -20,10 +20,11 @@ export async function GET() {
     }
 
     try {
-        const { data: promos } = await supabase.from('promo_codes')
-            .select('id, code, type, amount, uses, max_uses, is_active, created_at')
-            .order('created_at', { ascending: false })
-            .limit(100);
+        const promos = await prisma.promoCode.findMany({
+            select: { id: true, code: true, type: true, amount: true, uses: true, max_uses: true, is_active: true, created_at: true },
+            orderBy: { created_at: 'desc' },
+            take: 100
+        });
 
         return NextResponse.json({ promos });
     } catch (err: any) {
@@ -45,14 +46,14 @@ export async function PUT(req: Request) {
         }
 
         if (action === 'toggle_active') {
-            await supabase.from('promo_codes').update({ is_active }).eq('id', promoId);
+            await prisma.promoCode.update({ where: { id: promoId }, data: { is_active } });
             return NextResponse.json({ success: true });
         }
 
         if (action === 'delete') {
             // Delete usages first, then the promo code
-            await supabase.from('promo_usages').delete().eq('promo_id', promoId);
-            await supabase.from('promo_codes').delete().eq('id', promoId);
+            await prisma.promoUsage.deleteMany({ where: { promo_id: promoId } });
+            await prisma.promoCode.delete({ where: { id: promoId } });
             return NextResponse.json({ success: true });
         }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 import { verifySession } from '@/lib/session';
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -10,15 +10,14 @@ export async function DELETE(_req: Request, { params }: Ctx) {
 
     const { id } = await params;
 
-    const { data, error } = await supabase
-        .from('agent_sessions')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId)
-        .select('id');
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    if (!data || data.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    try {
+        const result = await prisma.agentSession.deleteMany({
+            where: { id, user_id: userId }
+        });
+        if (result.count === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
 }

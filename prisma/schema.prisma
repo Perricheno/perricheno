@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Users & Core ──────────────────────────────────────────────────────────
+
+model User {
+  id                  Int       @id @default(autoincrement())
+  telegram_id         String    @unique
+  username            String?
+  first_name          String?
+  photo_url           String?
+  created_at          DateTime  @default(now())
+
+  daily_chars_used    Int       @default(0)
+  purchased_chars     Int       @default(0)
+  daily_visuals_used  Int       @default(0)
+  purchased_visuals   Int       @default(0)
+  daily_reports_used  Int       @default(0)
+  purchased_reports   Int       @default(0)
+  last_reset_date     String?
+  account_tier        String?   @default("free")
+  weekly_chars_used   Int       @default(0)
+  last_week_reset     String?
+  is_banned           Boolean   @default(false)
+  referred_by         Int?
+  is_admin            Boolean   @default(false)
+  is_deleted          Boolean   @default(false)
+  plan_tier           String?   @default("free")
+  monthly_chars_used  Int       @default(0)
+
+  // Relations
+  tasks                 Task[]
+  agent_sessions        AgentSession[]
+  transactions          Transaction[]
+  usage_logs            UsageLog[]
+  system_notifications  SystemNotification[]
+  latex_errors          LatexError[]
+  chat_sessions         ChatSession[]
+  visual_assets         VisualAsset[]
+  receipts              Receipt[]
+  promo_usages          PromoUsage[]
+  sessions              Session[]
+  agent_uploads         AgentUpload[]
+  spaces                Space[]                @relation("SpaceOwner")
+  space_collaborators   SpaceCollaborator[]
+  space_versions        SpaceVersion[]
+  citations             Citation[]
+  citation_collections  CitationCollection[]
+}
+
+model Task {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  task_text  String
+  remind_at  DateTime
+  status     String   @default("pending")
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  topic       String
+  amount_text String
+  is_positive Boolean  @default(false)
+  created_at  DateTime @default(now())
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model UsageLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  tokens     Int
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model PromoCode {
+  id         Int          @id @default(autoincrement())
+  code       String       @unique
+  type       String
+  amount     Int
+  uses       Int          @default(0)
+  max_uses   Int
+  is_active  Boolean      @default(true)
+  created_at DateTime     @default(now())
+  usages     PromoUsage[]
+}
+
+model PromoUsage {
+  id         Int        @id @default(autoincrement())
+  promo_id   Int
+  user_id    Int
+  created_at DateTime   @default(now())
+  promo      PromoCode  @relation(fields: [promo_id], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([promo_id, user_id])
+}
+
+model SystemConfig {
+  key        String   @id
+  value      String
+  updated_at DateTime @default(now()) @updatedAt
+}
+
+model SystemNotification {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  message    String
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model LatexError {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  error_text String
+  session_id String?
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model AuthRequest {
+  token        String   @id
+  status       String   @default("pending")
+  tg_user_data String?
+  created_at   DateTime @default(now())
+}
+
+model Receipt {
+  id          String   @id @default(uuid())
+  user_id     Int
+  type        String
+  pack_name   String
+  amount_text String
+  pdf_base64  String?
+  created_at  DateTime @default(now())
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  user_id     Int
+  user_agent  String?
+  ip          String?
+  location    String?
+  last_active DateTime @default(now())
+  created_at  DateTime @default(now())
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model BotSession {
+  telegram_id  String   @id
+  session_data String
+  updated_at   DateTime @default(now()) @updatedAt
+}
+
+model ProcessedPayment {
+  order_id   String   @id
+  created_at DateTime @default(now())
+}
+
+// ── Agent & AI ─────────────────────────────────────────────────────────────
+
+model AgentSession {
+  id             String   @id @default(uuid())
+  user_id        Int
+  title          String
+  doc_type       String   @default("research")
+  settings_json  String?
+  main_tex       String?
+  references_bib String?
+  visuals_json   String?
+  share_id       String?  @unique
+  status         String   @default("done")
+  error_msg      String?
+  stream_text    String?
+  tg_message_id  Int?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now()) @updatedAt
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+  id            String        @id @default(uuid())
+  user_id       Int
+  title         String
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @default(now()) @updatedAt
+  user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages      ChatMessage[]
+  visual_assets VisualAsset[]
+}
+
+model ChatMessage {
+  id            String      @id @default(uuid())
+  session_id    String
+  role          String
+  content       String
+  metadata_json String?
+  created_at    DateTime    @default(now())
+  session       ChatSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+}
+
+model VisualAsset {
+  id          String       @id @default(uuid())
+  user_id     Int
+  session_id  String?
+  type        String
+  url         String
+  source_code String?
+  prompt      String?
+  created_at  DateTime     @default(now())
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  session     ChatSession? @relation(fields: [session_id], references: [id], onDelete: SetNull)
+}
+
+model AgentUpload {
+  id           String   @id @default(uuid())
+  user_id      Int
+  filename     String
+  text_content String?
+  images_json  String?
+  char_count   Int      @default(0)
+  image_count  Int      @default(0)
+  page_count   Int      @default(0)
+  ocr_used     Boolean  @default(false)
+  storage_path String?
+  file_size    Int?
+  mime_type    String?
+  created_at   DateTime @default(now())
+  expires_at   DateTime
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+// ── Spaces (Documents/Latex Editor) ───────────────────────────────────────
+
+model Space {
+  id           String              @id @default(uuid())
+  owner_id     Int
+  title        String
+  description  String?
+  compiler     String              @default("pdflatex")
+  main_file    String              @default("main.tex")
+  auto_compile Boolean             @default(true)
+  share_id     String?             @unique
+  is_public    Boolean             @default(false)
+  created_at   DateTime            @default(now())
+  updated_at   DateTime            @default(now()) @updatedAt
+  owner        User                @relation("SpaceOwner", fields: [owner_id], references: [id], onDelete: Cascade)
+  files        SpaceFile[]
+  versions     SpaceVersion[]
+  collaborators SpaceCollaborator[]
+  invites      SpaceInvite[]
+}
+
+model SpaceFile {
+  id          String   @id @default(uuid())
+  space_id    String
+  path        String
+  content     String?
+  content_b64 String?
+  is_binary   Boolean  @default(false)
+  mime_type   String   @default("text/plain")
+  size_bytes  Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+  space       Space    @relation(fields: [space_id], references: [id], onDelete: Cascade)
+
+  @@unique([space_id, path])
+}
+
+model SpaceVersion {
+  id         String   @id @default(uuid())
+  space_id   String
+  created_by Int?
+  label      String
+  message    String?
+  snapshot   String   // Stored as JSON string
+  created_at DateTime @default(now())
+  space      Space    @relation(fields: [space_id], references: [id], onDelete: Cascade)
+  creator    User?    @relation(fields: [created_by], references: [id], onDelete: SetNull)
+}
+
+model SpaceCollaborator {
+  id          String    @id @default(uuid())
+  space_id    String
+  user_id     Int
+  role        String    @default("editor")
+  invited_at  DateTime  @default(now())
+  accepted_at DateTime?
+  space       Space     @relation(fields: [space_id], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([space_id, user_id])
+}
+
+model SpaceInvite {
+  id         String   @id @default(uuid())
+  space_id   String
+  email      String?
+  role       String   @default("editor")
+  token      String   @unique
+  created_at DateTime @default(now())
+  expires_at DateTime
+  space      Space    @relation(fields: [space_id], references: [id], onDelete: Cascade)
+}
+
+// ── Citations ──────────────────────────────────────────────────────────────
+
+model Citation {
+  id          String    @id @default(uuid())
+  user_id     Int
+  doi         String?
+  arxiv_id    String?
+  isbn        String?
+  title       String
+  authors     String[]
+  year        Int?
+  venue       String?
+  abstract    String?
+  url         String?
+  bibtex      String
+  cite_key    String
+  tags        String[]
+  notes       String?
+  starred     Boolean   @default(false)
+  added_at    DateTime  @default(now())
+  updated_at  DateTime  @default(now()) @updatedAt
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  collections CitationCollectionItem[]
+}
+
+model CitationCollection {
+  id          String    @id @default(uuid())
+  user_id     Int
+  name        String
+  description String?
+  color       String?
+  created_at  DateTime  @default(now())
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  items       CitationCollectionItem[]
+}
+
+model CitationCollectionItem {
+  id            String             @id @default(uuid())
+  collection_id String
+  citation_id   String
+  collection    CitationCollection @relation(fields: [collection_id], references: [id], onDelete: Cascade)
+  citation      Citation           @relation(fields: [citation_id], references: [id], onDelete: Cascade)
+
+  @@unique([collection_id, citation_id])
+}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserById, PLAN_LIMITS, addPurchasedTokens } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         }
 
         const user = telegram_id
-            ? (await supabase.from('users').select('*').eq('telegram_id', String(telegram_id)).single()).data
+            ? await prisma.user.findFirst({ where: { telegram_id: String(telegram_id) } })
             : null;
 
         // ═══════════════════════════════
@@ -160,30 +160,32 @@ export async function POST(req: NextRequest) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
             const limit = body.limit || 10;
-            const { data: txsData } = await supabase.from('transactions')
-                .select('id, topic, amount_text, is_positive, created_at')
-                .eq('user_id', user.id)
-                .not('amount_text', 'in', '("0","-0","")')
-                .order('created_at', { ascending: false })
-                .limit(limit);
-            const txs = txsData || [];
+            const txs = await prisma.transaction.findMany({
+                where: {
+                    user_id: user.id,
+                    NOT: { amount_text: { in: ["0", "-0", ""] } }
+                },
+                select: { id: true, topic: true, amount_text: true, is_positive: true, created_at: true },
+                orderBy: { created_at: 'desc' },
+                take: limit
+            });
 
-            const transactions = txs.map(tx => ({
+            const transactions = txs.map((tx: any) => ({
                 id: tx.id,
                 topic: tx.topic,
                 amount: tx.amount_text,
-                is_positive: tx.is_positive === 1,
+                is_positive: tx.is_positive,
                 date: tx.created_at
             }));
 
-            const { data: receiptsData } = await supabase.from('receipts')
-                .select('id, type, pack_name, amount_text, created_at')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(limit);
-            const receiptsDb = receiptsData || [];
+            const receiptsDb = await prisma.receipt.findMany({
+                where: { user_id: user.id },
+                select: { id: true, type: true, pack_name: true, amount_text: true, created_at: true },
+                orderBy: { created_at: 'desc' },
+                take: limit
+            });
 
-            const receipts = receiptsDb.map(r => ({
+            const receipts = receiptsDb.map((r: any) => ({
                 id: r.id,
                 title: r.pack_name,
                 url: `${process.env.SITE_INTERNAL_URL?.replace('http://perricheno-site:3000', process.env.WEBHOOK_DOMAIN || 'https://perricheno.ru') || 'https://perricheno.ru'}/api/billing/receipt/${r.id}`,
@@ -202,20 +204,22 @@ export async function POST(req: NextRequest) {
             const { code } = body;
             if (!code) return NextResponse.json({ error: "Missing code" }, { status: 400 });
 
-            const { data: promo } = await supabase.from('promo_codes').select('*').eq('code', code.toUpperCase()).single();
+            const promo = await prisma.promoCode.findUnique({ where: { code: code.toUpperCase() } });
             if (!promo) return NextResponse.json({ error: "Промокод не найден." }, { status: 404 });
             if (promo.is_active === false) return NextResponse.json({ error: "Промокод деактивирован." }, { status: 410 });
             if (promo.uses >= promo.max_uses) return NextResponse.json({ error: "Лимит активаций исчерпан." }, { status: 410 });
 
             // Check if user already used this promo
-            const { data: alreadyUsed } = await supabase.from('promo_usages').select('id').eq('promo_id', promo.id).eq('user_id', user.id).maybeSingle();
+            const alreadyUsed = await prisma.promoUsage.findFirst({
+                where: { promo_id: promo.id, user_id: user.id }
+            });
             if (alreadyUsed) return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
 
             // Record usage
             try {
-                await supabase.from('promo_usages').insert({ promo_id: promo.id, user_id: user.id });
+                await prisma.promoUsage.create({ data: { promo_id: promo.id, user_id: user.id } });
             } catch (err: any) {
-                if (err.message?.includes("duplicate")) {
+                if (err.code === 'P2002') {
                     return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
                 }
                 throw err;
@@ -226,7 +230,10 @@ export async function POST(req: NextRequest) {
             await addPurchasedTokens(user.id, type, promo.amount);
             
             // Increment uses
-            await supabase.from('promo_codes').update({ uses: promo.uses + 1 }).eq('id', promo.id);
+            await prisma.promoCode.update({
+                where: { id: promo.id },
+                data: { uses: { increment: 1 } }
+            });
 
             const crypto = require('crypto');
             const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
@@ -266,7 +273,9 @@ export async function POST(req: NextRequest) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
             const { transactionId } = body;
-            const { data: tx } = await supabase.from('transactions').select('*').eq('id', transactionId).eq('user_id', user.id).single();
+            const tx = await prisma.transaction.findFirst({
+                where: { id: Number(transactionId), user_id: user.id }
+            });
             if (!tx) return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
 
             return NextResponse.json({
@@ -276,7 +285,7 @@ export async function POST(req: NextRequest) {
                     username: user.username || user.first_name || `TG#${user.telegram_id}`,
                     topic: tx.topic,
                     amount: tx.amount_text,
-                    is_positive: tx.is_positive === 1,
+                    is_positive: tx.is_positive,
                     date: tx.created_at,
                     platform: "Perricheno",
                     payment_method: "CryptoCloud (Crypto)"

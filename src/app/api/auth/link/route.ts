@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 
 // Generate a unique deep link token for Telegram auth
@@ -7,11 +7,11 @@ export async function POST() {
     try {
         const token = uuidv4();
 
-        await supabase.from('auth_requests').insert({ token, status: 'pending' });
+        await prisma.authRequest.create({ data: { token, status: 'pending' } });
 
         // Cleanup: delete tokens older than 10 minutes
-        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        await supabase.from('auth_requests').delete().lt('created_at', tenMinAgo);
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+        await prisma.authRequest.deleteMany({ where: { created_at: { lt: tenMinAgo } } });
 
         const botUsername = process.env.TELEGRAM_BOT_USERNAME || "PerrichenoBot";
         const deepLink = `https://t.me/${botUsername}?start=${token}`;

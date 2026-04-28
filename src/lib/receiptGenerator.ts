@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export interface ReceiptData {
     id: string;
@@ -15,14 +15,23 @@ export interface ReceiptData {
 export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolean> {
     try {
         // 1. Save initial record without PDF
-        await supabase.from('receipts').upsert({
-            id: data.id,            
-            user_id: data.userId,
-            type: data.type,
-            pack_name: data.packName,
-            amount_text: data.amountText,
-            created_at: data.dateISO
-        }, { onConflict: 'id', ignoreDuplicates: true });
+        await prisma.receipt.upsert({
+            where: { id: data.id },
+            update: {
+                user_id: data.userId,
+                type: data.type,
+                pack_name: data.packName,
+                amount_text: data.amountText,
+            },
+            create: {
+                id: data.id,            
+                user_id: data.userId,
+                type: data.type,
+                pack_name: data.packName,
+                amount_text: data.amountText,
+                created_at: new Date(data.dateISO)
+            }
+        });
 
         // 2. Read template
         const templatePath = path.join(process.cwd(), 'src', 'lib', 'templates', 'receipt.tex');
@@ -119,8 +128,10 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
         const pdfBuffer = Buffer.from(await compilerRes.arrayBuffer());
         const base64Data = pdfBuffer.toString('base64');
 
-        await supabase.from('receipts').update({ pdf_base64: `data:application/pdf;base64,${base64Data}` }).eq('id', data.id);
-
+        await prisma.receipt.update({
+            where: { id: data.id },
+            data: { pdf_base64: `data:application/pdf;base64,${base64Data}` }
+        });
         console.log(`✅ Passed receipt generation for ${data.id}`);
         return true;
 

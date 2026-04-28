@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getUserById } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
+import { prisma } from "@/lib/prisma";
 import { verifySession } from "@/lib/session";
 import crypto from "crypto";
 
@@ -24,14 +24,14 @@ async function verifyAdmin() {
 
 export async function createPromoCode(code: string, type: string, amount: number, maxUses: number) {
     await verifyAdmin();
-    await supabase.from('promo_codes').insert({ code, type, amount, max_uses: maxUses });
+    await prisma.promoCode.create({ data: { code, type, amount, max_uses: maxUses } });
     revalidatePath("/dashboard");
     return { success: true };
 }
 
 export async function setSystemConfig(key: string, value: string) {
     await verifyAdmin();
-    await supabase.from('system_config').upsert({ key, value }, { onConflict: 'key' });
+    await prisma.systemConfig.upsert({ where: { key }, update: { value }, create: { key, value } });
     revalidatePath("/dashboard");
     return { success: true };
 }
@@ -42,14 +42,14 @@ export async function manageUserTokens(userId: number, action: string, amount: n
     if (!user) throw new Error("User missing");
 
     if (action === 'grant_chars') {
-        await supabase.from('users').update({ purchased_chars: user.purchased_chars + amount }).eq('id', userId);
-        await supabase.from('transactions').insert({ user_id: userId, topic: "Admin System Grant", amount_text: `+${amount.toLocaleString()} chars`, is_positive: true });
+        await prisma.user.update({ where: { id: userId }, data: { purchased_chars: user.purchased_chars + amount } });
+        await prisma.transaction.create({ data: { user_id: userId, topic: "Admin System Grant", amount_text: `+${amount.toLocaleString()} chars`, is_positive: true } });
     } else if (action === 'grant_reports') {
-        await supabase.from('users').update({ purchased_reports: user.purchased_reports + amount }).eq('id', userId);
-        await supabase.from('transactions').insert({ user_id: userId, topic: "Admin System Grant", amount_text: `+${amount.toLocaleString()} reports`, is_positive: true });
+        await prisma.user.update({ where: { id: userId }, data: { purchased_reports: user.purchased_reports + amount } });
+        await prisma.transaction.create({ data: { user_id: userId, topic: "Admin System Grant", amount_text: `+${amount.toLocaleString()} reports`, is_positive: true } });
     } else if (action === 'toggle_freeze') {
         const newStatus = user.is_banned ? false : true;
-        await supabase.from('users').update({ is_banned: newStatus }).eq('id', userId);
+        await prisma.user.update({ where: { id: userId }, data: { is_banned: newStatus } });
     }
     revalidatePath("/dashboard");
     return { success: true };
@@ -61,7 +61,7 @@ export async function sendDirectMessage(userId: number, message: string) {
     const BOT_INTERNAL_URL = "http://telegram-bot:3001/bot-internal";
 
     // 1. Save to DB
-    await supabase.from('system_notifications').insert({ user_id: userId, message });
+    await prisma.systemNotification.create({ data: { user_id: userId, message } });
 
     // 2. PUSH to Telegram Bot
     try {
@@ -159,7 +159,7 @@ export async function checkServiceHealth(serviceId: string) {
             case 'db': {
                 log.push("Checking SQLite V-Base Integrity...");
                 const start = Date.now();
-                const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
+                const count = await prisma.user.count();
                 const end = Date.now();
                 log.push(`SUCCESS: ${count || 0} user records indexed. Latency: ${end - start}ms`);
                 break;

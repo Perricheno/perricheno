@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
 import { getUserById } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 async function verifyAdmin() {
     const userId = await verifySession();
@@ -25,12 +25,22 @@ export async function GET(req: Request) {
         
         let users = [] as any[];
         if (search) {
-            const pattern = `%${search}%`;
-            const { data } = await supabase.from('users').select('*').or(`telegram_id.ilike.${pattern},username.ilike.${pattern},first_name.ilike.${pattern}`).order('created_at', { ascending: false }).limit(50);
-            if (data) users = data;
+            users = await prisma.user.findMany({
+                where: {
+                    OR: [
+                        { telegram_id: { contains: search, mode: 'insensitive' } },
+                        { username: { contains: search, mode: 'insensitive' } },
+                        { first_name: { contains: search, mode: 'insensitive' } }
+                    ]
+                },
+                orderBy: { created_at: 'desc' },
+                take: 50
+            });
         } else {
-            const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false }).limit(50);
-            if (data) users = data;
+            users = await prisma.user.findMany({
+                orderBy: { created_at: 'desc' },
+                take: 50
+            });
         }
 
         return NextResponse.json({ users });
@@ -57,11 +67,11 @@ export async function PUT(req: Request) {
             const resourceName = isChars ? 'chars' : 'reports';
             
             if (isChars) {
-                await supabase.from('users').update({ purchased_chars: targetUser.purchased_chars + amount }).eq('id', targetUserId);
+                await prisma.user.update({ where: { id: targetUserId }, data: { purchased_chars: targetUser.purchased_chars + amount } });
             } else {
-                await supabase.from('users').update({ purchased_reports: targetUser.purchased_reports + amount }).eq('id', targetUserId);
+                await prisma.user.update({ where: { id: targetUserId }, data: { purchased_reports: targetUser.purchased_reports + amount } });
             }
-            await supabase.from('transactions').insert({ user_id: targetUserId, topic: "Admin Bonus", amount_text: `+${amount.toLocaleString()} ${resourceName}`, is_positive: true });
+            await prisma.transaction.create({ data: { user_id: targetUserId, topic: "Admin Bonus", amount_text: `+${amount.toLocaleString()} ${resourceName}`, is_positive: true } });
 
             // Trigger receipt generation
             const crypto = require('crypto');
@@ -84,10 +94,10 @@ export async function PUT(req: Request) {
             }
 
         } else if (action === 'set_tier') {
-            await supabase.from('users').update({ account_tier: tier }).eq('id', targetUserId);
+            await prisma.user.update({ where: { id: targetUserId }, data: { account_tier: tier } });
         } else if (action === 'toggle_ban') {
             const newBanStatus = targetUser.is_banned ? false : true;
-            await supabase.from('users').update({ is_banned: newBanStatus }).eq('id', targetUserId);
+            await prisma.user.update({ where: { id: targetUserId }, data: { is_banned: newBanStatus } });
             return NextResponse.json({ success: true, newBanStatus });
         } else {
             return NextResponse.json({ error: "Invalid action" }, { status: 400 });

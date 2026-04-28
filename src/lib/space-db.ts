@@ -1,5 +1,5 @@
 import 'server-only';
-import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -12,14 +12,13 @@ export interface Space {
     owner_id: number;
     title: string;
     description: string | null;
-    compiler: Compiler;
+    compiler: string;
     main_file: string;
     auto_compile: boolean;
     share_id: string | null;
     is_public: boolean;
-    created_at: string;
-    updated_at: string;
-    // joined from collaborators (when listing)
+    created_at: Date;
+    updated_at: Date;
     collaborators?: SpaceCollaborator[];
 }
 
@@ -32,8 +31,8 @@ export interface SpaceFile {
     is_binary: boolean;
     mime_type: string;
     size_bytes: number;
-    created_at: string;
-    updated_at: string;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export interface SpaceVersion {
@@ -43,17 +42,16 @@ export interface SpaceVersion {
     label: string;
     message: string | null;
     snapshot: Record<string, string>;   // { "path": "content" }
-    created_at: string;
+    created_at: Date;
 }
 
 export interface SpaceCollaborator {
     id: string;
     space_id: string;
     user_id: number;
-    role: CollaboratorRole;
-    invited_at: string;
-    accepted_at: string | null;
-    // joined
+    role: string;
+    invited_at: Date;
+    accepted_at: Date | null;
     username?: string | null;
     first_name?: string | null;
     photo_url?: string | null;
@@ -63,10 +61,10 @@ export interface SpaceInvite {
     id: string;
     space_id: string;
     email?: string | null;
-    role: CollaboratorRole;
+    role: string;
     token: string;
-    created_at: string;
-    expires_at: string;
+    created_at: Date;
+    expires_at: Date;
 }
 
 // Starter templates
@@ -232,13 +230,13 @@ export async function createSpace(
     template: keyof typeof STARTER_TEMPLATES = 'blank',
     compiler: Compiler = 'pdflatex',
 ): Promise<Space> {
-    const { data: space, error } = await supabase
-        .from('spaces')
-        .insert({ owner_id: ownerId, title, compiler })
-        .select('*')
-        .single();
-
-    if (error || !space) throw new Error(error?.message ?? 'Failed to create space');
+    const space = await prisma.space.create({
+        data: {
+            owner_id: ownerId,
+            title,
+            compiler
+        }
+    });
 
     // Seed files from template
     const files = STARTER_TEMPLATES[template] ?? STARTER_TEMPLATES.blank;
@@ -249,164 +247,198 @@ export async function createSpace(
         mime_type: 'text/plain',
         size_bytes: Buffer.byteLength(content, 'utf8'),
     }));
+    
     if (fileRows.length > 0) {
-        await supabase.from('space_files').insert(fileRows);
+        await prisma.spaceFile.createMany({ data: fileRows });
     }
 
     // Owner as collaborator
-    await supabase.from('space_collaborators').insert({
-        space_id: space.id,
-        user_id: ownerId,
-        role: 'owner',
-        accepted_at: new Date().toISOString(),
+    await prisma.spaceCollaborator.create({
+        data: {
+            space_id: space.id,
+            user_id: ownerId,
+            role: 'owner',
+            accepted_at: new Date()
+        }
     });
 
     return space as Space;
 }
 
 export async function getSpacesByUser(userId: number): Promise<Space[]> {
-    const { data } = await supabase
-        .from('spaces')
-        .select(`*, space_collaborators(user_id, role)`)
-        .or(`owner_id.eq.${userId},space_collaborators.user_id.eq.${userId}`)
-        .order('updated_at', { ascending: false });
-    return (data ?? []) as Space[];
+    const spaces = await prisma.space.findMany({
+        where: {
+            OR: [
+                { owner_id: userId },
+                { collaborators: { some: { user_id: userId } } }
+            ]
+        },
+        include: { collaborators: true },
+        orderBy: { updated_at: 'desc' }
+    });
+    return spaces as Space[];
 }
 
 export async function getSpace(id: string, userId: number): Promise<Space | null> {
-    const { data } = await supabase
-        .from('spaces')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-    if (!data) return null;
+    const space = await prisma.space.findUnique({
+        where: { id },
+        include: { collaborators: true }
+    });
+    if (!space) return null;
+    
     // Check access
-    if (data.owner_id !== userId) {
-        const { data: collab } = await supabase
-            .from('space_collaborators')
-            .select('role')
-            .eq('space_id', id)
-            .eq('user_id', userId)
-            .maybeSingle();
-        if (!collab) return null;
+    if (space.owner_id !== userId) {
+        const hasAccess = space.collaborators.some(c => c.user_id === userId);
+        if (!hasAccess) return null;
     }
-    return data as Space;
+    return space as Space;
 }
 
 export async function getSpaceByShareId(shareId: string): Promise<Space | null> {
-    const { data } = await supabase
-        .from('spaces')
-        .select('*')
-        .eq('share_id', shareId)
-        .eq('is_public', true)
-        .maybeSingle();
-    return (data as Space) ?? null;
+    return prisma.space.findFirst({
+        where: { share_id: shareId, is_public: true }
+    }) as Promise<Space | null>;
 }
 
 export async function updateSpace(id: string, userId: number, patch: Partial<Pick<Space, 'title' | 'description' | 'compiler' | 'main_file' | 'auto_compile' | 'is_public'>>): Promise<void> {
-    await supabase
-        .from('spaces')
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('owner_id', userId);
+    await prisma.space.updateMany({
+        where: { id, owner_id: userId },
+        data: patch
+    });
 }
 
 export async function touchSpace(id: string): Promise<void> {
-    await supabase.from('spaces').update({ updated_at: new Date().toISOString() }).eq('id', id);
+    await prisma.space.update({
+        where: { id },
+        data: { updated_at: new Date() }
+    });
 }
 
 export async function deleteSpace(id: string, userId: number): Promise<void> {
-    await supabase.from('spaces').delete().eq('id', id).eq('owner_id', userId);
+    await prisma.space.deleteMany({
+        where: { id, owner_id: userId }
+    });
 }
 
 export async function duplicateSpace(id: string, userId: number): Promise<Space | null> {
     const original = await getSpace(id, userId);
     if (!original) return null;
+    
     const files = await getSpaceFilesWithContent(id);
-    const newSpace = await supabase
-        .from('spaces')
-        .insert({ owner_id: userId, title: `${original.title} (copy)`, compiler: original.compiler, main_file: original.main_file })
-        .select('*')
-        .single();
-    if (!newSpace.data) return null;
+    
+    const newSpace = await prisma.space.create({
+        data: {
+            owner_id: userId,
+            title: `${original.title} (copy)`,
+            compiler: original.compiler,
+            main_file: original.main_file
+        }
+    });
+
     if (files.length > 0) {
-        await supabase.from('space_files').insert(
-            files.map(f => ({ space_id: newSpace.data.id, path: f.path, content: f.content, content_b64: f.content_b64, mime_type: f.mime_type, size_bytes: f.size_bytes }))
-        );
+        await prisma.spaceFile.createMany({
+            data: files.map(f => ({
+                space_id: newSpace.id,
+                path: f.path,
+                content: f.content,
+                content_b64: f.content_b64,
+                mime_type: f.mime_type,
+                size_bytes: f.size_bytes
+            }))
+        });
     }
-    await supabase.from('space_collaborators').insert({ space_id: newSpace.data.id, user_id: userId, role: 'owner', accepted_at: new Date().toISOString() });
-    return newSpace.data as Space;
+    
+    await prisma.spaceCollaborator.create({
+        data: {
+            space_id: newSpace.id,
+            user_id: userId,
+            role: 'owner',
+            accepted_at: new Date()
+        }
+    });
+    
+    return newSpace as Space;
 }
 
 export async function enableSpaceSharing(id: string, userId: number): Promise<string> {
     const shareId = uuidv4().replace(/-/g, '').slice(0, 12);
-    await supabase.from('spaces').update({ share_id: shareId, is_public: true }).eq('id', id).eq('owner_id', userId);
+    await prisma.space.updateMany({
+        where: { id, owner_id: userId },
+        data: { share_id: shareId, is_public: true }
+    });
     return shareId;
 }
 
 export async function disableSpaceSharing(id: string, userId: number): Promise<void> {
-    await supabase.from('spaces').update({ is_public: false }).eq('id', id).eq('owner_id', userId);
+    await prisma.space.updateMany({
+        where: { id, owner_id: userId },
+        data: { is_public: false }
+    });
 }
 
 // ── Files ──────────────────────────────────────────────────────────────────
 
 export async function getSpaceFiles(spaceId: string): Promise<SpaceFile[]> {
-    const { data } = await supabase
-        .from('space_files')
-        .select('id, space_id, path, is_binary, mime_type, size_bytes, created_at, updated_at')
-        .eq('space_id', spaceId)
-        .order('path');
-    return (data ?? []) as SpaceFile[];
+    return prisma.spaceFile.findMany({
+        where: { space_id: spaceId },
+        select: { id: true, space_id: true, path: true, is_binary: true, mime_type: true, size_bytes: true, created_at: true, updated_at: true },
+        orderBy: { path: 'asc' }
+    }) as unknown as Promise<SpaceFile[]>;
 }
 
 export async function getSpaceFilesWithContent(spaceId: string): Promise<SpaceFile[]> {
-    const { data } = await supabase
-        .from('space_files')
-        .select('*')
-        .eq('space_id', spaceId)
-        .order('path');
-    return (data ?? []) as SpaceFile[];
+    return prisma.spaceFile.findMany({
+        where: { space_id: spaceId },
+        orderBy: { path: 'asc' }
+    }) as Promise<SpaceFile[]>;
 }
 
 export async function getSpaceFile(spaceId: string, path: string): Promise<SpaceFile | null> {
-    const { data } = await supabase
-        .from('space_files')
-        .select('*')
-        .eq('space_id', spaceId)
-        .eq('path', path)
-        .maybeSingle();
-    return (data as SpaceFile) ?? null;
+    return prisma.spaceFile.findUnique({
+        where: { space_id_path: { space_id: spaceId, path } }
+    }) as Promise<SpaceFile | null>;
 }
 
 export async function upsertSpaceFile(spaceId: string, path: string, content: string, mimeType = 'text/plain'): Promise<void> {
     const sizeBytes = Buffer.byteLength(content, 'utf8');
-    await supabase.from('space_files').upsert(
-        { space_id: spaceId, path, content, mime_type: mimeType, size_bytes: sizeBytes, updated_at: new Date().toISOString() },
-        { onConflict: 'space_id,path' }
-    );
+    await prisma.spaceFile.upsert({
+        where: { space_id_path: { space_id: spaceId, path } },
+        update: { content, content_b64: null, is_binary: false, mime_type: mimeType, size_bytes: sizeBytes },
+        create: { space_id: spaceId, path, content, mime_type: mimeType, size_bytes: sizeBytes }
+    });
     await touchSpace(spaceId);
 }
 
 export async function upsertSpaceFileBinary(spaceId: string, path: string, contentB64: string, mimeType: string): Promise<void> {
     const sizeBytes = Math.round(contentB64.length * 0.75);
-    await supabase.from('space_files').upsert(
-        { space_id: spaceId, path, content: null, content_b64: contentB64, is_binary: true, mime_type: mimeType, size_bytes: sizeBytes, updated_at: new Date().toISOString() },
-        { onConflict: 'space_id,path' }
-    );
+    await prisma.spaceFile.upsert({
+        where: { space_id_path: { space_id: spaceId, path } },
+        update: { content: null, content_b64: contentB64, is_binary: true, mime_type: mimeType, size_bytes: sizeBytes },
+        create: { space_id: spaceId, path, content_b64: contentB64, is_binary: true, mime_type: mimeType, size_bytes: sizeBytes }
+    });
     await touchSpace(spaceId);
 }
 
 export async function deleteSpaceFile(spaceId: string, path: string): Promise<void> {
-    await supabase.from('space_files').delete().eq('space_id', spaceId).eq('path', path);
-    await touchSpace(spaceId);
+    try {
+        await prisma.spaceFile.delete({
+            where: { space_id_path: { space_id: spaceId, path } }
+        });
+        await touchSpace(spaceId);
+    } catch {}
 }
 
 export async function renameSpaceFile(spaceId: string, oldPath: string, newPath: string): Promise<void> {
-    await supabase.from('space_files').update({ path: newPath, updated_at: new Date().toISOString() }).eq('space_id', spaceId).eq('path', oldPath);
+    await prisma.spaceFile.update({
+        where: { space_id_path: { space_id: spaceId, path: oldPath } },
+        data: { path: newPath }
+    });
+    
     // Update \input / \include references in all .tex files
     const texFiles = (await getSpaceFilesWithContent(spaceId)).filter(f => f.path.endsWith('.tex') && f.content);
-    const oldBase = oldPath.replace(/\.tex$/, '');
-    const newBase = newPath.replace(/\.tex$/, '');
+    const oldBase = oldPath.replace(/\\.tex$/, '');
+    const newBase = newPath.replace(/\\.tex$/, '');
+    
     await Promise.all(texFiles.map(async f => {
         if (!f.content) return;
         const updated = f.content
@@ -414,6 +446,7 @@ export async function renameSpaceFile(spaceId: string, oldPath: string, newPath:
             .replace(new RegExp(`\\\\include\\{${escapeRegex(oldBase)}\\}`, 'g'), `\\include{${newBase}}`);
         if (updated !== f.content) await upsertSpaceFile(spaceId, f.path, updated);
     }));
+    
     await touchSpace(spaceId);
 }
 
@@ -428,40 +461,45 @@ export async function createSpaceVersion(spaceId: string, userId: number, label:
         if (f.content != null) {
             snapshot[f.path] = f.content;
         } else if (f.content_b64 != null) {
-            // Prefix binary files so restoreSpaceVersion can distinguish them
             snapshot[f.path] = `__b64__:${f.mime_type}:${f.content_b64}`;
         }
     }
-    const { data, error } = await supabase
-        .from('space_versions')
-        .insert({ space_id: spaceId, created_by: userId, label, message: message ?? null, snapshot })
-        .select('*')
-        .single();
-    if (error || !data) throw new Error(error?.message ?? 'Failed to create version');
-    return data as SpaceVersion;
+    
+    const version = await prisma.spaceVersion.create({
+        data: {
+            space_id: spaceId,
+            created_by: userId,
+            label,
+            message: message ?? null,
+            snapshot: JSON.stringify(snapshot)
+        }
+    });
+    
+    return { ...version, snapshot: JSON.parse(version.snapshot) } as SpaceVersion;
 }
 
 export async function getSpaceVersions(spaceId: string): Promise<Omit<SpaceVersion, 'snapshot'>[]> {
-    const { data } = await supabase
-        .from('space_versions')
-        .select('id, space_id, created_by, label, message, created_at')
-        .eq('space_id', spaceId)
-        .order('created_at', { ascending: false })
-        .limit(100);
-    return (data ?? []) as Omit<SpaceVersion, 'snapshot'>[];
+    const versions = await prisma.spaceVersion.findMany({
+        where: { space_id: spaceId },
+        select: { id: true, space_id: true, created_by: true, label: true, message: true, created_at: true },
+        orderBy: { created_at: 'desc' },
+        take: 100
+    });
+    return versions as Omit<SpaceVersion, 'snapshot'>[];
 }
 
 export async function getSpaceVersion(id: string): Promise<SpaceVersion | null> {
-    const { data } = await supabase.from('space_versions').select('*').eq('id', id).maybeSingle();
-    return (data as SpaceVersion) ?? null;
+    const version = await prisma.spaceVersion.findUnique({ where: { id } });
+    if (!version) return null;
+    return { ...version, snapshot: JSON.parse(version.snapshot) } as SpaceVersion;
 }
 
 export async function restoreSpaceVersion(versionId: string, spaceId: string, userId: number): Promise<void> {
     const version = await getSpaceVersion(versionId);
     if (!version || version.space_id !== spaceId) throw new Error('Version not found');
-    // Save current state as a version first
+    
     await createSpaceVersion(spaceId, userId, `Before restore to "${version.label}"`);
-    // Restore files from snapshot
+    
     for (const [path, value] of Object.entries(version.snapshot)) {
         if (value.startsWith('__b64__:')) {
             const rest = value.slice('__b64__:'.length);
@@ -478,73 +516,70 @@ export async function restoreSpaceVersion(versionId: string, spaceId: string, us
 // ── Collaborators ──────────────────────────────────────────────────────────
 
 export async function getSpaceCollaborators(spaceId: string): Promise<SpaceCollaborator[]> {
-    const { data } = await supabase
-        .from('space_collaborators')
-        .select('*, users(username, first_name, photo_url)')
-        .eq('space_id', spaceId);
-    return ((data ?? []) as any[]).map(row => ({
-        ...row,
-        username: row.users?.username ?? null,
-        first_name: row.users?.first_name ?? null,
-        photo_url: row.users?.photo_url ?? null,
-        users: undefined,
+    const collabs = await prisma.spaceCollaborator.findMany({
+        where: { space_id: spaceId },
+        include: { user: { select: { username: true, first_name: true, photo_url: true } } }
+    });
+    
+    return collabs.map(c => ({
+        ...c,
+        username: c.user?.username,
+        first_name: c.user?.first_name,
+        photo_url: c.user?.photo_url,
     })) as SpaceCollaborator[];
 }
 
 export async function addCollaborator(spaceId: string, userId: number, role: CollaboratorRole = 'editor'): Promise<void> {
-    await supabase.from('space_collaborators').upsert(
-        { space_id: spaceId, user_id: userId, role, accepted_at: new Date().toISOString() },
-        { onConflict: 'space_id,user_id' }
-    );
+    await prisma.spaceCollaborator.upsert({
+        where: { space_id_user_id: { space_id: spaceId, user_id: userId } },
+        update: { role, accepted_at: new Date() },
+        create: { space_id: spaceId, user_id: userId, role, accepted_at: new Date() }
+    });
 }
 
 export async function removeCollaborator(spaceId: string, userId: number): Promise<void> {
-    await supabase.from('space_collaborators').delete().eq('space_id', spaceId).eq('user_id', userId);
+    try {
+        await prisma.spaceCollaborator.delete({
+            where: { space_id_user_id: { space_id: spaceId, user_id: userId } }
+        });
+    } catch {}
 }
 
 export async function getUserRoleInSpace(spaceId: string, userId: number): Promise<CollaboratorRole | null> {
-    const { data } = await supabase
-        .from('space_collaborators')
-        .select('role')
-        .eq('space_id', spaceId)
-        .eq('user_id', userId)
-        .maybeSingle();
-    return (data?.role as CollaboratorRole) ?? null;
+    const collab = await prisma.spaceCollaborator.findUnique({
+        where: { space_id_user_id: { space_id: spaceId, user_id: userId } }
+    });
+    return (collab?.role as CollaboratorRole) ?? null;
 }
 
 export async function createSpaceInvite(spaceId: string, role: CollaboratorRole = 'editor'): Promise<SpaceInvite> {
     const token = uuidv4();
-    const { data, error } = await supabase
-        .from('space_invites')
-        .insert({ space_id: spaceId, role, token })
-        .select('*')
-        .single();
-    if (error || !data) throw new Error(error?.message ?? 'Failed to create invite');
-    return data as SpaceInvite;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+    
+    return prisma.spaceInvite.create({
+        data: { space_id: spaceId, role, token, expires_at: expiresAt }
+    }) as Promise<SpaceInvite>;
 }
 
 export async function getSpaceInviteByToken(token: string): Promise<SpaceInvite | null> {
-    const { data } = await supabase
-        .from('space_invites')
-        .select('*')
-        .eq('token', token)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
-    return (data as SpaceInvite) ?? null;
+    return prisma.spaceInvite.findFirst({
+        where: { token, expires_at: { gt: new Date() } }
+    }) as Promise<SpaceInvite | null>;
 }
 
 export async function acceptSpaceInvite(token: string, userId: number): Promise<{ spaceId: string } | null> {
     const invite = await getSpaceInviteByToken(token);
     if (!invite) return null;
 
-    // Add as collaborator (upsert in case already exists)
-    await supabase.from('space_collaborators').upsert(
-        { space_id: invite.space_id, user_id: userId, role: invite.role, accepted_at: new Date().toISOString() },
-        { onConflict: 'space_id,user_id' }
-    );
-
-    // Mark invite as accepted (delete it)
-    await supabase.from('space_invites').delete().eq('token', token);
+    await prisma.$transaction([
+        prisma.spaceCollaborator.upsert({
+            where: { space_id_user_id: { space_id: invite.space_id, user_id: userId } },
+            update: { role: invite.role, accepted_at: new Date() },
+            create: { space_id: invite.space_id, user_id: userId, role: invite.role, accepted_at: new Date() }
+        }),
+        prisma.spaceInvite.delete({ where: { token } })
+    ]);
 
     return { spaceId: invite.space_id };
 }

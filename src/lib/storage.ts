@@ -1,128 +1,99 @@
-// Supabase Storage helper functions for agent uploads
-// Handles file uploads, downloads, and deletions
+import * as Minio from 'minio';
+import path from 'path';
 
-import { supabase } from '@/lib/supabase';
-
-const BUCKET_NAME = 'agent-uploads';
+// Define Max file size
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-/**
- * Upload a file to Supabase Storage
- * Files are organized by user ID: {userId}/{timestamp}-{filename}
- */
+const minioClient = new Minio.Client({
+    endPoint: process.env.MINIO_ENDPOINT || 'localhost',
+    port: parseInt(process.env.MINIO_PORT || '9000', 10),
+    useSSL: process.env.MINIO_USE_SSL === 'true',
+    accessKey: process.env.MINIO_ACCESS_KEY || 'perricheno_admin',
+    secretKey: process.env.MINIO_SECRET_KEY || 'perricheno_minio_pass'
+});
+
+const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'perricheno-bucket';
+
 export async function uploadToStorage(
     userId: number,
     file: File
 ): Promise<{ path: string; publicUrl: string }> {
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
         throw new Error(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
     }
-    
-    // Generate unique filename
+
     const timestamp = Date.now();
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const path = `${userId}/${timestamp}-${sanitizedName}`;
-    
-    // Upload to Storage
-    const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type || 'application/octet-stream'
-        });
-    
-    if (error) {
-        console.error('[Storage] Upload error:', error);
-        throw new Error(`Upload failed: ${error.message}`);
-    }
-    
-    // Get public URL
-    const { data: urlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(path);
-    
+    const objectName = `${userId}/${timestamp}-${sanitizedName}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Put object to MinIO
+    await minioClient.putObject(
+        BUCKET_NAME,
+        objectName,
+        buffer,
+        buffer.length,
+        { 'Content-Type': file.type || 'application/octet-stream' }
+    );
+
+    // Using presigned GET URL for 'publicUrl' since bucket might not be entirely public
+    const publicUrl = await minioClient.presignedGetObject(BUCKET_NAME, objectName, 24 * 60 * 60);
+
     return {
-        path: data.path,
-        publicUrl: urlData.publicUrl
+        path: objectName,
+        publicUrl
     };
 }
 
-/**
- * Delete a file from Supabase Storage
- */
-export async function deleteFromStorage(path: string): Promise<void> {
-    const { error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .remove([path]);
-    
-    if (error) {
-        console.error('[Storage] Delete error:', error);
-        throw new Error(`Delete failed: ${error.message}`);
+export async function deleteFromStorage(filePath: string): Promise<void> {
+    try {
+        await minioClient.removeObject(BUCKET_NAME, filePath);
+    } catch (e) {
+        console.error('[Storage] Delete error:', e);
     }
 }
 
-/**
- * Get a signed URL for private file access
- * @param path - Storage path
- * @param expiresIn - Expiration time in seconds (default: 1 hour)
- */
-export async function getSignedUrl(path: string, expiresIn: number = 3600): Promise<string> {
-    const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(path, expiresIn);
-    
-    if (error) {
-        console.error('[Storage] Signed URL error:', error);
-        throw new Error(`Failed to get signed URL: ${error.message}`);
+export async function getSignedUrl(filePath: string, expiresIn: number = 3600): Promise<string> {
+    try {
+        return await minioClient.presignedGetObject(BUCKET_NAME, filePath, expiresIn);
+    } catch (e) {
+        console.error('[Storage] getSignedUrl error:', e);
+        return '';
     }
-    
-    return data.signedUrl;
 }
 
-/**
- * Download file content from Storage
- * Used by Analytics Pipeline to process files
- */
-export async function downloadFromStorage(path: string): Promise<ArrayBuffer> {
-    const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .download(path);
-    
-    if (error) {
-        console.error('[Storage] Download error:', error);
-        throw new Error(`Download failed: ${error.message}`);
+export async function downloadFromStorage(filePath: string): Promise<ArrayBuffer> {
+    try {
+        const dataStream = await minioClient.getObject(BUCKET_NAME, filePath);
+        
+        return new Promise((resolve, reject) => {
+            const chunks: any[] = [];
+            dataStream.on('data', (chunk) => chunks.push(chunk));
+            dataStream.on('end', () => {
+                const buffer = Buffer.concat(chunks);
+                resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+            });
+            dataStream.on('error', (err) => reject(err));
+        });
+    } catch (e: any) {
+        throw new Error(`Download failed: ${e.message}`);
     }
-    
-    return await data.arrayBuffer();
 }
 
-/**
- * Download file as text (for CSV, JSON, etc.)
- * Automatically converts XLSX to CSV
- */
-export async function downloadTextFromStorage(path: string): Promise<string> {
-    const buffer = await downloadFromStorage(path);
+export async function downloadTextFromStorage(filePath: string): Promise<string> {
+    const buffer = await downloadFromStorage(filePath);
     
-    // Check if it's an XLSX file
-    if (path.match(/\.xlsx?$/i)) {
+    if (filePath.match(/\.xlsx?$/i)) {
         try {
             const XLSX = await import('xlsx');
             const workbook = XLSX.read(buffer, { type: 'array' });
-            
-            // Get first sheet
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            
-            // Convert to CSV
-            const csv = XLSX.utils.sheet_to_csv(worksheet);
-            
-            console.log(`[Storage] Converted XLSX to CSV: ${path} (${csv.length} chars)`);
-            return csv;
+            return XLSX.utils.sheet_to_csv(worksheet);
         } catch (e) {
             console.error('[Storage] XLSX conversion failed:', e);
-            // Fallback to text decode
         }
     }
     
@@ -130,41 +101,35 @@ export async function downloadTextFromStorage(path: string): Promise<string> {
     return decoder.decode(buffer);
 }
 
-/**
- * Check if file exists in Storage
- */
-export async function fileExistsInStorage(path: string): Promise<boolean> {
-    const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .list(path.split('/')[0], {
-            search: path.split('/').pop()
-        });
-    
-    if (error) return false;
-    return data && data.length > 0;
+export async function fileExistsInStorage(filePath: string): Promise<boolean> {
+    try {
+        await minioClient.statObject(BUCKET_NAME, filePath);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
-/**
- * Get file metadata from Storage
- */
-export async function getFileMetadata(path: string): Promise<{
+export async function getFileMetadata(filePath: string): Promise<{
     size: number;
     mimeType: string;
     lastModified: string;
 } | null> {
     try {
-        const signedUrl = await getSignedUrl(path, 60);
-        const response = await fetch(signedUrl, { method: 'HEAD' });
+        const stat = await minioClient.statObject(BUCKET_NAME, filePath);
         
-        if (!response.ok) return null;
+        let mimeType = stat.metaData['content-type'] || 'application/octet-stream';
+        // fallback
+        if (filePath.endsWith('.csv')) mimeType = 'text/csv';
+        if (filePath.endsWith('.json')) mimeType = 'application/json';
+        if (filePath.endsWith('.xlsx')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         
         return {
-            size: parseInt(response.headers.get('content-length') || '0'),
-            mimeType: response.headers.get('content-type') || 'application/octet-stream',
-            lastModified: response.headers.get('last-modified') || new Date().toISOString()
+            size: stat.size,
+            mimeType,
+            lastModified: stat.lastModified.toISOString()
         };
     } catch (e) {
-        console.error('[Storage] Metadata error:', e);
         return null;
     }
 }
