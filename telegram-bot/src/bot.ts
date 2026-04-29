@@ -381,6 +381,12 @@ async function main() {
             return;
         }
 
+        // C. Health Check
+        if (url === "/health") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ status: "healthy" }));
+        }
+
         res.writeHead(404);
         res.end();
     });
