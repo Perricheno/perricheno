@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { upgradeSubscriptionPlan, isPaymentProcessed, markPaymentProcessed, addPurchasedTokens } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
 const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET; // This is used to verify signatures
@@ -91,17 +92,28 @@ export async function POST(req: Request) {
 
         console.log(`✅ Webhook: Received payment from UID ${userId} for plan ${packId}`);
 
-        // Grant resources
-        if (plan.tier) {
-            await upgradeSubscriptionPlan(userId, packId);
-        } else {
-            if (plan.chars) await addPurchasedTokens(userId, 'chars', plan.chars);
-            if (plan.visuals) await addPurchasedTokens(userId, 'visuals', plan.visuals);
-            if (plan.reports) await addPurchasedTokens(userId, 'reports', plan.reports);
-        }
+        try {
+            await prisma.$transaction(async (tx) => {
+                // Mark as processed to prevent double-crediting (ATOMICALLY)
+                // If it already exists, it will throw a P2002 error
+                await tx.processedPayment.create({ data: { order_id: orderId } });
 
-        // Mark as processed to prevent double-crediting
-        await markPaymentProcessed(orderId);
+                // Grant resources
+                if (plan.tier) {
+                    await upgradeSubscriptionPlan(userId, packId, tx);
+                } else {
+                    if (plan.chars) await addPurchasedTokens(userId, 'chars', plan.chars, tx);
+                    if (plan.visuals) await addPurchasedTokens(userId, 'visuals', plan.visuals, tx);
+                    if (plan.reports) await addPurchasedTokens(userId, 'reports', plan.reports, tx);
+                }
+            });
+        } catch (txErr: any) {
+            if (txErr.code === 'P2002') {
+                console.log(`ℹ️ Webhook: Skipping already processed order ${orderId} (caught by unique constraint)`);
+                return new NextResponse('Already processed', { status: 200 });
+            }
+            throw txErr; // Bubble up other errors
+        }
 
         const packName = plan.name;
         const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();

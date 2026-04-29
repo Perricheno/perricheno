@@ -209,31 +209,36 @@ export async function POST(req: NextRequest) {
             if (promo.is_active === false) return NextResponse.json({ error: "Промокод деактивирован." }, { status: 410 });
             if (promo.uses >= promo.max_uses) return NextResponse.json({ error: "Лимит активаций исчерпан." }, { status: 410 });
 
-            // Check if user already used this promo
-            const alreadyUsed = await prisma.promoUsage.findFirst({
-                where: { promo_id: promo.id, user_id: user.id }
-            });
-            if (alreadyUsed) return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
+            // Check if user already used this promo & apply atomically
+            const type = promo.type as 'chars' | 'visuals' | 'reports';
 
-            // Record usage
             try {
-                await prisma.promoUsage.create({ data: { promo_id: promo.id, user_id: user.id } });
+                await prisma.$transaction(async (tx) => {
+                    // 1. Record usage (throws P2002 if already used)
+                    await tx.promoUsage.create({ data: { promo_id: promo.id, user_id: user.id } });
+
+                    // 2. Increment uses ONLY IF under max_uses
+                    const updatedPromo = await tx.promoCode.updateMany({
+                        where: { id: promo.id, uses: { lt: promo.max_uses } },
+                        data: { uses: { increment: 1 } }
+                    });
+
+                    if (updatedPromo.count === 0) {
+                        throw new Error('EXHAUSTED');
+                    }
+
+                    // 3. Apply promo
+                    await addPurchasedTokens(user.id, type, promo.amount, tx);
+                });
             } catch (err: any) {
                 if (err.code === 'P2002') {
                     return NextResponse.json({ error: "Вы уже использовали этот промокод." }, { status: 403 });
                 }
+                if (err.message === 'EXHAUSTED') {
+                    return NextResponse.json({ error: "Лимит активаций исчерпан." }, { status: 410 });
+                }
                 throw err;
             }
-
-            // Apply promo
-            const type = promo.type as 'chars' | 'visuals' | 'reports';
-            await addPurchasedTokens(user.id, type, promo.amount);
-            
-            // Increment uses
-            await prisma.promoCode.update({
-                where: { id: promo.id },
-                data: { uses: { increment: 1 } }
-            });
 
             const crypto = require('crypto');
             const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { User, Task, AgentSession, AgentUpload, Session } from '@prisma/client';
+import type { User, Task, AgentSession, AgentUpload, Session, Prisma } from '@prisma/client';
 
 export type { User, Task, AgentSession, AgentUpload, Session };
 
@@ -179,37 +179,47 @@ export async function checkAndDeductUsage(
     return { success: true, remaining: 999 };
 }
 
-export async function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | 'reports', amount: number) {
-    const user = await getUserById(userId);
-    if (!user) return;
+export async function addPurchasedTokens(userId: number, type: 'chars' | 'visuals' | 'reports', amount: number, tx?: Prisma.TransactionClient) {
+    const db = tx || prisma;
     
     const field = `purchased_${type}` as const;
-    await prisma.user.update({
+    await db.user.update({
         where: { id: userId },
-        data: { [field]: (user[field] as number) + amount }
+        data: { [field]: { increment: amount } }
     });
     
     const typeName = type === 'chars' ? 'chars' : type === 'reports' ? 'reports' : 'visuals';
     if (amount > 0) {
-        await prisma.transaction.create({
+        await db.transaction.create({
             data: { user_id: userId, topic: "Purchased resource pack", amount_text: `+${amount.toLocaleString()} ${typeName}`, is_positive: true }
         });
     }
 }
 
-export async function upgradeSubscriptionPlan(userId: number, planId: string) {
+export async function upgradeSubscriptionPlan(userId: number, planId: string, tx?: Prisma.TransactionClient) {
+    const db = tx || prisma;
     const parts = planId.split('_');
     const tier = parts[0]; 
     if (['plus', 'pro', 'ultra'].includes(tier)) {
-        await prisma.$transaction([
-            prisma.user.update({
+        if (tx) {
+            await db.user.update({
                 where: { id: userId },
                 data: { plan_tier: tier, account_tier: tier, monthly_chars_used: 0 }
-            }),
-            prisma.transaction.create({
+            });
+            await db.transaction.create({
                 data: { user_id: userId, topic: "Subscription Upgrade", amount_text: `Tier: ${tier.toUpperCase()}`, is_positive: true }
-            })
-        ]);
+            });
+        } else {
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id: userId },
+                    data: { plan_tier: tier, account_tier: tier, monthly_chars_used: 0 }
+                }),
+                prisma.transaction.create({
+                    data: { user_id: userId, topic: "Subscription Upgrade", amount_text: `Tier: ${tier.toUpperCase()}`, is_positive: true }
+                })
+            ]);
+        }
     }
 }
 
