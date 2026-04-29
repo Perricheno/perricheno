@@ -1,19 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
-import { IconArrowLeft, IconCode, IconCpu } from '@tabler/icons-react';
+import { motion, useMotionValue } from 'framer-motion';
+import { IconArrowLeft } from '@tabler/icons-react';
 import { useEffect, useState, useRef } from 'react';
 
-// Интерактивная 3D Сфера (Blueprint / Чертежный стиль)
+// Минималистичная 3D Сфера (Blueprint / Чертежный стиль)
 const WireframeSphere = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Motion values for rotation
   const rotateX = useMotionValue(20);
   const rotateY = useMotionValue(30);
 
-  // Auto-rotation effect
   useEffect(() => {
     let animationFrame: number;
     let autoRotate = true;
@@ -27,35 +24,33 @@ const WireframeSphere = () => {
     };
 
     animate();
-
     return () => cancelAnimationFrame(animationFrame);
   }, [rotateX, rotateY]);
 
-  // Handle Dragging
   const handleDrag = (event: any, info: any) => {
     rotateY.set(rotateY.get() + info.delta.x * 0.5);
     rotateX.set(rotateX.get() - info.delta.y * 0.5);
   };
 
-  // 12 меридианов (вертикальные кольца)
+  // Меридианы
   const meridians = Array.from({ length: 12 }).map((_, i) => (
     <div
       key={`meridian-${i}`}
-      className="absolute inset-0 border border-emerald-500/30 rounded-full"
+      className="absolute inset-0 border border-[var(--foreground)] opacity-10 rounded-full"
       style={{ transform: `rotateY(${i * 15}deg)` }}
     />
   ));
 
-  // 10 параллелей (горизонтальные кольца)
+  // Параллели
   const parallels = Array.from({ length: 9 }).map((_, i) => {
-    const lat = -80 + (i + 1) * 16; // от -80 до 80 градусов
+    const lat = -80 + (i + 1) * 16;
     const radius = Math.cos((lat * Math.PI) / 180) * 100;
     const translateZ = Math.sin((lat * Math.PI) / 180) * 100;
 
     return (
       <div
         key={`parallel-${i}`}
-        className="absolute left-1/2 top-1/2 border border-emerald-500/20 rounded-full"
+        className="absolute left-1/2 top-1/2 border border-[var(--foreground)] opacity-10 rounded-full"
         style={{
           width: `${radius}%`,
           height: `${radius}%`,
@@ -67,15 +62,11 @@ const WireframeSphere = () => {
 
   return (
     <div 
-      className="relative w-64 h-64 md:w-80 md:h-80 cursor-grab active:cursor-grabbing group perspective-1000 mb-12"
+      className="relative w-64 h-64 md:w-80 md:h-80 cursor-grab active:cursor-grabbing group perspective-1000 mb-10"
       ref={containerRef}
       onMouseEnter={() => document.body.style.userSelect = 'none'}
       onMouseLeave={() => document.body.style.userSelect = 'auto'}
     >
-      {/* Свечение за сферой */}
-      <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-400/20 transition-all duration-500" />
-      
-      {/* Сама сфера */}
       <motion.div
         drag
         dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
@@ -87,9 +78,9 @@ const WireframeSphere = () => {
         {meridians}
         {parallels}
         
-        {/* Ядро (Core) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-emerald-500/20 border border-emerald-400/50 rounded-full shadow-[0_0_30px_rgba(16,185,129,0.5)] backdrop-blur-md flex items-center justify-center">
-          <div className="w-4 h-4 bg-emerald-300 rounded-full animate-pulse shadow-[0_0_15px_#6ee7b7]" />
+        {/* Центральное ядро в стиле Apple Glass */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/40 border border-white/60 rounded-full shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md flex items-center justify-center">
+          <div className="w-4 h-4 bg-[var(--foreground)] rounded-full animate-pulse opacity-80" />
         </div>
       </motion.div>
     </div>
@@ -105,71 +96,43 @@ export default function UnderConstructionPage() {
 
   if (!mounted) return null;
 
-  const particles = Array.from({ length: 30 });
-
   return (
-    <div className="relative min-h-screen bg-[#000d08] text-[#E0F2E9] overflow-hidden flex flex-col items-center justify-center font-sans selection:bg-emerald-500/30">
+    <div className="relative min-h-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col items-center justify-center font-sans">
       
-      {/* 1. Animated Background Gradients */}
+      {/* 1. Очень мягкие минималистичные градиенты на фоне */}
       <motion.div 
-        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 left-1/4 w-[40rem] h-[40rem] bg-emerald-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen" 
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.4, 0.2] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-teal-600/20 rounded-full blur-[100px] pointer-events-none mix-blend-screen" 
+        animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.4, 0.3] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/4 left-1/4 w-[40rem] h-[40rem] bg-[var(--muted)]/20 rounded-full blur-[100px] pointer-events-none" 
       />
 
-      {/* 2. Floating Code/Tech Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
-        {particles.map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-emerald-500"
-            initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000),
-              scale: Math.random() * 0.5 + 0.5,
-              opacity: Math.random() * 0.5 + 0.2
-            }}
-            animate={{ y: [null, Math.random() * -500], opacity: [null, 0] }}
-            transition={{ duration: Math.random() * 10 + 10, repeat: Infinity, ease: "linear" }}
-          >
-            {i % 3 === 0 ? <IconCode size={40} /> : i % 2 === 0 ? <IconCpu size={30} /> : '1010'}
-          </motion.div>
-        ))}
-      </div>
-
-      {/* 3. Main Content Container */}
-      <div className="z-10 flex flex-col items-center text-center max-w-4xl mx-auto px-6 mt-10">
+      {/* 2. Main Content Container */}
+      <div className="z-10 flex flex-col items-center text-center max-w-3xl mx-auto px-6 mt-4">
         
         {/* ИНТЕРАКТИВНАЯ 3D СФЕРА */}
         <WireframeSphere />
 
         {/* Text Section */}
         <motion.div 
-          initial={{ y: 30, opacity: 0, filter: "blur(10px)" }}
-          animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
           className="space-y-6 mb-12"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium tracking-wide uppercase mb-2">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] text-xs font-semibold tracking-widest uppercase mb-2 shadow-sm">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--foreground)] opacity-30"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--foreground)]"></span>
             </span>
-            Сборка ядра системы
+            Модернизация
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-emerald-100 to-emerald-600 drop-shadow-lg">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-[var(--foreground)]">
             В РАЗРАБОТКЕ
           </h1>
           
-          <p className="text-emerald-400/70 text-xl md:text-2xl max-w-2xl mx-auto font-light leading-relaxed">
-            Мы проектируем нейронные связи и полируем интерфейсы. 
-            Этот модуль проходит глубокую модернизацию архитектуры.
+          <p className="text-[var(--muted)] text-lg md:text-xl max-w-lg mx-auto font-medium leading-relaxed">
+            Мы проектируем этот раздел, чтобы он был безупречным. Скоро всё будет готово.
           </p>
         </motion.div>
 
@@ -177,19 +140,17 @@ export default function UnderConstructionPage() {
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <Link href="/dashboard" className="group relative inline-flex items-center gap-3 px-8 py-4 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-500/30 rounded-2xl text-emerald-300 transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:-translate-y-1 overflow-hidden backdrop-blur-sm">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-            <IconArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-semibold text-lg tracking-wide">Вернуться на главную</span>
+          <Link href="/dashboard" className="group relative inline-flex items-center gap-3 px-8 py-4 bg-[var(--card)] hover:bg-[var(--sidebar-bg)] border border-[var(--border)] rounded-[var(--radius)] text-[var(--foreground)] transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+            <IconArrowLeft className="w-5 h-5 opacity-70 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-semibold text-base tracking-wide">На главную</span>
           </Link>
         </motion.div>
       </div>
       
-      {/* 4. Global Noise & Grid Overlays */}
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] pointer-events-none mix-blend-overlay" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#10b9810a_1px,transparent_1px),linear-gradient(to_bottom,#10b9810a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+      {/* 3. Легкая сетка на фоне (Apple-style) */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_30%,transparent_100%)] opacity-20 pointer-events-none" />
       
     </div>
   );
