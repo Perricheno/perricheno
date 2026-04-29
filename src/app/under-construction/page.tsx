@@ -6,7 +6,6 @@ import { motion } from 'framer-motion';
 export default function UnderConstructionPage() {
   return (
     <div className="relative min-h-screen bg-[var(--background)] flex flex-col items-center justify-center overflow-hidden">
-      
       {/* Логотип, который крутится в 3D пространстве */}
       <motion.div
         animate={{ rotateY: 360 }}
@@ -33,7 +32,6 @@ export default function UnderConstructionPage() {
           under development
         </span>
       </div>
-      
     </div>
   );
 }
