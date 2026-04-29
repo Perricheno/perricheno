@@ -1,144 +1,169 @@
 'use client';
 
-import Link from 'next/link';
-import { motion, useMotionValue } from 'framer-motion';
-import { IconArrowLeft } from '@tabler/icons-react';
-import { useEffect, useState, useRef } from 'react';
-
-// Гигантская Сфера-Фон
-const FullScreenSphere = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rotateX = useMotionValue(10);
-  const rotateY = useMotionValue(20);
-
-  useEffect(() => {
-    let animationFrame: number;
-    let autoRotate = true;
-
-    const animate = () => {
-      if (autoRotate) {
-        rotateY.set(rotateY.get() + 0.1); // Медленное вращение для гигантской сферы
-        rotateX.set(rotateX.get() + 0.05);
-      }
-      animationFrame = requestAnimationFrame(animate);
-    };
-
-    animate();
-    return () => cancelAnimationFrame(animationFrame);
-  }, [rotateX, rotateY]);
-
-  const handleDrag = (event: any, info: any) => {
-    // Вращение мышкой/пальцем
-    rotateY.set(rotateY.get() + info.delta.x * 0.15);
-    rotateX.set(rotateX.get() - info.delta.y * 0.15);
-  };
-
-  // МНОЖЕСТВО меридианов (36 штук, каждые 10 градусов)
-  const meridians = Array.from({ length: 36 }).map((_, i) => (
-    <div
-      key={`meridian-${i}`}
-      className="absolute inset-0 border border-[var(--foreground)] opacity-[0.04] rounded-full"
-      style={{ transform: `rotateY(${i * 10}deg)` }}
-    />
-  ));
-
-  // МНОЖЕСТВО параллелей (34 штуки)
-  const parallels = Array.from({ length: 34 }).map((_, i) => {
-    const lat = -85 + (i + 1) * 5; // шаг 5 градусов
-    const radius = Math.cos((lat * Math.PI) / 180) * 100;
-    const translateZ = Math.sin((lat * Math.PI) / 180) * 100;
-
-    return (
-      <div
-        key={`parallel-${i}`}
-        className="absolute left-1/2 top-1/2 border border-[var(--foreground)] opacity-[0.04] rounded-full"
-        style={{
-          width: `${radius}%`,
-          height: `${radius}%`,
-          transform: `translate(-50%, -50%) translateZ(${translateZ}px) rotateX(90deg)`,
-        }}
-      />
-    );
-  });
-
-  return (
-    <div 
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[150vw] sm:w-[120vw] sm:h-[120vw] lg:w-[90vw] lg:h-[90vw] max-w-[1500px] max-h-[1500px] cursor-grab active:cursor-grabbing perspective-[2000px] z-0"
-      ref={containerRef}
-      onMouseEnter={() => document.body.style.userSelect = 'none'}
-      onMouseLeave={() => document.body.style.userSelect = 'auto'}
-    >
-      <motion.div
-        drag
-        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-        dragElastic={0}
-        onDrag={handleDrag}
-        style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
-        className="w-full h-full relative"
-      >
-        {meridians}
-        {parallels}
-      </motion.div>
-    </div>
-  );
-};
+import { useEffect, useRef } from 'react';
 
 export default function UnderConstructionPage() {
-  const [mounted, setMounted] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    setMounted(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    const handleResize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    let animationFrameId: number;
+    let time = 0;
+    
+    // Настройки 3D сетки
+    const cols = 55;
+    const rows = 45;
+    const spacing = 40;
+    const FOV = 400;
+
+    // Режимы: 'mesh' (обычная сетка) или 'ascii' (текстовый арт)
+    let mode: 'mesh' | 'ascii' = 'mesh';
+    let lastToggleTime = Date.now();
+
+    const chars = " .,-~:;=!*#$@";
+
+    // Получаем цвет из CSS-переменной (темы)
+    const getThemeColor = () => {
+      const computedStyle = getComputedStyle(document.body);
+      const color = computedStyle.getPropertyValue('--foreground').trim();
+      return color || '#1A1A1A'; // Фолбэк на темный цвет из globals.css
+    };
+
+    const render = () => {
+      time += 0.02;
+      
+      // Переключаем режим каждые 4 секунды
+      const now = Date.now();
+      if (now - lastToggleTime > 4000) {
+        mode = mode === 'mesh' ? 'ascii' : 'mesh';
+        lastToggleTime = now;
+      }
+
+      const fgColor = getThemeColor();
+
+      // Очистка
+      ctx.clearRect(0, 0, width, height);
+      
+      // Вычисляем точки
+      const points = [];
+      for (let z = 0; z < rows; z++) {
+        const row = [];
+        for (let x = 0; x < cols; x++) {
+          const worldX = (x - cols / 2) * spacing;
+          const worldZ = z * spacing;
+          
+          // Математика волны (Ландшафт)
+          const worldY = Math.sin(x * 0.2 + time) * 60 + Math.cos(z * 0.2 + time) * 60;
+
+          // 3D Проекция
+          const cameraZ = worldZ + 150; // Отдаляем камеру
+          const scale = FOV / (FOV + cameraZ);
+          
+          const px = worldX * scale + width / 2;
+          const py = (worldY + 200) * scale + height / 3; // Опускаем сетку вниз экрана
+          
+          row.push({ px, py, worldY, scale });
+        }
+        points.push(row);
+      }
+
+      if (mode === 'mesh') {
+        // Отрисовка обычной сетки (Линии)
+        ctx.strokeStyle = fgColor;
+        ctx.lineWidth = 1;
+        // Делаем линии прозрачнее вдалеке
+        ctx.globalAlpha = 0.3;
+
+        ctx.beginPath();
+        for (let z = 0; z < rows - 1; z++) {
+          for (let x = 0; x < cols - 1; x++) {
+            const p = points[z][x];
+            const pRight = points[z][x + 1];
+            const pBottom = points[z + 1][x];
+
+            // Рисуем только те, что перед камерой
+            if (p.scale > 0) {
+              ctx.moveTo(p.px, p.py);
+              ctx.lineTo(pRight.px, pRight.py);
+              
+              ctx.moveTo(p.px, p.py);
+              ctx.lineTo(pBottom.px, pBottom.py);
+            }
+          }
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+      } else {
+        // Отрисовка ASCII-арта
+        ctx.fillStyle = fgColor;
+        // Масштабируем размер шрифта по глубине
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let z = 0; z < rows; z++) {
+          for (let x = 0; x < cols; x++) {
+            const p = points[z][x];
+            if (p.scale > 0) {
+              // Выбираем символ в зависимости от высоты волны
+              const charIndex = Math.floor(((p.worldY + 120) / 240) * chars.length);
+              const safeIndex = Math.max(0, Math.min(chars.length - 1, charIndex));
+              
+              ctx.font = `${Math.max(4, p.scale * 14)}px monospace`;
+              
+              // Делаем символы вдалеке более прозрачными
+              ctx.globalAlpha = Math.min(1, p.scale * 1.5);
+              ctx.fillText(chars[safeIndex], p.px, p.py);
+            }
+          }
+        }
+        ctx.globalAlpha = 1.0;
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
-  if (!mounted) return null;
-
   return (
-    <div className="relative min-h-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col items-center justify-center font-sans">
-      
-      {/* 1. ГИГАНТСКАЯ ИНТЕРАКТИВНАЯ 3D СФЕРА НА ФОНЕ */}
-      <FullScreenSphere />
+    <div className="relative min-h-screen bg-[var(--background)] overflow-hidden">
+      {/* Анимированный Canvas без фона */}
+      <canvas 
+        ref={canvasRef} 
+        className="absolute inset-0 w-full h-full pointer-events-none"
+      />
 
-      {/* 2. Контент поверх сферы (pointer-events-none чтобы клики проходили сквозь текст на сферу) */}
-      <div className="z-10 flex flex-col items-center text-center px-6 pointer-events-none">
-        
-        {/* Text Section */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-          className="space-y-6 mb-12 backdrop-blur-sm bg-[var(--background)]/30 p-8 rounded-3xl border border-[var(--border)]/50 shadow-2xl"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] text-xs font-semibold tracking-widest uppercase mb-2 shadow-sm pointer-events-auto">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--foreground)] opacity-30"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--foreground)]"></span>
-            </span>
-            Система обновляется
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight text-[var(--foreground)]">
-            В РАЗРАБОТКЕ
-          </h1>
-          
-          <p className="text-[var(--muted)] text-lg md:text-xl max-w-lg mx-auto font-medium leading-relaxed">
-            Мы проектируем этот раздел. Покрутите сферу, пока мы всё не настроим.
-          </p>
-        </motion.div>
-
-        {/* Action Button (pointer-events-auto чтобы кнопка нажималась) */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="pointer-events-auto"
-        >
-          <Link href="/dashboard" className="group relative inline-flex items-center gap-3 px-8 py-4 bg-[var(--card)] hover:bg-[var(--sidebar-bg)] border border-[var(--border)] rounded-[var(--radius)] text-[var(--foreground)] transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-            <IconArrowLeft className="w-5 h-5 opacity-70 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-semibold text-base tracking-wide">Вернуться назад</span>
-          </Link>
-        </motion.div>
+      {/* Маленький текст внизу */}
+      <div className="absolute bottom-8 left-0 right-0 text-center">
+        <span className="text-[var(--muted)] text-xs md:text-sm font-medium tracking-[0.3em] uppercase opacity-60">
+          under development
+        </span>
       </div>
-      
     </div>
   );
 }
