@@ -34,7 +34,7 @@ fi
 
 # ── 3. Map changed paths → compose services ──
 # Changes to the compose file, .env, or deploy.sh itself affect the whole stack.
-ALL_SERVICES="perricheno-site research-api r-compiler python-compiler telegram-bot"
+ALL_SERVICES="perricheno-site research-api r-compiler python-compiler telegram-bot minio minio-init"
 
 if [ "$FULL_REBUILD" = "yes" ] || echo "$CHANGED_FILES" | grep -qE '^(docker-compose\.yml|\.env|deploy\.sh)$'; then
     SERVICES="$ALL_SERVICES"

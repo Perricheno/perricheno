@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://perricheno:perricheno_pass@postgres:5432/perricheno_db?schema=public
+      - DATABASE_URL=postgresql://perricheno:perricheno_pass@postgres-db:5432/perricheno_db?schema=public
       - NODE_ENV=production
       - R_COMPILER_URL=http://r-compiler:8000
       - PYTHON_COMPILER_URL=http://python-compiler:8000
@@ -139,8 +139,6 @@ services:
       - POSTGRES_USER=perricheno
       - POSTGRES_PASSWORD=perricheno_pass
       - POSTGRES_DB=perricheno_db
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:

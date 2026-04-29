@@ -21,15 +21,18 @@ jobs:
           CRYPTOCLOUD_SECRET: ${{ secrets.CRYPTOCLOUD_SECRET }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEBHOOK_DOMAIN: ${{ secrets.WEBHOOK_DOMAIN }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           WS_JWT_SECRET: ${{ secrets.WS_JWT_SECRET }}
           NEXT_PUBLIC_WS_URL: ${{ secrets.NEXT_PUBLIC_WS_URL }}
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_PORT: ${{ secrets.MINIO_PORT }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_BUCKET_NAME: ${{ secrets.MINIO_BUCKET_NAME }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,NEXT_PUBLIC_SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,WS_JWT_SECRET,NEXT_PUBLIC_WS_URL
+          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,WS_JWT_SECRET,NEXT_PUBLIC_WS_URL,MINIO_ENDPOINT,MINIO_PORT,MINIO_ACCESS_KEY,MINIO_SECRET_KEY,MINIO_BUCKET_NAME
           script: |
             cd ${{ secrets.SERVER_PATH }}
             
@@ -58,10 +61,13 @@ jobs:
             update_env "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
             update_env "WEBHOOK_DOMAIN" "$WEBHOOK_DOMAIN"
             update_env "WEBHOOK_SECRET" "$WEBHOOK_SECRET"
-            update_env "NEXT_PUBLIC_SUPABASE_URL" "$NEXT_PUBLIC_SUPABASE_URL"
-            update_env "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
             update_env "WS_JWT_SECRET" "$WS_JWT_SECRET"
             update_env "NEXT_PUBLIC_WS_URL" "$NEXT_PUBLIC_WS_URL"
+            update_env "MINIO_ENDPOINT" "$MINIO_ENDPOINT"
+            update_env "MINIO_PORT" "$MINIO_PORT"
+            update_env "MINIO_ACCESS_KEY" "$MINIO_ACCESS_KEY"
+            update_env "MINIO_SECRET_KEY" "$MINIO_SECRET_KEY"
+            update_env "MINIO_BUCKET_NAME" "$MINIO_BUCKET_NAME"
 
             # Ensure static internal domains are set
             update_env "SITE_INTERNAL_URL" "http://perricheno-site:3000"
