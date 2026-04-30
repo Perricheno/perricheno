@@ -316,13 +316,14 @@ if (typeof window === 'undefined') {
 // --- Agent Sessions ---
 
 export async function createAgentSession(data: any): Promise<AgentSession> {
-    return prisma.agentSession.create({
+    return (prisma.agentSession as any).create({
         data: {
             id: data.id,
             user_id: data.user_id,
             title: data.title,
             doc_type: data.doc_type,
             settings_json: data.settings_json || null,
+            stage_json: data.stage_json || null,
             main_tex: data.main_tex || null,
             references_bib: data.references_bib || null,
             visuals_json: data.visuals_json || null,
@@ -363,7 +364,20 @@ export async function getRecentSessionByTitle(userId: number, title: string): Pr
 
 export async function updateAgentSession(id: string, data: any): Promise<void> {
     if (Object.keys(data).length === 0) return;
-    await prisma.agentSession.update({ where: { id }, data });
+    
+    // Auto-serialize object fields to strings for the DB
+    const finalData = { ...data };
+    if (finalData.stage_json && typeof finalData.stage_json !== 'string') {
+        finalData.stage_json = JSON.stringify(finalData.stage_json);
+    }
+    if (finalData.settings_json && typeof finalData.settings_json !== 'string') {
+        finalData.settings_json = JSON.stringify(finalData.settings_json);
+    }
+    if (finalData.visuals_json && typeof finalData.visuals_json !== 'string') {
+        finalData.visuals_json = JSON.stringify(finalData.visuals_json);
+    }
+
+    await (prisma.agentSession as any).update({ where: { id }, data: finalData });
 }
 
 export async function deleteAgentSession(id: string, userId: number): Promise<boolean> {

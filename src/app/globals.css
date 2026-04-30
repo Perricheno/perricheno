@@ -44,14 +44,7 @@ body {
   }
 }
 
-/* Minimal Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
+/* Minimal Scrollbar removed - global hide applied at top */
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);

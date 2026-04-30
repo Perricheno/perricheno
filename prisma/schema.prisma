@@ -176,6 +176,7 @@ model AgentSession {
   title          String
   doc_type       String   @default("research")
   settings_json  String?
+  stage_json     String?
   main_tex       String?
   references_bib String?
   visuals_json   String?
