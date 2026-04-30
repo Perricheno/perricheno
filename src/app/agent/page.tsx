@@ -630,7 +630,7 @@ export default function AgentPage() {
         : MODES.find(m => m.id === docType) || MODES[0];
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-[#FBFBFC] relative p-6 overflow-hidden">
+        <div className="w-full h-full flex flex-col items-center justify-start bg-[#FBFBFC] relative p-4 md:p-6 overflow-y-auto thin-scrollbar">
             <AgentSidebar sessions={sessions} currentSessionId={null} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
             {/* Suggesting overlay */}
