@@ -20,11 +20,23 @@ function buildPreamble(s: PipelineSettings): string {
     const columnClass = s.columns === 2 ? "[twocolumn]" : "";
     const lines: string[] = [
         `\\documentclass${columnClass}{article}`,
-        "\\usepackage[utf8]{inputenc}",
     ];
 
+    const isKazakh = s.language === "kk";
     const isCyrillic = CYRILLIC_LANGS.has(s.language);
-    if (isCyrillic) {
+
+    if (!isKazakh) {
+        lines.push("\\usepackage[utf8]{inputenc}");
+    }
+
+    if (isKazakh) {
+        // Казахский требует XeLaTeX и системных шрифтов
+        lines.push(
+            "\\usepackage{fontspec}",
+            "\\setmainfont{Inter}",
+            "\\usepackage[kazakh]{babel}"
+        );
+    } else if (isCyrillic) {
         lines.push("\\usepackage[T2A]{fontenc}");
         const babelLang = BABEL_LANG_MAP[s.language] ?? "russian";
         lines.push(`\\usepackage[${babelLang},english]{babel}`);

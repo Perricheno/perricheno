@@ -8,6 +8,9 @@ import { chatCompletionLong, type ChatMessage, type ChatContentPart } from "./ll
 import type { ExtractedRef, Plan, PlanSection, SectionDraft, PipelineSettings, VerificationResult } from "./types";
 import type { AgentUpload } from "@/lib/db";
 import { BABEL_LANG_MAP } from "../stages";
+import fs from "fs";
+import path from "path";
+import { getLatexKnowledge } from "../knowledge/loader";
 
 const LANG_DISPLAY_NAMES: Record<string, string> = {
     en: "English", ru: "Russian", uk: "Ukrainian", kk: "Kazakh",
@@ -126,7 +129,8 @@ Rules:
 - Math: use \\( ... \\) or \\[ ... \\] for display, no bare $...$ if you can avoid it.
 - Tables / code / figures are allowed only when the task demands them.
 - ${refRules}
-- Output LaTeX only. No markdown, no fences, no commentary.`;
+- Output LaTeX only. No markdown, no fences, no commentary.` 
++ getLatexKnowledge();
 }
 
 function buildUserPrompt(

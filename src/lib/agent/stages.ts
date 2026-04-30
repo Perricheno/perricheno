@@ -99,6 +99,7 @@ const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
 export function ensureRussianPreamble(tex: string, language: string): string {
     const hasCyrillic = /[\u0400-\u04FF]/.test(tex);
+    if (language === "kk") return tex; // XeLaTeX handled in Stage 4
     if (!hasCyrillic && !CYRILLIC_LANGS.has(language)) return tex;
 
     const hasT2A = /\\usepackage\s*\[[^\]]*T2A[^\]]*\]\s*\{fontenc\}/.test(tex);

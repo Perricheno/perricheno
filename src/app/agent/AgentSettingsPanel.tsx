@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { IconChevronDown, IconShieldLock } from "@tabler/icons-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import { AgentSettings } from "./types";
 
 interface Props {
@@ -7,12 +7,10 @@ interface Props {
     updateSetting: <K extends keyof AgentSettings>(key: K, value: AgentSettings[K]) => void;
     detailsOpen: boolean;
     setDetailsOpen: (v: boolean) => void;
-    onOpenBilling?: () => void;
-    isAdmin?: boolean;
     agentSubMode?: "chat" | "data_analytics" | "literature_search" | null;
 }
 
-export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, onOpenBilling, isAdmin, agentSubMode }: Props) {
+export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDetailsOpen, agentSubMode }: Props) {
     const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
         <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
@@ -40,7 +38,7 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
     );
 
     return (
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-6 space-y-5 shadow-sm mt-4">
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 space-y-5 shadow-sm mt-4 max-h-[70vh] overflow-y-auto thin-scrollbar">
             
             {agentSubMode === "literature_search" ? (
                 <>
@@ -66,7 +64,7 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                     <div className="space-y-4 pb-4 border-b border-[var(--border)] mt-4">
                         <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Search Database</label>
                         <SegmentedControl
-                            options={[{ label: "OpenAlex (Powerful/No-Limits)", value: "openalex" }, { label: "arXiv (Strict)", value: "arxiv" }]}
+                            options={[{ label: "OpenAlex", value: "openalex" }, { label: "arXiv", value: "arxiv" }]}
                             value={settings.scholarSource || 'openalex'}
                             onChange={(v) => updateSetting("scholarSource", v)}
                         />
@@ -87,7 +85,7 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                                 type="text"
                                 value={settings.scholarAuthors}
                                 onChange={(e) => updateSetting("scholarAuthors", e.target.value)}
-                                placeholder="e.g. Yoshua Bengio (Optional)"
+                                placeholder="e.g. Yoshua Bengio"
                                 className="w-full px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm outline-none focus:border-[var(--foreground)] transition-colors placeholder:text-gray-300"
                             />
                         </div>
@@ -103,20 +101,16 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                             value={settings.runtime}
                             onChange={(v) => updateSetting("runtime", v)}
                         />
-                        <p className="text-[10px] text-gray-400 mt-2">
-                            Choose the programming language for data visualization and analysis.
-                        </p>
                     </div>
                 </>
             ) : (
                 <>
                     {/* Document Generation: Full settings */}
-                    {/* Row 1: Language + Style */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Language</label>
                     <SegmentedControl
-                        options={[{ label: "English", value: "en" }, { label: "Русский", value: "ru" }]}
+                        options={[{ label: "English", value: "en" }, { label: "Русский", value: "ru" }, { label: "Қазақша", value: "kk" }]}
                         value={settings.language}
                         onChange={(v) => updateSetting("language", v)}
                     />
@@ -131,7 +125,6 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 </div>
             </div>
 
-            {/* Row 2: Word count slider */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Word count</label>
@@ -151,19 +144,18 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 </div>
             </div>
 
-            {/* Row 3: Toggles & Runtime */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider underline decoration-gray-100 underline-offset-4">Columns</label>
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Layout</label>
                         <SegmentedControl
-                            options={[{ label: "One", value: "1" }, { label: "Two", value: "2" }]}
+                            options={[{ label: "One Column", value: "1" }, { label: "Two Columns", value: "2" }]}
                             value={String(settings.columns)}
                             onChange={(v) => updateSetting("columns", Number(v) as 1 | 2)}
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider underline decoration-gray-100 underline-offset-4">Scientific Runtime</label>
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Runtime</label>
                         <SegmentedControl
                             options={[{ label: "R (Stats)", value: "R" }, { label: "Python (DS)", value: "Python" }]}
                             value={settings.runtime}
@@ -172,16 +164,15 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                     </div>
                 </div>
                 <div className="space-y-3 pt-5 md:pt-6 md:space-y-4">
-                    <Toggle label="Use Perricheno Template" value={settings.useTemplate} onChange={(v) => updateSetting("useTemplate", v)} />
-                    <Toggle label="Include References" value={settings.useReferences} onChange={(v) => updateSetting("useReferences", v)} />
+                    <Toggle label="Scientific Template" value={settings.useTemplate} onChange={(v) => updateSetting("useTemplate", v)} />
+                    <Toggle label="Cite References" value={settings.useReferences} onChange={(v) => updateSetting("useReferences", v)} />
                 </div>
             </div>
 
-            {/* Collapsible details */}
             <div>
-                <button onClick={() => setDetailsOpen(!detailsOpen)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-wider">
+                <button onClick={() => setDetailsOpen(!detailsOpen)} className="flex items-center gap-1.5 text-xs font-semibold text-[var(--foreground)] hover:opacity-70 transition-all uppercase tracking-widest">
                     <IconChevronDown className={`w-3.5 h-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
-                    Document details
+                    Personalize Metadata
                 </button>
                 <AnimatePresence>
                     {detailsOpen && (
@@ -195,7 +186,7 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
                                 {[
-                                    { key: "authorName" as const, label: settings.language === 'ru' ? "Автор" : "Author", placeholder: "Amangeldy Shyngyskhan" },
+                                    { key: "authorName" as const, label: settings.language === 'ru' ? "Автор" : "Author", placeholder: "A. Shyngyskhan" },
                                     { key: "courseName" as const, label: settings.language === 'ru' ? "Курс" : "Course", placeholder: "Data Science" },
                                     { key: "groupName" as const, label: settings.language === 'ru' ? "Группа" : "Group", placeholder: "SE-2201" },
                                     { key: "supervisorName" as const, label: settings.language === 'ru' ? "Преподаватель" : "Supervisor", placeholder: "Dr. Smith" },
@@ -219,24 +210,6 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
             </div>
             </>
             )}
-
-            {/* Quick action helper */}
-            <div className="pt-4 border-t border-[var(--border)] mt-4 space-y-2">
-                <button 
-                    onClick={() => onOpenBilling?.()} 
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--foreground)] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-transform active:scale-[0.98]"
-                >
-                    Manage Billing & Tokens
-                </button>
-                {isAdmin && (
-                    <a 
-                        href="/dashboard" 
-                        className="w-full flex items-center justify-center gap-2 py-2.5 border border-[var(--border)] text-[var(--foreground)] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[var(--background)] transition-colors"
-                    >
-                        <IconShieldLock className="w-3.5 h-3.5" /> Project Overseer
-                    </a>
-                )}
-            </div>
         </div>
     );
 }

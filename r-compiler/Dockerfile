@@ -28,7 +28,8 @@ RUN install2.r --error --skipinstalled \
     Cairo svglite \
     ggridges ggrepel patchwork gridExtra \
     reshape2 forcats lubridate \
-    fmsb waffle waterfalls wordcloud ggExtra ggalt
+    fmsb waffle waterfalls wordcloud ggExtra ggalt \
+    ggthemes showtext ggsci hrbrthemes esquisse
 
 WORKDIR /app
 

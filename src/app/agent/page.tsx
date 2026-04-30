@@ -669,7 +669,6 @@ export default function AgentPage() {
                 
                 {/* Branding */}
                 <div className="mb-10 text-center select-none flex flex-col items-center justify-center">
-                    <img src="/Vector.svg" alt="Perricheno" className="w-8 h-8 opacity-20 mb-6" />
                     <h1 className="text-4xl md:text-5xl font-black text-[#1a1a1a] tracking-tighter mb-2">Perricheno Intelligence.</h1>
                     <div className="h-6 flex items-center justify-center">
                         <Typewriter phrases={[
@@ -868,11 +867,6 @@ export default function AgentPage() {
                                 detailsOpen={detailsOpen}
                                 setDetailsOpen={setDetailsOpen}
                                 agentSubMode={!isAgentMode ? agentSubMode : null}
-                                onOpenBilling={() => {
-                                    if (!user) setShowLogin(true);
-                                    else { setSettingsOpen(false); setBillingOpen(true); }
-                                }}
-                                isAdmin={user?.isAdmin}
                             />
                         </motion.div>
                     )}
