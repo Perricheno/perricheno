@@ -18,7 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     golang \
     && rm -rf /var/lib/apt/lists/*
 
-# Install R packages using the pre-configured binary repository (extremely fast)
+# Install core dependencies first to ensure they are available
+RUN install2.r --error --skipinstalled promises htmlwidgets
+
+# Install visualization and data science packages
 RUN install2.r --error --skipinstalled \
     ggplot2 plotly dplyr tidyr readr tibble stringr \
     plot3D scatterplot3d \
