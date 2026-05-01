@@ -8,7 +8,8 @@ import {
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
-    IconSparkles, IconCreditCard, IconBraces, IconBook2
+    IconSparkles, IconCreditCard, IconBraces, IconBook2,
+    IconChartDots2,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -39,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
         title: "Activity",
         links: [
             { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
+            { href: "/r", icon: IconChartDots2, label: "R Studio" },
             { href: "/agent", icon: IconSparkles, label: "AI Agent" },
             { href: "/citations", icon: IconBook2, label: "Citations" },
             { href: "/space", icon: IconBraces, label: "Space" },
@@ -57,7 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
 // Mobile bottom bar - 5 key items (icons only now)
 const MOBILE_NAV: NavLink[] = [
     { href: "/", icon: IconHome, label: "Home" },
-    { href: "/canvas", icon: IconLayoutBoard, label: "Canvas" },
+    { href: "/r", icon: IconChartDots2, label: "R Studio" },
     { href: "/pdf", icon: IconFileTypePdf, label: "PDF" },
     { href: "/agent", icon: IconSparkles, label: "Agent" },
 ];
