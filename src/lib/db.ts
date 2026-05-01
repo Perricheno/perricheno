@@ -338,7 +338,6 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
 export async function getAgentSessionsByUser(userId: number): Promise<AgentSession[]> {
     return prisma.agentSession.findMany({
         where: { user_id: userId },
-        select: { id: true, title: true, doc_type: true, status: true, error_msg: true, share_id: true, updated_at: true, created_at: true },
         orderBy: { updated_at: 'desc' }
     });
 }
