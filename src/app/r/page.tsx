@@ -6,6 +6,7 @@ import {
     IconArrowUp, IconLoader2, IconCode, IconX,
     IconCopy, IconCheck, IconRefresh, IconDownload,
     IconPaperclip, IconFile, IconSparkles,
+    IconChevronDown, IconChevronUp, IconMaximize,
 } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
 
@@ -19,26 +20,59 @@ interface ChartEntry {
 }
 
 const CHARTS: ChartEntry[] = [
-    { id: "bar",        name: "Bar",          tag: "Distribution",  preview: "/previews/bar.png" },
-    { id: "histogram",  name: "Histogram",    tag: "Distribution",  preview: "/previews/histogram.png" },
-    { id: "boxplot",    name: "Box Plot",     tag: "Distribution",  preview: "/previews/boxplot.png" },
-    { id: "violin",     name: "Violin",       tag: "Distribution",  preview: "" },
-    { id: "lollipop",   name: "Lollipop",     tag: "Ranking",       preview: "/previews/lollipop.png" },
-    { id: "dumbbell",   name: "Dumbbell",     tag: "Change",        preview: "/previews/dumbbell.png" },
-    { id: "bubble",     name: "Bubble",       tag: "Correlation",   preview: "/previews/bubble.png" },
-    { id: "density2d",  name: "2D Density",   tag: "Correlation",   preview: "/previews/density2d.png" },
-    { id: "marginal",   name: "Marginal",     tag: "Correlation",   preview: "/previews/marginal.png" },
-    { id: "heatmap",    name: "Heatmap",      tag: "Correlation",   preview: "/previews/heatmap.png" },
-    { id: "parallel",   name: "Parallel",     tag: "Multivariate",  preview: "/previews/parallel.png" },
-    { id: "radar",      name: "Radar",        tag: "Multivariate",  preview: "/previews/radar.png" },
-    { id: "sankey",     name: "Sankey",       tag: "Flow",          preview: "/previews/sankey.png" },
-    { id: "chord",      name: "Chord",        tag: "Flow",          preview: "/previews/chord.png" },
-    { id: "circlepack", name: "Circle Pack",  tag: "Hierarchy",     preview: "/previews/circlepack.png" },
-    { id: "dendrogram", name: "Dendrogram",   tag: "Hierarchy",     preview: "/previews/dendrogram.png" },
-    { id: "waffle",     name: "Waffle",       tag: "Part-to-Whole", preview: "/previews/waffle.png" },
-    { id: "wordcloud",  name: "Word Cloud",   tag: "Text",          preview: "/previews/wordcloud.png" },
-    { id: "3d_scatter", name: "3D Scatter",   tag: "3D",            preview: "/previews/3d_scatter.png" },
-    { id: "3d_surface", name: "3D Surface",   tag: "3D",            preview: "/previews/3d_surface.png" },
+    // Distribution
+    { id: "violin",          name: "Violin",           tag: "Distribution",  preview: "" },
+    { id: "density",         name: "Density",          tag: "Distribution",  preview: "" },
+    { id: "histogram",       name: "Histogram",        tag: "Distribution",  preview: "" },
+    { id: "boxplot",         name: "Box Plot",         tag: "Distribution",  preview: "" },
+    { id: "ridgeline",       name: "Ridgeline",        tag: "Distribution",  preview: "" },
+    { id: "beeswarm",        name: "Beeswarm",         tag: "Distribution",  preview: "" },
+    // Correlation
+    { id: "scatter",         name: "Scatter",          tag: "Correlation",   preview: "" },
+    { id: "heatmap",         name: "Heatmap",          tag: "Correlation",   preview: "" },
+    { id: "correlogram",     name: "Correlogram",      tag: "Correlation",   preview: "" },
+    { id: "bubble",          name: "Bubble",           tag: "Correlation",   preview: "" },
+    { id: "connected_scatter", name: "Connected Scatter", tag: "Correlation", preview: "" },
+    { id: "density2d",       name: "2D Density",       tag: "Correlation",   preview: "" },
+    // Ranking
+    { id: "bar",             name: "Barplot",          tag: "Ranking",       preview: "" },
+    { id: "radar",           name: "Spider / Radar",   tag: "Ranking",       preview: "" },
+    { id: "wordcloud",       name: "Word Cloud",       tag: "Ranking",       preview: "" },
+    { id: "parallel",        name: "Parallel",         tag: "Ranking",       preview: "" },
+    { id: "lollipop",        name: "Lollipop",         tag: "Ranking",       preview: "" },
+    { id: "circular_barplot", name: "Circular Bar",    tag: "Ranking",       preview: "" },
+    // Part of a whole
+    { id: "grouped_bar",     name: "Grouped Bar",      tag: "Part-to-Whole", preview: "" },
+    { id: "stacked_bar",     name: "Stacked Bar",      tag: "Part-to-Whole", preview: "" },
+    { id: "treemap",         name: "Treemap",          tag: "Part-to-Whole", preview: "" },
+    { id: "doughnut",        name: "Doughnut",         tag: "Part-to-Whole", preview: "" },
+    { id: "pie",             name: "Pie Chart",        tag: "Part-to-Whole", preview: "" },
+    { id: "dendrogram",      name: "Dendrogram",       tag: "Part-to-Whole", preview: "" },
+    { id: "circlepack",      name: "Circle Pack",      tag: "Part-to-Whole", preview: "" },
+    { id: "waffle",          name: "Waffle",           tag: "Part-to-Whole", preview: "" },
+    // Evolution
+    { id: "line",            name: "Line Plot",        tag: "Evolution",     preview: "" },
+    { id: "area",            name: "Area",             tag: "Evolution",     preview: "" },
+    { id: "stacked_area",    name: "Stacked Area",     tag: "Evolution",     preview: "" },
+    { id: "streamchart",     name: "Streamchart",      tag: "Evolution",     preview: "" },
+    { id: "timeseries",      name: "Time Series",      tag: "Evolution",     preview: "" },
+    // Map
+    { id: "choropleth",      name: "Choropleth",       tag: "Map",           preview: "" },
+    { id: "hexbin_map",      name: "Hexbin Map",       tag: "Map",           preview: "" },
+    { id: "cartogram",       name: "Cartogram",        tag: "Map",           preview: "" },
+    { id: "connection_map",  name: "Connection Map",   tag: "Map",           preview: "" },
+    { id: "bubble_map",      name: "Bubble Map",       tag: "Map",           preview: "" },
+    // Flow
+    { id: "chord",           name: "Chord",            tag: "Flow",          preview: "" },
+    { id: "network",         name: "Network",          tag: "Flow",          preview: "" },
+    { id: "sankey",          name: "Sankey",           tag: "Flow",          preview: "" },
+    { id: "arc_diagram",     name: "Arc Diagram",      tag: "Flow",          preview: "" },
+    { id: "edge_bundling",   name: "Edge Bundling",    tag: "Flow",          preview: "" },
+    // Other
+    { id: "dumbbell",        name: "Dumbbell",         tag: "Change",        preview: "" },
+    { id: "marginal",        name: "Marginal",         tag: "Correlation",   preview: "" },
+    { id: "3d_scatter",      name: "3D Scatter",       tag: "3D",            preview: "" },
+    { id: "3d_surface",      name: "3D Surface",       tag: "3D",            preview: "" },
 ];
 
 const SERVER_EXTRACT_EXTS = ["pdf", "doc", "docx", "ppt", "pptx"];
@@ -167,6 +201,185 @@ function ChartCard({
     );
 }
 
+// ── Multi result card ─────────────────────────────────────────────────────────
+
+interface GeneratedChart {
+    chartType: string;
+    name: string;
+    image: string;
+    code: string;
+    status: "pending" | "generating" | "done" | "error";
+    error?: string;
+}
+
+function MultiChartCard({
+    chart,
+    index,
+    onRetry,
+}: {
+    chart: GeneratedChart;
+    index: number;
+    onRetry: (index: number, chartType: string) => void;
+}) {
+    const [showCode, setShowCode] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+
+    const handleCopy = () => {
+        if (!chart.code) return;
+        navigator.clipboard.writeText(chart.code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+    };
+
+    const handleDownload = () => {
+        if (!chart.image) return;
+        const a = document.createElement("a");
+        a.href = `data:image/png;base64,${chart.image}`;
+        a.download = `r-${chart.chartType || "plot"}.png`;
+        a.click();
+    };
+
+    return (
+        <div className="bg-white rounded-2xl border border-[#e8e8e8] shadow-sm overflow-hidden flex flex-col">
+            {/* Image area */}
+            <div className="relative bg-[#FAFAFA] border-b border-[#f0f0f0] min-h-[180px] flex items-center justify-center">
+                {chart.status === "generating" && (
+                    <div className="flex flex-col items-center gap-2 py-8">
+                        <div className="w-8 h-8 rounded-full bg-white border border-[#e8e8e8] shadow-sm flex items-center justify-center">
+                            <IconLoader2 className="w-3.5 h-3.5 animate-spin text-[#1a1a1a]" />
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-medium">Running R…</p>
+                    </div>
+                )}
+                {chart.status === "error" && (
+                    <div className="flex flex-col items-center gap-2 py-8 px-4 text-center">
+                        <p className="text-[11px] text-red-400 font-medium leading-snug">{chart.error || "Generation failed."}</p>
+                        <button
+                            onClick={() => onRetry(index, chart.chartType)}
+                            className="mt-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-gray-400 hover:text-[#1a1a1a] transition-colors"
+                        >
+                            <IconRefresh className="w-3 h-3" /> Retry
+                        </button>
+                    </div>
+                )}
+                {chart.status === "done" && chart.image && (
+                    <>
+                        <img
+                            src={`data:image/png;base64,${chart.image}`}
+                            alt={chart.name}
+                            className="max-w-full max-h-[280px] object-contain p-3 cursor-zoom-in"
+                            onClick={() => setExpanded(true)}
+                        />
+                        <button
+                            onClick={() => setExpanded(true)}
+                            className="absolute top-2 right-2 p-1 bg-white/80 hover:bg-white rounded-lg border border-[#e8e8e8] text-gray-400 hover:text-[#1a1a1a] transition-all opacity-0 group-hover:opacity-100"
+                            title="Expand"
+                        >
+                            <IconMaximize className="w-3 h-3" />
+                        </button>
+                    </>
+                )}
+            </div>
+
+            {/* Card footer */}
+            <div className="px-3 py-2 flex-1 flex flex-col gap-1.5">
+                <p className="text-[11px] font-bold text-[#1a1a1a]">{chart.name}</p>
+
+                {chart.status === "done" && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                        <button
+                            onClick={() => setShowCode(v => !v)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border transition-all
+                                ${showCode ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "border-[#ebebeb] text-gray-400 hover:border-[#aaa] hover:text-[#1a1a1a]"}`}
+                        >
+                            <IconCode className="w-3 h-3" />
+                            Code
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border border-[#ebebeb] text-gray-400 hover:border-[#aaa] hover:text-[#1a1a1a] transition-all"
+                        >
+                            <IconDownload className="w-3 h-3" />
+                            PNG
+                        </button>
+                        <button
+                            onClick={() => onRetry(index, chart.chartType)}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border border-[#ebebeb] text-gray-400 hover:border-[#aaa] hover:text-[#1a1a1a] transition-all"
+                        >
+                            <IconRefresh className="w-3 h-3" />
+                            Retry
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Collapsible code panel */}
+            <AnimatePresence>
+                {showCode && chart.code && (
+                    <motion.div
+                        key="code"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden border-t border-[#f0f0f0]"
+                    >
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-[#f8f8f8] border-b border-[#eeeeee]">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">R Code</span>
+                            <button
+                                onClick={handleCopy}
+                                className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-[#1a1a1a] transition-colors uppercase tracking-wide"
+                            >
+                                {copied
+                                    ? <><IconCheck className="w-3 h-3 text-green-500" /> Copied</>
+                                    : <><IconCopy className="w-3 h-3" /> Copy</>
+                                }
+                            </button>
+                        </div>
+                        <pre className="px-4 py-3 text-[11px] leading-relaxed overflow-x-auto font-mono text-[#1a1a1a] bg-[#f8f8f8] max-h-[260px] thin-scrollbar whitespace-pre-wrap">
+                            {chart.code}
+                        </pre>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Expanded image lightbox */}
+            <AnimatePresence>
+                {expanded && chart.image && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+                        onClick={() => setExpanded(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.92 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.92 }}
+                            className="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#f0f0f0]">
+                                <span className="text-[11px] font-bold text-[#1a1a1a]">{chart.name}</span>
+                                <button onClick={() => setExpanded(false)} className="text-gray-400 hover:text-[#1a1a1a] transition-colors">
+                                    <IconX className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <img
+                                src={`data:image/png;base64,${chart.image}`}
+                                alt={chart.name}
+                                className="w-full object-contain max-h-[80vh]"
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 interface AttachedFile {
@@ -189,16 +402,32 @@ export default function RPage() {
     const [suggestedCharts, setSuggestedCharts] = useState<string[]>([]);
     const [suggestReasoning, setSuggestReasoning] = useState("");
 
-    // Generation states
+    // Single generation states
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Result
+    // Single result
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [resultCode, setResultCode] = useState("");
     const [resultChartType, setResultChartType] = useState("");
     const [showCode, setShowCode] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    // Multi generation state
+    const [multiResults, setMultiResults] = useState<GeneratedChart[]>([]);
+    const [multiLoading, setMultiLoading] = useState(false);
+    const [multiError, setMultiError] = useState<string | null>(null);
+
+    // Stage progress (for stepper)
+    const [stageInfo, setStageInfo] = useState<{
+        current: number;
+        completed: Set<number>;
+        label: string;
+        progress?: { done: number; total: number };
+        suggestedCharts?: string[];
+    }>({ current: 0, completed: new Set(), label: "" });
+    const [elapsed, setElapsed] = useState(0);
+    const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -258,12 +487,190 @@ export default function RPage() {
         }
     }, [prompt, files, selectedChart]);
 
-    // ── Generate ──
+    // ── Multi SSE flow ──
+    const runMulti = useCallback(async () => {
+        if (!user) { setShowLogin(true); return; }
+        if (!prompt.trim()) return;
+
+        setMultiLoading(true);
+        setMultiError(null);
+        setMultiResults([]);
+        setStageInfo({ current: 1, completed: new Set(), label: "Analysing data…" });
+        setElapsed(0);
+        setResultImage(null);
+        setResultCode("");
+        setError(null);
+
+        // Start elapsed timer
+        if (elapsedRef.current) clearInterval(elapsedRef.current);
+        const startTime = Date.now();
+        elapsedRef.current = setInterval(() => {
+            setElapsed((Date.now() - startTime) / 1000);
+        }, 100);
+
+        try {
+            const res = await fetch("/api/r/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: "multi",
+                    prompt,
+                    contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 402) {
+                    setMultiError("Quota reached. Please top up your balance.");
+                } else {
+                    setMultiError(data.error || `HTTP ${res.status}`);
+                }
+                return;
+            }
+
+            const reader = res.body?.getReader();
+            if (!reader) { setMultiError("Stream unavailable."); return; }
+
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            // Track per-index results for SSE updates
+            const resultsMap = new Map<number, GeneratedChart>();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                const parts = buffer.split("\n\n");
+                buffer = parts.pop() ?? "";
+
+                for (const part of parts) {
+                    const lines = part.split("\n");
+                    let eventType = "message";
+                    let dataStr = "";
+                    for (const line of lines) {
+                        if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+                        if (line.startsWith("data: ")) dataStr = line.slice(6).trim();
+                    }
+                    if (!dataStr) continue;
+
+                    let payload: any;
+                    try { payload = JSON.parse(dataStr); } catch { continue; }
+
+                    if (eventType === "stage") {
+                        const { stage, label, status, progress, charts } = payload;
+                        setStageInfo(prev => {
+                            const completed = new Set(prev.completed);
+                            if (status === "done") completed.add(stage);
+                            return {
+                                current: status === "done" ? stage + 1 : stage,
+                                completed,
+                                label,
+                                progress,
+                                suggestedCharts: charts ?? prev.suggestedCharts,
+                            };
+                        });
+                    }
+
+                    if (eventType === "status" && payload.status === "running") {
+                        // Add a placeholder for this chart
+                        const idx = resultsMap.size;
+                        const chart: GeneratedChart = {
+                            chartType: "",
+                            name: payload.label,
+                            image: "",
+                            code: "",
+                            status: "generating",
+                        };
+                        resultsMap.set(idx, chart);
+                        setMultiResults(Array.from(resultsMap.values()));
+                    }
+
+                    if (eventType === "chart_done") {
+                        const { index, chartType, image, code } = payload;
+                        const name = chartType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+                        const chart: GeneratedChart = { chartType, name, image, code, status: "done" };
+                        resultsMap.set(index, chart);
+                        setMultiResults(Array.from(resultsMap.values()));
+                    }
+
+                    if (eventType === "chart_error") {
+                        const { index, chartType, error: errMsg } = payload;
+                        const name = (chartType || "").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+                        const chart: GeneratedChart = { chartType: chartType || "", name, image: "", code: "", status: "error", error: errMsg };
+                        resultsMap.set(index, chart);
+                        setMultiResults(Array.from(resultsMap.values()));
+                    }
+
+                    if (eventType === "error") {
+                        setMultiError(payload.message || "An error occurred.");
+                    }
+                }
+            }
+        } catch (e: any) {
+            setMultiError(e.message || "Multi-generation failed.");
+        } finally {
+            setMultiLoading(false);
+            if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
+        }
+    }, [user, prompt, files, setShowLogin]);
+
+    // Retry a single chart within multi results
+    const retryMultiChart = useCallback(async (index: number, chartType: string) => {
+        if (!user) { setShowLogin(true); return; }
+        if (!prompt.trim()) return;
+
+        setMultiResults(prev => prev.map((c, i) =>
+            i === index ? { ...c, status: "generating", error: undefined } : c
+        ));
+
+        try {
+            const body: any = {
+                action: "generate",
+                prompt,
+                chartType,
+                contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+            };
+
+            const res = await fetch("/api/r/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                setMultiResults(prev => prev.map((c, i) =>
+                    i === index ? { ...c, status: "error", error: data.error || `HTTP ${res.status}` } : c
+                ));
+                return;
+            }
+
+            const name = (data.chartType || chartType).replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+            setMultiResults(prev => prev.map((c, i) =>
+                i === index ? { ...c, chartType: data.chartType || chartType, name, image: data.image, code: data.code, status: "done", error: undefined } : c
+            ));
+        } catch (e: any) {
+            setMultiResults(prev => prev.map((c, i) =>
+                i === index ? { ...c, status: "error", error: e.message || "Retry failed." } : c
+            ));
+        }
+    }, [user, prompt, files, setShowLogin]);
+
+    // ── Generate (single) ──
     const generate = useCallback(async (retryWithError = false, chartOverride?: string) => {
         if (!user) { setShowLogin(true); return; }
         if (!prompt.trim()) return;
 
-        // If files are attached but no chart type chosen, ask AI for suggestion first
+        // If no chart type selected AND files are attached → use multi flow
+        if (!retryWithError && !chartOverride && !selectedChart && files.length > 0) {
+            await runMulti();
+            return;
+        }
+
+        // If files attached but no chart type chosen, ask AI for suggestion first
         let chartToUse = chartOverride ?? selectedChart;
         if (!retryWithError && files.length > 0 && !chartToUse) {
             chartToUse = await suggestCharts();
@@ -271,6 +678,9 @@ export default function RPage() {
 
         setLoading(true);
         setError(null);
+        // Clear multi results when running single
+        setMultiResults([]);
+        setMultiError(null);
         if (!retryWithError) {
             setResultImage(null);
             setResultCode("");
@@ -320,7 +730,7 @@ export default function RPage() {
         } finally {
             setLoading(false);
         }
-    }, [user, prompt, selectedChart, files, resultCode, error, setShowLogin, suggestCharts]);
+    }, [user, prompt, selectedChart, files, resultCode, error, setShowLogin, suggestCharts, runMulti]);
 
     const handleRetry = () => generate(true);
 
@@ -333,6 +743,8 @@ export default function RPage() {
         setSelectedChart("");
         setSuggestedCharts([]);
         setSuggestReasoning("");
+        setMultiResults([]);
+        setMultiError(null);
         setTimeout(() => textareaRef.current?.focus(), 50);
     };
 
@@ -355,6 +767,9 @@ export default function RPage() {
         e.preventDefault();
         handleFiles(e.dataTransfer.files);
     };
+
+    // Determine whether submit will trigger multi
+    const willRunMulti = !selectedChart && files.length > 0;
 
     return (
         <div className="min-h-screen bg-[#F9F9F9] flex flex-col pb-20 md:pb-0">
@@ -385,7 +800,7 @@ export default function RPage() {
                             value={prompt}
                             onChange={e => setPrompt(e.target.value)}
                             onKeyDown={e => {
-                                if (e.key === "Enter" && !e.shiftKey && !loading) {
+                                if (e.key === "Enter" && !e.shiftKey && !loading && !multiLoading) {
                                     e.preventDefault();
                                     generate();
                                 }
@@ -451,6 +866,12 @@ export default function RPage() {
                                         <IconX className="w-3 h-3" />
                                     </button>
                                 </span>
+                            ) : willRunMulti ? (
+                                <span className="flex items-center gap-1 px-2 py-1 bg-[#f5f5f5] text-[#555] border border-[#e8e8e8]
+                                                 rounded-lg text-[11px] font-semibold">
+                                    <IconSparkles className="w-3 h-3" />
+                                    Multi-chart
+                                </span>
                             ) : (
                                 <span className="text-[11px] text-gray-300 px-1 hidden sm:block">
                                     Select a chart ↓ or let AI choose
@@ -461,11 +882,11 @@ export default function RPage() {
                         {/* Submit */}
                         <button
                             onClick={() => generate()}
-                            disabled={!prompt.trim() || loading || suggesting}
+                            disabled={!prompt.trim() || loading || suggesting || multiLoading}
                             className="w-8 h-8 bg-[#1a1a1a] text-white rounded-xl flex items-center justify-center
                                        disabled:opacity-15 transition-all hover:bg-black active:scale-95 shrink-0"
                         >
-                            {(loading || suggesting)
+                            {(loading || suggesting || multiLoading)
                                 ? <IconLoader2 className="w-4 h-4 animate-spin" />
                                 : <IconArrowUp className="w-4 h-4" />
                             }
@@ -473,7 +894,7 @@ export default function RPage() {
                     </div>
                 </div>
 
-                {/* ── Error banner ── */}
+                {/* ── Single error banner ── */}
                 <AnimatePresence>
                     {error && !loading && (
                         <motion.div
@@ -501,7 +922,25 @@ export default function RPage() {
                     )}
                 </AnimatePresence>
 
-                {/* ── Result panel ── */}
+                {/* ── Multi error banner ── */}
+                <AnimatePresence>
+                    {multiError && !multiLoading && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="flex items-start gap-3 px-4 py-3 bg-white border border-red-100 rounded-2xl
+                                       text-[13px] text-red-500 shadow-sm"
+                        >
+                            <span className="flex-1 leading-snug">{multiError}</span>
+                            <button onClick={() => setMultiError(null)} className="text-red-300 hover:text-red-500 transition-colors">
+                                <IconX className="w-4 h-4" />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Single result panel ── */}
                 <AnimatePresence mode="popLayout">
                     {(loading || resultImage) && (
                         <motion.div
@@ -611,6 +1050,136 @@ export default function RPage() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* ── Multi: stepper + results ── */}
+                <AnimatePresence mode="popLayout">
+                    {(multiLoading || multiResults.length > 0) && (
+                        <motion.div
+                            key="multi"
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                            className="space-y-4"
+                        >
+                            {/* ── Stepper (while loading) ── */}
+                            {multiLoading && (() => {
+                                const STAGES = ["Analyse", "Plan", "Visualize"];
+                                const { current, completed, label, progress } = stageInfo;
+                                return (
+                                    <div className="bg-white border border-[#e8e8e8] rounded-2xl p-6 shadow-sm">
+                                        {/* Stage stepper */}
+                                        <div className="flex items-start justify-between mb-7 relative">
+                                            <div className="absolute top-3 left-6 right-6 h-px bg-[#f0f0f0]" />
+                                            {STAGES.map((s, idx) => {
+                                                const num = idx + 1;
+                                                const isDone = completed.has(num) || current > num;
+                                                const isActive = current === num;
+                                                return (
+                                                    <div key={s} className="flex flex-col items-center relative z-10 flex-1">
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300
+                                                            ${isDone ? "bg-[#1a1a1a] text-white"
+                                                                : isActive ? "bg-white border-2 border-[#1a1a1a] text-[#1a1a1a]"
+                                                                : "bg-white border border-[#e0e0e0] text-[#ccc]"}`}>
+                                                            {isDone ? <IconCheck className="w-3 h-3" stroke={3} /> : num}
+                                                        </div>
+                                                        <div className={`mt-2 text-[9px] font-bold uppercase tracking-widest
+                                                            ${isActive ? "text-[#1a1a1a]" : isDone ? "text-gray-500" : "text-gray-300"}`}>
+                                                            {s}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Current label + progress bar */}
+                                        <div className="border-t border-[#f0f0f0] pt-5">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
+                                                <div className="flex-1 overflow-hidden h-5 relative">
+                                                    <AnimatePresence mode="wait">
+                                                        <motion.p
+                                                            key={label}
+                                                            initial={{ opacity: 0, y: 6 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -6 }}
+                                                            transition={{ duration: 0.18 }}
+                                                            className="text-[13px] font-bold text-[#1a1a1a] absolute inset-0 truncate"
+                                                        >
+                                                            {label || "Starting…"}
+                                                        </motion.p>
+                                                    </AnimatePresence>
+                                                </div>
+                                                {progress && (
+                                                    <span className="text-[11px] font-mono text-gray-400 shrink-0 tabular-nums">
+                                                        {progress.done}/{progress.total}
+                                                    </span>
+                                                )}
+                                                <span className="text-[11px] font-mono text-gray-300 shrink-0 tabular-nums">
+                                                    {elapsed.toFixed(1)}s
+                                                </span>
+                                            </div>
+                                            {progress && (
+                                                <div className="w-full bg-[#f5f5f5] h-1 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        className="h-full bg-[#1a1a1a] rounded-full"
+                                                        animate={{ width: `${(progress.done / progress.total) * 100}%` }}
+                                                        transition={{ duration: 0.4, ease: "easeOut" }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Per-chart status list */}
+                                        {multiResults.length > 0 && (
+                                            <div className="mt-4 space-y-1">
+                                                {multiResults.map((chart, i) => (
+                                                    <div key={i} className="flex items-center gap-2.5 px-1">
+                                                        <div className="shrink-0 w-4 flex justify-center">
+                                                            {chart.status === "generating" && <IconLoader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                                                            {chart.status === "done" && <IconCheck className="w-3 h-3 text-[#1a1a1a]" stroke={2.5} />}
+                                                            {chart.status === "error" && <IconX className="w-3 h-3 text-red-400" />}
+                                                            {chart.status === "pending" && <div className="w-2 h-2 rounded-full bg-[#e8e8e8]" />}
+                                                        </div>
+                                                        <p className={`text-[11px] font-medium flex-1 ${chart.status === "done" ? "text-[#1a1a1a]" : "text-gray-400"}`}>
+                                                            {chart.name}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* ── Header when done ── */}
+                            {!multiLoading && multiResults.length > 0 && (
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em]">
+                                        {multiResults.filter(c => c.status === "done").length} charts · {elapsed.toFixed(1)}s
+                                    </p>
+                                    <button onClick={handleNew} className="text-[11px] text-gray-400 hover:text-[#1a1a1a] font-medium transition-colors">
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* ── Results grid ── */}
+                            {multiResults.some(c => c.status === "done") && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {multiResults.filter(c => c.status === "done").map((chart, i) => (
+                                        <MultiChartCard
+                                            key={`done-${i}`}
+                                            chart={chart}
+                                            index={multiResults.indexOf(chart)}
+                                            onRetry={retryMultiChart}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

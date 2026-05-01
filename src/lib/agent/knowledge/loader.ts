@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 const R_SKILL_PATH = path.join(process.cwd(), "r", "r-skill.md");
+const R_ALL_CODE_PATH = path.join(process.cwd(), "r", "all_code.md");
 
 /**
  * Загружает базу знаний для визуализаций (R/Python)
@@ -33,9 +34,14 @@ export function getVisualKnowledge(): string {
             }
         }
         
-        // Load R skill guide from /r/r-skill.md
+        // Load R skill guide
         if (fs.existsSync(R_SKILL_PATH)) {
             examples.push(`--- R Agent Skill Guide ---\n${fs.readFileSync(R_SKILL_PATH, 'utf-8')}`);
+        }
+
+        // Load full R code examples library
+        if (fs.existsSync(R_ALL_CODE_PATH)) {
+            examples.push(`--- R Graph Gallery: All Code Examples ---\n${fs.readFileSync(R_ALL_CODE_PATH, 'utf-8')}`);
         }
 
         if (examples.length > 0) {

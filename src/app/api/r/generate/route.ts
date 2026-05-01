@@ -3,7 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
-import { checkAndDeductUsage } from "@/lib/db";
+import { checkAndDeductUsage, getUserById } from "@/lib/db";
 import { getVisualKnowledge } from "@/lib/agent/knowledge/loader";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -85,7 +85,7 @@ ${knowledge}
 OUTPUT: Only pure executable R code. No markdown fences. No commentary.`;
 }
 
-function buildSuggestPrompt(prompt: string, combinedContext: string): string {
+function buildSuggestPrompt(prompt: string, combinedContext: string, maxCharts = 4): string {
     const hasData = combinedContext.length > 50 && !isGarbage(combinedContext);
     return `You are a data visualization expert. Given the user's request and optionally their data, suggest the best R chart types.
 
@@ -93,11 +93,25 @@ User request: "${prompt}"
 ${hasData ? `\nData preview:\n${combinedContext.slice(0, 3000)}\n` : "\nNo data provided.\n"}
 
 Respond ONLY with valid JSON (no markdown):
-{"charts": ["chart_id_1", "chart_id_2", "chart_id_3"], "reasoning": "1-2 sentence explanation"}
+{"charts": ["chart_id_1", "chart_id_2", ...], "reasoning": "1-2 sentence explanation"}
 
-Available chart ids: bar, histogram, boxplot, violin, lollipop, dumbbell, bubble, density2d, marginal, heatmap, parallel, radar, sankey, chord, circlepack, dendrogram, waffle, wordcloud, 3d_scatter, 3d_surface
+Available chart ids:
+Distribution: violin, density, histogram, boxplot, ridgeline, beeswarm
+Correlation: scatter, heatmap, correlogram, bubble, connected_scatter, density2d, marginal
+Ranking: bar, radar, wordcloud, parallel, lollipop, circular_barplot, dumbbell
+Part-to-whole: grouped_bar, stacked_bar, treemap, doughnut, pie, dendrogram, circlepack, waffle
+Evolution: line, area, stacked_area, streamchart, timeseries
+Map: choropleth, hexbin_map, cartogram, connection_map, bubble_map
+Flow: chord, network, sankey, arc_diagram, edge_bundling
+3D: 3d_scatter, 3d_surface
 
-Pick 2-4 that best fit the data shape and question. Order by relevance.`;
+Pick ${maxCharts <= 4 ? "2-4" : `up to ${maxCharts}`} that best fit the data shape and question. Order by relevance.`;
+}
+
+// ── SSE helpers ───────────────────────────────────────────────────────────────
+
+function sseEvent(event: string, data: unknown): string {
+    return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
@@ -172,6 +186,173 @@ export async function POST(req: Request) {
         } catch {
             return NextResponse.json({ charts: ["bar", "histogram", "heatmap"], reasoning: "" });
         }
+    }
+
+    // ── MULTI mode ────────────────────────────────────────────────────────────
+    if (action === "multi") {
+        if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
+
+        // Determine plan-based chart limit
+        const user = await getUserById(userId);
+        const planTier = (user?.plan_tier ?? "free") as string;
+        const planLimits: Record<string, number> = {
+            free: 1,
+            plus: 3,
+            pro: 10,
+            ultra: 15,
+        };
+        const maxCharts = planLimits[planTier] ?? 1;
+
+        // Ask AI to suggest charts
+        const suggestRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({
+                model: MODEL,
+                messages: [
+                    { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
+                    { role: "user", content: buildSuggestPrompt(prompt, combinedContext, maxCharts) },
+                ],
+            }),
+            signal: AbortSignal.timeout(30_000),
+        });
+
+        let suggestedCharts: string[] = ["bar", "histogram", "scatter"];
+        if (suggestRes.ok) {
+            const suggestData = await suggestRes.json();
+            let raw = suggestData.choices?.[0]?.message?.content ?? "{}";
+            raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+            try {
+                const parsed = JSON.parse(raw);
+                suggestedCharts = parsed.charts ?? suggestedCharts;
+            } catch { /* use defaults */ }
+        }
+
+        // Cap to plan limit
+        const chartsToGenerate = suggestedCharts.slice(0, maxCharts);
+
+        const knowledge = getVisualKnowledge();
+        const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
+
+        // SSE stream
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+            async start(controller) {
+                const enqueue = (chunk: string) => controller.enqueue(encoder.encode(chunk));
+
+                // Stage 1: Analyse
+                enqueue(sseEvent("stage", { stage: 1, total: 3, label: "Analyse", status: "done" }));
+                // Stage 2: Plan (suggest already done above)
+                enqueue(sseEvent("stage", { stage: 2, total: 3, label: "Plan", status: "done",
+                    charts: chartsToGenerate }));
+                // Stage 3: Visualize — starts now
+                enqueue(sseEvent("stage", { stage: 3, total: 3, label: "Visualize", status: "running",
+                    progress: { done: 0, total: chartsToGenerate.length } }));
+
+                for (let i = 0; i < chartsToGenerate.length; i++) {
+                    const chartId = chartsToGenerate[i];
+                    const chartName = chartId.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+
+                    enqueue(sseEvent("status", {
+                        id: `chart-${i}`,
+                        label: chartName,
+                        status: "running",
+                        log: `Generating ${chartName}…`,
+                    }));
+
+                    try {
+                        const userPrompt = buildGeneratePrompt(prompt, chartId, combinedContext, knowledge);
+                        const userContent: any = contextImages.length > 0
+                            ? [
+                                { type: "text", text: userPrompt },
+                                ...contextImages.map(img => ({ type: "image_url", image_url: { url: img, detail: "low" } })),
+                              ]
+                            : userPrompt;
+
+                        const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
+                            body: JSON.stringify({
+                                model: MODEL,
+                                messages: [
+                                    { role: "system", content: systemPrompt },
+                                    { role: "user", content: userContent },
+                                ],
+                            }),
+                            signal: AbortSignal.timeout(60_000),
+                        });
+
+                        if (!aiRes.ok) {
+                            enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: "AI generation failed." }));
+                            enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: "AI generation failed." }));
+                            continue;
+                        }
+
+                        const aiData = await aiRes.json();
+                        const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
+                        if (!code) {
+                            enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: "AI returned empty code." }));
+                            enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: "Empty code." }));
+                            continue;
+                        }
+
+                        const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ code: wrapRCode(code) }),
+                            signal: AbortSignal.timeout(45_000),
+                        });
+
+                        if (!compileRes.ok) {
+                            enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: "R compiler error.", code }));
+                            enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: "R compiler error." }));
+                            continue;
+                        }
+
+                        const result = await compileRes.json();
+                        if (!result.success) {
+                            enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: result.log || "R execution failed.", code }));
+                            enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: result.log || "R execution failed." }));
+                            continue;
+                        }
+
+                        // Bill tokens
+                        const tokens = aiData.usage?.total_tokens ?? 0;
+                        if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
+
+                        enqueue(sseEvent("chart_done", {
+                            index: i,
+                            chartType: chartId,
+                            image: result.image,
+                            code,
+                        }));
+                        enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "done", log: "Done." }));
+
+                    } catch (err: any) {
+                        const msg = err?.message || "Unknown error";
+                        enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: msg }));
+                        enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: msg }));
+                    }
+
+                    // Update stage 3 progress after each chart
+                    enqueue(sseEvent("stage", { stage: 3, total: 3, label: "Visualize", status: "running",
+                        progress: { done: i + 1, total: chartsToGenerate.length } }));
+                }
+
+                enqueue(sseEvent("stage", { stage: 3, total: 3, label: "Visualize", status: "done",
+                    progress: { done: chartsToGenerate.length, total: chartsToGenerate.length } }));
+                enqueue(sseEvent("all_done", { total: chartsToGenerate.length }));
+                controller.close();
+            },
+        });
+
+        return new Response(stream, {
+            headers: {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        });
     }
 
     // ── GENERATE mode ─────────────────────────────────────────────────────────
