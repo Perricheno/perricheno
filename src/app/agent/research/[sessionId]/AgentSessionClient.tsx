@@ -105,6 +105,8 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         completed_stages: number[];
         files?: { name: string; status: "ok" | "failed" | "pending"; claims?: number; error?: string }[];
         retries?: Record<string, number>;
+        logs?: { timestamp: number; message: string; type?: "info" | "success" | "content" }[];
+        started_at?: string;
     } | null>(() => {
         const raw = (initialSession as any).stage_json;
         if (!raw) return null;
@@ -149,7 +151,8 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     // If session is still generating, start polling immediately
     useEffect(() => {
         if (initialSession.status === 'generating') {
-            startTimer();
+            const sp = stageProgress;
+            startTimer(sp?.started_at);
             pollSessionStatus();
         }
         return () => { if (pollRef.current) clearTimeout(pollRef.current); };
@@ -168,10 +171,19 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         }
     };
 
-    const startTimer = () => {
-        setElapsedTime(0);
-        timerRef.current = setInterval(() => setElapsedTime(t => t + 0.1), 100);
+    const startTimer = (startTime?: string) => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        
+        const initialOffset = startTime 
+            ? (Date.now() - new Date(startTime).getTime()) / 1000 
+            : 0;
+            
+        setElapsedTime(Math.max(0, initialOffset));
+        timerRef.current = setInterval(() => {
+            setElapsedTime(t => t + 0.1);
+        }, 100);
     };
+
     const stopTimer = () => {
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
@@ -225,6 +237,9 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
         setError(null);
         setPhase("streaming");
+        // Instant UI feedback
+        await new Promise(resolve => setTimeout(resolve, 10));
+
         setTopic(topicText);
         setStreamText("");
         setDisplayStreamText("");
@@ -232,7 +247,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         setStreamChars(0);
         setIsEditing(false);
         setIsFixingErrors(false);
-        startTimer();
+        startTimer(); // For new stream, start from 0 now
 
         try {
             body.sessionId = currentSessionId;
@@ -424,9 +439,10 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
     // ─── STREAMING ───
     if (phase === "streaming") {
-        const STAGE_LABELS = ["Plan", "Extract", "Draft", "Assemble", "Validate"];
+        const STAGE_LABELS = ["Plan", "Extract", "Verify", "Draft", "Design", "Assemble", "Validate"];
         const sp = stageProgress;
         const current = sp?.current_stage ?? 0;
+        const total = sp?.total_stages ?? STAGE_LABELS.length;
         const completed = new Set(sp?.completed_stages ?? []);
 
         return (
@@ -454,7 +470,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             <div className="absolute top-3 left-6 right-6 h-px bg-gray-100" />
                             {STAGE_LABELS.map((label, idx) => {
                                 const stageNum = idx + 1;
-                                const isDone = completed.has(stageNum);
+                                const isDone = completed.has(stageNum) || current > stageNum;
                                 const isActive = current === stageNum && !isDone;
                                 return (
                                     <div key={label} className="flex flex-col items-center relative z-10 flex-1">
@@ -479,91 +495,135 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                         <div className="border-t border-gray-100 pt-6">
                             <div className="flex items-center gap-3 mb-3">
                                 <IconLoader2 className="w-4 h-4 animate-spin text-black" />
-                                <div className="text-[13px] font-medium text-black flex-1 truncate">
-                                    {sp?.label || "Starting…"}
+                                <div className="flex-1 overflow-hidden h-5 relative">
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={sp?.label || "starting"}
+                                            initial={{ opacity: 0, y: 8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -8 }}
+                                            transition={{ duration: 0.2, ease: "easeOut" }}
+                                            className="text-[13px] font-bold text-black truncate absolute inset-0"
+                                        >
+                                            {sp?.label || "Starting…"}
+                                        </motion.div>
+                                    </AnimatePresence>
                                 </div>
                                 {sp?.progress && (
                                     <div className="text-[11px] font-mono text-gray-400 tabular-nums shrink-0">
                                         {sp.progress.done} / {sp.progress.total}
                                     </div>
                                 )}
-                                {/* Debug toggle button */}
+                                {/* Expand toggle button */}
                                 <button
                                     onClick={() => setShowDebug(!showDebug)}
-                                    className="w-5 h-5 rounded flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-400 hover:text-black shrink-0"
-                                    title="Toggle debug info"
+                                    className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all text-gray-400 hover:text-black shrink-0 active:scale-90"
+                                    title="View Details"
                                 >
-                                    <svg className={`w-3 h-3 transition-transform duration-300 ${showDebug ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                    </svg>
+                                    <IconChevronLeft className={`w-3.5 h-3.5 transition-transform duration-400 ${showDebug ? '-rotate-90' : ''}`} stroke={3} />
                                 </button>
                             </div>
                             {sp?.progress && (
-                                <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-black rounded-full transition-[width] duration-500 ease-out"
-                                        style={{ width: `${Math.min(100, (sp.progress.done / Math.max(1, sp.progress.total)) * 100)}%` }}
+                                <div className="w-full bg-gray-50 h-1.5 rounded-full overflow-hidden mb-1">
+                                    <motion.div
+                                        className="h-full bg-black rounded-full"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${Math.min(100, (sp.progress.done / Math.max(1, sp.progress.total)) * 100)}%` }}
+                                        transition={{ duration: 0.5, ease: "circOut" }}
                                     />
                                 </div>
                             )}
                             
-                            {/* Expandable debug view */}
+                            {/* Expandable status view */}
                             <motion.div
                                 initial={false}
                                 animate={{
                                     height: showDebug ? 'auto' : 0,
                                     opacity: showDebug ? 1 : 0,
+                                    marginTop: showDebug ? 16 : 0
                                 }}
-                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                                 className="overflow-hidden"
                             >
-                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                    <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                        Stage Data
-                                    </div>
-                                    <pre className="text-[10px] font-mono text-gray-600 whitespace-pre-wrap break-all">
-                                        {JSON.stringify(sp, null, 2)}
-                                    </pre>
+                                <div className="p-4 bg-[#FAFAFB] rounded-2xl border border-gray-100 space-y-4">
+                                    {/* Files status */}
+                                    {sp?.files && sp.files.length > 0 ? (
+                                        <div className="space-y-2">
+                                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Processing Items</div>
+                                            <div className="grid gap-1.5">
+                                                {sp.files.map((f, i) => (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, x: -5 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: i * 0.05 }}
+                                                        key={i} 
+                                                        className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-gray-50 shadow-sm"
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                                            f.status === 'ok' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+                                                                : f.status === 'failed' ? 'bg-red-400'
+                                                                : 'bg-black animate-pulse'
+                                                        }`} />
+                                                        <span className="text-[12px] font-bold text-gray-700 truncate flex-1">{f.name}</span>
+                                                        <span className="text-[10px] font-mono font-bold text-gray-400 tabular-nums shrink-0">
+                                                            {f.status === 'ok' && typeof f.claims === 'number' ? `${f.claims} claims`
+                                                                : f.status === 'failed' ? 'error'
+                                                                : 'processing'}
+                                                        </span>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-[11px] text-gray-400 font-medium italic text-center py-2">
+                                            Preparing stage resources...
+                                        </div>
+                                    )}
+                                    
+                                    {/* Live Logs */}
+                                    {sp?.logs && sp.logs.length > 0 && (
+                                        <div className="space-y-3">
+                                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Live Activity</div>
+                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar flex flex-col-reverse">
+                                                {sp.logs.map((log, i) => (
+                                                    <motion.div
+                                                        key={log.timestamp + i}
+                                                        initial={{ opacity: 0, x: 10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        className={`text-[11px] p-3 rounded-xl border shadow-sm ${
+                                                            log.type === 'content' 
+                                                                ? 'bg-black text-white border-black font-mono leading-relaxed' 
+                                                                : log.type === 'success'
+                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                                    : 'bg-white text-gray-600 border-gray-100'
+                                                        }`}
+                                                    >
+                                                        {log.type === 'content' && <span className="text-emerald-400 mr-2">➤</span>}
+                                                        {log.message}
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Retries and System Logs */}
+                                    {(sp?.retries || sp?.completed_stages) && (
+                                        <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                                            {sp?.retries && Object.entries(sp.retries).map(([k, v]) => (
+                                                <span key={k} className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg border border-amber-100/50">
+                                                    {k.replace(/_/g, ' ')} retry {v}
+                                                </span>
+                                            ))}
+                                            {sp?.completed_stages?.map(sNum => (
+                                                <span key={sNum} className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100/50">
+                                                    Stage {sNum} Complete
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         </div>
-
-                        {/* Files status */}
-                        {sp?.files && sp.files.length > 0 && (
-                            <div className="border-t border-gray-100 pt-6 mt-6">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                                    Reference Files
-                                </div>
-                                <div className="space-y-1.5">
-                                    {sp.files.map((f, i) => (
-                                        <div key={i} className="flex items-center gap-3 text-[12px]" title={f.error}>
-                                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                                f.status === 'ok' ? 'bg-emerald-500'
-                                                    : f.status === 'failed' ? 'bg-red-400'
-                                                    : 'bg-gray-300 animate-pulse'
-                                            }`} />
-                                            <span className="font-medium text-gray-700 truncate flex-1">{f.name}</span>
-                                            <span className="text-[10px] font-mono text-gray-400 tabular-nums shrink-0">
-                                                {f.status === 'ok' && typeof f.claims === 'number' ? `${f.claims} claims`
-                                                    : f.status === 'failed' ? 'failed'
-                                                    : '…'}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Retry badge */}
-                        {sp?.retries && Object.keys(sp.retries).length > 0 && (
-                            <div className="border-t border-gray-100 pt-4 mt-6 flex flex-wrap gap-2">
-                                {Object.entries(sp.retries).map(([k, v]) => (
-                                    <span key={k} className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 bg-amber-50 text-amber-700 rounded">
-                                        {k.replace(/_/g, ' ')} · {v}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </motion.div>
             </div>

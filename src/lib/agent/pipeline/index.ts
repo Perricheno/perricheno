@@ -1,4 +1,4 @@
-// Orchestrator for the 5-stage generate pipeline.
+// Orchestrator for the 7-stage generate pipeline.
 // Called from /api/agent/generate in a fire-and-forget background task.
 // Streams progress updates into agent_sessions.stage_json so the UI can poll.
 
@@ -8,6 +8,7 @@ import type { AgentUpload } from "@/lib/db";
 import { runStage1 } from "./stage1_plan";
 import { runStage2 } from "./stage2_extract";
 import { runStage2_5 } from "./stage2_5_verify";
+import { runStage2_7 } from "./stage2_7_enrich_doi";
 import { runStage3 } from "./stage3_draft";
 import { runStage3_5 } from "./stage3_5_design";
 import { runStage4 } from "./stage4_assemble";
@@ -35,10 +36,6 @@ export interface RunPipelineOutput {
     status: "done" | "needs_attention";
 }
 
-function touch(p: StageProgress, patch: Partial<StageProgress>): StageProgress {
-    return { ...p, ...patch, updated_at: new Date().toISOString() };
-}
-
 export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineOutput> {
     const { settings, uploads, writeProgress } = input;
     let totalTokens = 0;
@@ -51,13 +48,31 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         files: uploads.map(u => ({ name: u.filename, status: "pending" as const })),
         started_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        logs: [],
     };
+
+    const updateProgress = async (patch: Partial<StageProgress>) => {
+        progress = { ...progress, ...patch, updated_at: new Date().toISOString() };
+        await writeProgress(progress);
+    };
+
+    const addLog = async (message: string, type: "info" | "success" | "content" = "info") => {
+        progress = { 
+            ...progress, 
+            logs: [...(progress.logs || []), { timestamp: Date.now(), message, type }].slice(-10) 
+        };
+        await writeProgress(progress);
+    };
+
     await writeProgress(progress);
 
     // ── Stage 1: Plan ──
     const { plan, tokensUsed: t1 } = await runStage1(settings, uploads.map(u => u.filename));
     totalTokens += t1;
-    progress = touch(progress, {
+    await addLog(`Plan generated: ${plan.sections.length} sections, ~${plan.sections.reduce((s, x) => s + x.wordTarget, 0)} words`, "success");
+    await addLog(`Document structure: ${plan.sections.map(s => s.heading).join(" → ").slice(0, 100)}...`, "content");
+
+    await updateProgress({
         current_stage: 2,
         label: settings.useReferences && uploads.length > 0
             ? `Extracting from ${uploads.length} file(s)`
@@ -65,7 +80,6 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         completed_stages: [1],
         progress: settings.useReferences && uploads.length > 0 ? { done: 0, total: uploads.length } : undefined,
     });
-    await writeProgress(progress);
 
     // ── Stage 2: Extract ──
     const { refs, tokensUsed: t2 } = await runStage2(
@@ -73,14 +87,14 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         plan,
         uploads,
         async (done, total, current) => {
-            progress = touch(progress, {
+            await updateProgress({
                 progress: { done, total },
                 label: `Extracting from ${current ?? "file"} (${done}/${total})`,
             });
-            await writeProgress(progress);
         },
     );
     totalTokens += t2;
+    await addLog(`Extraction complete: ${refs.filter(r => r.status === "ok").length} files processed`, "success");
 
     // Mark per-file statuses after extraction.
     let fileStatus = new Map(refs.map(r => [r.uploadId, r]));
@@ -89,72 +103,65 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         if (!r) return { name: u.filename, status: "pending" as const };
         return {
             name: u.filename,
-            status: r.status === "ok" ? "ok" : "failed",
+            status: r.status === "ok" ? "ok" : (r.status === "skipped" ? "pending" : "failed"),
             claims: r.keyClaims?.length,
             error: r.error,
         };
     });
+    await writeProgress(progress);
 
-    // ── Stage 2.7: DOI Enrichment (NEW) ──
+    // ── Stage 3: Verify & Enrich ──
     let enrichedRefs = refs;
-    if (settings.useReferences && refs.some(r => r.status === "ok" && r.metadata?.doi)) {
-        progress = touch(progress, {
-            current_stage: 3,
-            label: "Enriching metadata via CrossRef API",
-            completed_stages: [1, 2],
-            progress: { done: 0, total: refs.filter(r => r.status === "ok" && r.metadata?.doi).length },
-        });
-        await writeProgress(progress);
-
-        const { runStage2_7 } = await import("./stage2_7_enrich_doi");
-        const { enrichedRefs: enriched, enrichedCount } = await runStage2_7(
-            refs,
-            async (done: number, total: number, current?: string) => {
-                progress = touch(progress, {
-                    progress: { done, total },
-                    label: `Enriching ${current ?? "reference"} (${done}/${total})`,
-                });
-                await writeProgress(progress);
-            },
-        );
-        enrichedRefs = enriched;
-        
-        // Update fileStatus map with enriched refs
-        fileStatus = new Map(enrichedRefs.map(r => [r.uploadId, r]));
-        
-        console.log(`[Pipeline] DOI enrichment: ${enrichedCount} references improved`);
-    }
-
-    // ── Stage 2.5: Verify ──
     let verifications: VerificationResult[] = [];
+
     if (settings.useReferences && refs.some(r => r.status === "ok")) {
-        progress = touch(progress, {
+        await updateProgress({
             current_stage: 3,
-            label: "Verifying references understanding",
+            label: "Enriching and verifying references",
             completed_stages: [1, 2],
             progress: { done: 0, total: refs.filter(r => r.status === "ok").length },
         });
-        await writeProgress(progress);
 
+        // 3a. DOI Enrichment
+        const refsWithDoi = refs.filter(r => r.status === "ok" && r.metadata?.doi);
+        if (refsWithDoi.length > 0) {
+            await addLog(`Found ${refsWithDoi.length} DOIs for enrichment`, "info");
+            const { enrichedRefs: enriched, enrichedCount } = await runStage2_7(
+                refs,
+                async (done, total, current) => {
+                    await updateProgress({
+                        progress: { done, total },
+                        label: `Enriching ${current ?? "reference"} (${done}/${total})`,
+                    });
+                },
+            );
+            enrichedRefs = enriched;
+            fileStatus = new Map(enrichedRefs.map(r => [r.uploadId, r]));
+            if (enrichedCount > 0) {
+                await addLog(`DOI enrichment: ${enrichedCount} references improved`, "success");
+            }
+        }
+
+        // 3b. Verification
         const { verifications: v, tokensUsed: t2_5 } = await runStage2_5(
-            refs,
+            enrichedRefs,
             uploads,
-            async (done: number, total: number, current?: string) => {
-                progress = touch(progress, {
+            async (done, total, current) => {
+                await updateProgress({
                     progress: { done, total },
                     label: `Verifying ${current ?? "reference"} (${done}/${total})`,
                 });
-                await writeProgress(progress);
             },
         );
         verifications = v;
         totalTokens += t2_5;
+        const verifiedCount = verifications.filter(x => x.verified).length;
+        await addLog(`Verification: ${verifiedCount}/${verifications.length} sources confirmed`, "success");
 
         // Update file statuses with verification results
         progress.files = uploads.map(u => {
             const r = fileStatus.get(u.id);
             const v = verifications.find(ver => ver.uploadId === u.id);
-            // Map "skipped" to "pending" for UI compatibility
             const mappedStatus = r?.status === "skipped" ? "pending" : (r?.status || "pending");
             return {
                 name: u.filename,
@@ -167,85 +174,92 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
                     : undefined,
             };
         });
+        await writeProgress(progress);
+    } else {
+        await updateProgress({ completed_stages: [1, 2, 3] });
     }
 
-    progress = touch(progress, {
+    // ── Stage 4: Draft ──
+    await updateProgress({
         current_stage: 4,
         label: `Drafting ${plan.sections.length} section(s)`,
         completed_stages: [1, 2, 3],
         progress: { done: 0, total: plan.sections.length },
     });
-    await writeProgress(progress);
 
-    // ── Stage 3: Draft (with enhanced context from enriched refs) ──
     const { sections, tokensUsed: t3, anyTruncated } = await runStage3(
         settings,
         plan,
-        enrichedRefs,  // Use enriched refs with accurate metadata
+        enrichedRefs,
         uploads,
         verifications,
-        async (done: number, total: number, heading: string) => {
-            progress = touch(progress, {
+        async (done, total, heading) => {
+            await addLog(`Drafted: ${heading}`, "content");
+            await updateProgress({
                 progress: { done, total },
-                label: `Drafting §${done} ${heading}`,
+                label: `Drafting ${heading} (${done}/${total})`,
             });
-            await writeProgress(progress);
         },
     );
     totalTokens += t3;
-
     if (anyTruncated) {
         progress.retries = { ...(progress.retries ?? {}), stage_3_truncated: 1 };
     }
+    await addLog(`Drafting complete: ~${sections.reduce((s, x) => s + x.wordCount, 0)} words generated`, "success");
 
-    progress = touch(progress, {
+    // ── Stage 5: Design ──
+    await updateProgress({
         current_stage: 5,
         label: "Designing document layout",
         completed_stages: [1, 2, 3, 4],
         progress: undefined,
     });
-    await writeProgress(progress);
 
-    // ── Stage 3.5: Design ──
     const design = await runStage3_5(settings, plan);
     totalTokens += design.tokensUsed;
+    await addLog(`Design applied: ${design.titleBlock.slice(0, 60)}...`, "success");
 
-    progress = touch(progress, {
+    // ── Stage 6: Assemble ──
+    await updateProgress({
         current_stage: 6,
-        label: "Assembling document",
+        label: "Assembling LaTeX document",
         completed_stages: [1, 2, 3, 4, 5],
-        progress: undefined,
     });
-    await writeProgress(progress);
 
-    // ── Stage 4: Assemble (no LLM, no tokens) ──
     const assembled = runStage4(settings, plan, enrichedRefs, sections, design);
+    await addLog(`Assembly complete: ${assembled.mainTex.length} chars, ${assembled.warnings.length} warnings`, "info");
 
-    progress = touch(progress, {
+    // ── Stage 7: Validate & Repair ──
+    await updateProgress({
         current_stage: 7,
-        label: "Validating LaTeX",
+        label: "Validating LaTeX source",
         completed_stages: [1, 2, 3, 4, 5, 6],
     });
-    await writeProgress(progress);
 
-    // ── Stage 5: Validate + Repair ──
     const validated = await runStage5(settings, assembled, async (attempt, outcome) => {
-        progress = touch(progress, {
+        await updateProgress({
             label: outcome === "ok"
                 ? `Compiled on attempt ${attempt + 1}`
-                : `Compile failed on attempt ${attempt + 1}, repairing`,
-            retries: { ...(progress.retries ?? {}), stage_5: attempt + 1 },
+                : `Compile failed (attempt ${attempt + 1}), repairing...`,
+            retries: { ...(progress.retries ?? {}), repair: attempt + 1 },
         });
-        await writeProgress(progress);
+        if (outcome !== "ok") {
+            await addLog(`Repair attempt ${attempt + 1} started`, "info");
+        }
     });
     totalTokens += validated.tokensUsed;
 
-    progress = touch(progress, {
+    await updateProgress({
         current_stage: 7,
         label: validated.compiled ? "Done" : "Needs attention",
         completed_stages: [1, 2, 3, 4, 5, 6, 7],
     });
-    await writeProgress(progress);
+
+    if (validated.compiled) {
+        await addLog("Document ready for download", "success");
+    } else {
+        await addLog("Document needs attention (compile failed)", "info");
+    }
 
     return {
         plan,
@@ -261,3 +275,4 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         status: validated.compiled ? "done" : "needs_attention",
     };
 }
+

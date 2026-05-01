@@ -222,6 +222,7 @@ export interface StageProgress {
     retries?: Record<string, number>;
     started_at: string;
     updated_at: string;
+    logs?: { timestamp: number; message: string; type?: "info" | "success" | "content" }[];
 }
 
 export function initProgress(totalStages: number): StageProgress {

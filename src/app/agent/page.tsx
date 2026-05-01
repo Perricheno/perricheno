@@ -134,6 +134,9 @@ export default function AgentPage() {
         if (isGenerating) return;
 
         setIsGenerating(true);
+        // Instant UI feedback before fetch
+        await new Promise(resolve => setTimeout(resolve, 10));
+
         if (!isAgentMode) {
             if (agentSubMode === 'chat') {
                 try {
