@@ -15,6 +15,7 @@ services:
       - R_COMPILER_URL=http://r-compiler:8000
       - PYTHON_COMPILER_URL=http://python-compiler:8000
       - RESEARCH_API_URL=http://research-api:8080
+      - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
       - WS_SERVER_INTERNAL_URL=ws://ws-server:1234
     volumes:
       - db-data:/app/db
@@ -35,6 +36,8 @@ services:
       python-compiler:
         condition: service_healthy
       research-api:
+        condition: service_healthy
+      pdf-extractor:
         condition: service_healthy
 
   r-compiler:
