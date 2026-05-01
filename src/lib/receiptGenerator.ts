@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 export interface ReceiptData {
     id: string;
     userId: number;
-    type: 'crypto_purchase' | 'promo_code' | 'admin_bonus';
+    type: 'crypto_purchase' | 'promo_code' | 'admin_bonus' | 'admin_subscription';
     packName: string;
     amountText: string;
     dateISO: string;
@@ -50,7 +50,8 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
         const typeLabels: Record<string, string> = {
             'crypto_purchase': 'Оплата CryptoCloud',
             'promo_code': 'Активация промокода',
-            'admin_bonus': 'Бонус от администрации'
+            'admin_bonus': 'Бонус от администрации',
+            'admin_subscription': 'Подписка от администрации'
         };
 
         // Parse custom currency fields from webhook's amount text

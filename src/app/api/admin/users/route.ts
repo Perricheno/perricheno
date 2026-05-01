@@ -93,6 +93,49 @@ export async function PUT(req: Request) {
                 console.error("Failed to trigger receipt generator:", e);
             }
 
+        } else if (action === 'grant_subscription') {
+            // Grant subscription plan to user
+            const planTier = tier; // 'free', 'plus', 'pro', 'ultra'
+            await prisma.user.update({ 
+                where: { id: targetUserId }, 
+                data: { plan_tier: planTier } 
+            });
+            
+            const planNames: Record<string, string> = {
+                free: 'Free',
+                plus: 'Plus',
+                pro: 'Pro',
+                ultra: 'Ultra'
+            };
+            
+            await prisma.transaction.create({ 
+                data: { 
+                    user_id: targetUserId, 
+                    topic: "Subscription Granted", 
+                    amount_text: `${planNames[planTier] || planTier} Plan`, 
+                    is_positive: true 
+                } 
+            });
+
+            // Trigger receipt generation
+            const crypto = require('crypto');
+            const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
+            const receiptId = `PRN-SUB-${uniqueId}-${targetUserId}`;
+            
+            try {
+                const { generateAndStoreReceipt } = await import('@/lib/receiptGenerator');
+                generateAndStoreReceipt({
+                    id: receiptId,
+                    userId: targetUserId,
+                    type: 'admin_subscription',
+                    packName: `${planNames[planTier] || planTier} Subscription`,
+                    amountText: `${planNames[planTier] || planTier} Plan (Admin Grant)`,
+                    dateISO: new Date().toISOString()
+                }).catch(e => console.error("Receipt background gen failed:", e));
+            } catch (e) {
+                console.error("Failed to trigger receipt generator:", e);
+            }
+
         } else if (action === 'set_tier') {
             await prisma.user.update({ where: { id: targetUserId }, data: { account_tier: tier } });
         } else if (action === 'toggle_ban') {

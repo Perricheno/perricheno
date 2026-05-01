@@ -8,7 +8,8 @@ import {
     IconReceipt,
     IconPackage, IconTrendingUp, IconClock, IconLogin,
     IconMail, IconChevronRight, IconDatabase,
-    IconShieldLock, IconTrash, IconPlayerPlay, IconPlayerPause, IconCopy, IconCheck
+    IconShieldLock, IconTrash, IconPlayerPlay, IconPlayerPause, IconCopy, IconCheck,
+    IconUsers, IconSearch, IconX, IconGift, IconCrown
 } from "@tabler/icons-react";
 
 interface PromoCode {
@@ -32,6 +33,13 @@ export default function SettingsPage() {
     const [promos, setPromos] = useState<PromoCode[]>([]);
     const [promoLoading, setPromoLoading] = useState(false);
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+    // User management (admin only)
+    const [users, setUsers] = useState<any[]>([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [userLoading, setUserLoading] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [showUserModal, setShowUserModal] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -99,6 +107,43 @@ export default function SettingsPage() {
         navigator.clipboard.writeText(code);
         setCopiedCode(code);
         setTimeout(() => setCopiedCode(null), 2000);
+    };
+
+    const searchUsers = async () => {
+        if (!userSearch.trim()) return;
+        setUserLoading(true);
+        try {
+            const res = await fetch(`/api/admin/users?search=${encodeURIComponent(userSearch)}`);
+            const data = await res.json();
+            if (data.users) setUsers(data.users);
+        } catch (e) {
+            console.error("Failed to search users:", e);
+        } finally {
+            setUserLoading(false);
+        }
+    };
+
+    const grantSubscription = async (userId: number, tier: string) => {
+        if (!confirm(`Grant ${tier.toUpperCase()} subscription to this user?`)) return;
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUserId: userId, action: 'grant_subscription', tier })
+            });
+            if (res.ok) {
+                alert('Subscription granted successfully!');
+                setShowUserModal(false);
+                setSelectedUser(null);
+                searchUsers(); // Refresh list
+            } else {
+                const error = await res.json();
+                alert(`Error: ${error.error || 'Failed to grant subscription'}`);
+            }
+        } catch (e) {
+            console.error("Failed to grant subscription:", e);
+            alert('Failed to grant subscription');
+        }
     };
 
     const timelineItems = useMemo(() => {
@@ -287,6 +332,122 @@ export default function SettingsPage() {
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {/* ━━ User Management (Admin Only) ━━ */}
+                    {fullUser?.isAdmin && (
+                        <div className="mb-10">
+                            <div className="flex items-center gap-2 mb-5">
+                                <IconUsers className="w-5 h-5 text-[#1a1a1a]" stroke={2} />
+                                <h2 className="text-xl font-black tracking-tight text-[#1a1a1a]">User Management</h2>
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded">Admin</span>
+                            </div>
+
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-5">
+                                <div className="flex gap-2 mb-4">
+                                    <input
+                                        type="text"
+                                        value={userSearch}
+                                        onChange={(e) => setUserSearch(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && searchUsers()}
+                                        placeholder="Search by username, name, or Telegram ID..."
+                                        className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] focus:border-transparent"
+                                    />
+                                    <button
+                                        onClick={searchUsers}
+                                        disabled={userLoading || !userSearch.trim()}
+                                        className="px-4 py-2 bg-[#1a1a1a] text-white rounded-lg font-bold text-sm hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        <IconSearch className="w-4 h-4" />
+                                        Search
+                                    </button>
+                                </div>
+
+                                {userLoading ? (
+                                    <div className="p-10 text-center">
+                                        <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent animate-spin rounded-full mx-auto" />
+                                    </div>
+                                ) : users.length > 0 ? (
+                                    <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50 -mx-5">
+                                        {users.map(u => (
+                                            <div key={u.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white font-black text-xs uppercase shrink-0">
+                                                        {(u.username || u.first_name || "U").slice(0, 2)}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold truncate text-[#1a1a1a]">{u.username || u.first_name || "User"}</p>
+                                                        <p className="text-[10px] text-gray-400">
+                                                            ID: {u.id} · {planLabels[u.plan_tier || 'free']} Plan
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setSelectedUser(u); setShowUserModal(true); }}
+                                                    className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg font-bold text-xs hover:bg-emerald-100 transition-all flex items-center gap-1.5 shrink-0"
+                                                >
+                                                    <IconGift className="w-3.5 h-3.5" />
+                                                    Grant
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : userSearch ? (
+                                    <div className="p-10 text-center">
+                                        <p className="text-sm text-gray-400">No users found</p>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            {/* Grant Subscription Modal */}
+                            {showUserModal && selectedUser && (
+                                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowUserModal(false)}>
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center justify-between mb-5">
+                                            <h3 className="text-lg font-black text-[#1a1a1a]">Grant Subscription</h3>
+                                            <button onClick={() => setShowUserModal(false)} className="text-gray-400 hover:text-[#1a1a1a] transition-colors">
+                                                <IconX className="w-5 h-5" />
+                                            </button>
+                                        </div>
+
+                                        <div className="mb-5">
+                                            <p className="text-sm text-gray-600 mb-1">User:</p>
+                                            <p className="text-base font-bold text-[#1a1a1a]">{selectedUser.username || selectedUser.first_name || "User"}</p>
+                                            <p className="text-xs text-gray-400">Current plan: {planLabels[selectedUser.plan_tier || 'free']}</p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-bold text-gray-600 mb-3">Select Plan:</p>
+                                            {['free', 'plus', 'pro', 'ultra'].map(tier => (
+                                                <button
+                                                    key={tier}
+                                                    onClick={() => grantSubscription(selectedUser.id, tier)}
+                                                    className={`w-full px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-between ${
+                                                        tier === 'ultra' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600' :
+                                                        tier === 'pro' ? 'bg-[#1a1a1a] text-white hover:bg-black' :
+                                                        tier === 'plus' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
+                                                        'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    <span className="flex items-center gap-2">
+                                                        {tier === 'ultra' && <IconCrown className="w-4 h-4" />}
+                                                        {planLabels[tier]}
+                                                    </span>
+                                                    <span className="text-xs opacity-75">
+                                                        {tier === 'ultra' ? '3M/mo' : tier === 'pro' ? '800K/mo' : tier === 'plus' ? '450K/mo' : '150K/mo'}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            )}
                         </div>
                     )}
 
