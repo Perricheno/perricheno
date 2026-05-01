@@ -69,7 +69,7 @@ export async function runStage3_5(
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
         ],
-        { jsonMode: true, timeoutMs: 45_000 },
+        { jsonMode: true, timeoutMs: 90_000 },
     );
 
     const parsed = parseJsonLoose(r.text);
