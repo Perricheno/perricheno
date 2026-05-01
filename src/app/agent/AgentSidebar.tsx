@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { IconClock, IconTrash, IconShare, IconFileText, IconMenu2, IconX, IconLoader2 } from "@tabler/icons-react";
 import { AgentSession } from "./types";
 
@@ -15,6 +16,8 @@ interface Props {
 export function AgentSidebar({
     sessions, currentSessionId, onSelectSession, onDeleteSession, onShareSession, onNewSession, isOpen, setIsOpen
 }: Props) {
+    const [loadingId, setLoadingId] = useState<string | null>(null);
+
     if (!isOpen) {
         return (
             <button
@@ -25,6 +28,12 @@ export function AgentSidebar({
             </button>
         );
     }
+
+    const handleSelect = (s: AgentSession) => {
+        if (s.id === currentSessionId) return;
+        setLoadingId(s.id);
+        onSelectSession(s);
+    };
 
     return (
         <div className="absolute inset-y-0 left-0 z-40 w-72 bg-[var(--card)] border-r border-[var(--border)] flex flex-col shadow-xl">
@@ -50,20 +59,25 @@ export function AgentSidebar({
                 ) : (
                     sessions.map(s => {
                         const isActive = s.id === currentSessionId;
+                        const isLoading = s.id === loadingId;
                         return (
                             <div
                                 key={s.id}
-                                onClick={() => onSelectSession(s)}
+                                onClick={() => handleSelect(s)}
                                 className={`group p-3 rounded-xl cursor-pointer transition-colors border ${isActive ? 'bg-[var(--foreground)] text-[var(--card)] border-transparent' : 'bg-transparent border-transparent hover:bg-black/5'}`}
                             >
                                 <div className="flex items-start gap-2">
-                                    <IconFileText className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'opacity-80' : 'text-gray-400'}`} />
+                                    {isLoading ? (
+                                        <IconLoader2 className="w-4 h-4 mt-0.5 shrink-0 animate-spin text-[var(--foreground)]" />
+                                    ) : (
+                                        <IconFileText className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'opacity-80' : 'text-gray-400'}`} />
+                                    )}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-1">
                                             <p className={`text-sm font-medium truncate ${isActive ? 'text-[var(--card)]' : 'text-[var(--foreground)]'}`}>
                                                 {s.title}
                                             </p>
-                                            {s.status === 'generating' && (
+                                            {(s.status === 'generating' && !isLoading) && (
                                                 <IconLoader2 className={`w-3.5 h-3.5 animate-spin ${isActive ? 'text-[var(--card)]' : 'text-emerald-500'}`} />
                                             )}
                                         </div>
@@ -87,10 +101,10 @@ export function AgentSidebar({
                                         </div>
                                     </div>
                                     <div className={`flex items-center gap-1 transition-opacity ${isActive ? 'text-[var(--card)]' : 'text-gray-500 opacity-40 hover:opacity-100'}`}>
-                                        <button onClick={(e) => onShareSession(s.id, e)} className="p-1.5 hover:bg-black/10 rounded-md" title="Share Session">
+                                        <button onClick={(e) => { e.stopPropagation(); onShareSession(s.id, e); }} className="p-1.5 hover:bg-black/10 rounded-md" title="Share Session">
                                             <IconShare className="w-3.5 h-3.5" />
                                         </button>
-                                        <button onClick={(e) => onDeleteSession(s.id, e)} className="p-1.5 hover:bg-red-500/20 hover:text-red-500 rounded-md" title="Delete Session">
+                                        <button onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, e); }} className="p-1.5 hover:bg-red-500/20 hover:text-red-500 rounded-md" title="Delete Session">
                                             <IconTrash className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
