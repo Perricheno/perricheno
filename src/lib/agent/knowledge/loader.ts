@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 
+const R_SKILL_PATH = path.join(process.cwd(), "r", "r-skill.md");
+
 /**
  * Загружает базу знаний для визуализаций (R/Python)
  */
@@ -31,6 +33,11 @@ export function getVisualKnowledge(): string {
             }
         }
         
+        // Load R skill guide from /r/r-skill.md
+        if (fs.existsSync(R_SKILL_PATH)) {
+            examples.push(`--- R Agent Skill Guide ---\n${fs.readFileSync(R_SKILL_PATH, 'utf-8')}`);
+        }
+
         if (examples.length > 0) {
             return `\n\n=== VISUALIZATION KNOWLEDGE BASE (CODING STANDARDS) ===\nUse this reference for libraries and code quality standards:\n\n${examples.join('\n\n')}\n`;
         }

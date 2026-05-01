@@ -181,14 +181,11 @@ export async function POST(req: Request) {
     const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
     const userPrompt = buildGeneratePrompt(prompt, chartType, combinedContext, knowledge);
 
-    // If PDF pages were uploaded, send them as vision content so the model can read tables/figures
+    // Build user message: text prompt + optional PDF pages as vision
     const userContent: any = contextImages.length > 0
         ? [
             { type: "text", text: userPrompt },
-            ...contextImages.map(img => ({
-                type: "image_url",
-                image_url: { url: img, detail: "low" },
-            })),
+            ...contextImages.map(img => ({ type: "image_url", image_url: { url: img, detail: "low" } })),
           ]
         : userPrompt;
 
