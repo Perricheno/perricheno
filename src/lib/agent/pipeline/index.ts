@@ -2,13 +2,14 @@
 // Called from /api/agent/generate in a fire-and-forget background task.
 // Streams progress updates into agent_sessions.stage_json so the UI can poll.
 
-import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult } from "./types";
+import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult, DocumentDesign } from "./types";
 import type { StageProgress } from "../stages";
 import type { AgentUpload } from "@/lib/db";
 import { runStage1 } from "./stage1_plan";
 import { runStage2 } from "./stage2_extract";
 import { runStage2_5 } from "./stage2_5_verify";
 import { runStage3 } from "./stage3_draft";
+import { runStage3_5 } from "./stage3_5_design";
 import { runStage4 } from "./stage4_assemble";
 import { runStage5 } from "./stage5_validate";
 
@@ -44,7 +45,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
 
     let progress: StageProgress = {
         current_stage: 1,
-        total_stages: 6, // Changed from 5 to 6 (added Stage 2.5)
+        total_stages: 7,
         label: "Planning document structure",
         completed_stages: [],
         files: uploads.map(u => ({ name: u.filename, status: "pending" as const })),
@@ -198,20 +199,32 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     }
 
     progress = touch(progress, {
-        current_stage: 4,
+        current_stage: 5,
+        label: "Designing document layout",
+        completed_stages: [1, 2, 3, 4],
+        progress: undefined,
+    });
+    await writeProgress(progress);
+
+    // ── Stage 3.5: Design ──
+    const design = await runStage3_5(settings, plan);
+    totalTokens += design.tokensUsed;
+
+    progress = touch(progress, {
+        current_stage: 6,
         label: "Assembling document",
-        completed_stages: [1, 2, 3],
+        completed_stages: [1, 2, 3, 4, 5],
         progress: undefined,
     });
     await writeProgress(progress);
 
     // ── Stage 4: Assemble (no LLM, no tokens) ──
-    const assembled = runStage4(settings, plan, enrichedRefs, sections);
+    const assembled = runStage4(settings, plan, enrichedRefs, sections, design);
 
     progress = touch(progress, {
-        current_stage: 5,
+        current_stage: 7,
         label: "Validating LaTeX",
-        completed_stages: [1, 2, 3, 4],
+        completed_stages: [1, 2, 3, 4, 5, 6],
     });
     await writeProgress(progress);
 
@@ -228,9 +241,9 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     totalTokens += validated.tokensUsed;
 
     progress = touch(progress, {
-        current_stage: 5,
+        current_stage: 7,
         label: validated.compiled ? "Done" : "Needs attention",
-        completed_stages: [1, 2, 3, 4, 5],
+        completed_stages: [1, 2, 3, 4, 5, 6, 7],
     });
     await writeProgress(progress);
 

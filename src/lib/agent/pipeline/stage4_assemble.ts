@@ -5,7 +5,7 @@
 // bibliography, and stubs any that the bib is missing so pdflatex won't die
 // on the first pass.
 
-import type { AssembledDoc, ExtractedRef, Plan, SectionDraft, PipelineSettings } from "./types";
+import type { AssembledDoc, ExtractedRef, Plan, SectionDraft, PipelineSettings, DocumentDesign } from "./types";
 import {
     normalizeLatexText,
     ensureRussianPreamble,
@@ -123,6 +123,7 @@ export function runStage4(
     plan: Plan,
     refs: ExtractedRef[],
     sections: SectionDraft[],
+    design?: DocumentDesign,
 ): AssembledDoc {
     const warnings: string[] = [];
 
@@ -138,8 +139,16 @@ export function runStage4(
 
     // ── Title + body ──
     const title = plan.title;
-    const preamble = buildPreamble(settings);
-    const titleBlock = buildTitleBlock(settings, title);
+    
+    // Use custom design if available, otherwise fallback to deterministic template
+    const preamble = design?.preamble 
+        ? `${buildPreamble(settings)}\n\n% --- Custom LLM Design ---\n${design.preamble}`
+        : buildPreamble(settings);
+
+    const titleBlock = design?.titleBlock
+        ? `\\begin{document}\n${design.titleBlock}`
+        : buildTitleBlock(settings, title);
+
     const body = buildSectionBlock(sections);
 
     const closing = settings.useReferences

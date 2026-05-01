@@ -75,6 +75,12 @@ export interface AssembledDoc {
     unresolvedCitations: string[];
 }
 
+export interface DocumentDesign {
+    preamble: string;
+    titleBlock: string;
+    tokensUsed: number;
+}
+
 export interface VerificationResult {
     uploadId: string;
     filename: string;
