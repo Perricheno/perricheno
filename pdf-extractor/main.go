@@ -267,7 +267,8 @@ func performOCR(pdfPath string) (string, error) {
 		imgPath := filepath.Join(imgDir, f.Name())
 		
 		// Run tesseract with multiple languages
-		cmd := exec.Command("tesseract", imgPath, "stdout", "-l", "eng+rus")
+		// eng+rus+kaz+chi_sim+jpn+kor+ara+deu+fra+spa+ita+por+ukr
+		cmd := exec.Command("tesseract", imgPath, "stdout", "-l", "eng+rus+kaz+chi_sim+jpn+kor+ara+deu+fra+spa+ita+por+ukr")
 		output, err := cmd.Output()
 		if err != nil {
 			log.Printf("[OCR] Page %s failed: %v", f.Name(), err)
