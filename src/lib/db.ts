@@ -323,7 +323,7 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
             title: data.title,
             doc_type: data.doc_type,
             settings_json: data.settings_json || null,
-            stage_json: data.stage_json || null,
+            // stage_json: data.stage_json || null,
             main_tex: data.main_tex || null,
             references_bib: data.references_bib || null,
             visuals_json: data.visuals_json || null,
@@ -367,9 +367,11 @@ export async function updateAgentSession(id: string, data: any): Promise<void> {
     
     // Auto-serialize object fields to strings for the DB
     const finalData = { ...data };
+    /*
     if (finalData.stage_json && typeof finalData.stage_json !== 'string') {
         finalData.stage_json = JSON.stringify(finalData.stage_json);
     }
+    */
     if (finalData.settings_json && typeof finalData.settings_json !== 'string') {
         finalData.settings_json = JSON.stringify(finalData.settings_json);
     }
