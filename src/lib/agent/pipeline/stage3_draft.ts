@@ -5,7 +5,7 @@
 // 25 000-word thesis is never bottlenecked by a per-call token cap.
 
 import { chatCompletionLong, type ChatMessage, type ChatContentPart } from "./llm";
-import type { ExtractedRef, Plan, PlanSection, SectionDraft, PipelineSettings, VerificationResult } from "./types";
+import type { ExtractedRef, Plan, PlanSection, SectionDraft, PipelineSettings, VerificationResult, DocumentDesign } from "./types";
 import type { AgentUpload } from "@/lib/db";
 import { BABEL_LANG_MAP } from "../stages";
 import fs from "fs";
@@ -105,7 +105,7 @@ function buildRefBundle(refs: ExtractedRef[]): string {
     return lines.join("\n\n");
 }
 
-function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean): string {
+function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean, design?: DocumentDesign): string {
     const lang = LANG_DISPLAY_NAMES[s.language] ?? s.language;
     const styleDesc = {
         simple: "Simple and clear. Basic vocabulary, short sentences.",
@@ -117,6 +117,10 @@ function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean): string 
         ? `CITATIONS: Use \\textcite{key} and \\parencite{key} where appropriate. Only cite keys from the provided reference bundle. Do NOT invent keys.`
         : `CITATIONS: Do NOT include any \\cite / \\textcite / \\parencite commands. No bibliography references in this draft.`;
 
+
+    const designContext = design?.preamble
+        ? `\nDOCUMENT DESIGN (custom packages \& commands available in the preamble):\n${design.preamble}\nYou SHOULD use the custom colors, commands, and environments defined above to make each section visually consistent with the overall document design.`
+        : "";
     return `You are writing ONE section of an academic ${s.docType ?? "document"} in ${lang}.
 
 Return ONLY the LaTeX body of that section - plain text and LaTeX commands, NO \\section{...} wrapper (the orchestrator adds it), NO document preamble, NO \\begin{document}.
@@ -129,7 +133,7 @@ Rules:
 - Math: use \\( ... \\) or \\[ ... \\] for display, no bare $...$ if you can avoid it.
 - Tables / code / figures are allowed only when the task demands them.
 - ${refRules}
-- Output LaTeX only. No markdown, no fences, no commentary.` 
+- Output LaTeX only. No markdown, no fences, no commentary.${designContext}` 
 + getLatexKnowledge();
 }
 
@@ -209,13 +213,14 @@ export async function runStage3(
     uploads: AgentUpload[],
     verifications: VerificationResult[],
     onProgress?: (done: number, total: number, heading: string) => void,
+    design?: DocumentDesign,
 ): Promise<{ sections: SectionDraft[]; tokensUsed: number; anyTruncated: boolean }> {
     // Use enhanced bundle if verifications available, otherwise fallback to legacy
     const refBundle = verifications.length > 0
         ? buildEnhancedRefBundle(refs, uploads, verifications)
         : buildRefBundle(refs);
     
-    const systemPrompt = buildSystemPrompt(settings, !!refBundle);
+    const systemPrompt = buildSystemPrompt(settings, !!refBundle, design);
 
     const drafts: SectionDraft[] = [];
     let totalTokens = 0;

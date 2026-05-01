@@ -179,11 +179,23 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         await updateProgress({ completed_stages: [1, 2, 3] });
     }
 
-    // ── Stage 4: Draft ──
+    // ── Stage 4: Design ──
     await updateProgress({
         current_stage: 4,
-        label: `Drafting ${plan.sections.length} section(s)`,
+        label: "Designing document layout",
         completed_stages: [1, 2, 3],
+        progress: undefined,
+    });
+
+    const design = await runStage3_5(settings, plan);
+    totalTokens += design.tokensUsed;
+    await addLog(`Design applied: ${design.titleBlock.slice(0, 60)}...`, "success");
+
+    // ── Stage 5: Draft (with design context) ──
+    await updateProgress({
+        current_stage: 5,
+        label: `Drafting ${plan.sections.length} section(s)`,
+        completed_stages: [1, 2, 3, 4],
         progress: { done: 0, total: plan.sections.length },
     });
 
@@ -200,24 +212,13 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
                 label: `Drafting ${heading} (${done}/${total})`,
             });
         },
+        design,
     );
     totalTokens += t3;
     if (anyTruncated) {
         progress.retries = { ...(progress.retries ?? {}), stage_3_truncated: 1 };
     }
     await addLog(`Drafting complete: ~${sections.reduce((s, x) => s + x.wordCount, 0)} words generated`, "success");
-
-    // ── Stage 5: Design ──
-    await updateProgress({
-        current_stage: 5,
-        label: "Designing document layout",
-        completed_stages: [1, 2, 3, 4],
-        progress: undefined,
-    });
-
-    const design = await runStage3_5(settings, plan);
-    totalTokens += design.tokensUsed;
-    await addLog(`Design applied: ${design.titleBlock.slice(0, 60)}...`, "success");
 
     // ── Stage 6: Assemble ──
     await updateProgress({
