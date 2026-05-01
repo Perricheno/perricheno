@@ -71,6 +71,8 @@ model Transaction {
   is_positive Boolean  @default(false)
   created_at  DateTime @default(now())
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model UsageLog {
@@ -144,6 +146,8 @@ model Receipt {
   pdf_base64  String?
   created_at  DateTime @default(now())
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model Session {
@@ -155,6 +159,8 @@ model Session {
   last_active DateTime @default(now())
   created_at  DateTime @default(now())
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model BotSession {
@@ -188,6 +194,8 @@ model AgentSession {
   created_at     DateTime @default(now())
   updated_at     DateTime @default(now()) @updatedAt
   user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model ChatSession {
@@ -199,6 +207,8 @@ model ChatSession {
   user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   messages      ChatMessage[]
   visual_assets VisualAsset[]
+
+  @@index([user_id])
 }
 
 model ChatMessage {
@@ -209,6 +219,8 @@ model ChatMessage {
   metadata_json String?
   created_at    DateTime    @default(now())
   session       ChatSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
 }
 
 model VisualAsset {
@@ -240,6 +252,8 @@ model AgentUpload {
   created_at   DateTime @default(now())
   expires_at   DateTime
   user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 // ── Spaces (Documents/Latex Editor) ───────────────────────────────────────

@@ -338,8 +338,19 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
 export async function getAgentSessionsByUser(userId: number): Promise<AgentSession[]> {
     return prisma.agentSession.findMany({
         where: { user_id: userId },
+        select: {
+            id: true,
+            user_id: true,
+            title: true,
+            doc_type: true,
+            status: true,
+            share_id: true,
+            created_at: true,
+            updated_at: true,
+            // Exclude huge fields: main_tex, references_bib, visuals_json, stage_json, stream_text, settings_json
+        },
         orderBy: { updated_at: 'desc' }
-    });
+    }) as unknown as Promise<AgentSession[]>;
 }
 
 export async function getAgentSession(id: string): Promise<AgentSession | undefined> {
