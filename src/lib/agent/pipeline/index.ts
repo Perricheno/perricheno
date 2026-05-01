@@ -12,6 +12,7 @@ import { runStage2_7 } from "./stage2_7_enrich_doi";
 import { runStage3 } from "./stage3_draft";
 import { runStage4 } from "./stage4_assemble";
 import { runStage5 } from "./stage5_validate";
+import { withRetry } from "../stages";
 
 export type ProgressWriter = (p: StageProgress) => Promise<void>;
 
@@ -67,7 +68,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     await writeProgress(progress);
 
     // ── Stage 1: Plan ──
-    const { plan, tokensUsed: t1 } = await runStage1(settings, uploads.map(u => u.filename));
+    const { plan, tokensUsed: t1 } = await withRetry(() => runStage1(settings, uploads.map(u => u.filename)), 3, 1000);
     totalTokens += t1;
     await addLog(`Plan generated: ${plan.sections.length} sections`, "success");
 
@@ -116,7 +117,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         completed_stages: [1, 2, 3],
     });
 
-    const { sections, tokensUsed: t3 } = await runStage3(
+    const { sections, tokensUsed: t3 } = await withRetry(() => runStage3(
         settings,
         plan,
         enrichedRefs,
@@ -125,7 +126,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         async (done, total, heading) => {
             await updateProgress({ progress: { done, total }, label: `Drafting ${heading} (${done}/${total})` });
         },
-    );
+    ), 2, 2000);
     totalTokens += t3;
 
     // ── Stage 5: Assemble ──

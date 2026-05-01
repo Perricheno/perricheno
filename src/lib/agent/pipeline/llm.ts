@@ -32,7 +32,14 @@ export interface ChatResult {
 
 export class LlmError extends Error {
     constructor(public status: number, public body: string) {
-        super(`OpenAI ${status}: ${body.slice(0, 300)}`);
+        let cleanBody = body.trim();
+        // If it looks like a Cloudflare/HTML error page, don't show the HTML tags
+        if (cleanBody.startsWith("<!DOCTYPE") || cleanBody.startsWith("<html")) {
+            cleanBody = "Infrastructure Error (Gateway/Cloudflare). OpenAI might be temporarily overloaded.";
+        } else {
+            cleanBody = cleanBody.slice(0, 300);
+        }
+        super(`OpenAI ${status}: ${cleanBody}`);
     }
 }
 
