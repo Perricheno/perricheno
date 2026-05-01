@@ -93,7 +93,7 @@ async function extractImages(pdfBuffer: Buffer, filename: string): Promise<Inges
 async function ocrPdf(pdfBuffer: Buffer, filename: string): Promise<Buffer> {
     const res = await stirlingMultipart("/misc/ocr-pdf", pdfBuffer, filename, {
         languages: "eng,rus",
-        ocrType: "force-ocr",
+        ocrType: "skip-text",
         ocrRenderType: "normal",
     });
     if (!res.ok) throw new Error(`ocr-pdf failed: ${res.status}`);
