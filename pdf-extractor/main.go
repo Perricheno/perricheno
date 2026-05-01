@@ -45,10 +45,12 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// Health check
-	r.GET("/health", func(c *gin.Context) {
+	// Health check (support both GET and HEAD for Docker healthcheck)
+	healthHandler := func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "UP", "service": "pdf-extractor"})
-	})
+	}
+	r.GET("/health", healthHandler)
+	r.HEAD("/health", healthHandler)
 
 	// Extract endpoint
 	r.POST("/extract", handleExtract)
