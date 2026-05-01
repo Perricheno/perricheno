@@ -439,7 +439,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
     // ─── STREAMING ───
     if (phase === "streaming") {
-        const STAGE_LABELS = ["Plan", "Extract", "Verify", "Draft", "Design", "Assemble", "Validate"];
+        const STAGE_LABELS = ["Plan", "Extract", "Verify", "Draft", "Assemble", "Validate"];
         const sp = stageProgress;
         const current = sp?.current_stage ?? 0;
         const total = sp?.total_stages ?? STAGE_LABELS.length;

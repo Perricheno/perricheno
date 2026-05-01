@@ -1,8 +1,8 @@
-// Orchestrator for the 7-stage generate pipeline.
+// Orchestrator for the 6-stage generate pipeline.
 // Called from /api/agent/generate in a fire-and-forget background task.
 // Streams progress updates into agent_sessions.stage_json so the UI can poll.
 
-import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult, DocumentDesign } from "./types";
+import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult } from "./types";
 import type { StageProgress } from "../stages";
 import type { AgentUpload } from "@/lib/db";
 import { runStage1 } from "./stage1_plan";
@@ -10,7 +10,6 @@ import { runStage2 } from "./stage2_extract";
 import { runStage2_5 } from "./stage2_5_verify";
 import { runStage2_7 } from "./stage2_7_enrich_doi";
 import { runStage3 } from "./stage3_draft";
-import { runStage3_5 } from "./stage3_5_design";
 import { runStage4 } from "./stage4_assemble";
 import { runStage5 } from "./stage5_validate";
 
@@ -25,8 +24,8 @@ export interface RunPipelineInput {
 export interface RunPipelineOutput {
     plan: Plan;
     refs: ExtractedRef[];
+    verifications: VerificationResult[];
     sections: SectionDraft[];
-    design?: DocumentDesign;
     assembled: AssembledDoc;
     mainTex: string;
     referencesBib: string | null;
@@ -43,7 +42,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
 
     let progress: StageProgress = {
         current_stage: 1,
-        total_stages: 7,
+        total_stages: 6,
         label: "Planning document structure",
         completed_stages: [],
         files: uploads.map(u => ({ name: u.filename, status: "pending" as const })),
@@ -129,32 +128,21 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     );
     totalTokens += t3;
 
-    // ── Stage 5: Design ──
+    // ── Stage 5: Assemble ──
     await updateProgress({
         current_stage: 5,
-        label: "Designing document layout",
+        label: "Assembling LaTeX document",
         completed_stages: [1, 2, 3, 4],
     });
 
-    const design = await runStage3_5(settings, plan);
-    totalTokens += design.tokensUsed;
-    await addLog("Custom design generated", "success");
-
-    // ── Stage 6: Assemble ──
-    await updateProgress({
-        current_stage: 6,
-        label: "Assembling LaTeX document",
-        completed_stages: [1, 2, 3, 4, 5],
-    });
-
-    const assembled = runStage4(settings, plan, enrichedRefs, sections, design);
+    const assembled = runStage4(settings, plan, enrichedRefs, sections);
     await addLog("Assembly complete", "success");
 
-    // ── Stage 7: Validate & Repair ──
+    // ── Stage 6: Validate & Repair ──
     await updateProgress({
-        current_stage: 7,
+        current_stage: 6,
         label: "Validating LaTeX source",
-        completed_stages: [1, 2, 3, 4, 5, 6],
+        completed_stages: [1, 2, 3, 4, 5],
     });
 
     const validated = await runStage5(settings, assembled, async (attempt, outcome) => {
@@ -166,16 +154,16 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
     totalTokens += validated.tokensUsed;
 
     await updateProgress({
-        current_stage: 7,
+        current_stage: 6,
         label: validated.compiled ? "Done" : "Needs attention",
-        completed_stages: [1, 2, 3, 4, 5, 6, 7],
+        completed_stages: [1, 2, 3, 4, 5, 6],
     });
 
     return {
         plan,
-        refs,
+        refs: enrichedRefs,
+        verifications,
         sections,
-        design,
         assembled,
         mainTex: validated.finalMainTex,
         referencesBib: validated.finalReferencesBib,

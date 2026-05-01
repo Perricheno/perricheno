@@ -5,7 +5,7 @@
 // bibliography, and stubs any that the bib is missing so pdflatex won't die
 // on the first pass.
 
-import type { AssembledDoc, ExtractedRef, Plan, SectionDraft, PipelineSettings, DocumentDesign } from "./types";
+import type { AssembledDoc, ExtractedRef, Plan, SectionDraft, PipelineSettings } from "./types";
 import {
     normalizeLatexText,
     ensureRussianPreamble,
@@ -16,7 +16,7 @@ import {
 
 const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
-function buildPreamble(s: PipelineSettings, design?: DocumentDesign): string {
+function buildPreamble(s: PipelineSettings): string {
     const columnClass = s.columns === 2 ? "[twocolumn]" : "";
     const lines: string[] = [
         `\\documentclass${columnClass}{article}`,
@@ -59,20 +59,22 @@ function buildPreamble(s: PipelineSettings, design?: DocumentDesign): string {
         "\\usepackage{parskip}",
     );
 
-    // Merge LLM design if available, otherwise use defaults
-    if (design?.preamble) {
-        lines.push("\n% --- Custom LLM Design ---");
-        lines.push(design.preamble);
-        lines.push("% -------------------------\n");
-    } else if (s.useTemplate) {
+    // Standard Template Settings
+    if (s.useTemplate) {
         lines.push(
             "\\usepackage{fancyhdr}",
             "\\usepackage{titlesec}",
-            "\\geometry{a4paper,left=25mm,right=25mm,top=28mm,bottom=28mm,headheight=14pt,headsep=10pt,footskip=12pt}",
-            "\\onehalfspacing",
+            "\\geometry{a4paper,left=20mm,right=20mm,top=25mm,bottom=25mm,headheight=14pt,headsep=10pt,footskip=12pt}",
+            "\\setstretch{1.1}",
             "\\pagestyle{fancy}",
             "\\fancyhf{}",
-            "\\fancyfoot[C]{\\thepage}",
+            "\\renewcommand{\\headrulewidth}{0.4pt}",
+            "\\renewcommand{\\footrulewidth}{0.4pt}",
+            "\\fancyhead[L]{\\small " + (s.authorName || "Author") + "}",
+            "\\fancyhead[R]{\\small \\textsc{" + (s.docType.toUpperCase()) + "}}",
+            "\\fancyfoot[C]{\\small \\thepage}",
+            "\\titleformat{\\section}{\\normalfont\\large\\bfseries}{\\thesection}{1em}{}",
+            "\\titleformat{\\subsection}{\\normalfont\\normalsize\\bfseries}{\\thesubsection}{1em}{}",
         );
     } else {
         lines.push(
@@ -93,18 +95,10 @@ function buildPreamble(s: PipelineSettings, design?: DocumentDesign): string {
     return lines.join("\n");
 }
 
-function buildTitleBlock(s: PipelineSettings, title: string, design?: DocumentDesign): string {
+function buildTitleBlock(s: PipelineSettings, title: string): string {
     const author = s.authorName || "Author";
     const affiliation = "Astana IT University";
     const date = s.dateStr || "\\today";
-
-    if (design?.titleBlock) {
-        // Replace placeholders if LLM used them
-        let block = design.titleBlock;
-        block = block.replace(/\\thetitle/g, title);
-        block = block.replace(/\\theauthor/g, author);
-        return `\\begin{document}\n${block}`;
-    }
 
     const metaParts: string[] = [];
     if (s.courseName)     metaParts.push(`\\textbf{${s.language === "ru" ? "Курс" : "Course"}:} ${s.courseName}`);
@@ -164,7 +158,6 @@ export function runStage4(
     plan: Plan,
     refs: ExtractedRef[],
     sections: SectionDraft[],
-    design?: DocumentDesign,
 ): AssembledDoc {
     const warnings: string[] = [];
 
@@ -181,8 +174,8 @@ export function runStage4(
     // ── Title + body ──
     const title = plan.title;
     
-    const preamble = buildPreamble(settings, design);
-    const titleBlock = buildTitleBlock(settings, title, design);
+    const preamble = buildPreamble(settings);
+    const titleBlock = buildTitleBlock(settings, title);
     const body = buildSectionBlock(sections);
 
     const closing = settings.useReferences
