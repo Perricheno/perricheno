@@ -212,7 +212,6 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
                 label: `Drafting ${heading} (${done}/${total})`,
             });
         },
-        design,
     );
     totalTokens += t3;
     if (anyTruncated) {
