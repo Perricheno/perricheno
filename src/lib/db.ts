@@ -323,7 +323,7 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
             title: data.title,
             doc_type: data.doc_type,
             settings_json: data.settings_json || null,
-            // stage_json: data.stage_json || null,
+            stage_json: data.stage_json || null,
             main_tex: data.main_tex || null,
             references_bib: data.references_bib || null,
             visuals_json: data.visuals_json || null,
@@ -344,12 +344,32 @@ export async function getAgentSessionsByUser(userId: number): Promise<AgentSessi
 }
 
 export async function getAgentSession(id: string): Promise<AgentSession | undefined> {
-    const session = await prisma.agentSession.findUnique({ where: { id } });
+    // Explicitly select fields to avoid crashing if schema/db mismatch (e.g. stage_json missing)
+    const session = await (prisma.agentSession as any).findUnique({ 
+        where: { id },
+        select: {
+            id: true, user_id: true, title: true, doc_type: true,
+            settings_json: true, main_tex: true, references_bib: true,
+            visuals_json: true, share_id: true, status: true,
+            error_msg: true, stream_text: true, tg_message_id: true,
+            created_at: true, updated_at: true,
+            // stage_json: false // DON'T REQUEST IT
+        }
+    });
     return session || undefined;
 }
 
 export async function getAgentSessionByShareId(shareId: string): Promise<AgentSession | undefined> {
-    const session = await prisma.agentSession.findUnique({ where: { share_id: shareId } });
+    const session = await (prisma.agentSession as any).findUnique({ 
+        where: { share_id: shareId },
+        select: {
+            id: true, user_id: true, title: true, doc_type: true,
+            settings_json: true, main_tex: true, references_bib: true,
+            visuals_json: true, share_id: true, status: true,
+            error_msg: true, stream_text: true, tg_message_id: true,
+            created_at: true, updated_at: true
+        }
+    });
     return session || undefined;
 }
 
@@ -367,11 +387,9 @@ export async function updateAgentSession(id: string, data: any): Promise<void> {
     
     // Auto-serialize object fields to strings for the DB
     const finalData = { ...data };
-    /*
     if (finalData.stage_json && typeof finalData.stage_json !== 'string') {
         finalData.stage_json = JSON.stringify(finalData.stage_json);
     }
-    */
     if (finalData.settings_json && typeof finalData.settings_json !== 'string') {
         finalData.settings_json = JSON.stringify(finalData.settings_json);
     }
