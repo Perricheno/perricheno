@@ -13,6 +13,7 @@ import {
     checkLatexStructure,
     BABEL_LANG_MAP,
 } from "../stages";
+import { TEMPLATE_PRESETS } from "../templates/presets";
 
 const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
@@ -64,7 +65,7 @@ function buildPreamble(s: PipelineSettings): string {
         lines.push(
             "\\usepackage{fancyhdr}",
             "\\usepackage{titlesec}",
-            "\\geometry{a4paper,left=20mm,right=20mm,top=25mm,bottom=25mm,headheight=14pt,headsep=10pt,footskip=12pt}",
+            "\\geometry{a4paper,left=8mm,right=8mm,top=15mm,bottom=15mm,headheight=14pt,headsep=10pt,footskip=12pt}",
             "\\setstretch{1.1}",
             "\\pagestyle{fancy}",
             "\\fancyhf{}",
@@ -153,6 +154,42 @@ function stubMissingBibEntries(missingKeys: string[], lang: string): string {
 }`).join("\n\n");
 }
 
+// ── Template resolution ─────────────────────────────────────────────────────
+// Returns the full preamble string (everything before \begin{document}).
+// Priority: custom ZIP upload → named preset → legacy buildPreamble().
+
+function injectBiblatexIfNeeded(preamble: string, useReferences: boolean): string {
+    if (!useReferences) return preamble;
+    if (/\\usepackage.*\{biblatex\}/.test(preamble)) return preamble;
+    const bibLines = "\\usepackage[style=apa, backend=biber]{biblatex}\n\\addbibresource{references.bib}";
+    // Insert just before \begin{document} if present; otherwise append.
+    const idx = preamble.lastIndexOf("\\begin{document}");
+    if (idx !== -1) return preamble.slice(0, idx) + bibLines + "\n" + preamble.slice(idx);
+    return preamble + "\n" + bibLines;
+}
+
+function resolveTemplate(settings: PipelineSettings): { preamble: string; useFancyTitle: boolean } {
+    // 1. Custom Overleaf ZIP preamble
+    if (settings.customTemplatePreamble) {
+        // Strip \begin{document} and anything after it — Stage 4 adds that.
+        const raw = settings.customTemplatePreamble.replace(/\\begin\s*\{document\}[\s\S]*$/, "").trim();
+        const preamble = injectBiblatexIfNeeded(raw, !!settings.useReferences);
+        return { preamble, useFancyTitle: false };
+    }
+
+    // 2. Named preset
+    if (settings.templateId && settings.templateId !== "plain") {
+        const preset = TEMPLATE_PRESETS.find(p => p.id === settings.templateId);
+        if (preset) {
+            const preamble = injectBiblatexIfNeeded(preset.preamble(settings), !!settings.useReferences);
+            return { preamble, useFancyTitle: preset.useFancyTitle };
+        }
+    }
+
+    // 3. Legacy useTemplate flag / default
+    return { preamble: buildPreamble(settings), useFancyTitle: settings.useTemplate };
+}
+
 export function runStage4(
     settings: PipelineSettings,
     plan: Plan,
@@ -173,9 +210,9 @@ export function runStage4(
 
     // ── Title + body ──
     const title = plan.title;
-    
-    const preamble = buildPreamble(settings);
-    const titleBlock = buildTitleBlock(settings, title);
+
+    const { preamble, useFancyTitle } = resolveTemplate(settings);
+    const titleBlock = buildTitleBlock({ ...settings, useTemplate: useFancyTitle }, title);
     const body = buildSectionBlock(sections);
 
     const closing = settings.useReferences

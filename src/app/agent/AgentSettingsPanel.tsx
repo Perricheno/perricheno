@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { IconChevronDown } from "@tabler/icons-react";
 import { AgentSettings } from "./types";
+import { TemplatePicker } from "./TemplatePicker";
 
 interface Props {
     settings: AgentSettings;
@@ -164,10 +165,16 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                     </div>
                 </div>
                 <div className="space-y-3 pt-5 md:pt-6 md:space-y-4">
-                    <Toggle label="Scientific Template" value={settings.useTemplate} onChange={(v) => updateSetting("useTemplate", v)} />
                     <Toggle label="Cite References" value={settings.useReferences} onChange={(v) => updateSetting("useReferences", v)} />
                 </div>
             </div>
+
+            <TemplatePicker
+                templateId={settings.templateId}
+                customTemplatePreamble={settings.customTemplatePreamble}
+                onTemplateChange={(id) => updateSetting("templateId", id)}
+                onCustomPreamble={(p) => updateSetting("customTemplatePreamble", p)}
+            />
 
             <div>
                 <button onClick={() => setDetailsOpen(!detailsOpen)} className="flex items-center gap-1.5 text-xs font-semibold text-[var(--foreground)] hover:opacity-70 transition-all uppercase tracking-widest">

@@ -32,6 +32,10 @@ export interface AgentSettings {
     referenceFileNames: string[];
     /** ids of parsed PDFs in agent_uploads (new staged pipeline). */
     uploadIds: string[];
+    /** Selected preset template id, or "custom" when a ZIP was uploaded. */
+    templateId: string;
+    /** Preamble extracted from a user-uploaded Overleaf ZIP. */
+    customTemplatePreamble: string;
     /** Per-upload display metadata kept in sync with uploadIds. */
     uploadMeta: {
         id: string;
@@ -68,6 +72,8 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     referenceFilesText: [],
     referenceFileNames: [],
     uploadIds: [],
+    templateId: "plain",
+    customTemplatePreamble: "",
     uploadMeta: [],
     runtime: 'R',
     scholarMaxArticles: 10,

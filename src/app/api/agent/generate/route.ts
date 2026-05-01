@@ -130,6 +130,10 @@ export async function POST(req: Request) {
         wordCount: Math.max(300, Math.min(30_000, Number(body.wordCount) || 2000)),
         columns: body.columns === 1 ? 1 : 2,
         useTemplate: body.useTemplate ?? true,
+        templateId: typeof body.templateId === "string" ? body.templateId : undefined,
+        customTemplatePreamble: typeof body.customTemplatePreamble === "string" && body.customTemplatePreamble
+            ? body.customTemplatePreamble
+            : undefined,
         useReferences: body.useReferences ?? false,
         language: typeof body.language === 'string' && body.language ? body.language.slice(0, 10).toLowerCase() : 'en',
         authorName: body.authorName,

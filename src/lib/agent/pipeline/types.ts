@@ -22,6 +22,10 @@ export interface PipelineSettings {
     taskFileText?: string;       // pasted assignment text (not a PDF)
     referenceLinks?: string[];   // URLs only; content isn't fetched
     uploadIds?: string[];        // ids in agent_uploads (the new PDF bundles)
+    /** Preset template id ("plain" | "academic" | "ieee" | "elegant" | "minimal"). */
+    templateId?: string;
+    /** Full LaTeX preamble extracted from a user-uploaded Overleaf ZIP. Overrides templateId. */
+    customTemplatePreamble?: string;
 }
 
 export interface PlanSection {
