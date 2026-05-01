@@ -364,8 +364,13 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
     const buildZipBlob = async (): Promise<Blob> => {
         const zip = new JSZip();
-        zip.file("main.tex", mainTex);
-        if (referencesBib) zip.file("references.bib", referencesBib);
+        const encoder = new TextEncoder();
+        
+        // Explicitly encode strings as UTF-8 to avoid browser-specific encoding issues
+        zip.file("main.tex", encoder.encode(mainTex));
+        if (referencesBib) {
+            zip.file("references.bib", encoder.encode(referencesBib));
+        }
         visuals.forEach((img, i) => {
             const cleanBase64 = img.image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
             try {
