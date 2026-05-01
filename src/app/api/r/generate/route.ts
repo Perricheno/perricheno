@@ -1,5 +1,5 @@
-// R Studio page — generate + compile R visualization in one shot.
-// Uses the R knowledge base and enforces B&W aesthetics.
+// R Studio — generate + compile R visualization.
+// Accepts optional contextFiles (CSV/text data) and uses real data in the prompt.
 
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
@@ -10,49 +10,23 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const R_COMPILER_URL = process.env.R_COMPILER_URL || "http://r-compiler:8000";
 const MODEL = "gpt-5-mini-2025-08-07";
 
-const CHART_DESCRIPTIONS: Record<string, string> = {
-    bar:          "a bar/column chart showing categorical comparisons",
-    histogram:    "a histogram showing the distribution of a continuous variable",
-    boxplot:      "a boxplot showing statistical distribution and outliers across groups",
-    violin:       "a violin plot showing probability density and distribution shape",
-    heatmap:      "a heatmap or correlation matrix",
-    lollipop:     "a lollipop / dot-stem chart for ranked comparisons",
-    dumbbell:     "a dumbbell plot showing change between two points in time",
-    density2d:    "a 2D kernel density / contour plot",
-    bubble:       "a bubble chart with a third dimension encoded as circle size",
-    scatter:      "a scatter plot showing the relationship between two variables",
-    line:         "a line chart showing trends over time",
-    radar:        "a radar / spider chart for multivariate comparison",
-    sankey:       "a Sankey / alluvial flow diagram",
-    chord:        "a chord diagram showing relationships between groups",
-    wordcloud:    "a word cloud showing term frequencies",
-    waffle:       "a waffle chart showing part-to-whole relationships",
-    dendrogram:   "a hierarchical clustering dendrogram",
-    parallel:     "a parallel coordinates plot for multivariate data",
-    marginal:     "a scatter plot with marginal histograms on each axis",
-    circlepack:   "a circle packing chart for hierarchical proportions",
-    "3d_scatter": "a 3D scatter plot",
-    "3d_surface": "a 3D surface / mesh plot",
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function wrapRCode(raw: string): string {
     return `
-# Fail-safe auto-installer
 options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))
 .orig_lib <- base::library
 library <- function(package, ...) {
   pkg_name <- as.character(substitute(package))
   if (length(pkg_name) == 1 && pkg_name != "package") {
-    if (!requireNamespace(pkg_name, quietly = TRUE)) {
-        suppressMessages(suppressWarnings(install.packages(pkg_name, quiet = TRUE)))
-    }
-    invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))))
+    if (!requireNamespace(pkg_name, quietly = TRUE))
+      suppressMessages(suppressWarnings(install.packages(pkg_name, quiet = TRUE)))
+    invisible(suppressPackageStartupMessages(suppressWarnings(
+      .orig_lib(pkg_name, character.only = TRUE, quietly = TRUE))))
   } else {
     invisible(suppressPackageStartupMessages(suppressWarnings(.orig_lib(...))))
   }
 }
-
-# Generated code
 ${raw}`;
 }
 
@@ -62,21 +36,71 @@ function cleanCode(raw: string): string {
     return c.trim();
 }
 
-function buildSystemPrompt(knowledge: string): string {
-    return `You are an expert R visualization programmer specializing in ggplot2 and the R statistical ecosystem.
-
-OUTPUT: Only pure, executable R code. No markdown fences. No comments starting with #. No commentary outside code.
-
-CRITICAL RULES:
-- Always end the script with the plot object \`p\` (for ggplot2) or let the final expression be the rendering call (for base-R plots like radarchart, wordcloud, chordDiagram).
-- NEVER call \`png()\`, \`pdf()\`, \`dev.off()\`, \`ggsave()\`. The compiler captures output automatically.
-- Always set \`set.seed(42)\` before any random data generation.
-- Generate all data inline — no external file dependencies.
-- Default to a clean black-and-white / grayscale aesthetic: \`theme_minimal()\`, \`scale_fill_grey()\`, \`scale_color_grey()\`.
-- Use \`ggrepel::geom_text_repel\` when labels might overlap.
-- Keep the script concise (under 80 lines).
-${knowledge}`;
+function isGarbage(text: string): boolean {
+    return /[\x00-\x08\x0E-\x1F]{5,}|(%[0-9A-Fa-f]{2}){10,}/.test(text.slice(0, 500));
 }
+
+// ── Prompt builders ───────────────────────────────────────────────────────────
+
+function buildGeneratePrompt(
+    prompt: string,
+    chartType: string,
+    combinedContext: string,
+    knowledge: string,
+): string {
+    const hasRealData = combinedContext.length > 50 && !isGarbage(combinedContext);
+    const chartDesc = chartType
+        ? `a **${chartType.replace(/_/g, " ").toUpperCase()}** chart`
+        : "the most appropriate chart type";
+
+    return `You are a strict Data Analytics and Visualization Agent using R/ggplot2.
+
+TASK: Create ${chartDesc} for this request: "${prompt}"
+
+**DATA QUALITY CHECK** (MANDATORY):
+- If the context below looks like binary garbage, garbled text, base64, hex, or unreadable characters — DO NOT attempt to parse it. Extraction failed.
+- NEVER try to parse filenames or metadata markers as actual data.
+- If context is plain readable text (not tabular), extract key facts/numbers and build a data.frame manually.
+
+${hasRealData
+    ? `USER PROVIDED DATASET — YOU MUST USE THIS ACTUAL DATA:\n${combinedContext}\n\n**CRITICAL**: Parse and use the data above. DO NOT invent synthetic data.`
+    : "No dataset provided — generate realistic synthetic data with set.seed(42)."}
+
+VISUAL STYLE — Black & White / Grayscale:
+- Use theme_minimal(base_size = 13) or theme_classic(base_size = 13)
+- Use scale_fill_grey(start = 0.15, end = 0.85) for fills
+- Use scale_color_grey(start = 0.1, end = 0.7) for lines/points
+- White background, minimal grid (#e8e8e8 lines or none)
+
+CRITICAL CODE RULES:
+1. End the script with the ggplot object \`p\` (for ggplot2), or let the rendering function be the last call (for base-R plots).
+2. NEVER call png(), pdf(), ggsave(), cairo_pdf(), dev.off() — compiler captures output.
+3. NEVER reference external files or paths.
+4. set.seed(42) before any random generation.
+5. Prevent text overlap with ggrepel::geom_text_repel when labeling many points.
+6. Keep code under 80 lines.
+
+${knowledge}
+
+OUTPUT: Only pure executable R code. No markdown fences. No commentary.`;
+}
+
+function buildSuggestPrompt(prompt: string, combinedContext: string): string {
+    const hasData = combinedContext.length > 50 && !isGarbage(combinedContext);
+    return `You are a data visualization expert. Given the user's request and optionally their data, suggest the best R chart types.
+
+User request: "${prompt}"
+${hasData ? `\nData preview:\n${combinedContext.slice(0, 3000)}\n` : "\nNo data provided.\n"}
+
+Respond ONLY with valid JSON (no markdown):
+{"charts": ["chart_id_1", "chart_id_2", "chart_id_3"], "reasoning": "1-2 sentence explanation"}
+
+Available chart ids: bar, histogram, boxplot, violin, lollipop, dumbbell, bubble, density2d, marginal, heatmap, parallel, radar, sankey, chord, circlepack, dendrogram, waffle, wordcloud, 3d_scatter, 3d_surface
+
+Pick 2-4 that best fit the data shape and question. Order by relevance.`;
+}
+
+// ── Route ─────────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
     const userId = await verifySession();
@@ -87,44 +111,103 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "LIMIT_REACHED", details: "Visual limit reached." }, { status: 402 });
     }
 
-    if (!OPENAI_API_KEY) {
-        return NextResponse.json({ error: "OpenAI API key not configured." }, { status: 500 });
-    }
+    if (!OPENAI_API_KEY) return NextResponse.json({ error: "OpenAI API key not configured." }, { status: 500 });
 
     let body: any;
     try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-    const { prompt, chartType = "", previousCode, previousError } = body;
+    const {
+        action = "generate",
+        prompt,
+        chartType = "",
+        contextFiles = [],   // [{name: string, content: string, images?: string[]}]
+        previousCode,
+        previousError,
+    } = body;
+
+    // Combined data context from uploaded files (cap each at 15 000 chars)
+    const combinedContext = (contextFiles as { name: string; content: string; images?: string[] }[])
+        .map(f => `--- ${f.name} ---\n${f.content.slice(0, 15_000)}`)
+        .join("\n\n");
+
+    // Collect PDF/Office page images (cap at 10 pages to stay within context limits)
+    const contextImages: string[] = (contextFiles as { images?: string[] }[])
+        .flatMap(f => f.images ?? [])
+        .slice(0, 10);
+
+    // Hard-stop if file extraction clearly failed
+    if (contextFiles.length > 0 && (combinedContext.includes("Failed to extract") || combinedContext.includes("[Failed"))) {
+        return NextResponse.json({ error: "File extraction failed. Please upload a readable CSV, TSV, or Excel file." }, { status: 400 });
+    }
+
+    // ── SUGGEST mode ──────────────────────────────────────────────────────────
+    if (action === "suggest") {
+        if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
+
+        const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({
+                model: MODEL,
+                messages: [
+                    { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
+                    { role: "user", content: buildSuggestPrompt(prompt, combinedContext) },
+                ],
+            }),
+            signal: AbortSignal.timeout(30_000),
+        });
+
+        if (!aiRes.ok) return NextResponse.json({ error: "Suggestion failed." }, { status: 500 });
+
+        const data = await aiRes.json();
+        let raw = data.choices?.[0]?.message?.content ?? "{}";
+        raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+        try {
+            const parsed = JSON.parse(raw);
+            return NextResponse.json({
+                charts: parsed.charts ?? ["bar", "histogram", "scatter"],
+                reasoning: parsed.reasoning ?? "",
+            });
+        } catch {
+            return NextResponse.json({ charts: ["bar", "histogram", "heatmap"], reasoning: "" });
+        }
+    }
+
+    // ── GENERATE mode ─────────────────────────────────────────────────────────
     if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
 
-    const chartDesc = CHART_DESCRIPTIONS[chartType] || (chartType ? `a ${chartType} visualization` : "the most appropriate chart type");
     const knowledge = getVisualKnowledge();
-    const systemPrompt = buildSystemPrompt(knowledge);
+    const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
+    const userPrompt = buildGeneratePrompt(prompt, chartType, combinedContext, knowledge);
 
-    const userPrompt = [
-        chartType ? `Create ${chartDesc}.` : "Choose the best chart type for the task.",
-        `Topic / request: "${prompt.trim()}"`,
-        "Generate realistic synthetic data unless the prompt includes actual data.",
-        "Use the B&W / grayscale aesthetic.",
-    ].join("\n");
+    // If PDF pages were uploaded, send them as vision content so the model can read tables/figures
+    const userContent: any = contextImages.length > 0
+        ? [
+            { type: "text", text: userPrompt },
+            ...contextImages.map(img => ({
+                type: "image_url",
+                image_url: { url: img, detail: "low" },
+            })),
+          ]
+        : userPrompt;
 
     const messages: any[] = [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+        { role: "user", content: userContent },
     ];
 
     if (previousError && previousCode) {
         messages.push(
             { role: "assistant", content: previousCode },
-            { role: "user", content: `That code produced this error:\n\n${previousError}\n\nFix it. Output ONLY pure R code.` },
+            { role: "user", content: `That code produced this R error:\n\n${previousError}\n\nFix ALL errors. Output ONLY pure R code.` },
         );
     }
 
-    // ── 1. Generate R code ──
     const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-        body: JSON.stringify({ model: MODEL, messages, stream: false }),
+        body: JSON.stringify({ model: MODEL, messages }),
         signal: AbortSignal.timeout(60_000),
     });
 
@@ -134,11 +217,9 @@ export async function POST(req: Request) {
     }
 
     const aiData = await aiRes.json();
-    const rawCode = aiData.choices?.[0]?.message?.content ?? "";
-    const code = cleanCode(rawCode);
+    const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
     if (!code) return NextResponse.json({ error: "AI returned empty code." }, { status: 500 });
 
-    // ── 2. Compile ──
     const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,9 +234,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: result.log || "R execution failed.", code }, { status: 422 });
     }
 
-    // ── 3. Bill ──
-    const inputTokens = aiData.usage?.total_tokens ?? 0;
-    if (inputTokens > 0) await checkAndDeductUsage(userId, "visuals", inputTokens);
+    const tokens = aiData.usage?.total_tokens ?? 0;
+    if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
 
     return NextResponse.json({ image: result.image, code, chartType });
 }
