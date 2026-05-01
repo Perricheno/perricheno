@@ -393,7 +393,7 @@ export default function RPage() {
     const { user, setShowLogin } = useAdmin();
 
     const [prompt, setPrompt] = useState("");
-    const [selectedChart, setSelectedChart] = useState("");
+    const [selectedCharts, setSelectedCharts] = useState<string[]>([]);
     const [files, setFiles] = useState<AttachedFile[]>([]);
     const [uploading, setUploading] = useState(false);
 
@@ -462,7 +462,7 @@ export default function RPage() {
 
     // ── Suggest chart types (called when files attached + no chart selected) ──
     const suggestCharts = useCallback(async (): Promise<string> => {
-        if (!files.length) return selectedChart;
+        if (!files.length) return selectedCharts[0] ?? "";
         setSuggesting(true);
         try {
             const res = await fetch("/api/r/generate", {
@@ -485,7 +485,7 @@ export default function RPage() {
         } finally {
             setSuggesting(false);
         }
-    }, [prompt, files, selectedChart]);
+    }, [prompt, files, selectedCharts]);
 
     // ── Multi SSE flow ──
     const runMulti = useCallback(async () => {
@@ -516,6 +516,7 @@ export default function RPage() {
                     action: "multi",
                     prompt,
                     contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+                    ...(selectedCharts.length > 0 ? { chartTypes: selectedCharts } : {}),
                 }),
             });
 
@@ -615,7 +616,7 @@ export default function RPage() {
             setMultiLoading(false);
             if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
         }
-    }, [user, prompt, files, setShowLogin]);
+    }, [user, prompt, files, selectedCharts, setShowLogin]);
 
     // Retry a single chart within multi results
     const retryMultiChart = useCallback(async (index: number, chartType: string) => {
@@ -664,14 +665,14 @@ export default function RPage() {
         if (!user) { setShowLogin(true); return; }
         if (!prompt.trim()) return;
 
-        // If no chart type selected AND files are attached → use multi flow
-        if (!retryWithError && !chartOverride && !selectedChart && files.length > 0) {
+        // 2+ charts selected, or no chart selected + files → use multi flow
+        if (!retryWithError && !chartOverride && (selectedCharts.length >= 2 || (selectedCharts.length === 0 && files.length > 0))) {
             await runMulti();
             return;
         }
 
-        // If files attached but no chart type chosen, ask AI for suggestion first
-        let chartToUse = chartOverride ?? selectedChart;
+        // Single chart: use selection or ask AI
+        let chartToUse = chartOverride ?? selectedCharts[0] ?? "";
         if (!retryWithError && files.length > 0 && !chartToUse) {
             chartToUse = await suggestCharts();
         }
@@ -730,7 +731,7 @@ export default function RPage() {
         } finally {
             setLoading(false);
         }
-    }, [user, prompt, selectedChart, files, resultCode, error, setShowLogin, suggestCharts, runMulti]);
+    }, [user, prompt, selectedCharts, files, resultCode, error, setShowLogin, suggestCharts, runMulti]);
 
     const handleRetry = () => generate(true);
 
@@ -740,7 +741,7 @@ export default function RPage() {
         setError(null);
         setShowCode(false);
         setPrompt("");
-        setSelectedChart("");
+        setSelectedCharts([]);
         setSuggestedCharts([]);
         setSuggestReasoning("");
         setMultiResults([]);
@@ -769,7 +770,7 @@ export default function RPage() {
     };
 
     // Determine whether submit will trigger multi
-    const willRunMulti = !selectedChart && files.length > 0;
+    const willRunMulti = selectedCharts.length >= 2 || (selectedCharts.length === 0 && files.length > 0);
 
     return (
         <div className="min-h-screen bg-[#F9F9F9] flex flex-col pb-20 md:pb-0">
@@ -857,15 +858,19 @@ export default function RPage() {
                                 />
                             </label>
 
-                            {/* Selected chart chip */}
-                            {selectedChart ? (
-                                <span className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-[#1a1a1a] text-white
-                                                 rounded-lg text-[11px] font-semibold">
-                                    {CHARTS.find(c => c.id === selectedChart)?.name}
-                                    <button onClick={() => setSelectedChart("")} className="hover:opacity-60 transition-opacity ml-0.5">
-                                        <IconX className="w-3 h-3" />
-                                    </button>
-                                </span>
+                            {/* Selected chart chips */}
+                            {selectedCharts.length > 0 ? (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                    {selectedCharts.map(id => (
+                                        <span key={id} className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-[#1a1a1a] text-white
+                                                         rounded-lg text-[11px] font-semibold">
+                                            {CHARTS.find(c => c.id === id)?.name ?? id}
+                                            <button onClick={() => setSelectedCharts(prev => prev.filter(c => c !== id))} className="hover:opacity-60 transition-opacity ml-0.5">
+                                                <IconX className="w-3 h-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
                             ) : willRunMulti ? (
                                 <span className="flex items-center gap-1 px-2 py-1 bg-[#f5f5f5] text-[#555] border border-[#e8e8e8]
                                                  rounded-lg text-[11px] font-semibold">
@@ -874,7 +879,7 @@ export default function RPage() {
                                 </span>
                             ) : (
                                 <span className="text-[11px] text-gray-300 px-1 hidden sm:block">
-                                    Select a chart ↓ or let AI choose
+                                    Select chart(s) ↓ or let AI choose
                                 </span>
                             )}
                         </div>
@@ -1190,9 +1195,9 @@ export default function RPage() {
                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em]">
                             Chart Types · {CHARTS.length} available
                         </p>
-                        {(selectedChart || suggestedCharts.length > 0) && (
+                        {(selectedCharts.length > 0 || suggestedCharts.length > 0) && (
                             <button
-                                onClick={() => { setSelectedChart(""); setSuggestedCharts([]); setSuggestReasoning(""); }}
+                                onClick={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
                                 className="text-[11px] text-gray-400 hover:text-[#1a1a1a] font-medium transition-colors"
                             >
                                 Clear
@@ -1220,10 +1225,14 @@ export default function RPage() {
                             <ChartCard
                                 key={chart.id}
                                 chart={chart}
-                                selected={selectedChart === chart.id}
-                                suggested={suggestedCharts.includes(chart.id) && selectedChart !== chart.id}
+                                selected={selectedCharts.includes(chart.id)}
+                                suggested={suggestedCharts.includes(chart.id) && !selectedCharts.includes(chart.id)}
                                 onClick={() => {
-                                    setSelectedChart(prev => prev === chart.id ? "" : chart.id);
+                                    setSelectedCharts(prev =>
+                                        prev.includes(chart.id)
+                                            ? prev.filter(c => c !== chart.id)
+                                            : [...prev, chart.id]
+                                    );
                                     setSuggestedCharts([]);
                                     setSuggestReasoning("");
                                 }}

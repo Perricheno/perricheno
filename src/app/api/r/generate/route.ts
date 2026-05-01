@@ -134,6 +134,7 @@ export async function POST(req: Request) {
         action = "generate",
         prompt,
         chartType = "",
+        chartTypes,          // optional: explicit list for multi mode
         contextFiles = [],   // [{name: string, content: string, images?: string[]}]
         previousCode,
         previousError,
@@ -203,33 +204,37 @@ export async function POST(req: Request) {
         };
         const maxCharts = planLimits[planTier] ?? 1;
 
-        // Ask AI to suggest charts
-        const suggestRes = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-            body: JSON.stringify({
-                model: MODEL,
-                messages: [
-                    { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
-                    { role: "user", content: buildSuggestPrompt(prompt, combinedContext, maxCharts) },
-                ],
-            }),
-            signal: AbortSignal.timeout(30_000),
-        });
+        // If explicit chart list provided by client, use it (respect plan cap)
+        let chartsToGenerate: string[];
+        if (Array.isArray(chartTypes) && chartTypes.length > 0) {
+            chartsToGenerate = chartTypes.slice(0, maxCharts);
+        } else {
+            // Ask AI to suggest charts
+            const suggestRes = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
+                body: JSON.stringify({
+                    model: MODEL,
+                    messages: [
+                        { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
+                        { role: "user", content: buildSuggestPrompt(prompt, combinedContext, maxCharts) },
+                    ],
+                }),
+                signal: AbortSignal.timeout(30_000),
+            });
 
-        let suggestedCharts: string[] = ["bar", "histogram", "scatter"];
-        if (suggestRes.ok) {
-            const suggestData = await suggestRes.json();
-            let raw = suggestData.choices?.[0]?.message?.content ?? "{}";
-            raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-            try {
-                const parsed = JSON.parse(raw);
-                suggestedCharts = parsed.charts ?? suggestedCharts;
-            } catch { /* use defaults */ }
+            let suggestedCharts: string[] = ["bar", "histogram", "scatter"];
+            if (suggestRes.ok) {
+                const suggestData = await suggestRes.json();
+                let raw = suggestData.choices?.[0]?.message?.content ?? "{}";
+                raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+                try {
+                    const parsed = JSON.parse(raw);
+                    suggestedCharts = parsed.charts ?? suggestedCharts;
+                } catch { /* use defaults */ }
+            }
+            chartsToGenerate = suggestedCharts.slice(0, maxCharts);
         }
-
-        // Cap to plan limit
-        const chartsToGenerate = suggestedCharts.slice(0, maxCharts);
 
         const knowledge = getVisualKnowledge();
         const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
