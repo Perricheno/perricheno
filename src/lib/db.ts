@@ -316,7 +316,7 @@ if (typeof window === 'undefined') {
 // --- Agent Sessions ---
 
 export async function createAgentSession(data: any): Promise<AgentSession> {
-    return (prisma.agentSession as any).create({
+    return prisma.agentSession.create({
         data: {
             id: data.id,
             user_id: data.user_id,
@@ -338,37 +338,21 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
 export async function getAgentSessionsByUser(userId: number): Promise<AgentSession[]> {
     return prisma.agentSession.findMany({
         where: { user_id: userId },
-        select: { id: true, title: true, doc_type: true, status: true, error_msg: true, share_id: true, updated_at: true, created_at: true } as any,
+        select: { id: true, title: true, doc_type: true, status: true, error_msg: true, share_id: true, updated_at: true, created_at: true },
         orderBy: { updated_at: 'desc' }
-    }) as unknown as AgentSession[];
+    });
 }
 
 export async function getAgentSession(id: string): Promise<AgentSession | undefined> {
-    // Explicitly select fields to avoid crashing if schema/db mismatch (e.g. stage_json missing)
-    const session = await (prisma.agentSession as any).findUnique({ 
-        where: { id },
-        select: {
-            id: true, user_id: true, title: true, doc_type: true,
-            settings_json: true, main_tex: true, references_bib: true,
-            visuals_json: true, share_id: true, status: true,
-            error_msg: true, stream_text: true, tg_message_id: true,
-            created_at: true, updated_at: true,
-            // stage_json: false // DON'T REQUEST IT
-        }
+    const session = await prisma.agentSession.findUnique({ 
+        where: { id }
     });
     return session || undefined;
 }
 
 export async function getAgentSessionByShareId(shareId: string): Promise<AgentSession | undefined> {
-    const session = await (prisma.agentSession as any).findUnique({ 
-        where: { share_id: shareId },
-        select: {
-            id: true, user_id: true, title: true, doc_type: true,
-            settings_json: true, main_tex: true, references_bib: true,
-            visuals_json: true, share_id: true, status: true,
-            error_msg: true, stream_text: true, tg_message_id: true,
-            created_at: true, updated_at: true
-        }
+    const session = await prisma.agentSession.findUnique({ 
+        where: { share_id: shareId }
     });
     return session || undefined;
 }
@@ -397,7 +381,7 @@ export async function updateAgentSession(id: string, data: any): Promise<void> {
         finalData.visuals_json = JSON.stringify(finalData.visuals_json);
     }
 
-    await (prisma.agentSession as any).update({ where: { id }, data: finalData });
+    await prisma.agentSession.update({ where: { id }, data: finalData });
 }
 
 export async function deleteAgentSession(id: string, userId: number): Promise<boolean> {

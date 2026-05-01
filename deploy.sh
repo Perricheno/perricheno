@@ -73,11 +73,18 @@ echo "🚀 Starting / replacing: $SERVICES"
 # shellcheck disable=SC2086
 docker compose up -d --force-recreate --remove-orphans $SERVICES
 
+# ── 5. Sync Database Schema ──
+if echo "$SERVICES" | grep -qE "(perricheno-site|postgres)"; then
+    echo "🔄 Syncing database schema..."
+    # Run prisma db push from the site container
+    docker exec perricheno-site npx prisma db push --accept-data-loss
+fi
+
 # Clean up old images immediately to save disk space
 echo "🧹 Cleaning up old images..."
 docker image prune -f --filter "until=1h" 2>/dev/null || true
 
-# ── 5. Health check (only the user-facing site container) ──
+# ── 6. Health check (only the user-facing site container) ──
 if echo "$SERVICES" | grep -q "perricheno-site"; then
     echo "⏳ Waiting for health check..."
     for i in $(seq 1 12); do
