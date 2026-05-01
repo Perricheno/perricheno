@@ -16,7 +16,7 @@ import {
 
 const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
-function buildPreamble(s: PipelineSettings): string {
+function buildPreamble(s: PipelineSettings, design?: DocumentDesign): string {
     const columnClass = s.columns === 2 ? "[twocolumn]" : "";
     const lines: string[] = [
         `\\documentclass${columnClass}{article}`,
@@ -25,12 +25,8 @@ function buildPreamble(s: PipelineSettings): string {
     const isKazakh = s.language === "kk";
     const isCyrillic = CYRILLIC_LANGS.has(s.language);
 
-    if (!isKazakh) {
-        lines.push("\\usepackage[utf8]{inputenc}");
-    }
-
     if (isKazakh) {
-        // Казахский требует XeLaTeX и системных шрифтов
+        // Kazakh requires XeLaTeX and system fonts
         lines.push(
             "\\usepackage{fontspec}",
             "\\setmainfont{Inter}",
@@ -38,14 +34,17 @@ function buildPreamble(s: PipelineSettings): string {
         );
     } else if (isCyrillic) {
         lines.push("\\usepackage[T2A]{fontenc}");
+        lines.push("\\usepackage[utf8]{inputenc}");
         const babelLang = BABEL_LANG_MAP[s.language] ?? "russian";
         lines.push(`\\usepackage[${babelLang},english]{babel}`);
     } else if (s.language !== "en") {
         lines.push("\\usepackage[T1]{fontenc}");
+        lines.push("\\usepackage[utf8]{inputenc}");
         const babelLang = BABEL_LANG_MAP[s.language];
         if (babelLang) lines.push(`\\usepackage[${babelLang},english]{babel}`);
     } else {
         lines.push("\\usepackage[T1]{fontenc}");
+        lines.push("\\usepackage[utf8]{inputenc}");
     }
 
     lines.push(
@@ -56,16 +55,28 @@ function buildPreamble(s: PipelineSettings): string {
         "\\usepackage{geometry}",
         "\\usepackage{booktabs}",
         "\\usepackage{enumitem}",
+        "\\usepackage{setspace}",
+        "\\usepackage{parskip}",
     );
 
-    if (s.useTemplate) {
+    // Merge LLM design if available, otherwise use defaults
+    if (design?.preamble) {
+        lines.push("\n% --- Custom LLM Design ---");
+        lines.push(design.preamble);
+        lines.push("% -------------------------\n");
+    } else if (s.useTemplate) {
         lines.push(
             "\\usepackage{fancyhdr}",
             "\\usepackage{titlesec}",
-            "\\geometry{lmargin=0.8in,rmargin=0.8in,tmargin=1in,bmargin=1in}",
+            "\\geometry{a4paper,left=25mm,right=25mm,top=28mm,bottom=28mm,headheight=14pt,headsep=10pt,footskip=12pt}",
+            "\\onehalfspacing",
             "\\pagestyle{fancy}",
             "\\fancyhf{}",
             "\\fancyfoot[C]{\\thepage}",
+        );
+    } else {
+        lines.push(
+            "\\geometry{lmargin=1in,rmargin=1in,tmargin=1in,bmargin=1in}",
         );
     }
 
@@ -82,24 +93,54 @@ function buildPreamble(s: PipelineSettings): string {
     return lines.join("\n");
 }
 
-function buildTitleBlock(s: PipelineSettings, title: string): string {
+function buildTitleBlock(s: PipelineSettings, title: string, design?: DocumentDesign): string {
     const author = s.authorName || "Author";
     const affiliation = "Astana IT University";
     const date = s.dateStr || "\\today";
+
+    if (design?.titleBlock) {
+        // Replace placeholders if LLM used them
+        let block = design.titleBlock;
+        block = block.replace(/\\thetitle/g, title);
+        block = block.replace(/\\theauthor/g, author);
+        return `\\begin{document}\n${block}`;
+    }
 
     const metaParts: string[] = [];
     if (s.courseName)     metaParts.push(`\\textbf{${s.language === "ru" ? "Курс" : "Course"}:} ${s.courseName}`);
     if (s.groupName)      metaParts.push(`\\textbf{${s.language === "ru" ? "Группа" : "Group"}:} ${s.groupName}`);
     if (s.supervisorName) metaParts.push(`\\textbf{${s.language === "ru" ? "Преподаватель" : "Supervisor"}:} ${s.supervisorName}`);
-    const metaLine = metaParts.length ? `\n\\begin{center}\n${metaParts.join(" \\qquad ")}\n\\end{center}\n` : "";
+    
+    let titleContent = "";
+    if (s.useTemplate) {
+        const metaLine = metaParts.length ? `\n\\begin{center}\n${metaParts.join(" \\\\ ")}\n\\end{center}\n` : "";
+        titleContent = [
+            `\\begin{center}`,
+            `  {\\LARGE\\bfseries ${title} \\par}`,
+            `  \\vspace{1.5ex}`,
+            `  {\\large ${author} \\\\ ${affiliation} \\par}`,
+            `  \\vspace{1ex}`,
+            `  {\\small ${date} \\par}`,
+            metaLine,
+            `\\end{center}`,
+            `\\vspace{2em}`,
+            `\\hrule`,
+            `\\vspace{1.5em}`,
+        ].join("\n");
+    } else {
+        const metaLine = metaParts.length ? `\n\\begin{center}\n${metaParts.join(" \\qquad ")}\n\\end{center}\n` : "";
+        titleContent = [
+            `\\title{${title}}`,
+            `\\author{${author} \\\\ ${affiliation}}`,
+            `\\date{${date}}`,
+            `\\maketitle`,
+            metaLine,
+        ].join("\n");
+    }
 
     return [
-        `\\title{${title}}`,
-        `\\author{${author} \\\\ ${affiliation}}`,
-        `\\date{${date}}`,
         `\\begin{document}`,
-        `\\maketitle`,
-        metaLine,
+        titleContent,
     ].join("\n");
 }
 
@@ -140,15 +181,8 @@ export function runStage4(
     // ── Title + body ──
     const title = plan.title;
     
-    // Use custom design if available, otherwise fallback to deterministic template
-    const preamble = design?.preamble 
-        ? `${buildPreamble(settings)}\n\n% --- Custom LLM Design ---\n${design.preamble}`
-        : buildPreamble(settings);
-
-    const titleBlock = design?.titleBlock
-        ? `\\begin{document}\n${design.titleBlock}`
-        : buildTitleBlock(settings, title);
-
+    const preamble = buildPreamble(settings, design);
+    const titleBlock = buildTitleBlock(settings, title, design);
     const body = buildSectionBlock(sections);
 
     const closing = settings.useReferences

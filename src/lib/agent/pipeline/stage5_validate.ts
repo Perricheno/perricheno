@@ -84,7 +84,7 @@ Output ONLY valid JSON:
 Rules:
 - Fix every error the log reports. Do not leave TODO markers.
 - Preserve content. Do not paraphrase prose. Minimal surgical edits only.
-- Escape specials properly in prose: & → \\&, % → \\%, _ → \\_, # → \\#.
+- Escape specials properly in prose: & → \\&, % → \\%, _ → \\_, # → \\#, $ in prose → \\$.
 - Keep braces, environments, and math delimiters balanced.
 - Language is ${langNote}.
 - Return both files in full. Do not return diffs.
@@ -98,8 +98,8 @@ Rules:
         mainTex,
         referencesBib ? `\nCURRENT references.bib:\n${referencesBib}` : "",
         ``,
-        `Return the corrected JSON now.`,
-    ].filter(Boolean).join("\n");
+        `Return the JSON with corrected files now.`,
+    ].join("\n");
 
     return [
         { role: "system", content: system },
@@ -107,36 +107,26 @@ Rules:
     ];
 }
 
-async function repair(mainTex: string, referencesBib: string | null, errorLog: string, lang: string):
-    Promise<{ mainTex: string; referencesBib: string | null; tokens: number }> {
-    const r = await chatCompletion(buildRepairMessages(mainTex, referencesBib, errorLog, lang), {
-        jsonMode: true,
-        timeoutMs: 180_000,
-    });
+async function repair(mainTex: string, referencesBib: string | null, errorLog: string, lang: string): Promise<{ mainTex: string; referencesBib: string | null; tokensUsed: number }> {
+    const messages = buildRepairMessages(mainTex, referencesBib, errorLog, lang);
+    const r = await chatCompletion(messages, { jsonMode: true, timeoutMs: 120_000 });
+    const parsed = parseJsonLoose(r.text);
 
-    const parsed: any = parseJsonLoose(r.text);
-    if (!parsed || typeof parsed.main_tex !== "string") {
-        throw new Error("Repair model returned invalid JSON");
-    }
-
-    let fixedMain = normalizeLatexText(parsed.main_tex);
-    fixedMain = ensureRussianPreamble(fixedMain, lang);
-    const fixedBib = (typeof parsed.references_bib === "string" && parsed.references_bib.trim())
-        ? normalizeLatexText(parsed.references_bib)
-        : null;
-
-    return { mainTex: fixedMain, referencesBib: fixedBib, tokens: r.totalTokens };
+    return {
+        mainTex: (parsed.main_tex || mainTex).trim(),
+        referencesBib: (parsed.references_bib || referencesBib)?.trim() || null,
+        tokensUsed: r.totalTokens,
+    };
 }
 
-// ── Orchestrated stage ──
+// ── Orchestrator ──
 
 export async function runStage5(
     settings: PipelineSettings,
     assembled: AssembledDoc,
     onAttempt?: (attempt: number, outcome: "ok" | "failed") => void,
 ): Promise<Stage5Result> {
-    let mainTex = assembled.mainTex;
-    let referencesBib = assembled.referencesBib;
+    let { mainTex, referencesBib } = assembled;
     let tokensUsed = 0;
     let lastLog: string | undefined;
 
@@ -144,7 +134,10 @@ export async function runStage5(
     for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
         try {
             const r = await compile(mainTex, referencesBib);
-            if (r.ok) {
+            if (!r.ok) {
+                lastLog = r.log;
+                onAttempt?.(attempt, "failed");
+            } else {
                 onAttempt?.(attempt, "ok");
                 return {
                     compiled: true,
@@ -154,8 +147,6 @@ export async function runStage5(
                     tokensUsed,
                 };
             }
-            lastLog = r.log;
-            onAttempt?.(attempt, "failed");
         } catch (e: any) {
             // Infrastructure failure (compiler down, network). Surface and bail -
             // repair won't help if we can't even reach the compiler.
@@ -166,13 +157,12 @@ export async function runStage5(
         if (attempt === MAX_REPAIR_ATTEMPTS) break;
 
         try {
-            const fixed = await repair(mainTex, referencesBib, lastLog, settings.language);
+            const fixed = await repair(mainTex, referencesBib, lastLog ?? "Unknown error", settings.language);
             mainTex = fixed.mainTex;
             referencesBib = fixed.referencesBib;
-            tokensUsed += fixed.tokens;
+            tokensUsed += fixed.tokensUsed;
         } catch (e: any) {
-            // Repair itself broke; fall through to returning the best-so-far.
-            console.warn("[Stage5] Repair call failed:", e?.message);
+            console.error("[Stage5] Repair failed:", e);
             break;
         }
     }
