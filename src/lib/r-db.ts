@@ -26,7 +26,7 @@ export interface RResultItem {
     name: string;
     image: string;
     code: string;
-    status: 'done' | 'error' | 'generating';
+    status: 'done' | 'error' | 'generating' | 'pending';
     error?: string;
 }
 

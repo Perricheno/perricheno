@@ -513,9 +513,11 @@ export default function RPage() {
     }, []);
 
     // ── Poll a session until done ──
-    const pollSession = useCallback((sessionId: string) => {
+    // startedAt: epoch ms of session creation — timer counts from there so reloads don't reset it
+    const pollSession = useCallback((sessionId: string, startedAt?: number) => {
         stopPolling();
-        const startTime = Date.now();
+        const startTime = startedAt ?? Date.now();
+        setElapsed((Date.now() - startTime) / 1000);
         elapsedRef.current = setInterval(() => setElapsed((Date.now() - startTime) / 1000), 100);
 
         pollRef.current = setInterval(async () => {
@@ -739,10 +741,8 @@ export default function RPage() {
             const data = await res.json();
             const s = data.session;
 
-            // Restore prompt
             setPrompt(s.prompt ?? "");
 
-            // Restore results
             const results: GeneratedChart[] = (s.results ?? []).map((r: any) => ({
                 chartType: r.chartType,
                 name: r.name || r.chartType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
@@ -752,8 +752,23 @@ export default function RPage() {
                 error: r.error,
             }));
 
+            if (s.status === "generating") {
+                // Session still running in background — resume polling from where it was
+                setMultiResults(results);
+                setChartsPlanned(results.map(r => r.chartType));
+                setMultiLoading(true);
+                setResultImage(null);
+                setResultCode("");
+                setActiveSessionId(id);
+                setError(null);
+                setMultiError(null);
+                setShowCode(false);
+                // Timer counts from actual session start, not from now
+                pollSession(id, new Date(s.created_at).getTime());
+                return;
+            }
+
             if (results.length === 1 && results[0].status === "done") {
-                // Single chart — show in single result panel
                 setResultImage(`data:image/png;base64,${results[0].image}`);
                 setResultCode(results[0].code);
                 setResultChartType(results[0].chartType);
@@ -769,7 +784,7 @@ export default function RPage() {
             setMultiError(null);
             setShowCode(false);
         } catch { /* ignore */ }
-    }, []);
+    }, [pollSession]);
 
     const handleCopy = () => {
         if (!resultCode) return;

@@ -148,79 +148,92 @@ async function runMultiGeneration(params: {
     } = params;
 
     const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
-    const results: RResultItem[] = [];
+
+    // Initialize all charts as pending immediately — client sees full list on first poll
+    const results: RResultItem[] = chartsToGenerate.map(id => ({
+        chartType: id,
+        name: id.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+        image: "", code: "", status: "pending",
+    }));
+    await updateRSession(sessionId, { results_json: JSON.stringify(results) });
 
     for (let i = 0; i < chartsToGenerate.length; i++) {
         const chartId = chartsToGenerate[i];
-        const chartName = chartId.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+        const chartName = results[i].name;
 
-        try {
-            const userPrompt = buildGeneratePrompt(prompt, chartId, combinedContext, knowledge, rFileNames);
-            const userContent: any = contextImages.length > 0
-                ? [
-                    { type: "text", text: userPrompt },
-                    ...contextImages.map(img => ({ type: "image_url", image_url: { url: img, detail: "low" } })),
-                  ]
-                : userPrompt;
+        // Mark as generating so client shows spinner for this chart
+        results[i] = { ...results[i], status: "generating" };
+        await updateRSession(sessionId, { results_json: JSON.stringify(results) });
 
-            const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({
-                    model: MODEL,
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        { role: "user", content: userContent },
-                    ],
-                }),
-                signal: AbortSignal.timeout(60_000),
-            });
+        let finalResult: RResultItem | null = null;
+        let lastCode = "";
+        let lastError = "";
 
-            if (!aiRes.ok) {
-                results[i] = { chartType: chartId, name: chartName, image: "", code: "", status: "error", error: "AI generation failed." };
-                await updateRSession(sessionId, { results_json: JSON.stringify(results.filter(Boolean)) });
-                continue;
+        // Attempt generation + 1 auto-retry on failure with error feedback
+        for (let attempt = 0; attempt <= 1 && !finalResult; attempt++) {
+            try {
+                const userPrompt = buildGeneratePrompt(prompt, chartId, combinedContext, knowledge, rFileNames);
+                const baseContent: any = contextImages.length > 0
+                    ? [
+                        { type: "text", text: userPrompt },
+                        ...contextImages.map(img => ({ type: "image_url", image_url: { url: img, detail: "low" } })),
+                      ]
+                    : userPrompt;
+
+                const messages: any[] = [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: baseContent },
+                ];
+
+                // On retry: feed previous error back to LLM so it can self-correct
+                if (attempt > 0 && lastCode && lastError) {
+                    messages.push(
+                        { role: "assistant", content: lastCode },
+                        { role: "user", content: `That code produced this R error:\n\n${lastError}\n\nFix ALL errors. Output ONLY pure R code.` },
+                    );
+                }
+
+                const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                    body: JSON.stringify({ model: MODEL, messages }),
+                    signal: AbortSignal.timeout(60_000),
+                });
+
+                if (!aiRes.ok) { lastError = "AI generation failed."; continue; }
+
+                const aiData = await aiRes.json();
+                const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
+                if (!code) { lastError = "AI returned empty code."; continue; }
+                lastCode = code;
+
+                const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code: wrapRCode(code), files: rFiles }),
+                    signal: AbortSignal.timeout(45_000),
+                });
+
+                if (!compileRes.ok) { lastError = "R compiler error."; continue; }
+
+                const result = await compileRes.json();
+                if (!result.success) { lastError = result.log || "R execution failed."; continue; }
+
+                const tokens = aiData.usage?.total_tokens ?? 0;
+                if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
+
+                finalResult = { chartType: chartId, name: chartName, image: result.image, code, status: "done" };
+
+            } catch (err: any) {
+                lastError = err?.message || "Unknown error";
             }
-
-            const aiData = await aiRes.json();
-            const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
-            if (!code) {
-                results[i] = { chartType: chartId, name: chartName, image: "", code: "", status: "error", error: "AI returned empty code." };
-                await updateRSession(sessionId, { results_json: JSON.stringify(results.filter(Boolean)) });
-                continue;
-            }
-
-            const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: wrapRCode(code), files: rFiles }),
-                signal: AbortSignal.timeout(45_000),
-            });
-
-            if (!compileRes.ok) {
-                results[i] = { chartType: chartId, name: chartName, image: "", code, status: "error", error: "R compiler error." };
-                await updateRSession(sessionId, { results_json: JSON.stringify(results.filter(Boolean)) });
-                continue;
-            }
-
-            const result = await compileRes.json();
-            if (!result.success) {
-                results[i] = { chartType: chartId, name: chartName, image: "", code, status: "error", error: result.log || "R execution failed." };
-                await updateRSession(sessionId, { results_json: JSON.stringify(results.filter(Boolean)) });
-                continue;
-            }
-
-            const tokens = aiData.usage?.total_tokens ?? 0;
-            if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
-
-            results[i] = { chartType: chartId, name: chartName, image: result.image, code, status: "done" };
-            // Persist after each chart so partial results are always visible
-            await updateRSession(sessionId, { results_json: JSON.stringify(results.filter(Boolean)) });
-
-        } catch (err: any) {
-            results[i] = { chartType: chartId, name: chartName, image: "", code: "", status: "error", error: err?.message || "Unknown error" };
-            await updateRSession(sessionId, { results_json: JSON.stringify(results.filter(Boolean)) });
         }
+
+        results[i] = finalResult ?? {
+            chartType: chartId, name: chartName, image: "", code: lastCode,
+            status: "error", error: lastError,
+        };
+        await updateRSession(sessionId, { results_json: JSON.stringify(results) });
     }
 
     await updateRSession(sessionId, { status: "done" });
