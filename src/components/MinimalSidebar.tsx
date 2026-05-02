@@ -249,8 +249,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             animate(rotationAngle, 0, { type: "spring", damping: 24, stiffness: 110 });
             animate(radiusValue, 130, { type: "spring", damping: 20, stiffness: 120 });
         } else {
-            // Spin out on close
-            animate(rotationAngle, initialRot, { type: "spring", damping: 24, stiffness: 90 });
+            // Spin out on close (no reverse rotation, just shrink radius)
             animate(radiusValue, 0, { type: "spring", damping: 24, stiffness: 150 });
         }
     }, [isPresent, rotationAngle, initialRot, radiusValue]);
