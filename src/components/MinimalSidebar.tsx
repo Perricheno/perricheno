@@ -280,7 +280,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             <div 
                 className="absolute pointer-events-none"
                 style={{
-                    bottom: 44 - 250, // Center Y at the logo
+                    bottom: "calc(48px - 250px + env(safe-area-inset-bottom))", // Center Y at the logo
                     left: "50%",
                     marginLeft: -250, // Center X
                     width: 500,
@@ -310,10 +310,9 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
                     ← drag to spin →
                 </motion.p>
 
-                {/* Ring anchor — center above nav bar */}
                 <div
                     className="absolute pointer-events-none"
-                    style={{ bottom: 44, left: "50%", transform: "translateX(-50%)" }}
+                    style={{ bottom: "calc(48px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)" }}
                 >
                     {RADIAL_ALL.map((item, i) => (
                         <RingItem
@@ -487,10 +486,10 @@ export default function MinimalSidebar() {
                 "fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full pb-safe transition-colors duration-300",
                 radialOpen ? "bg-transparent border-transparent" : "bg-white/50 backdrop-blur-xl border-t border-gray-200/50"
             )}>
-                <div className="flex items-center justify-between px-2 pt-2 pb-5">
+                <div className="flex items-center justify-between px-2 pt-2 pb-5 relative">
 
                     {/* Left items */}
-                    <div className="flex items-center justify-around flex-1">
+                    <div className="flex items-center justify-around w-[40%]">
                         {MOBILE_NAV_LEFT.map(l => (
                             <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
                                 <NavItem l={l} />
@@ -501,7 +500,7 @@ export default function MinimalSidebar() {
                     {/* ── Center Logo Button ── */}
                     <button
                         onClick={() => setRadialOpen(v => !v)}
-                        className="relative flex items-center justify-center w-16 h-14 -mt-5"
+                        className="absolute left-[50%] bottom-[20px] -translate-x-[50%] flex items-center justify-center w-16 h-14 z-10"
                     >
                         <motion.div
                             animate={{ rotate: radialOpen ? 135 : 0, scale: radialOpen ? 1.08 : 1 }}
@@ -535,7 +534,7 @@ export default function MinimalSidebar() {
                     </button>
 
                     {/* Right items */}
-                    <div className="flex items-center justify-around flex-1">
+                    <div className="flex items-center justify-around w-[40%]">
                         {MOBILE_NAV_RIGHT.map(l => (
                             <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
                                 <NavItem l={l} />
