@@ -256,7 +256,23 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             animate="visible"
             exit="exit"
             onClick={onClose}
+            style={{
+                background: 'linear-gradient(to top, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.3) 100%)',
+                backdropFilter: 'blur(0px)',
+                WebkitBackdropFilter: 'blur(0px)',
+            }}
         >
+            {/* Gradient blur overlay - more blur at top, less at bottom */}
+            <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                    maskImage: 'linear-gradient(to top, transparent 0%, black 40%, black 100%)',
+                    WebkitMaskImage: 'linear-gradient(to top, transparent 0%, black 40%, black 100%)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                }}
+            />
+            
             {/* Drag capture zone — transparent, full screen */}
             <motion.div
                 className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none"
