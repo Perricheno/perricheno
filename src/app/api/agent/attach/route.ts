@@ -8,7 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
-import { createAgentUpload, getUserActiveUploadsCharTotal } from "@/lib/db";
+import { createAgentUpload, getUserActiveUploadsCharTotal, getUserById, PDF_STAGING_CAPS } from "@/lib/db";
 import { ingestPdf } from "@/lib/agent/pdfIngest";
 import { uploadToStorage } from "@/lib/storage";
 
@@ -16,7 +16,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-const TOTAL_CHAR_CAP = 200_000;
 const MAX_PDF_BYTES = 40 * 1024 * 1024;      // 40 MB
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;    // 10 MB
 const MAX_DATA_BYTES = 20 * 1024 * 1024;     // 20 MB for CSV/Excel
@@ -76,14 +75,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Failed to parse PDF", details: String(e?.message || e).slice(0, 300) }, { status: 502 });
         }
 
+        const dbUser = await getUserById(userId);
+        const planTier = dbUser?.plan_tier || 'free';
+        const stagingCap = PDF_STAGING_CAPS[planTier] ?? PDF_STAGING_CAPS.free;
+
         const existing = await getUserActiveUploadsCharTotal(userId);
-        if (existing + bundle.charCount > TOTAL_CHAR_CAP) {
+        if (stagingCap !== -1 && existing + bundle.charCount > stagingCap) {
             return NextResponse.json({
                 error: "TOTAL_CHAR_CAP",
-                message: `Upload would exceed the ${TOTAL_CHAR_CAP.toLocaleString()}-character cap.`,
+                message: `Staging limit reached for your plan.`,
                 fileChars: bundle.charCount,
                 alreadyUsed: existing,
-                remaining: Math.max(0, TOTAL_CHAR_CAP - existing),
+                stagingCap,
+                remaining: Math.max(0, stagingCap - existing),
+                planTier,
             }, { status: 413 });
         }
 
@@ -215,7 +220,7 @@ export async function POST(req: Request) {
         
         const charCount = text.length;
         
-        // For data analytics, don't enforce TOTAL_CHAR_CAP
+        // For data analytics, don't enforce staging cap
         // (data files are used differently than PDFs)
         
         const row = await createAgentUpload({
