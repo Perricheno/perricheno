@@ -116,8 +116,9 @@ const itemVariants = {
         opacity: 1,
         transition: {
             type: "spring" as const,
-            damping: 15,
-            stiffness: 300,
+            damping: 25,
+            stiffness: 180,
+            mass: 0.8,
         }
     }),
     exit: {
@@ -126,7 +127,7 @@ const itemVariants = {
         scale: 0,
         opacity: 0,
         transition: {
-            duration: 0.2,
+            duration: 0.3,
             ease: "easeInOut" as const
         }
     }
@@ -233,14 +234,8 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
     };
 
     const handlePanEnd = (_: PointerEvent, info: PanInfo) => {
-        const currentAngle = rotationAngle.get() + info.velocity.x * 0.24;
-        const itemCount = RADIAL_ALL.length;
-        const snapAngle = 360 / itemCount;
-        
-        // Find nearest snap position
-        const nearestSnap = Math.round(currentAngle / snapAngle) * snapAngle;
-        
-        animate(rotationAngle, nearestSnap, {
+        // Smooth deceleration without snap
+        animate(rotationAngle, rotationAngle.get() + info.velocity.x * 0.24, {
             type: "spring",
             damping: 22,
             stiffness: 50,
