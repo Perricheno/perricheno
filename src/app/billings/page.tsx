@@ -26,6 +26,7 @@ const PLANS = [
             { text: "Stack: Basic Python (5 chart types)", included: true },
             { text: "7-day chat retention", included: true },
             { text: "Quota resets: Mon, 00:00 AST", included: true },
+            { text: "200K chars PDF staging (24h)", included: true },
             { text: "ZIP Project Export", included: false },
             { text: "R Environment (CRAN)", included: false },
             { text: "AI Code Editing", included: false },
@@ -44,6 +45,7 @@ const PLANS = [
             { text: "450,000 tokens / month", included: true },
             { text: "Stack: Full Python (35+ visualizations)", included: true },
             { text: "ZIP Project Export unlocked", included: true },
+            { text: "500K chars PDF staging (24h)", included: true },
             { text: "Priority Rendering", included: true },
             { text: "14-day chat retention", included: true },
             { text: "R Environment", included: false },
@@ -63,6 +65,7 @@ const PLANS = [
             { text: "800,000 tokens / month", included: true },
             { text: "Stack: R-Infrastructure + Python", included: true },
             { text: "AI Code Editor enabled", included: true },
+            { text: "1M chars PDF staging (24h)", included: true },
             { text: "Share Reports via link", included: true },
             { text: "Exclusive power giveaways", included: true },
             { text: "30-day chat retention", included: true },
@@ -79,6 +82,7 @@ const PLANS = [
         features: [
             { text: "800,000 tokens / week (Cap)", included: true },
             { text: "3,000,000 tokens / month", included: true },
+            { text: "Unlimited PDF staging (24h)", included: true },
             { text: "AI Edit: Low Cost Mode (Cost ÷ 2)", included: true },
             { text: "2x Bonus on Referrals & Promos", included: true },
             { text: "Maximum Rendering Priority", included: true },
@@ -92,6 +96,8 @@ export default function BillingsPage() {
     const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
     const [limits, setLimits] = useState<any>(null);
     const [fullUser, setFullUser] = useState<any>(null);
+    const [stagingUsed, setStagingUsed] = useState(0);
+    const [stagingCap, setStagingCap] = useState(200_000);
     const [exchangeRate, setExchangeRate] = useState<number | null>(500);
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
@@ -112,7 +118,12 @@ export default function BillingsPage() {
         if (user) {
             fetch("/api/auth/me")
                 .then(r => r.json())
-                .then(d => { setLimits(d.limits); setFullUser(d.user); });
+                .then(d => {
+                    setLimits(d.limits);
+                    setFullUser(d.user);
+                    if (d.stagingUsed !== undefined) setStagingUsed(d.stagingUsed);
+                    if (d.stagingCap !== undefined) setStagingCap(d.stagingCap);
+                });
 
             fetch("/api/billing/stats")
                 .then(r => r.json())
@@ -234,6 +245,29 @@ export default function BillingsPage() {
                                         <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (monthlyUsed / monthlyLimit) * 100)}%` }} />
                                     </div>
                                     <p className="text-[9px] text-gray-400 mt-1">Stops entirely when depleted</p>
+                                </div>
+
+                                {/* PDF Staging */}
+                                <div className="border-t border-gray-50 pt-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <IconFileText className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
+                                            <p className="text-xs font-bold text-[#1a1a1a]">PDF Staging (24h)</p>
+                                        </div>
+                                        <p className="text-xs font-black tabular-nums text-[#1a1a1a]">
+                                            {stagingCap === -1 ? (
+                                                <span className="text-gray-400 font-medium">Unlimited</span>
+                                            ) : (
+                                                <>{(stagingUsed / 1000).toFixed(0)}K<span className="text-gray-300 font-medium">/{(stagingCap / 1000).toFixed(0)}K</span></>
+                                            )}
+                                        </p>
+                                    </div>
+                                    {stagingCap !== -1 && (
+                                        <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
+                                            <div className="h-full bg-gray-300 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (stagingUsed / stagingCap) * 100)}%` }} />
+                                        </div>
+                                    )}
+                                    <p className="text-[9px] text-gray-400 mt-1">Active uploads auto-clear after 24h</p>
                                 </div>
                             </div>
 

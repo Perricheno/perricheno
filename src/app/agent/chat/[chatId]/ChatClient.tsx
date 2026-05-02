@@ -59,6 +59,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
     }
     const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
 
+    const [uploadError, setUploadError] = useState<{ type: 'cap' | 'generic'; message: string; planTier?: string; remaining?: number; stagingCap?: number } | null>(null);
     const [charsBilled, setCharsBilled] = useState(0);
     const [billingOpen, setBillingOpen] = useState(false);
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -157,10 +158,17 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                 const res = await fetch('/api/agent/attach', { method: 'POST', body: fd });
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-                    const msg = res.status === 413 && err?.error === 'TOTAL_CHAR_CAP'
-                        ? `Upload exceeds the 200k-character total cap. Remaining: ${err.remaining?.toLocaleString() ?? 0}.`
-                        : (err?.message || err?.error || `Upload failed (${res.status}).`);
-                    alert(msg);
+                    if (res.status === 413 && err?.error === 'TOTAL_CHAR_CAP') {
+                        setUploadError({
+                            type: 'cap',
+                            message: err.message || 'Staging limit reached.',
+                            planTier: err.planTier,
+                            remaining: err.remaining,
+                            stagingCap: err.stagingCap,
+                        });
+                    } else {
+                        setUploadError({ type: 'generic', message: err?.message || err?.error || `Upload failed (${res.status}).` });
+                    }
                     setAttachments(prev => prev.filter(a => a.uploadId !== tempId));
                     continue;
                 }
@@ -178,7 +186,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                 } : a));
             } catch (err: any) {
                 console.error(`[attach] ${file.name}:`, err);
-                alert(err?.message || 'Upload failed.');
+                setUploadError({ type: 'generic', message: err?.message || 'Upload failed.' });
                 setAttachments(prev => prev.filter(a => a.uploadId !== tempId));
             }
         }
@@ -721,6 +729,61 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                     </div>
                 </div>
             </div>
+
+            {/* ── Upload Error Banner ── */}
+            <AnimatePresence>
+                {uploadError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ type: "spring", damping: 28, stiffness: 380 }}
+                        className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4"
+                    >
+                        <div className="bg-[#1a1a1a] text-white rounded-2xl shadow-2xl shadow-black/30 overflow-hidden">
+                            <div className="px-5 py-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        {uploadError.type === 'cap' ? (
+                                            <>
+                                                <p className="text-[13px] font-black tracking-tight leading-snug mb-1">
+                                                    Staging limit reached
+                                                </p>
+                                                <p className="text-[11px] text-gray-400 leading-relaxed">
+                                                    Your {uploadError.planTier || 'current'} plan allows&nbsp;
+                                                    <span className="text-white font-bold">
+                                                        {uploadError.stagingCap ? `${(uploadError.stagingCap / 1000).toFixed(0)}K` : '—'}
+                                                    </span>
+                                                    &nbsp;chars staged at once. Files auto-clear after 24h.
+                                                    {(uploadError.remaining ?? 0) > 0 && (
+                                                        <> Remaining:&nbsp;<span className="text-white font-bold">{((uploadError.remaining ?? 0) / 1000).toFixed(0)}K</span>.</>
+                                                    )}
+                                                </p>
+                                                <a
+                                                    href="/billings"
+                                                    className="inline-flex items-center gap-1 mt-2.5 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+                                                >
+                                                    Upgrade plan →
+                                                </a>
+                                            </>
+                                        ) : (
+                                            <p className="text-[13px] font-medium leading-snug text-gray-200">
+                                                {uploadError.message}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => setUploadError(null)}
+                                        className="shrink-0 w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors mt-0.5"
+                                    >
+                                        <IconX className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AgentBillingModal isOpen={billingOpen} onClose={() => setBillingOpen(false)} totalSessions={sessions.length} />
         </div>

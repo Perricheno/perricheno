@@ -61,6 +61,14 @@ export const PLAN_LIMITS: Record<string, { weekly_chars: number, monthly_chars: 
     ultra: { weekly_chars: 800000, monthly_chars: 3000000 }
 };
 
+// Max chars that can be staged (active uploads within 24h window) per plan
+export const PDF_STAGING_CAPS: Record<string, number> = {
+    free: 200_000,
+    plus: 500_000,
+    pro: 1_000_000,
+    ultra: -1, // unlimited
+};
+
 function getWeekNumber(d: Date): string {
     const start = new Date(d.getFullYear(), 0, 1);
     const diff = d.getTime() - start.getTime();
