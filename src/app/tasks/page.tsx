@@ -2,7 +2,6 @@
 
 import { useState, useEffect, KeyboardEvent } from "react";
 import { useAdmin } from "@/components/AdminContext";
-import { LoginModal } from "@/components/LoginModal";
 import { 
     IconSend, IconClock, IconCheck, IconTrash, IconLoader2, 
     IconSparkles, IconPlus, IconEdit, IconX, IconCalendar
@@ -18,7 +17,7 @@ interface Task {
 }
 
 export default function TasksPage() {
-    const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
+    const { user, setShowLogin, setIsEditing } = useAdmin();
     const { showToast } = useToast();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
@@ -207,8 +206,6 @@ export default function TasksPage() {
 
     return (
         <div className="w-full h-full font-sans">
-            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
-
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-24">
                 <div className="mb-8">
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Schedule Tasks</h1>

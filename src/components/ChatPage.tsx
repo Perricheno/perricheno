@@ -9,7 +9,6 @@ import {
 } from "@tabler/icons-react";
 import ChatSettingsModal from "@/components/ChatSettingsModal";
 import { useAdmin } from "@/components/AdminContext";
-import { LoginModal } from "@/components/LoginModal";
 import { getSettings, saveSettings, type ChatSettings } from "@/app/actions";
 import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "framer-motion";
@@ -65,7 +64,7 @@ export default function ChatPage() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Admin / Auth
-    const { user, isEditing, setIsEditing, showLogin, setShowLogin } = useAdmin();
+    const { user, isEditing, setIsEditing, setShowLogin } = useAdmin();
     const { theme, setTheme } = useTheme();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -265,8 +264,6 @@ export default function ChatPage() {
 
     return (
         <div className="w-full h-full flex overflow-hidden">
-            {/* Admin login modal */}
-            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
 
             {/* Desktop Sidebar */}

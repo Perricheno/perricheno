@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAdmin } from "@/components/AdminContext";
-import { LoginModal } from "@/components/LoginModal";
 import { motion } from "framer-motion";
 import {
     IconCreditCard, IconDatabase, IconReceipt,
@@ -93,7 +92,7 @@ const PLANS = [
 ];
 
 export default function BillingsPage() {
-    const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
+    const { user, setShowLogin, setIsEditing } = useAdmin();
     const [limits, setLimits] = useState<any>(null);
     const [fullUser, setFullUser] = useState<any>(null);
     const [stagingUsed, setStagingUsed] = useState(0);
@@ -197,8 +196,6 @@ export default function BillingsPage() {
 
     return (
         <div className="w-full h-full font-sans overflow-auto pb-24 md:pb-0 bg-[#FBFBFC]">
-            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
-
             <div className="max-w-[1100px] mx-auto px-5 py-10 md:py-20">
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
 
