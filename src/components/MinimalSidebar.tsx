@@ -132,12 +132,18 @@ const itemVariants = {
 // ─── Ring Item ────────────────────────────────────────────────────────────────
 // Separate component so hooks can be called at top level (not inside a loop)
 function RingItem({
-    index, total, radius, rotationAngle, item, onClose, custom
+    index,
+    total,
+    radiusValue,
+    rotationAngle,
+    item,
+    onClose,
+    custom
 }: {
     index: number;
     total: number;
-    radius: number;
-    rotationAngle: ReturnType<typeof useMotionValue<number>>;
+    radiusValue: any;
+    rotationAngle: any;
     item: (typeof RADIAL_ALL)[number];
     onClose: () => void;
     custom: { enterDelay: number; exitDelay: number };
@@ -146,27 +152,27 @@ function RingItem({
     const baseAngle = (index / total) * 360;
 
     // Calculate final position based on rotation
-    const finalX = useTransform(rotationAngle, (a: number) => {
+    const finalX = useTransform([rotationAngle, radiusValue], ([a, r]: any) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
-        return Math.sin(rad) * radius;
+        return Math.sin(rad) * r;
     });
-    const finalY = useTransform(rotationAngle, (a: number) => {
+    const finalY = useTransform([rotationAngle, radiusValue], ([a, r]: any) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
-        return -Math.cos(rad) * radius;
+        return -Math.cos(rad) * r;
     });
     
     const arcOpacity = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
-        const yPos = -Math.cos(rad) * radius;
-        const t = (yPos + radius) / (2 * radius); // 0 = top, 1 = bottom
+        const yPos = -Math.cos(rad) * 130;
+        const t = (yPos + 130) / (2 * 130); // 0 = top, 1 = bottom
         if (t < 0.36) return 1;
         if (t < 0.58) return Math.max(0, 1 - (t - 0.36) / 0.22);
         return 0;
     });
     const arcScale = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
-        const yPos = -Math.cos(rad) * radius;
-        const t = (yPos + radius) / (2 * radius);
+        const yPos = -Math.cos(rad) * 130;
+        const t = (yPos + 130) / (2 * 130);
         return Math.max(0.6, 1 - t * 0.45);
     });
     const pointerEvents = useTransform(arcOpacity, (o: number) =>
@@ -191,10 +197,8 @@ function RingItem({
                 style={{
                     x: finalX,
                     y: finalY,
-                    translateX: "-50%",
-                    translateY: "-50%",
                 }}
-                className="absolute"
+                className="absolute flex items-center justify-center w-0 h-0"
             >
                 <motion.div
                     style={{
@@ -226,9 +230,9 @@ function RingItem({
 
 // ─── Radial Spin Menu ─────────────────────────────────────────────────────────
 function RadialSpinMenu({ onClose }: { onClose: () => void }) {
-    const RADIUS = 130;
     const initialRot = -20;
     const rotationAngle = useMotionValue(initialRot);
+    const radiusValue = useMotionValue(0);
 
     const { enterDelays, exitDelays } = useMemo(() => {
         const angles = RADIAL_ALL.map((_, i) => {
@@ -257,11 +261,13 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
         if (isPresent) {
             // Spin in on open
             animate(rotationAngle, 0, { type: "spring", damping: 24, stiffness: 110 });
+            animate(radiusValue, 130, { type: "spring", damping: 20, stiffness: 120 });
         } else {
             // Spin out on close
             animate(rotationAngle, initialRot, { type: "spring", damping: 24, stiffness: 90 });
+            animate(radiusValue, 0, { type: "spring", damping: 24, stiffness: 150 });
         }
-    }, [isPresent, rotationAngle, initialRot]);
+    }, [isPresent, rotationAngle, initialRot, radiusValue]);
 
     const handlePan = (_: PointerEvent, info: PanInfo) => {
         rotationAngle.set(rotationAngle.get() + info.delta.x * 0.42);
@@ -322,21 +328,23 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
                 </motion.p>
 
                 <div
-                    className="absolute pointer-events-none"
-                    style={{ bottom: "calc(48px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)" }}
+                    className="absolute pointer-events-none flex justify-center"
+                    style={{ bottom: "calc(48px + env(safe-area-inset-bottom))", left: 0, right: 0 }}
                 >
-                    {RADIAL_ALL.map((item, i) => (
-                        <RingItem
-                            key={item.href}
-                            index={i}
-                            total={RADIAL_ALL.length}
-                            radius={RADIUS}
-                            rotationAngle={rotationAngle}
-                            item={item}
-                            onClose={onClose}
-                            custom={{ enterDelay: enterDelays[i], exitDelay: exitDelays[i] }}
-                        />
-                    ))}
+                    <div className="relative w-0 h-0 flex items-center justify-center">
+                        {RADIAL_ALL.map((item, i) => (
+                            <RingItem
+                                key={item.href}
+                                index={i}
+                                total={RADIAL_ALL.length}
+                                radiusValue={radiusValue}
+                                rotationAngle={rotationAngle}
+                                item={item}
+                                onClose={onClose}
+                                custom={{ enterDelay: enterDelays[i], exitDelay: exitDelays[i] }}
+                            />
+                        ))}
+                    </div>
                 </div>
             </motion.div>
         </motion.div>
