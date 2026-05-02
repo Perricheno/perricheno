@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import JSZip from "jszip";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+const PDF_EXTRACTOR_URL = process.env.PDF_EXTRACTOR_URL || "http://pdf-extractor:8080";
 const PDF_API_BASE = "https://pdf.perricheno.ru/api/v1";
 const PDF_API_KEY = "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
 
@@ -45,56 +45,29 @@ export async function POST(req: NextRequest) {
         }
 
         if (currentExt === 'pdf') {
-            // 1. Try Text Extraction first
+            // PDF → pdf-extractor (PaddleOCR-VL: layout-aware markdown + embedded images)
             try {
-                const formData = new FormData();
-                formData.append("fileInput", new Blob([currentBuffer], { type: "application/pdf" }), fileName);
-                const pdfRes = await fetch(`${PDF_API_BASE}/convert/pdf/text`, {
+                const form = new FormData();
+                form.append("file", new Blob([currentBuffer], { type: "application/pdf" }), fileName);
+                const res = await fetch(`${PDF_EXTRACTOR_URL}/extract`, {
                     method: "POST",
-                    headers: { "X-API-KEY": PDF_API_KEY },
-                    body: formData,
-                    signal: AbortSignal.timeout(15000),
+                    body: form,
+                    signal: AbortSignal.timeout(300_000), // 5 min — async job can take a while
                 });
-                if (pdfRes.ok) {
-                    text = Buffer.from(await pdfRes.arrayBuffer()).toString('utf-8');
+                if (res.ok) {
+                    const data = await res.json();
+                    text = (data.text || "").replace(/\f/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+                    images = (data.images || [])
+                        .filter((img: { bytes: number }) => img.bytes >= 2048)
+                        .map((img: { dataUrl: string }) => img.dataUrl);
+                    console.log(`[ExtractText] pdf-extractor: ${text.length} chars, ${images.length} images`);
+                } else {
+                    console.warn(`[ExtractText] pdf-extractor returned ${res.status}`);
+                    text = "[PDF extraction failed]";
                 }
             } catch (e) {
-                console.warn("[ExtractText] Failed to get text metadata, falling back to images only.");
-            }
-
-            // 2. PRIMARY: Convert PDF to Images for Vision analysis (OPTIMIZED DPI)
-            try {
-                const imgFormData = new FormData();
-                imgFormData.append("fileInput", new Blob([currentBuffer], { type: "application/pdf" }), fileName);
-                // 150 DPI + JPG significantly reduces file size (by up to 90%)
-                imgFormData.append("imageDPI", "150");
-                imgFormData.append("imageFormat", "jpg");
-                
-                const imgRes = await fetch(`${PDF_API_BASE}/convert/pdf/img`, {
-                    method: "POST",
-                    headers: { "X-API-KEY": PDF_API_KEY },
-                    body: imgFormData,
-                    signal: AbortSignal.timeout(45000),
-                });
-
-                if (imgRes.ok) {
-                    const zipBuffer = await imgRes.arrayBuffer();
-                    const zip = await JSZip.loadAsync(zipBuffer);
-                    const files = Object.keys(zip.files).sort();
-                    
-                    // Take first 50 pages to prevent context window crash
-                    const limitedFiles = files.slice(0, 50);
-                    for (const fName of limitedFiles) {
-                        if (fName.match(/\.(png|jpg|jpeg)$/i)) {
-                            const imgData = await zip.file(fName)?.async("base64");
-                            if (imgData) images.push(`data:image/jpeg;base64,${imgData}`);
-                        }
-                    }
-                    console.log(`[ExtractText] Processed ${images.length} pages at 150 DPI (JPG).`);
-                }
-            } catch (e) {
-                console.error("[ExtractText] PDF Image conversion failed:", e);
-                if (!text) text = "[File processing failed]";
+                console.error("[ExtractText] pdf-extractor error:", e);
+                text = "[PDF extraction failed]";
             }
         } else if (['txt', 'csv', 'tsv', 'json', 'md', 'xml'].includes(ext || '')) {
             // SAFE BUFFER READING: Only read up to 5MB to prevent memory exhaustion on 1M+ row files
