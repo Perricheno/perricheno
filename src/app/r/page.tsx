@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     IconArrowUp, IconLoader2, IconCode, IconX,
     IconCopy, IconCheck, IconRefresh, IconDownload,
-    IconPaperclip, IconFile, IconSparkles,
-    IconChevronDown, IconChevronUp, IconMaximize,
+    IconPaperclip, IconFile, IconSparkles, IconMaximize,
 } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
 import RSidebar from "./RSidebar";
@@ -80,32 +79,42 @@ const SERVER_EXTRACT_EXTS = ["pdf", "doc", "docx", "ppt", "pptx"];
 const CLIENT_TEXT_EXTS = ["csv", "tsv", "txt", "md", "json"];
 const CLIENT_EXCEL_EXTS = ["xlsx", "xls"];
 
+// ── Encode ArrayBuffer → base64 ───────────────────────────────────────────
+function bufToBase64(buf: ArrayBuffer): string {
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
 // ── Read file: client-side for text/Excel, server-side for PDF/Office ────────
-async function readFileAsContext(file: File): Promise<{ content: string; images?: string[] }> {
+async function readFileAsContext(file: File): Promise<{ content: string; rFileName?: string; fileData?: string; images?: string[] }> {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
 
     if (CLIENT_TEXT_EXTS.includes(ext)) {
-        // Read up to 5 MB to avoid memory issues on huge files
-        const MAX_BYTES = 5 * 1024 * 1024;
+        const MAX_BYTES = 10 * 1024 * 1024;
         const buf = await file.arrayBuffer();
         const safeBuf = buf.byteLength > MAX_BYTES ? buf.slice(0, MAX_BYTES) : buf;
         const raw = new TextDecoder().decode(safeBuf);
 
-        if (ext === "csv" || ext === "tsv" || raw.includes(",")) {
+        if (ext === "csv" || ext === "tsv") {
+            const sep = ext === "tsv" ? "\t" : ",";
             const lines = raw.split("\n").map(l => l.trim()).filter(Boolean);
             const header = lines[0] ?? "";
-            const sample = lines.slice(0, 10);
-            const sep = ext === "tsv" ? "\t" : ",";
-            const columns = header.split(sep).join(" | ");
-            const content =
-                `[DATASET SCHEMA DETECTED]\nCOLUMNS: ${columns}\n\n` +
-                `[STRUCTURAL SAMPLE (First 10 rows)]:\n===CSV START===\n${sample.join("\n")}\n===CSV END===`;
-            return { content };
+            const totalRows = lines.length - 1;
+            const sample = lines.slice(1, 4).join("\n");
+            // Schema snippet — just enough for LLM to know columns & types
+            const content = [
+                `FILE: "${file.name}" — ${totalRows} rows`,
+                `COLUMNS: ${header.split(sep).join(" | ")}`,
+                `SAMPLE (3 rows):\n${sample}`,
+            ].join("\n");
+            return { content, fileData: bufToBase64(safeBuf), rFileName: file.name };
         }
 
-        // Plain text / JSON / MD — truncate to 800 lines
+        // Plain text / JSON / MD
         const lines = raw.split("\n");
-        return { content: lines.length > 800 ? `[TRUNCATED: showing 800 lines]\n\n${lines.slice(0, 800).join("\n")}` : raw };
+        return { content: lines.length > 800 ? lines.slice(0, 800).join("\n") : raw };
     }
 
     if (CLIENT_EXCEL_EXTS.includes(ext)) {
@@ -117,12 +126,17 @@ async function readFileAsContext(file: File): Promise<{ content: string; images?
             const csv = utils.sheet_to_csv(ws);
             const lines = csv.split("\n").map(l => l.trim()).filter(Boolean);
             const header = lines[0] ?? "";
-            const sample = lines.slice(0, 10);
-            const columns = header.split(",").join(" | ");
-            const content =
-                `[DATASET SCHEMA DETECTED]\nCOLUMNS: ${columns}\n\n` +
-                `[STRUCTURAL SAMPLE (First 10 rows)]:\n===CSV START===\n${sample.join("\n")}\n===CSV END===`;
-            return { content };
+            const totalRows = lines.length - 1;
+            const sample = lines.slice(1, 4).join("\n");
+            const rFileName = file.name.replace(/\.[^.]+$/, ".csv");
+            const content = [
+                `FILE: "${rFileName}" — ${totalRows} rows (converted from Excel)`,
+                `COLUMNS: ${header.split(",").join(" | ")}`,
+                `SAMPLE (3 rows):\n${sample}`,
+            ].join("\n");
+            // Encode CSV text (not raw Excel) so R can read it with read.csv()
+            const csvBuf = new TextEncoder().encode(csv).buffer;
+            return { content, fileData: bufToBase64(csvBuf), rFileName };
         } catch {
             return { content: "[Excel parsing failed — please convert to CSV]" };
         }
@@ -385,8 +399,10 @@ function MultiChartCard({
 
 interface AttachedFile {
     name: string;
-    content: string;
-    images?: string[];  // base64 pages for PDF/Office files
+    content: string;       // schema snippet for LLM context
+    rFileName?: string;    // filename R will use (may differ for Excel→CSV)
+    fileData?: string;     // base64 of full file for R compiler
+    images?: string[];
     size: number;
 }
 
@@ -418,17 +434,14 @@ export default function RPage() {
     const [multiResults, setMultiResults] = useState<GeneratedChart[]>([]);
     const [multiLoading, setMultiLoading] = useState(false);
     const [multiError, setMultiError] = useState<string | null>(null);
+    const [chartsPlanned, setChartsPlanned] = useState<string[]>([]);
 
-    // Stage progress (for stepper)
-    const [stageInfo, setStageInfo] = useState<{
-        current: number;
-        completed: Set<number>;
-        label: string;
-        progress?: { done: number; total: number };
-        suggestedCharts?: string[];
-    }>({ current: 0, completed: new Set(), label: "" });
+    // Elapsed timer
     const [elapsed, setElapsed] = useState(0);
     const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Polling ref for background session
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Sidebar + session state
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -454,9 +467,9 @@ export default function RPage() {
         const results: AttachedFile[] = [];
 
         for (const f of arr) {
-            const { content, images } = await readFileAsContext(f);
+            const { content, rFileName, fileData, images } = await readFileAsContext(f);
             if (content || images?.length) {
-                results.push({ name: f.name, content, images, size: f.size });
+                results.push({ name: f.name, content, rFileName, fileData, images, size: f.size });
             }
         }
 
@@ -477,7 +490,7 @@ export default function RPage() {
                 body: JSON.stringify({
                     action: "suggest",
                     prompt,
-                    contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+                    contextFiles: files.map(f => ({ name: f.name, content: f.content, rFileName: f.rFileName, fileData: f.fileData, images: f.images ?? [] })),
                 }),
             });
             if (!res.ok) return "";
@@ -493,7 +506,49 @@ export default function RPage() {
         }
     }, [prompt, files, selectedCharts]);
 
-    // ── Multi SSE flow ──
+    // ── Stop polling helper ──
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
+    }, []);
+
+    // ── Poll a session until done ──
+    const pollSession = useCallback((sessionId: string) => {
+        stopPolling();
+        const startTime = Date.now();
+        elapsedRef.current = setInterval(() => setElapsed((Date.now() - startTime) / 1000), 100);
+
+        pollRef.current = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/r/sessions/${sessionId}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const s = data.session;
+
+                const results: GeneratedChart[] = (s.results ?? []).map((r: any) => ({
+                    chartType: r.chartType,
+                    name: r.name || r.chartType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                    image: r.image ?? "",
+                    code: r.code ?? "",
+                    status: r.status ?? "done",
+                    error: r.error,
+                }));
+
+                setMultiResults(results);
+
+                if (s.status === "done" || s.status === "error") {
+                    stopPolling();
+                    setMultiLoading(false);
+                    setSidebarRefresh(n => n + 1);
+                    if (s.status === "error" && results.length === 0) {
+                        setMultiError("Generation failed. Please try again.");
+                    }
+                }
+            } catch { /* ignore transient errors */ }
+        }, 2500);
+    }, [stopPolling]);
+
+    // ── Multi polling flow ──
     const runMulti = useCallback(async () => {
         if (!user) { setShowLogin(true); return; }
         if (!prompt.trim()) return;
@@ -501,18 +556,12 @@ export default function RPage() {
         setMultiLoading(true);
         setMultiError(null);
         setMultiResults([]);
-        setStageInfo({ current: 1, completed: new Set(), label: "Analysing data…" });
+        setChartsPlanned([]);
         setElapsed(0);
         setResultImage(null);
         setResultCode("");
         setError(null);
-
-        // Start elapsed timer
-        if (elapsedRef.current) clearInterval(elapsedRef.current);
-        const startTime = Date.now();
-        elapsedRef.current = setInterval(() => {
-            setElapsed((Date.now() - startTime) / 1000);
-        }, 100);
+        stopPolling();
 
         try {
             const res = await fetch("/api/r/generate", {
@@ -521,113 +570,31 @@ export default function RPage() {
                 body: JSON.stringify({
                     action: "multi",
                     prompt,
-                    contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+                    contextFiles: files.map(f => ({ name: f.name, content: f.content, rFileName: f.rFileName, fileData: f.fileData, images: f.images ?? [] })),
                     ...(selectedCharts.length > 0 ? { chartTypes: selectedCharts } : {}),
                 }),
             });
 
+            const data = await res.json().catch(() => ({}));
+
             if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                if (res.status === 402) {
-                    setMultiError("Quota reached. Please top up your balance.");
-                } else {
-                    setMultiError(data.error || `HTTP ${res.status}`);
-                }
+                setMultiError(res.status === 402 ? "Quota reached. Please top up your balance." : data.error || `HTTP ${res.status}`);
+                setMultiLoading(false);
                 return;
             }
 
-            const reader = res.body?.getReader();
-            if (!reader) { setMultiError("Stream unavailable."); return; }
+            const { sessionId, chartsPlanned: planned = [] } = data;
+            setActiveSessionId(sessionId);
+            setChartsPlanned(planned);
 
-            const decoder = new TextDecoder();
-            let buffer = "";
+            // Kick off polling — background job runs independently
+            pollSession(sessionId);
 
-            // Track per-index results for SSE updates
-            const resultsMap = new Map<number, GeneratedChart>();
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-
-                const parts = buffer.split("\n\n");
-                buffer = parts.pop() ?? "";
-
-                for (const part of parts) {
-                    const lines = part.split("\n");
-                    let eventType = "message";
-                    let dataStr = "";
-                    for (const line of lines) {
-                        if (line.startsWith("event: ")) eventType = line.slice(7).trim();
-                        if (line.startsWith("data: ")) dataStr = line.slice(6).trim();
-                    }
-                    if (!dataStr) continue;
-
-                    let payload: any;
-                    try { payload = JSON.parse(dataStr); } catch { continue; }
-
-                    if (eventType === "session_created") {
-                        setActiveSessionId(payload.sessionId ?? null);
-                    }
-
-                    if (eventType === "stage") {
-                        const { stage, label, status, progress, charts } = payload;
-                        setStageInfo(prev => {
-                            const completed = new Set(prev.completed);
-                            if (status === "done") completed.add(stage);
-                            return {
-                                current: status === "done" ? stage + 1 : stage,
-                                completed,
-                                label,
-                                progress,
-                                suggestedCharts: charts ?? prev.suggestedCharts,
-                            };
-                        });
-                    }
-
-                    if (eventType === "status" && payload.status === "running") {
-                        // Add a placeholder for this chart
-                        const idx = resultsMap.size;
-                        const chart: GeneratedChart = {
-                            chartType: "",
-                            name: payload.label,
-                            image: "",
-                            code: "",
-                            status: "generating",
-                        };
-                        resultsMap.set(idx, chart);
-                        setMultiResults(Array.from(resultsMap.values()));
-                    }
-
-                    if (eventType === "chart_done") {
-                        const { index, chartType, image, code } = payload;
-                        const name = chartType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
-                        const chart: GeneratedChart = { chartType, name, image, code, status: "done" };
-                        resultsMap.set(index, chart);
-                        setMultiResults(Array.from(resultsMap.values()));
-                    }
-
-                    if (eventType === "chart_error") {
-                        const { index, chartType, error: errMsg } = payload;
-                        const name = (chartType || "").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
-                        const chart: GeneratedChart = { chartType: chartType || "", name, image: "", code: "", status: "error", error: errMsg };
-                        resultsMap.set(index, chart);
-                        setMultiResults(Array.from(resultsMap.values()));
-                    }
-
-                    if (eventType === "error") {
-                        setMultiError(payload.message || "An error occurred.");
-                    }
-                }
-            }
         } catch (e: any) {
             setMultiError(e.message || "Multi-generation failed.");
-        } finally {
             setMultiLoading(false);
-            if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
-            setSidebarRefresh(n => n + 1);
         }
-    }, [user, prompt, files, selectedCharts, setShowLogin]);
+    }, [user, prompt, files, selectedCharts, setShowLogin, stopPolling, pollSession]);
 
     // Retry a single chart within multi results
     const retryMultiChart = useCallback(async (index: number, chartType: string) => {
@@ -643,7 +610,7 @@ export default function RPage() {
                 action: "generate",
                 prompt,
                 chartType,
-                contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+                contextFiles: files.map(f => ({ name: f.name, content: f.content, rFileName: f.rFileName, fileData: f.fileData, images: f.images ?? [] })),
             };
 
             const res = await fetch("/api/r/generate", {
@@ -704,7 +671,7 @@ export default function RPage() {
                 action: "generate",
                 prompt,
                 chartType: chartToUse,
-                contextFiles: files.map(f => ({ name: f.name, content: f.content, images: f.images ?? [] })),
+                contextFiles: files.map(f => ({ name: f.name, content: f.content, rFileName: f.rFileName, fileData: f.fileData, images: f.images ?? [] })),
             };
 
             if (retryWithError && resultCode) {
@@ -1084,90 +1051,53 @@ export default function RPage() {
                             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                             className="space-y-4"
                         >
-                            {/* ── Stepper (while loading) ── */}
+                            {/* ── Progress card (while polling) ── */}
                             {multiLoading && (() => {
-                                const STAGES = ["Analyse", "Plan", "Visualize"];
-                                const { current, completed, label, progress } = stageInfo;
+                                const done = multiResults.filter(c => c.status === "done").length;
+                                const total = chartsPlanned.length || multiResults.length;
+                                const pct = total > 0 ? (done / total) * 100 : 0;
                                 return (
                                     <div className="bg-white border border-[#e8e8e8] rounded-2xl p-6 shadow-sm">
-                                        {/* Stage stepper */}
-                                        <div className="flex items-start justify-between mb-7 relative">
-                                            <div className="absolute top-3 left-6 right-6 h-px bg-[#f0f0f0]" />
-                                            {STAGES.map((s, idx) => {
-                                                const num = idx + 1;
-                                                const isDone = completed.has(num) || current > num;
-                                                const isActive = current === num;
-                                                return (
-                                                    <div key={s} className="flex flex-col items-center relative z-10 flex-1">
-                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300
-                                                            ${isDone ? "bg-[#1a1a1a] text-white"
-                                                                : isActive ? "bg-white border-2 border-[#1a1a1a] text-[#1a1a1a]"
-                                                                : "bg-white border border-[#e0e0e0] text-[#ccc]"}`}>
-                                                            {isDone ? <IconCheck className="w-3 h-3" stroke={3} /> : num}
-                                                        </div>
-                                                        <div className={`mt-2 text-[9px] font-bold uppercase tracking-widest
-                                                            ${isActive ? "text-[#1a1a1a]" : isDone ? "text-gray-500" : "text-gray-300"}`}>
-                                                            {s}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
+                                            <p className="text-[13px] font-bold text-[#1a1a1a] flex-1">
+                                                {done === 0 ? "Generating visualizations…" : `${done} of ${total} charts ready`}
+                                            </p>
+                                            <span className="text-[11px] font-mono text-gray-300 tabular-nums shrink-0">
+                                                {elapsed.toFixed(1)}s
+                                            </span>
                                         </div>
 
-                                        {/* Current label + progress bar */}
-                                        <div className="border-t border-[#f0f0f0] pt-5">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
-                                                <div className="flex-1 overflow-hidden h-5 relative">
-                                                    <AnimatePresence mode="wait">
-                                                        <motion.p
-                                                            key={label}
-                                                            initial={{ opacity: 0, y: 6 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: -6 }}
-                                                            transition={{ duration: 0.18 }}
-                                                            className="text-[13px] font-bold text-[#1a1a1a] absolute inset-0 truncate"
-                                                        >
-                                                            {label || "Starting…"}
-                                                        </motion.p>
-                                                    </AnimatePresence>
-                                                </div>
-                                                {progress && (
-                                                    <span className="text-[11px] font-mono text-gray-400 shrink-0 tabular-nums">
-                                                        {progress.done}/{progress.total}
-                                                    </span>
-                                                )}
-                                                <span className="text-[11px] font-mono text-gray-300 shrink-0 tabular-nums">
-                                                    {elapsed.toFixed(1)}s
-                                                </span>
-                                            </div>
-                                            {progress && (
-                                                <div className="w-full bg-[#f5f5f5] h-1 rounded-full overflow-hidden">
-                                                    <motion.div
-                                                        className="h-full bg-[#1a1a1a] rounded-full"
-                                                        animate={{ width: `${(progress.done / progress.total) * 100}%` }}
-                                                        transition={{ duration: 0.4, ease: "easeOut" }}
-                                                    />
-                                                </div>
-                                            )}
+                                        {/* Progress bar */}
+                                        <div className="w-full bg-[#f5f5f5] h-1 rounded-full overflow-hidden mb-4">
+                                            <motion.div
+                                                className="h-full bg-[#1a1a1a] rounded-full"
+                                                animate={{ width: `${pct}%` }}
+                                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                            />
                                         </div>
 
                                         {/* Per-chart status list */}
-                                        {multiResults.length > 0 && (
-                                            <div className="mt-4 space-y-1">
-                                                {multiResults.map((chart, i) => (
-                                                    <div key={i} className="flex items-center gap-2.5 px-1">
-                                                        <div className="shrink-0 w-4 flex justify-center">
-                                                            {chart.status === "generating" && <IconLoader2 className="w-3 h-3 animate-spin text-gray-400" />}
-                                                            {chart.status === "done" && <IconCheck className="w-3 h-3 text-[#1a1a1a]" stroke={2.5} />}
-                                                            {chart.status === "error" && <IconX className="w-3 h-3 text-red-400" />}
-                                                            {chart.status === "pending" && <div className="w-2 h-2 rounded-full bg-[#e8e8e8]" />}
+                                        {(multiResults.length > 0 || chartsPlanned.length > 0) && (
+                                            <div className="space-y-1">
+                                                {(chartsPlanned.length > 0 ? chartsPlanned : multiResults.map(c => c.chartType)).map((ct, i) => {
+                                                    const res = multiResults[i];
+                                                    const status = res?.status ?? "pending";
+                                                    const name = (res?.name) || ct.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+                                                    return (
+                                                        <div key={i} className="flex items-center gap-2.5 px-1">
+                                                            <div className="shrink-0 w-4 flex justify-center">
+                                                                {status === "generating" && <IconLoader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                                                                {status === "done" && <IconCheck className="w-3 h-3 text-[#1a1a1a]" stroke={2.5} />}
+                                                                {status === "error" && <IconX className="w-3 h-3 text-red-400" />}
+                                                                {status === "pending" && <div className="w-2 h-2 rounded-full bg-[#e0e0e0]" />}
+                                                            </div>
+                                                            <p className={`text-[11px] font-medium flex-1 ${status === "done" ? "text-[#1a1a1a]" : "text-gray-400"}`}>
+                                                                {name}
+                                                            </p>
                                                         </div>
-                                                        <p className={`text-[11px] font-medium flex-1 ${chart.status === "done" ? "text-[#1a1a1a]" : "text-gray-400"}`}>
-                                                            {chart.name}
-                                                        </p>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
