@@ -475,14 +475,16 @@ export default function MinimalSidebar() {
                 "fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full pb-safe transition-colors duration-300",
                 radialOpen ? "bg-transparent border-transparent" : "bg-white/50 backdrop-blur-xl border-t border-gray-200/50"
             )}>
-                <div className="flex items-center justify-around px-2 pt-2 pb-5">
+                <div className="flex items-center justify-between px-2 pt-2 pb-5">
 
                     {/* Left items */}
-                    {MOBILE_NAV_LEFT.map(l => (
-                        <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
-                            <NavItem l={l} />
-                        </div>
-                    ))}
+                    <div className="flex items-center justify-around flex-1">
+                        {MOBILE_NAV_LEFT.map(l => (
+                            <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
+                                <NavItem l={l} />
+                            </div>
+                        ))}
+                    </div>
 
                     {/* ── Center Logo Button ── */}
                     <button
@@ -521,11 +523,13 @@ export default function MinimalSidebar() {
                     </button>
 
                     {/* Right items */}
-                    {MOBILE_NAV_RIGHT.map(l => (
-                        <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
-                            <NavItem l={l} />
-                        </div>
-                    ))}
+                    <div className="flex items-center justify-around flex-1">
+                        {MOBILE_NAV_RIGHT.map(l => (
+                            <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
+                                <NavItem l={l} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </nav>
         </>
