@@ -88,16 +88,15 @@ const containerVariants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.03,
-            delayChildren: 0.05,
+            staggerChildren: 0,
+            delayChildren: 0,
             when: "beforeChildren" as const,
         }
     },
     exit: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.025,
-            staggerDirection: -1,
+            staggerChildren: 0,
             when: "afterChildren" as const,
         }
     }
@@ -147,9 +146,6 @@ function RingItem({
 }) {
     const router = useRouter();
     const baseAngle = (index / total) * 360;
-    
-    // Track current position for animation
-    const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
 
     // Calculate final position based on rotation
     const finalX = useTransform(rotationAngle, (a: number) => {
@@ -159,14 +155,6 @@ function RingItem({
     const finalY = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         return -Math.cos(rad) * radius;
-    });
-    
-    // Update position when rotation changes (for drag)
-    useMotionValueEvent(finalX, "change", (x) => {
-        setCurrentPos(prev => ({ ...prev, x }));
-    });
-    useMotionValueEvent(finalY, "change", (y) => {
-        setCurrentPos(prev => ({ ...prev, y }));
     });
     
     const arcOpacity = useTransform(rotationAngle, (a: number) => {
@@ -190,11 +178,13 @@ function RingItem({
     return (
         <motion.div
             variants={itemVariants}
-            custom={currentPos}
+            custom={{ x: finalX.get(), y: finalY.get() }}
             style={{
                 position: "absolute",
                 left: 0,
                 top: 0,
+                x: finalX,
+                y: finalY,
                 translateX: "-50%",
                 translateY: "-50%",
                 pointerEvents,
@@ -243,7 +233,14 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
     };
 
     const handlePanEnd = (_: PointerEvent, info: PanInfo) => {
-        animate(rotationAngle, rotationAngle.get() + info.velocity.x * 0.24, {
+        const currentAngle = rotationAngle.get() + info.velocity.x * 0.24;
+        const itemCount = RADIAL_ALL.length;
+        const snapAngle = 360 / itemCount;
+        
+        // Find nearest snap position
+        const nearestSnap = Math.round(currentAngle / snapAngle) * snapAngle;
+        
+        animate(rotationAngle, nearestSnap, {
             type: "spring",
             damping: 22,
             stiffness: 50,
