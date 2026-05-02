@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, useMotionValueEvent } from "framer-motion";
 import type { PanInfo } from "framer-motion";
 
@@ -88,16 +88,12 @@ const containerVariants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.04,
-            delayChildren: 0.02,
             when: "beforeChildren" as const,
         }
     },
     exit: {
         opacity: 0,
         transition: {
-            staggerChildren: 0.03,
-            staggerDirection: -1,
             when: "afterChildren" as const,
         }
     }
@@ -108,30 +104,32 @@ const itemVariants = {
         scale: 0,
         opacity: 0,
     },
-    visible: {
+    visible: (custom: { enterDelay: number; exitDelay: number }) => ({
         scale: 1,
         opacity: 1,
         transition: {
+            delay: custom.enterDelay,
             type: "spring" as const,
             damping: 18,
             stiffness: 100,
             mass: 1,
         }
-    },
-    exit: {
+    }),
+    exit: (custom: { enterDelay: number; exitDelay: number }) => ({
         scale: 0,
         opacity: 0,
         transition: {
-            duration: 0.3,
+            delay: custom.exitDelay,
+            duration: 0.25,
             ease: "easeInOut" as const
         }
-    }
+    })
 };
 
 // ─── Ring Item ────────────────────────────────────────────────────────────────
 // Separate component so hooks can be called at top level (not inside a loop)
 function RingItem({
-    index, total, radius, rotationAngle, item, onClose,
+    index, total, radius, rotationAngle, item, onClose, custom
 }: {
     index: number;
     total: number;
@@ -139,6 +137,7 @@ function RingItem({
     rotationAngle: ReturnType<typeof useMotionValue<number>>;
     item: (typeof RADIAL_ALL)[number];
     onClose: () => void;
+    custom: { enterDelay: number; exitDelay: number };
 }) {
     const router = useRouter();
     const baseAngle = (index / total) * 360;
@@ -173,6 +172,7 @@ function RingItem({
 
     return (
         <motion.div
+            custom={custom}
             variants={itemVariants}
             style={{
                 position: "absolute",
@@ -224,7 +224,29 @@ function RingItem({
 // ─── Radial Spin Menu ─────────────────────────────────────────────────────────
 function RadialSpinMenu({ onClose }: { onClose: () => void }) {
     const RADIUS = 130;
-    const rotationAngle = useMotionValue(-20);
+    const initialRot = -20;
+    const rotationAngle = useMotionValue(initialRot);
+
+    const { enterDelays, exitDelays } = useMemo(() => {
+        const angles = RADIAL_ALL.map((_, i) => {
+            const baseAngle = (i / RADIAL_ALL.length) * 360;
+            let norm = ((baseAngle + initialRot) % 360 + 360) % 360;
+            if (norm > 180) norm -= 360;
+            return { index: i, angle: norm };
+        });
+        
+        angles.sort((a, b) => a.angle - b.angle);
+        
+        const enter = new Array(RADIAL_ALL.length).fill(0);
+        const exit = new Array(RADIAL_ALL.length).fill(0);
+        
+        angles.forEach((item, rank) => {
+            enter[item.index] = rank * 0.04 + 0.02;
+            exit[item.index] = (angles.length - 1 - rank) * 0.03;
+        });
+        
+        return { enterDelays: enter, exitDelays: exit };
+    }, []);
 
     useEffect(() => {
         // Spin in on open
@@ -254,22 +276,11 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             exit="exit"
             onClick={onClose}
             style={{
-                background: 'linear-gradient(to top, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.3) 100%)',
-                backdropFilter: 'blur(0px)',
-                WebkitBackdropFilter: 'blur(0px)',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
             }}
         >
-            {/* Gradient blur overlay - more blur at top, less at bottom */}
-            <div 
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                    maskImage: 'linear-gradient(to top, transparent 0%, black 40%, black 100%)',
-                    WebkitMaskImage: 'linear-gradient(to top, transparent 0%, black 40%, black 100%)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                }}
-            />
-            
             {/* Drag capture zone — transparent, full screen */}
             <motion.div
                 className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none"
@@ -301,6 +312,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
                             rotationAngle={rotationAngle}
                             item={item}
                             onClose={onClose}
+                            custom={{ enterDelay: enterDelays[i], exitDelay: exitDelays[i] }}
                         />
                     ))}
                 </div>
@@ -459,11 +471,18 @@ export default function MinimalSidebar() {
                 {radialOpen && <RadialSpinMenu onClose={() => setRadialOpen(false)} />}
             </AnimatePresence>
 
-            <nav className="fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full bg-white/50 backdrop-blur-xl border-t border-gray-200/50 pb-safe">
+            <nav className={cn(
+                "fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full pb-safe transition-colors duration-300",
+                radialOpen ? "bg-transparent border-transparent" : "bg-white/50 backdrop-blur-xl border-t border-gray-200/50"
+            )}>
                 <div className="flex items-center justify-around px-2 pt-2 pb-5">
 
                     {/* Left items */}
-                    {MOBILE_NAV_LEFT.map(l => <NavItem key={l.href} l={l} />)}
+                    {MOBILE_NAV_LEFT.map(l => (
+                        <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
+                            <NavItem l={l} />
+                        </div>
+                    ))}
 
                     {/* ── Center Logo Button ── */}
                     <button
@@ -502,7 +521,11 @@ export default function MinimalSidebar() {
                     </button>
 
                     {/* Right items */}
-                    {MOBILE_NAV_RIGHT.map(l => <NavItem key={l.href} l={l} />)}
+                    {MOBILE_NAV_RIGHT.map(l => (
+                        <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
+                            <NavItem l={l} />
+                        </div>
+                    ))}
                 </div>
             </nav>
         </>
