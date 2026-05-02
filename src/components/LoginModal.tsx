@@ -7,7 +7,10 @@ import { useAdmin } from "@/components/AdminContext";
 
 export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: { onSuccess: () => void; onGuestSuccess?: (name: string) => void; onClose: () => void; anchorRect?: DOMRect }) => {
     // Desktop popover mode: anchorRect provided + viewport ≥ 768px
-    const isPopover = !!anchorRect && (typeof window === "undefined" ? false : window.innerWidth >= 768);
+    // Use state to avoid hydration mismatch (window not available on SSR)
+    const [isWide, setIsWide] = useState<boolean | null>(null);
+    useEffect(() => { setIsWide(window.innerWidth >= 768); }, []);
+    const isPopover = !!anchorRect && isWide === true;
     const { user, login, logout, deleteAccount } = useAdmin();
     const [error, setError] = useState("");
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -83,11 +86,14 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
         ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(deepLink)}&bgcolor=FFFFFF&color=1A1A1A&margin=8`
         : null;
 
-    // Popover position: anchored above the Account button
+    // Popover position: anchored above the Account button (left-side sidebar)
+    // While we haven't resolved viewport width yet (anchorRect mode), don't flash fullscreen
+    if (anchorRect && isWide === null) return null;
+
     const popoverStyle = isPopover && anchorRect ? {
         position: "fixed" as const,
         bottom: window.innerHeight - anchorRect.top + 8,
-        left: Math.max(8, anchorRect.left - 320 + anchorRect.width),
+        left: Math.max(8, anchorRect.left),
         width: 340,
         zIndex: 200,
     } : undefined;
@@ -290,7 +296,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
 
     if (isPopover && anchorRect) {
         return (
-            <AnimatePresence>
+            <>
                 <div className="fixed inset-0 z-[199]" onClick={onClose} />
                 <motion.div
                     onClick={e => e.stopPropagation()}
@@ -303,7 +309,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                 >
                     {innerContent}
                 </motion.div>
-            </AnimatePresence>
+            </>
         );
     }
 
