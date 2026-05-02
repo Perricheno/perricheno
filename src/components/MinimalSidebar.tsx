@@ -59,11 +59,11 @@ const NAV_GROUPS: NavGroup[] = [
 
 // Bottom nav: 4 items + Logo button in center
 const MOBILE_NAV_LEFT: NavLink[] = [
-    { href: "/", icon: IconHome, label: "Home" },
+    { href: "/agent", icon: IconSparkles, label: "Agent" },
     { href: "/r", icon: IconChartDots2, label: "R Studio" },
 ];
 const MOBILE_NAV_RIGHT: NavLink[] = [
-    { href: "/agent", icon: IconSparkles, label: "Agent" },
+    { href: "/pdf", icon: IconFileTypePdf, label: "PDF" },
     { href: "/settings", icon: IconSettings, label: "Settings" },
 ];
 
@@ -182,7 +182,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
 
     return (
         <motion.div
-            className="fixed inset-0 z-[45] md:hidden"
+            className="fixed inset-0 z-[9998] md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -387,7 +387,7 @@ export default function MinimalSidebar() {
                 {radialOpen && <RadialSpinMenu onClose={() => setRadialOpen(false)} />}
             </AnimatePresence>
 
-            <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden w-full bg-white/95 backdrop-blur-2xl border-t border-gray-100 pb-safe">
+            <nav className="fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full bg-transparent pb-safe">
                 <div className="flex items-center justify-around px-2 pt-2 pb-5">
 
                     {/* Left items */}
