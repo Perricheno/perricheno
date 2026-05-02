@@ -142,14 +142,16 @@ function RingItem({
     const router = useRouter();
     const baseAngle = (index / total) * 360;
 
-    const x = useTransform(rotationAngle, (a: number) => {
+    // Calculate final position based on rotation
+    const finalX = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         return Math.sin(rad) * radius;
     });
-    const y = useTransform(rotationAngle, (a: number) => {
+    const finalY = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         return -Math.cos(rad) * radius;
     });
+    
     const arcOpacity = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         const yPos = -Math.cos(rad) * radius;
@@ -175,8 +177,8 @@ function RingItem({
                 position: "absolute",
                 left: 0,
                 top: 0,
-                x,
-                y,
+                x: finalX,
+                y: finalY,
                 translateX: "-50%",
                 translateY: "-50%",
                 pointerEvents,
