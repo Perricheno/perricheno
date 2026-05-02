@@ -80,6 +80,53 @@ const RADIAL_ALL = [
     { href: "/settings", icon: IconSettings, label: "Settings" },
 ];
 
+// ─── Animation Variants ───────────────────────────────────────────────────────
+const containerVariants = {
+    hidden: {
+        opacity: 0,
+    },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.03,
+            delayChildren: 0.05,
+            when: "beforeChildren" as const,
+        }
+    },
+    exit: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.025,
+            staggerDirection: -1,
+            when: "afterChildren" as const,
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: {
+        scale: 0,
+        opacity: 0,
+    },
+    visible: {
+        scale: 1,
+        opacity: 1,
+        transition: {
+            type: "spring" as const,
+            damping: 15,
+            stiffness: 300,
+        }
+    },
+    exit: {
+        scale: 0,
+        opacity: 0,
+        transition: {
+            duration: 0.2,
+            ease: "easeInOut" as const
+        }
+    }
+};
+
 // ─── Ring Item ────────────────────────────────────────────────────────────────
 // Separate component so hooks can be called at top level (not inside a loop)
 function RingItem({
@@ -103,7 +150,7 @@ function RingItem({
         const rad = ((baseAngle + a) * Math.PI) / 180;
         return -Math.cos(rad) * radius;
     });
-    const opacity = useTransform(rotationAngle, (a: number) => {
+    const arcOpacity = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         const yPos = -Math.cos(rad) * radius;
         const t = (yPos + radius) / (2 * radius); // 0 = top, 1 = bottom
@@ -111,18 +158,19 @@ function RingItem({
         if (t < 0.58) return Math.max(0, 1 - (t - 0.36) / 0.22);
         return 0;
     });
-    const scale = useTransform(rotationAngle, (a: number) => {
+    const arcScale = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         const yPos = -Math.cos(rad) * radius;
         const t = (yPos + radius) / (2 * radius);
         return Math.max(0.6, 1 - t * 0.45);
     });
-    const pointerEvents = useTransform(opacity, (o: number) =>
+    const pointerEvents = useTransform(arcOpacity, (o: number) =>
         o < 0.15 ? "none" : "auto"
     );
 
     return (
         <motion.div
+            variants={itemVariants}
             style={{
                 position: "absolute",
                 left: 0,
@@ -131,28 +179,33 @@ function RingItem({
                 y,
                 translateX: "-50%",
                 translateY: "-50%",
-                opacity,
-                scale,
                 pointerEvents,
             }}
             className="flex flex-col items-center"
         >
-            <button
-                onPointerDown={e => e.stopPropagation()}
-                onClick={e => {
-                    e.stopPropagation();
-                    onClose();
-                    router.push(item.href);
+            <motion.div
+                style={{
+                    opacity: arcOpacity,
+                    scale: arcScale,
                 }}
-                className="flex flex-col items-center gap-1.5 select-none"
             >
-                <div className="w-[52px] h-[52px] bg-[#1a1a1a] rounded-[18px] flex items-center justify-center shadow-xl shadow-black/20 active:scale-90 transition-transform duration-100" style={{ willChange: "transform" }}>
-                    <item.icon className="w-[22px] h-[22px] text-white" stroke={1.5} />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#1a1a1a] whitespace-nowrap">
-                    {item.label}
-                </span>
-            </button>
+                <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={e => {
+                        e.stopPropagation();
+                        onClose();
+                        router.push(item.href);
+                    }}
+                    className="flex flex-col items-center gap-1.5 select-none"
+                >
+                    <div className="w-[52px] h-[52px] bg-[#1a1a1a] rounded-[18px] flex items-center justify-center shadow-xl shadow-black/20 active:scale-90 transition-transform duration-100" style={{ willChange: "transform" }}>
+                        <item.icon className="w-[22px] h-[22px] text-white" stroke={1.5} />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#1a1a1a] whitespace-nowrap">
+                        {item.label}
+                    </span>
+                </button>
+            </motion.div>
         </motion.div>
     );
 }
@@ -183,10 +236,10 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
     return (
         <motion.div
             className="fixed inset-0 z-[9998] md:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             onClick={onClose}
         >
             {/* Drag capture zone — transparent, full screen */}
