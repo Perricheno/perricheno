@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, useMotionValueEvent } from "framer-motion";
 import type { PanInfo } from "framer-motion";
 
 type NavLink = {
@@ -105,10 +105,14 @@ const containerVariants = {
 
 const itemVariants = {
     hidden: {
+        x: 0,
+        y: 0,
         scale: 0,
         opacity: 0,
     },
-    visible: {
+    visible: (custom: { x: number; y: number }) => ({
+        x: custom.x,
+        y: custom.y,
         scale: 1,
         opacity: 1,
         transition: {
@@ -116,8 +120,10 @@ const itemVariants = {
             damping: 15,
             stiffness: 300,
         }
-    },
+    }),
     exit: {
+        x: 0,
+        y: 0,
         scale: 0,
         opacity: 0,
         transition: {
@@ -141,6 +147,9 @@ function RingItem({
 }) {
     const router = useRouter();
     const baseAngle = (index / total) * 360;
+    
+    // Track current position for animation
+    const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
 
     // Calculate final position based on rotation
     const finalX = useTransform(rotationAngle, (a: number) => {
@@ -150,6 +159,14 @@ function RingItem({
     const finalY = useTransform(rotationAngle, (a: number) => {
         const rad = ((baseAngle + a) * Math.PI) / 180;
         return -Math.cos(rad) * radius;
+    });
+    
+    // Update position when rotation changes (for drag)
+    useMotionValueEvent(finalX, "change", (x) => {
+        setCurrentPos(prev => ({ ...prev, x }));
+    });
+    useMotionValueEvent(finalY, "change", (y) => {
+        setCurrentPos(prev => ({ ...prev, y }));
     });
     
     const arcOpacity = useTransform(rotationAngle, (a: number) => {
@@ -173,12 +190,11 @@ function RingItem({
     return (
         <motion.div
             variants={itemVariants}
+            custom={currentPos}
             style={{
                 position: "absolute",
                 left: 0,
                 top: 0,
-                x: finalX,
-                y: finalY,
                 translateX: "-50%",
                 translateY: "-50%",
                 pointerEvents,
