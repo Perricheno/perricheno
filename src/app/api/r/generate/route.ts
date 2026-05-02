@@ -128,6 +128,18 @@ Flow: chord, network, sankey, arc_diagram, edge_bundling
 Pick ${maxCharts <= 4 ? "2-4" : `up to ${maxCharts}`} that best fit the data shape and question. Order by relevance.`;
 }
 
+// ── Logger ────────────────────────────────────────────────────────────────────
+
+function rLog(sessionId: string, chartId: string, msg: string, extra?: Record<string, unknown>) {
+    const ts = new Date().toISOString();
+    const prefix = `[R][${sessionId.slice(0, 8)}][${chartId}]`;
+    if (extra) {
+        console.log(`${ts} ${prefix} ${msg}`, JSON.stringify(extra));
+    } else {
+        console.log(`${ts} ${prefix} ${msg}`);
+    }
+}
+
 // ── Background multi-chart generation (fire-and-forget) ───────────────────────
 
 async function runMultiGeneration(params: {
@@ -147,6 +159,11 @@ async function runMultiGeneration(params: {
         combinedContext, rFileNames, rFiles, contextImages, knowledge, apiKey,
     } = params;
 
+    console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Starting session — ${chartsToGenerate.length} charts: ${chartsToGenerate.join(", ")}`);
+    if (rFileNames.length > 0) {
+        console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Files: ${rFileNames.join(", ")}`);
+    }
+
     const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
 
     // Initialize all charts as pending immediately — client sees full list on first poll
@@ -157,9 +174,14 @@ async function runMultiGeneration(params: {
     }));
     await updateRSession(sessionId, { results_json: JSON.stringify(results) });
 
+    let successCount = 0;
+
     for (let i = 0; i < chartsToGenerate.length; i++) {
         const chartId = chartsToGenerate[i];
         const chartName = results[i].name;
+        const chartStart = Date.now();
+
+        rLog(sessionId, chartId, `[${i + 1}/${chartsToGenerate.length}] Starting`);
 
         // Mark as generating so client shows spinner for this chart
         results[i] = { ...results[i], status: "generating" };
@@ -171,6 +193,10 @@ async function runMultiGeneration(params: {
 
         // Attempt generation + 1 auto-retry on failure with error feedback
         for (let attempt = 0; attempt <= 1 && !finalResult; attempt++) {
+            if (attempt > 0) {
+                rLog(sessionId, chartId, `Retry attempt ${attempt} — previous error: ${lastError.slice(0, 200)}`);
+            }
+
             try {
                 const userPrompt = buildGeneratePrompt(prompt, chartId, combinedContext, knowledge, rFileNames);
                 const baseContent: any = contextImages.length > 0
@@ -193,6 +219,9 @@ async function runMultiGeneration(params: {
                     );
                 }
 
+                rLog(sessionId, chartId, `Calling AI (attempt ${attempt + 1})`);
+                const aiStart = Date.now();
+
                 const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
@@ -200,12 +229,29 @@ async function runMultiGeneration(params: {
                     signal: AbortSignal.timeout(60_000),
                 });
 
-                if (!aiRes.ok) { lastError = "AI generation failed."; continue; }
+                if (!aiRes.ok) {
+                    const errBody = await aiRes.text().catch(() => "");
+                    lastError = `AI HTTP ${aiRes.status}: ${errBody.slice(0, 200)}`;
+                    rLog(sessionId, chartId, `AI failed`, { status: aiRes.status, body: errBody.slice(0, 200) });
+                    continue;
+                }
 
                 const aiData = await aiRes.json();
+                const tokens = aiData.usage?.total_tokens ?? 0;
+                const aiMs = Date.now() - aiStart;
+                rLog(sessionId, chartId, `AI ok`, { ms: aiMs, tokens, finish: aiData.choices?.[0]?.finish_reason });
+
                 const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
-                if (!code) { lastError = "AI returned empty code."; continue; }
+                if (!code) {
+                    lastError = "AI returned empty code.";
+                    rLog(sessionId, chartId, `Empty code from AI`);
+                    continue;
+                }
                 lastCode = code;
+                rLog(sessionId, chartId, `Code: ${code.split("\n").length} lines`);
+
+                rLog(sessionId, chartId, `Compiling`);
+                const compileStart = Date.now();
 
                 const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
                     method: "POST",
@@ -214,19 +260,37 @@ async function runMultiGeneration(params: {
                     signal: AbortSignal.timeout(45_000),
                 });
 
-                if (!compileRes.ok) { lastError = "R compiler error."; continue; }
+                if (!compileRes.ok) {
+                    lastError = `Compiler HTTP ${compileRes.status}`;
+                    rLog(sessionId, chartId, `Compiler HTTP error`, { status: compileRes.status });
+                    continue;
+                }
 
                 const result = await compileRes.json();
-                if (!result.success) { lastError = result.log || "R execution failed."; continue; }
+                const compileMs = Date.now() - compileStart;
 
-                const tokens = aiData.usage?.total_tokens ?? 0;
+                if (!result.success) {
+                    lastError = result.log || "R execution failed.";
+                    rLog(sessionId, chartId, `R execution failed`, { ms: compileMs, log: lastError.slice(0, 500) });
+                    continue;
+                }
+
+                rLog(sessionId, chartId, `Compiled ok`, { ms: compileMs });
+
                 if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
 
                 finalResult = { chartType: chartId, name: chartName, image: result.image, code, status: "done" };
+                successCount++;
+                rLog(sessionId, chartId, `Done in ${Date.now() - chartStart}ms`);
 
             } catch (err: any) {
                 lastError = err?.message || "Unknown error";
+                rLog(sessionId, chartId, `Exception (attempt ${attempt + 1})`, { error: lastError });
             }
+        }
+
+        if (!finalResult) {
+            rLog(sessionId, chartId, `All attempts failed — final error: ${lastError.slice(0, 300)}`);
         }
 
         results[i] = finalResult ?? {
@@ -237,6 +301,7 @@ async function runMultiGeneration(params: {
     }
 
     await updateRSession(sessionId, { status: "done" });
+    console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Session complete — ${successCount}/${chartsToGenerate.length} succeeded`);
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
@@ -408,7 +473,10 @@ export async function POST(req: Request) {
     }
 
     const session = await createRSession({ userId, title: makeTitle(prompt), prompt });
+    const sid = session.id.slice(0, 8);
+    console.log(`${new Date().toISOString()} [R][${sid}] Single chart: ${chartType || "auto"}`);
 
+    const aiStart = Date.now();
     const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
@@ -417,17 +485,25 @@ export async function POST(req: Request) {
     });
 
     if (!aiRes.ok) {
-        await updateRSession(session.id, { status: "error" });
         const err = await aiRes.text();
+        console.error(`${new Date().toISOString()} [R][${sid}] AI failed HTTP ${aiRes.status}: ${err.slice(0, 200)}`);
+        await updateRSession(session.id, { status: "error" });
         return NextResponse.json({ error: "AI generation failed: " + err.slice(0, 200) }, { status: 500 });
     }
 
     const aiData = await aiRes.json();
+    const tokens = aiData.usage?.total_tokens ?? 0;
+    console.log(`${new Date().toISOString()} [R][${sid}] AI ok — ${Date.now() - aiStart}ms, tokens=${tokens}`);
+
     const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
     if (!code) {
+        console.error(`${new Date().toISOString()} [R][${sid}] Empty code from AI`);
         await updateRSession(session.id, { status: "error" });
         return NextResponse.json({ error: "AI returned empty code." }, { status: 500 });
     }
+
+    console.log(`${new Date().toISOString()} [R][${sid}] Code: ${code.split("\n").length} lines — compiling`);
+    const compileStart = Date.now();
 
     const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
         method: "POST",
@@ -437,22 +513,26 @@ export async function POST(req: Request) {
     });
 
     if (!compileRes.ok) {
+        console.error(`${new Date().toISOString()} [R][${sid}] Compiler HTTP ${compileRes.status}`);
         await updateRSession(session.id, { status: "error" });
         return NextResponse.json({ error: "R compiler error.", code }, { status: 500 });
     }
 
     const result = await compileRes.json();
     if (!result.success) {
+        console.error(`${new Date().toISOString()} [R][${sid}] R execution failed (${Date.now() - compileStart}ms): ${(result.log || "").slice(0, 500)}`);
         await updateRSession(session.id, { status: "error" });
         return NextResponse.json({ error: result.log || "R execution failed.", code }, { status: 422 });
     }
 
-    const tokens = aiData.usage?.total_tokens ?? 0;
+    console.log(`${new Date().toISOString()} [R][${sid}] Compiled ok — ${Date.now() - compileStart}ms`);
+
     if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
 
     const chartName = (chartType || "chart").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
     const resultItem: RResultItem = { chartType: chartType || "chart", name: chartName, image: result.image, code, status: "done" };
     await updateRSession(session.id, { results_json: JSON.stringify([resultItem]), status: "done" });
+    console.log(`${new Date().toISOString()} [R][${sid}] Session complete`);
 
     return NextResponse.json({ image: result.image, code, chartType, sessionId: session.id });
 }
