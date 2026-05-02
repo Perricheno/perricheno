@@ -104,26 +104,20 @@ const containerVariants = {
 
 const itemVariants = {
     hidden: {
-        x: 0,
-        y: 0,
         scale: 0,
         opacity: 0,
     },
-    visible: (custom: { x: number; y: number }) => ({
-        x: custom.x,
-        y: custom.y,
+    visible: {
         scale: 1,
         opacity: 1,
         transition: {
             type: "spring" as const,
-            damping: 25,
-            stiffness: 180,
-            mass: 0.8,
+            damping: 18,
+            stiffness: 100,
+            mass: 1,
         }
-    }),
+    },
     exit: {
-        x: 0,
-        y: 0,
         scale: 0,
         opacity: 0,
         transition: {
@@ -179,25 +173,29 @@ function RingItem({
     return (
         <motion.div
             variants={itemVariants}
-            custom={{ x: finalX.get(), y: finalY.get() }}
             style={{
                 position: "absolute",
                 left: 0,
                 top: 0,
-                x: finalX,
-                y: finalY,
-                translateX: "-50%",
-                translateY: "-50%",
                 pointerEvents,
             }}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center justify-center origin-center"
         >
             <motion.div
                 style={{
-                    opacity: arcOpacity,
-                    scale: arcScale,
+                    x: finalX,
+                    y: finalY,
+                    translateX: "-50%",
+                    translateY: "-50%",
                 }}
+                className="absolute"
             >
+                <motion.div
+                    style={{
+                        opacity: arcOpacity,
+                        scale: arcScale,
+                    }}
+                >
                 <button
                     onPointerDown={e => e.stopPropagation()}
                     onClick={e => {
@@ -214,6 +212,7 @@ function RingItem({
                         {item.label}
                     </span>
                 </button>
+            </motion.div>
             </motion.div>
         </motion.div>
     );
