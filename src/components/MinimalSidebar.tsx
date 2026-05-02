@@ -16,7 +16,7 @@ import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, useMotionValueEvent } from "framer-motion";
-import type { PanInfo } from "framer-motion";
+import type { PanInfo, Variants } from "framer-motion";
 
 type NavLink = {
     href: string;
@@ -81,23 +81,23 @@ const RADIAL_ALL = [
 ];
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
-const containerVariants = {
+const containerVariants: Variants = {
     hidden: {
         opacity: 0,
     },
     visible: {
         opacity: 1,
         transition: {
-            duration: 0.5,
-            ease: "easeOut" as const
+            duration: 0.15,
+            ease: "easeOut"
         }
     },
     exit: {
         opacity: 0,
         transition: {
-            duration: 0.4,
-            ease: "easeIn" as const,
-            delay: 0.1
+            duration: 0.15,
+            ease: "easeIn",
+            delay: 0.05
         }
     }
 };
@@ -487,14 +487,14 @@ export default function MinimalSidebar() {
 
             <nav className={cn(
                 "fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full pb-safe transition-colors duration-300",
-                radialOpen ? "bg-transparent border-transparent" : "bg-white/50 backdrop-blur-xl border-t border-gray-200/50"
+                "bg-white/50 backdrop-blur-xl border-t border-gray-200/50"
             )}>
                 <div className="flex items-center justify-between px-2 pt-2 pb-5 relative">
 
                     {/* Left items */}
                     <div className="flex items-center justify-around w-[40%]">
                         {MOBILE_NAV_LEFT.map(l => (
-                            <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
+                            <div key={l.href} className="transition-all duration-300 opacity-100 scale-100">
                                 <NavItem l={l} />
                             </div>
                         ))}
@@ -539,7 +539,7 @@ export default function MinimalSidebar() {
                     {/* Right items */}
                     <div className="flex items-center justify-around w-[40%]">
                         {MOBILE_NAV_RIGHT.map(l => (
-                            <div key={l.href} className={cn("transition-all duration-300", radialOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100")}>
+                            <div key={l.href} className="transition-all duration-300 opacity-100 scale-100">
                                 <NavItem l={l} />
                             </div>
                         ))}
