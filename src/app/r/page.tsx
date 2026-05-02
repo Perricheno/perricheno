@@ -8,6 +8,7 @@ import {
     IconPaperclip, IconFile, IconSparkles, IconMaximize,
 } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
+import { useRouter } from "next/navigation";
 import RSidebar from "./RSidebar";
 
 // ── Chart catalogue ─────────────────────────────────────────────────────────
@@ -408,6 +409,7 @@ interface AttachedFile {
 
 export default function RPage() {
     const { user, setShowLogin } = useAdmin();
+    const router = useRouter();
 
     const [prompt, setPrompt] = useState("");
     const [selectedCharts, setSelectedCharts] = useState<string[]>([]);
@@ -586,11 +588,9 @@ export default function RPage() {
             }
 
             const { sessionId, chartsPlanned: planned = [] } = data;
-            setActiveSessionId(sessionId);
-            setChartsPlanned(planned);
-
-            // Kick off polling — background job runs independently
-            pollSession(sessionId);
+            
+            // Redirect to session page immediately
+            router.push(`/r/${sessionId}`);
 
         } catch (e: any) {
             setMultiError(e.message || "Multi-generation failed.");
@@ -703,12 +703,9 @@ export default function RPage() {
                 throw new Error(data.error || `HTTP ${res.status}`);
             }
 
-            setResultImage(`data:image/png;base64,${data.image}`);
-            setResultCode(data.code ?? "");
-            setResultChartType(data.chartType ?? chartToUse);
+            // Redirect to session page
             if (data.sessionId) {
-                setActiveSessionId(data.sessionId);
-                setSidebarRefresh(n => n + 1);
+                router.push(`/r/${data.sessionId}`);
             }
         } catch (e: any) {
             setError(e.message || "Generation failed.");
@@ -734,57 +731,9 @@ export default function RPage() {
         setTimeout(() => textareaRef.current?.focus(), 50);
     };
 
-    const loadSession = useCallback(async (id: string) => {
-        try {
-            const res = await fetch(`/api/r/sessions/${id}`);
-            if (!res.ok) return;
-            const data = await res.json();
-            const s = data.session;
-
-            setPrompt(s.prompt ?? "");
-
-            const results: GeneratedChart[] = (s.results ?? []).map((r: any) => ({
-                chartType: r.chartType,
-                name: r.name || r.chartType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
-                image: r.image ?? "",
-                code: r.code ?? "",
-                status: r.status ?? "done",
-                error: r.error,
-            }));
-
-            if (s.status === "generating") {
-                // Session still running in background — resume polling from where it was
-                setMultiResults(results);
-                setChartsPlanned(results.map(r => r.chartType));
-                setMultiLoading(true);
-                setResultImage(null);
-                setResultCode("");
-                setActiveSessionId(id);
-                setError(null);
-                setMultiError(null);
-                setShowCode(false);
-                // Timer counts from actual session start, not from now
-                pollSession(id, new Date(s.created_at).getTime());
-                return;
-            }
-
-            if (results.length === 1 && results[0].status === "done") {
-                setResultImage(`data:image/png;base64,${results[0].image}`);
-                setResultCode(results[0].code);
-                setResultChartType(results[0].chartType);
-                setMultiResults([]);
-            } else if (results.length > 0) {
-                setMultiResults(results);
-                setResultImage(null);
-                setResultCode("");
-            }
-
-            setActiveSessionId(id);
-            setError(null);
-            setMultiError(null);
-            setShowCode(false);
-        } catch { /* ignore */ }
-    }, [pollSession]);
+    const loadSession = useCallback((id: string) => {
+        router.push(`/r/${id}`);
+    }, [router]);
 
     const handleCopy = () => {
         if (!resultCode) return;
