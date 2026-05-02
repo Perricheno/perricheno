@@ -5,6 +5,8 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
 import { checkAndDeductUsage, getUserById } from "@/lib/db";
 import { getVisualKnowledge } from "@/lib/agent/knowledge/loader";
+import { createRSession, updateRSession } from "@/lib/r-db";
+import type { RResultItem } from "@/lib/r-db";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const R_COMPILER_URL = process.env.R_COMPILER_URL || "http://r-compiler:8000";
@@ -38,6 +40,10 @@ function cleanCode(raw: string): string {
 
 function isGarbage(text: string): boolean {
     return /[\x00-\x08\x0E-\x1F]{5,}|(%[0-9A-Fa-f]{2}){10,}/.test(text.slice(0, 500));
+}
+
+function makeTitle(prompt: string): string {
+    return prompt.slice(0, 80).trim();
 }
 
 // ── Prompt builders ───────────────────────────────────────────────────────────
@@ -134,23 +140,20 @@ export async function POST(req: Request) {
         action = "generate",
         prompt,
         chartType = "",
-        chartTypes,          // optional: explicit list for multi mode
-        contextFiles = [],   // [{name: string, content: string, images?: string[]}]
+        chartTypes,
+        contextFiles = [],
         previousCode,
         previousError,
     } = body;
 
-    // Combined data context from uploaded files (cap each at 15 000 chars)
     const combinedContext = (contextFiles as { name: string; content: string; images?: string[] }[])
         .map(f => `--- ${f.name} ---\n${f.content.slice(0, 15_000)}`)
         .join("\n\n");
 
-    // Collect PDF/Office page images (cap at 10 pages to stay within context limits)
     const contextImages: string[] = (contextFiles as { images?: string[] }[])
         .flatMap(f => f.images ?? [])
         .slice(0, 10);
 
-    // Hard-stop if file extraction clearly failed
     if (contextFiles.length > 0 && (combinedContext.includes("Failed to extract") || combinedContext.includes("[Failed"))) {
         return NextResponse.json({ error: "File extraction failed. Please upload a readable CSV, TSV, or Excel file." }, { status: 400 });
     }
@@ -193,7 +196,6 @@ export async function POST(req: Request) {
     if (action === "multi") {
         if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
 
-        // Determine plan-based chart limit
         const user = await getUserById(userId);
         const planTier = (user?.plan_tier ?? "free") as string;
         const planLimits: Record<string, number> = {
@@ -204,12 +206,10 @@ export async function POST(req: Request) {
         };
         const maxCharts = planLimits[planTier] ?? 1;
 
-        // If explicit chart list provided by client, use it (respect plan cap)
         let chartsToGenerate: string[];
         if (Array.isArray(chartTypes) && chartTypes.length > 0) {
             chartsToGenerate = chartTypes.slice(0, maxCharts);
         } else {
-            // Ask AI to suggest charts
             const suggestRes = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
@@ -236,23 +236,32 @@ export async function POST(req: Request) {
             chartsToGenerate = suggestedCharts.slice(0, maxCharts);
         }
 
+        // Create session in DB before streaming
+        const session = await createRSession({
+            userId,
+            title: makeTitle(prompt),
+            prompt,
+        });
+
         const knowledge = getVisualKnowledge();
         const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
 
-        // SSE stream
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
             async start(controller) {
                 const enqueue = (chunk: string) => controller.enqueue(encoder.encode(chunk));
 
-                // Stage 1: Analyse
+                // Announce session ID first so client can track it
+                enqueue(sseEvent("session_created", { sessionId: session.id }));
+
                 enqueue(sseEvent("stage", { stage: 1, total: 3, label: "Analyse", status: "done" }));
-                // Stage 2: Plan (suggest already done above)
                 enqueue(sseEvent("stage", { stage: 2, total: 3, label: "Plan", status: "done",
                     charts: chartsToGenerate }));
-                // Stage 3: Visualize — starts now
                 enqueue(sseEvent("stage", { stage: 3, total: 3, label: "Visualize", status: "running",
                     progress: { done: 0, total: chartsToGenerate.length } }));
+
+                // Accumulate results to persist incrementally
+                const results: RResultItem[] = [];
 
                 for (let i = 0; i < chartsToGenerate.length; i++) {
                     const chartId = chartsToGenerate[i];
@@ -288,6 +297,9 @@ export async function POST(req: Request) {
                         });
 
                         if (!aiRes.ok) {
+                            const item: RResultItem = { chartType: chartId, name: chartName, image: "", code: "", status: "error", error: "AI generation failed." };
+                            results[i] = item;
+                            await updateRSession(session.id, { results_json: JSON.stringify(results.filter(Boolean)) });
                             enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: "AI generation failed." }));
                             enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: "AI generation failed." }));
                             continue;
@@ -296,6 +308,9 @@ export async function POST(req: Request) {
                         const aiData = await aiRes.json();
                         const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
                         if (!code) {
+                            const item: RResultItem = { chartType: chartId, name: chartName, image: "", code: "", status: "error", error: "AI returned empty code." };
+                            results[i] = item;
+                            await updateRSession(session.id, { results_json: JSON.stringify(results.filter(Boolean)) });
                             enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: "AI returned empty code." }));
                             enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: "Empty code." }));
                             continue;
@@ -309,6 +324,9 @@ export async function POST(req: Request) {
                         });
 
                         if (!compileRes.ok) {
+                            const item: RResultItem = { chartType: chartId, name: chartName, image: "", code, status: "error", error: "R compiler error." };
+                            results[i] = item;
+                            await updateRSession(session.id, { results_json: JSON.stringify(results.filter(Boolean)) });
                             enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: "R compiler error.", code }));
                             enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: "R compiler error." }));
                             continue;
@@ -316,14 +334,21 @@ export async function POST(req: Request) {
 
                         const result = await compileRes.json();
                         if (!result.success) {
+                            const item: RResultItem = { chartType: chartId, name: chartName, image: "", code, status: "error", error: result.log || "R execution failed." };
+                            results[i] = item;
+                            await updateRSession(session.id, { results_json: JSON.stringify(results.filter(Boolean)) });
                             enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: result.log || "R execution failed.", code }));
                             enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: result.log || "R execution failed." }));
                             continue;
                         }
 
-                        // Bill tokens
                         const tokens = aiData.usage?.total_tokens ?? 0;
                         if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
+
+                        const item: RResultItem = { chartType: chartId, name: chartName, image: result.image, code, status: "done" };
+                        results[i] = item;
+                        // Persist incrementally — sidebar reflects live progress
+                        await updateRSession(session.id, { results_json: JSON.stringify(results.filter(Boolean)) });
 
                         enqueue(sseEvent("chart_done", {
                             index: i,
@@ -335,18 +360,23 @@ export async function POST(req: Request) {
 
                     } catch (err: any) {
                         const msg = err?.message || "Unknown error";
+                        const item: RResultItem = { chartType: chartId, name: chartName, image: "", code: "", status: "error", error: msg };
+                        results[i] = item;
+                        await updateRSession(session.id, { results_json: JSON.stringify(results.filter(Boolean)) });
                         enqueue(sseEvent("chart_error", { index: i, chartType: chartId, error: msg }));
                         enqueue(sseEvent("status", { id: `chart-${i}`, label: chartName, status: "error", log: msg }));
                     }
 
-                    // Update stage 3 progress after each chart
                     enqueue(sseEvent("stage", { stage: 3, total: 3, label: "Visualize", status: "running",
                         progress: { done: i + 1, total: chartsToGenerate.length } }));
                 }
 
+                // Finalize session
+                await updateRSession(session.id, { status: "done" });
+
                 enqueue(sseEvent("stage", { stage: 3, total: 3, label: "Visualize", status: "done",
                     progress: { done: chartsToGenerate.length, total: chartsToGenerate.length } }));
-                enqueue(sseEvent("all_done", { total: chartsToGenerate.length }));
+                enqueue(sseEvent("all_done", { total: chartsToGenerate.length, sessionId: session.id }));
                 controller.close();
             },
         });
@@ -360,14 +390,13 @@ export async function POST(req: Request) {
         });
     }
 
-    // ── GENERATE mode ─────────────────────────────────────────────────────────
+    // ── GENERATE mode (single chart) ──────────────────────────────────────────
     if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
 
     const knowledge = getVisualKnowledge();
     const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
     const userPrompt = buildGeneratePrompt(prompt, chartType, combinedContext, knowledge);
 
-    // Build user message: text prompt + optional PDF pages as vision
     const userContent: any = contextImages.length > 0
         ? [
             { type: "text", text: userPrompt },
@@ -387,6 +416,9 @@ export async function POST(req: Request) {
         );
     }
 
+    // Create session upfront so it's visible immediately
+    const session = await createRSession({ userId, title: makeTitle(prompt), prompt });
+
     const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
@@ -395,13 +427,17 @@ export async function POST(req: Request) {
     });
 
     if (!aiRes.ok) {
+        await updateRSession(session.id, { status: "error" });
         const err = await aiRes.text();
         return NextResponse.json({ error: "AI generation failed: " + err.slice(0, 200) }, { status: 500 });
     }
 
     const aiData = await aiRes.json();
     const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
-    if (!code) return NextResponse.json({ error: "AI returned empty code." }, { status: 500 });
+    if (!code) {
+        await updateRSession(session.id, { status: "error" });
+        return NextResponse.json({ error: "AI returned empty code." }, { status: 500 });
+    }
 
     const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
         method: "POST",
@@ -410,15 +446,32 @@ export async function POST(req: Request) {
         signal: AbortSignal.timeout(45_000),
     });
 
-    if (!compileRes.ok) return NextResponse.json({ error: "R compiler error.", code }, { status: 500 });
+    if (!compileRes.ok) {
+        await updateRSession(session.id, { status: "error" });
+        return NextResponse.json({ error: "R compiler error.", code }, { status: 500 });
+    }
 
     const result = await compileRes.json();
     if (!result.success) {
+        await updateRSession(session.id, { status: "error" });
         return NextResponse.json({ error: result.log || "R execution failed.", code }, { status: 422 });
     }
 
     const tokens = aiData.usage?.total_tokens ?? 0;
     if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
 
-    return NextResponse.json({ image: result.image, code, chartType });
+    const chartName = (chartType || "chart").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+    const resultItem: RResultItem = {
+        chartType: chartType || "chart",
+        name: chartName,
+        image: result.image,
+        code,
+        status: "done",
+    };
+    await updateRSession(session.id, {
+        results_json: JSON.stringify([resultItem]),
+        status: "done",
+    });
+
+    return NextResponse.json({ image: result.image, code, chartType, sessionId: session.id });
 }

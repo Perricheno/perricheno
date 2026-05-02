@@ -51,6 +51,7 @@ model User {
   space_versions        SpaceVersion[]
   citations             Citation[]
   citation_collections  CitationCollection[]
+  r_sessions            RSession[]
 }
 
 model Task {
@@ -363,6 +364,22 @@ model CitationCollection {
   created_at  DateTime  @default(now())
   user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   items       CitationCollectionItem[]
+}
+
+// ── R Studio Sessions ─────────────────────────────────────────────────────
+
+model RSession {
+  id           String   @id @default(uuid())
+  user_id      Int
+  title        String
+  prompt       String
+  results_json String?
+  status       String   @default("generating")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model CitationCollectionItem {

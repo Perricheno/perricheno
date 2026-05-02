@@ -9,6 +9,7 @@ import {
     IconChevronDown, IconChevronUp, IconMaximize,
 } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
+import RSidebar from "./RSidebar";
 
 // ── Chart catalogue ─────────────────────────────────────────────────────────
 
@@ -429,6 +430,11 @@ export default function RPage() {
     const [elapsed, setElapsed] = useState(0);
     const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // Sidebar + session state
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+    const [sidebarRefresh, setSidebarRefresh] = useState(0);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -560,6 +566,10 @@ export default function RPage() {
                     let payload: any;
                     try { payload = JSON.parse(dataStr); } catch { continue; }
 
+                    if (eventType === "session_created") {
+                        setActiveSessionId(payload.sessionId ?? null);
+                    }
+
                     if (eventType === "stage") {
                         const { stage, label, status, progress, charts } = payload;
                         setStageInfo(prev => {
@@ -615,6 +625,7 @@ export default function RPage() {
         } finally {
             setMultiLoading(false);
             if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
+            setSidebarRefresh(n => n + 1);
         }
     }, [user, prompt, files, selectedCharts, setShowLogin]);
 
@@ -726,6 +737,10 @@ export default function RPage() {
             setResultImage(`data:image/png;base64,${data.image}`);
             setResultCode(data.code ?? "");
             setResultChartType(data.chartType ?? chartToUse);
+            if (data.sessionId) {
+                setActiveSessionId(data.sessionId);
+                setSidebarRefresh(n => n + 1);
+            }
         } catch (e: any) {
             setError(e.message || "Generation failed.");
         } finally {
@@ -746,8 +761,48 @@ export default function RPage() {
         setSuggestReasoning("");
         setMultiResults([]);
         setMultiError(null);
+        setActiveSessionId(null);
         setTimeout(() => textareaRef.current?.focus(), 50);
     };
+
+    const loadSession = useCallback(async (id: string) => {
+        try {
+            const res = await fetch(`/api/r/sessions/${id}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const s = data.session;
+
+            // Restore prompt
+            setPrompt(s.prompt ?? "");
+
+            // Restore results
+            const results: GeneratedChart[] = (s.results ?? []).map((r: any) => ({
+                chartType: r.chartType,
+                name: r.name || r.chartType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                image: r.image ?? "",
+                code: r.code ?? "",
+                status: r.status ?? "done",
+                error: r.error,
+            }));
+
+            if (results.length === 1 && results[0].status === "done") {
+                // Single chart — show in single result panel
+                setResultImage(`data:image/png;base64,${results[0].image}`);
+                setResultCode(results[0].code);
+                setResultChartType(results[0].chartType);
+                setMultiResults([]);
+            } else if (results.length > 0) {
+                setMultiResults(results);
+                setResultImage(null);
+                setResultCode("");
+            }
+
+            setActiveSessionId(id);
+            setError(null);
+            setMultiError(null);
+            setShowCode(false);
+        } catch { /* ignore */ }
+    }, []);
 
     const handleCopy = () => {
         if (!resultCode) return;
@@ -773,14 +828,29 @@ export default function RPage() {
     const willRunMulti = selectedCharts.length >= 2 || (selectedCharts.length === 0 && files.length > 0);
 
     return (
-        <div className="h-full flex flex-col bg-[#F9F9F9]" onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
+        <div className="h-full relative flex flex-col bg-[#F9F9F9]" onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
+
+            <RSidebar
+                open={sidebarOpen}
+                onToggle={() => setSidebarOpen(v => !v)}
+                activeSessionId={activeSessionId}
+                refreshTrigger={sidebarRefresh}
+                onSelectSession={loadSession}
+                onNewSession={handleNew}
+            />
 
             {/* ── Page header ── */}
             <div className="max-w-3xl mx-auto w-full px-5 pt-10 pb-2 shrink-0">
-                <p className="text-[11px] font-bold text-gray-300 uppercase tracking-[0.2em] mb-1 font-mono">R Studio</p>
-                <h1 className="text-[28px] md:text-[34px] font-black text-[#1a1a1a] tracking-tight leading-none">
-                    Statistical Visualization
-                </h1>
+                <div className="flex items-end gap-4">
+                    {/* Spacer for hamburger when sidebar closed */}
+                    <div className="w-8 shrink-0" />
+                    <div>
+                        <p className="text-[11px] font-bold text-gray-300 uppercase tracking-[0.2em] mb-1 font-mono">R Studio</p>
+                        <h1 className="text-[28px] md:text-[34px] font-black text-[#1a1a1a] tracking-tight leading-none">
+                            Statistical Visualization
+                        </h1>
+                    </div>
+                </div>
             </div>
 
             {/* ── Scrollable content ── */}
