@@ -88,15 +88,16 @@ const containerVariants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0,
-            delayChildren: 0,
+            staggerChildren: 0.04,
+            delayChildren: 0.02,
             when: "beforeChildren" as const,
         }
     },
     exit: {
-        opacity: 1,
+        opacity: 0,
         transition: {
-            staggerChildren: 0,
+            staggerChildren: 0.03,
+            staggerDirection: -1,
             when: "afterChildren" as const,
         }
     }
@@ -177,9 +178,11 @@ function RingItem({
                 position: "absolute",
                 left: 0,
                 top: 0,
+                width: 0,
+                height: 0,
                 pointerEvents,
             }}
-            className="flex flex-col items-center justify-center origin-center"
+            className="flex flex-col items-center justify-center overflow-visible"
         >
             <motion.div
                 style={{
