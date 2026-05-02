@@ -773,131 +773,75 @@ export default function RPage() {
     const willRunMulti = selectedCharts.length >= 2 || (selectedCharts.length === 0 && files.length > 0);
 
     return (
-        <div className="min-h-screen bg-[#F9F9F9] flex flex-col pb-20 md:pb-0">
+        <div className="h-full flex flex-col bg-[#F9F9F9]" onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
 
             {/* ── Page header ── */}
-            <div className="max-w-3xl mx-auto w-full px-5 pt-10 pb-2">
+            <div className="max-w-3xl mx-auto w-full px-5 pt-10 pb-2 shrink-0">
                 <p className="text-[11px] font-bold text-gray-300 uppercase tracking-[0.2em] mb-1 font-mono">R Studio</p>
                 <h1 className="text-[28px] md:text-[34px] font-black text-[#1a1a1a] tracking-tight leading-none">
                     Statistical Visualization
                 </h1>
-                <p className="text-[13px] text-gray-400 mt-1.5 font-medium">
-                    ggplot2 · greyscale · publication-ready
-                </p>
             </div>
 
-            <main className="max-w-3xl mx-auto w-full px-5 pt-6 space-y-6">
+            {/* ── Scrollable content ── */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+                <main className="max-w-3xl mx-auto w-full px-5 pt-6 space-y-6 pb-6">
 
-                {/* ── Input card ── */}
-                <div
-                    className="bg-white rounded-2xl border border-[#e8e8e8] shadow-sm"
-                    onDrop={handleDrop}
-                    onDragOver={e => e.preventDefault()}
-                >
-                    {/* Textarea */}
-                    <div className="px-4 pt-4 pb-2">
-                        <textarea
-                            ref={textareaRef}
-                            value={prompt}
-                            onChange={e => setPrompt(e.target.value)}
-                            onKeyDown={e => {
-                                if (e.key === "Enter" && !e.shiftKey && !loading && !multiLoading) {
-                                    e.preventDefault();
-                                    generate();
-                                }
-                            }}
-                            placeholder="Describe the visualization — topic, data shape, or insight…"
-                            className="w-full text-[14px] leading-relaxed text-[#1a1a1a] bg-transparent outline-none
-                                       placeholder:text-[#bbb] resize-none min-h-[52px]"
-                            autoFocus
-                        />
+                {/* ── Chart gallery (first) ── */}
+                <section className="pb-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em]">
+                            Chart Types · {CHARTS.length} available
+                        </p>
+                        {(selectedCharts.length > 0 || suggestedCharts.length > 0) && (
+                            <button
+                                onClick={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
+                                className="text-[11px] text-gray-400 hover:text-[#1a1a1a] font-medium transition-colors"
+                            >
+                                Clear
+                            </button>
+                        )}
                     </div>
 
-                    {/* Attached files row */}
-                    {(files.length > 0 || uploading) && (
-                        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
-                            {files.map((f, i) => (
-                                <span
-                                    key={i}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg
-                                               text-[11px] font-medium text-[#444] border border-[#e8e8e8]"
-                                >
-                                    <IconFile className="w-3 h-3 text-gray-400 shrink-0" />
-                                    <span className="truncate max-w-[120px]">{f.name}</span>
-                                    <button
-                                        onClick={() => removeFile(i)}
-                                        className="text-gray-300 hover:text-gray-600 transition-colors"
-                                    >
-                                        <IconX className="w-3 h-3" />
-                                    </button>
-                                </span>
-                            ))}
-                            {uploading && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg text-[11px] text-gray-400">
-                                    <IconLoader2 className="w-3 h-3 animate-spin" />
-                                    Reading…
-                                </span>
-                            )}
-                        </div>
-                    )}
+                    {/* AI reasoning banner */}
+                    <AnimatePresence>
+                        {suggestReasoning && suggestedCharts.length > 0 && !loading && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                className="flex items-start gap-2 px-3 py-2 mb-3 bg-[#f5f5f5] rounded-xl border border-[#e8e8e8]"
+                            >
+                                <IconSparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                                <p className="text-[11px] text-gray-500 leading-snug">{suggestReasoning}</p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                    {/* Toolbar */}
-                    <div className="flex items-center justify-between px-3 pb-3 pt-1 gap-2">
-                        <div className="flex items-center gap-1 flex-wrap">
-                            {/* Attach */}
-                            <label className="cursor-pointer p-1.5 text-gray-400 hover:text-[#1a1a1a] rounded-lg
-                                              hover:bg-[#f5f5f5] transition-colors" title="Attach CSV / Excel">
-                                <IconPaperclip className="w-4 h-4" stroke={1.8} />
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    className="hidden"
-                                    multiple
-                                    accept=".csv,.tsv,.xlsx,.xls,.txt,.json,.pdf,.doc,.docx,.ppt,.pptx"
-                                    onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
-                                />
-                            </label>
-
-                            {/* Selected chart chips */}
-                            {selectedCharts.length > 0 ? (
-                                <div className="flex items-center gap-1 flex-wrap">
-                                    {selectedCharts.map(id => (
-                                        <span key={id} className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-[#1a1a1a] text-white
-                                                         rounded-lg text-[11px] font-semibold">
-                                            {CHARTS.find(c => c.id === id)?.name ?? id}
-                                            <button onClick={() => setSelectedCharts(prev => prev.filter(c => c !== id))} className="hover:opacity-60 transition-opacity ml-0.5">
-                                                <IconX className="w-3 h-3" />
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-                            ) : willRunMulti ? (
-                                <span className="flex items-center gap-1 px-2 py-1 bg-[#f5f5f5] text-[#555] border border-[#e8e8e8]
-                                                 rounded-lg text-[11px] font-semibold">
-                                    <IconSparkles className="w-3 h-3" />
-                                    Multi-chart
-                                </span>
-                            ) : (
-                                <span className="text-[11px] text-gray-300 px-1 hidden sm:block">
-                                    Select chart(s) ↓ or let AI choose
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Submit */}
-                        <button
-                            onClick={() => generate()}
-                            disabled={!prompt.trim() || loading || suggesting || multiLoading}
-                            className="w-8 h-8 bg-[#1a1a1a] text-white rounded-xl flex items-center justify-center
-                                       disabled:opacity-15 transition-all hover:bg-black active:scale-95 shrink-0"
-                        >
-                            {(loading || suggesting || multiLoading)
-                                ? <IconLoader2 className="w-4 h-4 animate-spin" />
-                                : <IconArrowUp className="w-4 h-4" />
-                            }
-                        </button>
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                        {CHARTS.map(chart => (
+                            <ChartCard
+                                key={chart.id}
+                                chart={chart}
+                                selected={selectedCharts.includes(chart.id)}
+                                suggested={suggestedCharts.includes(chart.id) && !selectedCharts.includes(chart.id)}
+                                onClick={() => {
+                                    setSelectedCharts(prev =>
+                                        prev.includes(chart.id)
+                                            ? prev.filter(c => c !== chart.id)
+                                            : [...prev, chart.id]
+                                    );
+                                    setSuggestedCharts([]);
+                                    setSuggestReasoning("");
+                                }}
+                            />
+                        ))}
                     </div>
-                </div>
+
+                    <p className="text-[10px] text-gray-300 mt-3 font-medium">
+                        Hover to preview · click to select · attach CSV, Excel, PDF or Word for real-data plots
+                    </p>
+                </section>
 
                 {/* ── Single error banner ── */}
                 <AnimatePresence>
@@ -1189,62 +1133,119 @@ export default function RPage() {
                     )}
                 </AnimatePresence>
 
-                {/* ── Chart gallery ── */}
-                <section className="pb-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em]">
-                            Chart Types · {CHARTS.length} available
-                        </p>
-                        {(selectedCharts.length > 0 || suggestedCharts.length > 0) && (
-                            <button
-                                onClick={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
-                                className="text-[11px] text-gray-400 hover:text-[#1a1a1a] font-medium transition-colors"
-                            >
-                                Clear
-                            </button>
-                        )}
-                    </div>
+                </main>
+            </div>
 
-                    {/* AI reasoning banner */}
-                    <AnimatePresence>
-                        {suggestReasoning && suggestedCharts.length > 0 && !loading && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                className="flex items-start gap-2 px-3 py-2 mb-3 bg-[#f5f5f5] rounded-xl border border-[#e8e8e8]"
-                            >
-                                <IconSparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                                <p className="text-[11px] text-gray-500 leading-snug">{suggestReasoning}</p>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                        {CHARTS.map(chart => (
-                            <ChartCard
-                                key={chart.id}
-                                chart={chart}
-                                selected={selectedCharts.includes(chart.id)}
-                                suggested={suggestedCharts.includes(chart.id) && !selectedCharts.includes(chart.id)}
-                                onClick={() => {
-                                    setSelectedCharts(prev =>
-                                        prev.includes(chart.id)
-                                            ? prev.filter(c => c !== chart.id)
-                                            : [...prev, chart.id]
-                                    );
-                                    setSuggestedCharts([]);
-                                    setSuggestReasoning("");
+            {/* ── Bottom input (sticky) ── */}
+            <div className="shrink-0 bg-[#F9F9F9]/95 backdrop-blur-sm border-t border-[#f0f0f0] pt-3 pb-[76px] md:pb-4">
+                <div className="max-w-3xl mx-auto w-full px-5">
+                    <div className="bg-white rounded-2xl border border-[#e8e8e8] shadow-sm">
+                        {/* Textarea */}
+                        <div className="px-4 pt-4 pb-2">
+                            <textarea
+                                ref={textareaRef}
+                                value={prompt}
+                                onChange={e => setPrompt(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" && !e.shiftKey && !loading && !multiLoading) {
+                                        e.preventDefault();
+                                        generate();
+                                    }
                                 }}
+                                placeholder="Describe the visualization — topic, data shape, or insight…"
+                                className="w-full text-[14px] leading-relaxed text-[#1a1a1a] bg-transparent outline-none
+                                           placeholder:text-[#bbb] resize-none min-h-[52px]"
+                                autoFocus
                             />
-                        ))}
-                    </div>
+                        </div>
 
-                    <p className="text-[10px] text-gray-300 mt-3 font-medium">
-                        Hover to preview · click to select · attach CSV, Excel, PDF or Word for real-data plots
-                    </p>
-                </section>
-            </main>
+                        {/* Attached files row */}
+                        {(files.length > 0 || uploading) && (
+                            <div className="px-4 pb-2 flex flex-wrap gap-1.5">
+                                {files.map((f, i) => (
+                                    <span
+                                        key={i}
+                                        className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg
+                                                   text-[11px] font-medium text-[#444] border border-[#e8e8e8]"
+                                    >
+                                        <IconFile className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="truncate max-w-[120px]">{f.name}</span>
+                                        <button
+                                            onClick={() => removeFile(i)}
+                                            className="text-gray-300 hover:text-gray-600 transition-colors"
+                                        >
+                                            <IconX className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                                {uploading && (
+                                    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg text-[11px] text-gray-400">
+                                        <IconLoader2 className="w-3 h-3 animate-spin" />
+                                        Reading…
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Toolbar */}
+                        <div className="flex items-center justify-between px-3 pb-3 pt-1 gap-2">
+                            <div className="flex items-center gap-1 flex-wrap">
+                                {/* Attach */}
+                                <label className="cursor-pointer p-1.5 text-gray-400 hover:text-[#1a1a1a] rounded-lg
+                                                  hover:bg-[#f5f5f5] transition-colors" title="Attach CSV / Excel">
+                                    <IconPaperclip className="w-4 h-4" stroke={1.8} />
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        multiple
+                                        accept=".csv,.tsv,.xlsx,.xls,.txt,.json,.pdf,.doc,.docx,.ppt,.pptx"
+                                        onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
+                                    />
+                                </label>
+
+                                {/* Selected chart chips */}
+                                {selectedCharts.length > 0 ? (
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                        {selectedCharts.map(id => (
+                                            <span key={id} className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-[#1a1a1a] text-white
+                                                             rounded-lg text-[11px] font-semibold">
+                                                {CHARTS.find(c => c.id === id)?.name ?? id}
+                                                <button onClick={() => setSelectedCharts(prev => prev.filter(c => c !== id))} className="hover:opacity-60 transition-opacity ml-0.5">
+                                                    <IconX className="w-3 h-3" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : willRunMulti ? (
+                                    <span className="flex items-center gap-1 px-2 py-1 bg-[#f5f5f5] text-[#555] border border-[#e8e8e8]
+                                                     rounded-lg text-[11px] font-semibold">
+                                        <IconSparkles className="w-3 h-3" />
+                                        Multi-chart
+                                    </span>
+                                ) : (
+                                    <span className="text-[11px] text-gray-300 px-1 hidden sm:block">
+                                        Select chart(s) above or let AI choose
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Submit */}
+                            <button
+                                onClick={() => generate()}
+                                disabled={!prompt.trim() || loading || suggesting || multiLoading}
+                                className="w-8 h-8 bg-[#1a1a1a] text-white rounded-xl flex items-center justify-center
+                                           disabled:opacity-15 transition-all hover:bg-black active:scale-95 shrink-0"
+                            >
+                                {(loading || suggesting || multiLoading)
+                                    ? <IconLoader2 className="w-4 h-4 animate-spin" />
+                                    : <IconArrowUp className="w-4 h-4" />
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

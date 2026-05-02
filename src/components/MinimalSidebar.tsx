@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 type NavLink = {
     href: string;
@@ -69,10 +69,12 @@ export default function MinimalSidebar() {
     const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href);
     const { user, showLogin, setShowLogin, setIsEditing } = useAdmin();
     const [collapsed, setCollapsed] = useState(false);
+    const [anchorRect, setAnchorRect] = useState<DOMRect | undefined>(undefined);
+    const accountBtnRef = useRef<HTMLButtonElement>(null);
 
     return (
         <>
-            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
+            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); }} onClose={() => { setShowLogin(false); setAnchorRect(undefined); }} anchorRect={anchorRect} />}
             
             {/* ═══════════════════════════════════════ */}
             {/* Desktop Sidebar - hidden on mobile      */}
@@ -143,7 +145,11 @@ export default function MinimalSidebar() {
                      {!collapsed && <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Account</h4>}
                      
                     {user ? (
-                        <button onClick={() => setShowLogin(true)} className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-black/5 transition-colors text-left">
+                        <button
+                            ref={accountBtnRef}
+                            onClick={() => { setAnchorRect(accountBtnRef.current?.getBoundingClientRect()); setShowLogin(true); }}
+                            className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-black/5 transition-colors text-left"
+                        >
                             <div className="w-8 h-8 rounded-full bg-[var(--card)] shadow-sm flex items-center justify-center overflow-hidden shrink-0 border border-[var(--border)]">
                                 {user.photo_url ? <img src={user.photo_url || ""} alt={user.first_name || "User"} /> : <IconUser className="w-4 h-4 text-[var(--muted)]" />}
                             </div>
@@ -153,10 +159,13 @@ export default function MinimalSidebar() {
                             </div>
                         </button>
                     ) : (
-                        <button onClick={() => setShowLogin(true)} 
-                            className="w-full flex items-center justify-center gap-2 p-2 rounded-[var(--radius)] bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity text-sm font-semibold shadow-sm">
+                        <button
+                            ref={accountBtnRef}
+                            onClick={() => { setAnchorRect(accountBtnRef.current?.getBoundingClientRect()); setShowLogin(true); }}
+                            className="w-full flex items-center justify-center gap-2 p-2 rounded-[var(--radius)] bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity text-sm font-semibold shadow-sm"
+                        >
                             <IconLogin className="w-[18px] h-[18px]" />
-                                <span className={cn(collapsed && "hidden")}>Sign In</span>
+                            <span className={cn(collapsed && "hidden")}>Sign In</span>
                         </button>
                     )}
                 </div>

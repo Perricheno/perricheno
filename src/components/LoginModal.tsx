@@ -5,7 +5,9 @@ import { IconX, IconUser, IconTrash, IconLogout, IconBrandTelegram, IconLoader2,
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
 
-export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: () => void; onGuestSuccess?: (name: string) => void; onClose: () => void }) => {
+export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: { onSuccess: () => void; onGuestSuccess?: (name: string) => void; onClose: () => void; anchorRect?: DOMRect }) => {
+    // Desktop popover mode: anchorRect provided + viewport ≥ 768px
+    const isPopover = !!anchorRect && (typeof window === "undefined" ? false : window.innerWidth >= 768);
     const { user, login, logout, deleteAccount } = useAdmin();
     const [error, setError] = useState("");
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -81,24 +83,18 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
         ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(deepLink)}&bgcolor=FFFFFF&color=1A1A1A&margin=8`
         : null;
 
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl"
-                onClick={onClose}
-            >
-                <motion.div
-                    onClick={e => e.stopPropagation()}
-                    initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.92, opacity: 0, y: 20 }}
-                    transition={{ type: "spring", damping: 28, stiffness: 380 }}
-                    className="w-full max-w-[420px] mx-4 bg-white rounded-[28px] shadow-2xl shadow-black/20 relative overflow-hidden"
-                >
-                    {/* Close button */}
+    // Popover position: anchored above the Account button
+    const popoverStyle = isPopover && anchorRect ? {
+        position: "fixed" as const,
+        bottom: window.innerHeight - anchorRect.top + 8,
+        left: Math.max(8, anchorRect.left - 320 + anchorRect.width),
+        width: 340,
+        zIndex: 200,
+    } : undefined;
+
+    const innerContent = (
+        <>
+            {/* Close button */}
                     <button
                         onClick={onClose}
                         className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors z-10"
@@ -289,6 +285,46 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose }: { onSuccess: 
                             )}
                         </div>
                     )}
+        </>
+    );
+
+    if (isPopover && anchorRect) {
+        return (
+            <AnimatePresence>
+                <div className="fixed inset-0 z-[199]" onClick={onClose} />
+                <motion.div
+                    onClick={e => e.stopPropagation()}
+                    initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                    transition={{ type: "spring", damping: 30, stiffness: 420 }}
+                    style={popoverStyle}
+                    className="bg-white rounded-[24px] shadow-2xl shadow-black/15 border border-[#ebebeb] relative overflow-hidden"
+                >
+                    {innerContent}
+                </motion.div>
+            </AnimatePresence>
+        );
+    }
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xl"
+                onClick={onClose}
+            >
+                <motion.div
+                    onClick={e => e.stopPropagation()}
+                    initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                    transition={{ type: "spring", damping: 28, stiffness: 380 }}
+                    className="w-full max-w-[420px] mx-4 bg-white rounded-[28px] shadow-2xl shadow-black/20 relative overflow-hidden"
+                >
+                    {innerContent}
                 </motion.div>
             </motion.div>
         </AnimatePresence>

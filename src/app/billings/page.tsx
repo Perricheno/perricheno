@@ -330,29 +330,37 @@ export default function BillingsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-20 items-stretch">
                         {PLANS.map((plan, idx) => {
                             const isPro = plan.id === "pro";
+                            const isCurrent = plan.id === currentPlanId;
                             const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
-                            
+
                             return (
-                                <motion.div 
+                                <motion.div
                                     key={plan.id}
                                     initial={{ opacity: 0, y: 12 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.1, duration: 0.4 }}
                                     className={`relative rounded-3xl p-6 flex flex-col transition-all duration-300 border ${
-                                        isPro 
-                                            ? 'bg-[#111] border-emerald-500/30 hover:border-emerald-500/50 shadow-2xl shadow-emerald-900/10 scale-100 lg:scale-[1.02] z-10' 
-                                            : 'bg-[#111] border-gray-800 hover:border-gray-700 shadow-xl'
+                                        isCurrent
+                                            ? 'bg-[#111] border-white/20 shadow-2xl shadow-white/5 scale-100 lg:scale-[1.02] z-10'
+                                            : isPro
+                                                ? 'bg-[#111] border-emerald-500/30 hover:border-emerald-500/50 shadow-2xl shadow-emerald-900/10'
+                                                : 'bg-[#111] border-gray-800 hover:border-gray-700 shadow-xl'
                                     }`}
                                 >
                                     {/* Tag */}
-                                    {(isAnnual && plan.priceAnnual > 0 ? true : plan.tag) && (
-                                        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
-                                            (isAnnual && plan.priceAnnual > 0) ? 'bg-[#f59e0b] text-[#111] shadow-lg shadow-[#f59e0b]/20 whitespace-nowrap' :
-                                            plan.tag === 'Popular' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap' :
-                                            plan.tag === 'Best Value' ? 'bg-[#f59e0b] text-[#111] whitespace-nowrap' :
-                                            'bg-gray-200 text-gray-600 whitespace-nowrap'
+                                    {(isCurrent || (isAnnual && plan.priceAnnual > 0) || plan.tag) && (
+                                        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full whitespace-nowrap ${
+                                            isCurrent
+                                                ? 'bg-white text-[#111] shadow-lg'
+                                                : (isAnnual && plan.priceAnnual > 0)
+                                                    ? 'bg-[#f59e0b] text-[#111] shadow-lg shadow-[#f59e0b]/20'
+                                                    : plan.tag === 'Popular'
+                                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                                                        : plan.tag === 'Best Value'
+                                                            ? 'bg-[#f59e0b] text-[#111]'
+                                                            : 'bg-gray-200 text-gray-600'
                                         }`}>
-                                            {(isAnnual && plan.priceAnnual > 0) ? '2 Months Free' : plan.tag}
+                                            {isCurrent ? 'Active' : (isAnnual && plan.priceAnnual > 0) ? '2 Months Free' : plan.tag}
                                         </div>
                                     )}
 
@@ -386,15 +394,20 @@ export default function BillingsPage() {
                                     </div>
 
                                     {/* CTA */}
-                                    <button 
+                                    <button
+                                        disabled={isCurrent || plan.id === 'free'}
                                         className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98] mb-8 ${
-                                            isPro ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20' : 
-                                            plan.id === 'free' ? 'bg-white/5 text-white hover:bg-white/10' :
-                                            'bg-[#F1F1F3] text-[#111] hover:bg-white'
+                                            isCurrent
+                                                ? 'bg-white/10 text-white cursor-default'
+                                                : isPro
+                                                    ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20'
+                                                    : plan.id === 'free'
+                                                        ? 'bg-white/5 text-gray-500 cursor-default'
+                                                        : 'bg-[#F1F1F3] text-[#111] hover:bg-white'
                                         }`}
-                                        onClick={() => handleCheckout(plan.id)}
+                                        onClick={() => !isCurrent && handleCheckout(plan.id)}
                                     >
-                                        {plan.id === 'free' ? 'Current Plan' : 'Get Plan'}
+                                        {isCurrent ? 'Current Plan' : 'Get Plan'}
                                     </button>
 
                                     {/* Features List */}
