@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate, useMotionValueEvent } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, useMotionValueEvent, usePresence } from "framer-motion";
 import type { PanInfo, Variants } from "framer-motion";
 
 type NavLink = {
@@ -251,10 +251,17 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
         return { enterDelays: enter, exitDelays: exit };
     }, []);
 
+    const [isPresent] = usePresence();
+
     useEffect(() => {
-        // Spin in on open
-        animate(rotationAngle, 0, { type: "spring", damping: 24, stiffness: 110 });
-    }, []);
+        if (isPresent) {
+            // Spin in on open
+            animate(rotationAngle, 0, { type: "spring", damping: 24, stiffness: 110 });
+        } else {
+            // Spin out on close
+            animate(rotationAngle, initialRot, { type: "spring", damping: 24, stiffness: 90 });
+        }
+    }, [isPresent, rotationAngle, initialRot]);
 
     const handlePan = (_: PointerEvent, info: PanInfo) => {
         rotationAngle.set(rotationAngle.get() + info.delta.x * 0.42);
@@ -306,6 +313,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
                 <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: { delay: 0, duration: 0.15 } }}
                     transition={{ delay: 0.35 }}
                     className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none text-[9px] font-black uppercase tracking-[0.24em] text-gray-400 drop-shadow-sm"
                     style={{ bottom: 104 }}
@@ -501,10 +509,11 @@ export default function MinimalSidebar() {
                     </div>
 
                     {/* ── Center Logo Button ── */}
-                    <button
-                        onClick={() => setRadialOpen(v => !v)}
-                        className="absolute left-1/2 bottom-[20px] -translate-x-1/2 flex items-center justify-center w-16 h-14 z-10"
-                    >
+                    <div className="absolute inset-x-0 bottom-[20px] flex justify-center pointer-events-none z-10">
+                        <button
+                            onClick={() => setRadialOpen(v => !v)}
+                            className="pointer-events-auto flex items-center justify-center w-16 h-14"
+                        >
                         <motion.div
                             animate={{ rotate: radialOpen ? 180 : 0, scale: radialOpen ? 1.08 : 1 }}
                             transition={{ type: "spring", damping: 20, stiffness: 280 }}
@@ -534,7 +543,8 @@ export default function MinimalSidebar() {
                                 )}
                             </AnimatePresence>
                         </motion.div>
-                    </button>
+                        </button>
+                    </div>
 
                     {/* Right items */}
                     <div className="flex items-center justify-around w-[40%]">
