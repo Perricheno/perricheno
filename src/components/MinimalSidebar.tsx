@@ -80,27 +80,6 @@ const RADIAL_ALL = [
     { href: "/settings", icon: IconSettings, label: "Settings" },
 ];
 
-// ─── Animation Variants ───────────────────────────────────────────────────────
-const containerVariants: Variants = {
-    hidden: {
-        opacity: 0,
-    },
-    visible: {
-        opacity: 1,
-        transition: {
-            duration: 0.15,
-            ease: "easeOut"
-        }
-    },
-    exit: {
-        opacity: 0,
-        transition: {
-            duration: 0.15,
-            ease: "easeIn",
-            delay: 0.05
-        }
-    }
-};
 
 const itemVariants = {
     hidden: {
@@ -286,15 +265,16 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
     return (
         <motion.div
             className="fixed inset-0 z-[9998] md:hidden"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            style={{ pointerEvents: isPresent ? "auto" : "none" }}
             onClick={onClose}
         >
             {/* Soft radial blur behind the menu to improve contrast without covering the whole screen */}
-            <div 
+            <motion.div 
                 className="absolute pointer-events-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 style={{
                     bottom: "calc(48px - 250px + env(safe-area-inset-bottom))", // Center Y at the logo
                     left: "50%",
