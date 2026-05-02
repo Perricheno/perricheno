@@ -117,6 +117,7 @@ function RingItem({
     rotationAngle,
     item,
     onClose,
+    isDragging,
     custom
 }: {
     index: number;
@@ -125,6 +126,7 @@ function RingItem({
     rotationAngle: any;
     item: (typeof RADIAL_ALL)[number];
     onClose: () => void;
+    isDragging: React.MutableRefObject<boolean>;
     custom: { enterDelay: number; exitDelay: number };
 }) {
     const router = useRouter();
@@ -186,8 +188,12 @@ function RingItem({
                     }}
                 >
                 <button
-                    onPointerDown={e => e.stopPropagation()}
                     onClick={e => {
+                        if (isDragging.current) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                        }
                         e.stopPropagation();
                         onClose();
                         router.push(item.href);
@@ -209,6 +215,7 @@ function RingItem({
 
 // ─── Radial Spin Menu ─────────────────────────────────────────────────────────
 function RadialSpinMenu({ onClose }: { onClose: () => void }) {
+    const isDragging = useRef(false);
     const initialRot = -20;
     const rotationAngle = useMotionValue(initialRot);
     const radiusValue = useMotionValue(0);
@@ -248,8 +255,13 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
         }
     }, [isPresent, rotationAngle, initialRot, radiusValue]);
 
+    const handlePanStart = () => {
+        isDragging.current = true;
+        rotationAngle.stop();
+    };
+
     const handlePan = (_: PointerEvent, info: PanInfo) => {
-        rotationAngle.set(rotationAngle.get() + info.delta.x * 0.42);
+        rotationAngle.set(rotationAngle.get() + info.delta.x * 0.55);
     };
 
     const handlePanEnd = (_: PointerEvent, info: PanInfo) => {
@@ -260,13 +272,19 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             stiffness: 50,
             mass: 1.1,
         });
+        setTimeout(() => {
+            isDragging.current = false;
+        }, 50);
     };
 
     return (
         <motion.div
-            className="fixed inset-0 z-[9998] md:hidden"
+            className="fixed inset-0 z-[9998] md:hidden bg-transparent"
             style={{ pointerEvents: isPresent ? "auto" : "none" }}
-            onClick={onClose}
+            onClick={() => {
+                if (isDragging.current) return;
+                onClose();
+            }}
         >
             {/* Soft radial blur behind the menu to improve contrast without covering the whole screen */}
             <motion.div 
@@ -292,6 +310,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             {/* Drag capture zone — transparent, full screen */}
             <motion.div
                 className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none"
+                onPanStart={handlePanStart}
                 onPan={handlePan}
                 onPanEnd={handlePanEnd}
             >
@@ -321,6 +340,7 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
                                 rotationAngle={rotationAngle}
                                 item={item}
                                 onClose={onClose}
+                                isDragging={isDragging}
                                 custom={{ enterDelay: enterDelays[i], exitDelay: exitDelays[i] }}
                             />
                         ))}
