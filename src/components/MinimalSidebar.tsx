@@ -88,13 +88,16 @@ const containerVariants = {
     visible: {
         opacity: 1,
         transition: {
-            when: "beforeChildren" as const,
+            duration: 0.5,
+            ease: "easeOut" as const
         }
     },
     exit: {
         opacity: 0,
         transition: {
-            when: "afterChildren" as const,
+            duration: 0.4,
+            ease: "easeIn" as const,
+            delay: 0.1
         }
     }
 };
@@ -500,10 +503,10 @@ export default function MinimalSidebar() {
                     {/* ── Center Logo Button ── */}
                     <button
                         onClick={() => setRadialOpen(v => !v)}
-                        className="absolute left-[50%] bottom-[20px] -translate-x-[50%] flex items-center justify-center w-16 h-14 z-10"
+                        className="absolute left-1/2 bottom-[20px] -translate-x-1/2 flex items-center justify-center w-16 h-14 z-10"
                     >
                         <motion.div
-                            animate={{ rotate: radialOpen ? 135 : 0, scale: radialOpen ? 1.08 : 1 }}
+                            animate={{ rotate: radialOpen ? 180 : 0, scale: radialOpen ? 1.08 : 1 }}
                             transition={{ type: "spring", damping: 20, stiffness: 280 }}
                             className="w-14 h-14 rounded-full bg-[#1a1a1a] flex items-center justify-center shadow-2xl shadow-black/30 border-[3px] border-white"
                         >
@@ -511,9 +514,9 @@ export default function MinimalSidebar() {
                                 {radialOpen ? (
                                     <motion.div
                                         key="close"
-                                        initial={{ opacity: 0, rotate: -45 }}
+                                        initial={{ opacity: 0, rotate: -90 }}
                                         animate={{ opacity: 1, rotate: 0 }}
-                                        exit={{ opacity: 0, rotate: 45 }}
+                                        exit={{ opacity: 0, rotate: 90 }}
                                         transition={{ duration: 0.15 }}
                                     >
                                         <IconX className="w-5 h-5 text-white" stroke={2.5} />
@@ -521,9 +524,9 @@ export default function MinimalSidebar() {
                                 ) : (
                                     <motion.div
                                         key="logo"
-                                        initial={{ opacity: 0, rotate: 45 }}
+                                        initial={{ opacity: 0, rotate: 90 }}
                                         animate={{ opacity: 1, rotate: 0 }}
-                                        exit={{ opacity: 0, rotate: -45 }}
+                                        exit={{ opacity: 0, rotate: -90 }}
                                         transition={{ duration: 0.15 }}
                                     >
                                         <img src="/Vector.svg" alt="P" className="w-6 h-6 invert brightness-200" />
