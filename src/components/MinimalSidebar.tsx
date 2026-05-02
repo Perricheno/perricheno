@@ -146,7 +146,7 @@ function RingItem({
                 }}
                 className="flex flex-col items-center gap-1.5 select-none"
             >
-                <div className="w-[52px] h-[52px] bg-[#1a1a1a] rounded-[18px] flex items-center justify-center shadow-xl shadow-black/20 active:scale-90 transition-transform duration-100">
+                <div className="w-[52px] h-[52px] bg-[#1a1a1a] rounded-[18px] flex items-center justify-center shadow-xl shadow-black/20 active:scale-90 transition-transform duration-100" style={{ willChange: "transform" }}>
                     <item.icon className="w-[22px] h-[22px] text-white" stroke={1.5} />
                 </div>
                 <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#1a1a1a] whitespace-nowrap">
@@ -189,27 +189,18 @@ function RadialSpinMenu({ onClose }: { onClose: () => void }) {
             transition={{ duration: 0.16 }}
             onClick={onClose}
         >
-            {/* Frosted backdrop */}
-            <motion.div
-                className="absolute inset-0 bg-white/75 backdrop-blur-2xl"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-            />
-
-            {/* Drag capture zone (full screen) */}
+            {/* Drag capture zone — transparent, full screen */}
             <motion.div
                 className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none"
                 onPan={handlePan}
                 onPanEnd={handlePanEnd}
-                onClick={e => e.stopPropagation()}
             >
                 {/* Drag hint */}
                 <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.35 }}
-                    className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none text-[9px] font-black uppercase tracking-[0.24em] text-gray-300"
+                    className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none text-[9px] font-black uppercase tracking-[0.24em] text-gray-400 drop-shadow-sm"
                     style={{ bottom: 104 }}
                 >
                     ← drag to spin →
