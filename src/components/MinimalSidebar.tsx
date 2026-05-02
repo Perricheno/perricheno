@@ -433,7 +433,7 @@ export default function MinimalSidebar() {
                 {radialOpen && <RadialSpinMenu onClose={() => setRadialOpen(false)} />}
             </AnimatePresence>
 
-            <nav className="fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full bg-transparent pb-safe">
+            <nav className="fixed bottom-0 left-0 right-0 z-[9999] md:hidden w-full bg-white/50 backdrop-blur-xl border-t border-gray-200/50 pb-safe">
                 <div className="flex items-center justify-around px-2 pt-2 pb-5">
 
                     {/* Left items */}
