@@ -186,7 +186,8 @@ async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
 
     let userMsg: string;
     if (body.errorLog && body.currentTex) {
-        userMsg = `Fix ALL compilation errors and return full corrected files.\n\nERROR LOG:\n${body.errorLog}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
+        const extraGuidance = body.prompt?.trim() ? `\n\nADDITIONAL GUIDANCE FROM USER:\n${body.prompt}` : '';
+        userMsg = `Fix ALL compilation errors and return full corrected files. Preserve prose and structure — minimal surgical edits only.${extraGuidance}\n\nERROR LOG:\n${body.errorLog}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
     } else if (body.currentTex) {
         userMsg = `Apply these changes to the document and return full updated files.\n\nCHANGE REQUEST:\n${body.prompt || '(none)'}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
     } else {
@@ -196,7 +197,8 @@ async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
     const sessionId = body.sessionId;
     if (!sessionId) return NextResponse.json({ error: 'sessionId required for edit' }, { status: 400 });
 
-    await updateAgentSession(sessionId, { status: 'generating', error_msg: null, stream_text: null });
+    // Clear stage_json so the client doesn't show stale generation stages during the edit
+    await updateAgentSession(sessionId, { status: 'generating', error_msg: null, stream_text: null, stage_json: null });
 
     (async () => {
         try {

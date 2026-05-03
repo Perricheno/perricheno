@@ -83,6 +83,8 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     const [editPrompt, setEditPrompt] = useState("");
     const [isFixingErrors, setIsFixingErrors] = useState(false);
     const [errorLogInput, setErrorLogInput] = useState("");
+    const [fixGuidance, setFixGuidance] = useState("");
+    const [isEditMode, setIsEditMode] = useState(false); // true = edit/fix, false = full generation
     const [isCompiling, setIsCompiling] = useState(false);
 
     // Editor modal
@@ -235,6 +237,8 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
     const streamGenerate = useCallback(async (body: Record<string, any>, topicText: string) => {
         if (!user) { setShowLogin(true); return; }
 
+        const editMode = !!(body.currentTex || body.errorLog);
+        setIsEditMode(editMode);
         setError(null);
         setPhase("streaming");
         // Instant UI feedback
@@ -247,7 +251,11 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         setStreamChars(0);
         setIsEditing(false);
         setIsFixingErrors(false);
-        startTimer(); // For new stream, start from 0 now
+        if (editMode) {
+            // Don't show stale stages from the original generation during an edit
+            setStageProgress(null);
+        }
+        startTimer();
 
         try {
             body.sessionId = currentSessionId;
@@ -318,22 +326,40 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         if (!editPrompt.trim()) return;
         const text = editPrompt;
         setEditPrompt("");
-        streamGenerate({ prompt: text, type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib }, topic + " → edit");
+        // prompt must come AFTER ...settings — settings.prompt (original prompt) would
+        // otherwise overwrite the user's edit instruction
+        streamGenerate({
+            ...settings,
+            prompt: text,
+            currentTex: mainTex,
+            currentBib: referencesBib,
+        }, topic + " → edit");
     };
 
     const fixErrors = () => {
         if (!errorLogInput.trim() || !mainTex) return;
         const log = errorLogInput;
+        const guidance = fixGuidance.trim();
         setErrorLogInput("");
-        streamGenerate({ errorLog: log, type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib }, topic + " → fix");
+        setFixGuidance("");
+        streamGenerate({
+            language: settings.language,
+            errorLog: log,
+            prompt: guidance || undefined,
+            currentTex: mainTex,
+            currentBib: referencesBib,
+        }, topic + " → fix");
     };
 
     const handleAddVisualsToReport = (images: CodeImage[]) => {
         if (!mainTex || images.length === 0) return;
         setViewerOpen(false);
-        streamGenerate({ 
-            prompt: "Please integrate the attached R figures into the report.", 
-            type: docType, ...settings, currentTex: mainTex, currentBib: referencesBib, useDbImages: true
+        streamGenerate({
+            ...settings,
+            prompt: "Please integrate the attached R figures into the report.",
+            currentTex: mainTex,
+            currentBib: referencesBib,
+            useDbImages: true,
         }, topic + " → add visuals");
     };
 
@@ -453,7 +479,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                     {/* Header */}
                     <div className="text-center mb-10">
                         <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#A1A1AA] mb-3">
-                            {isAgentMode ? `${docType.replace("_", " ")} • ${settings.style}` : 'Analytics Console'}
+                            {isEditMode ? "Post-editing" : isAgentMode ? `${docType.replace("_", " ")} • ${settings.style}` : 'Analytics Console'}
                         </div>
                         <h2 className="text-2xl md:text-3xl font-black tracking-tight text-black break-words">
                             {topic}
@@ -463,7 +489,16 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                         </div>
                     </div>
 
-                    {/* Stepper */}
+                    {/* Edit mode: simple spinner instead of full stage stepper */}
+                    {isEditMode ? (
+                        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm flex flex-col items-center gap-4 text-center">
+                            <IconLoader2 className="w-6 h-6 animate-spin text-black" />
+                            <p className="text-[13px] font-bold text-black">
+                                {topic.includes("fix") ? "Fixing errors…" : "Applying changes…"}
+                            </p>
+                            <p className="text-[11px] text-gray-400">The LLM is rewriting the document. This takes 30–90 seconds.</p>
+                        </div>
+                    ) : (
                     <div className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm">
                         <div className="flex items-start justify-between mb-8 relative">
                             {/* connector line */}
@@ -625,6 +660,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             </motion.div>
                         </div>
                     </div>
+                    )} {/* end isEditMode ternary — closes the stepper div */}
                 </motion.div>
             </div>
         );
@@ -711,10 +747,12 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                         )}
                         {isFixingErrors && (
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
-                                <div className="border border-gray-100 rounded-[24px] bg-white shadow-2xl overflow-hidden p-2">
+                                <div className="border border-gray-100 rounded-[24px] bg-white shadow-2xl overflow-hidden p-2 space-y-2">
                                     <div className="px-5 py-2 text-[9px] font-black text-black uppercase tracking-[0.3em]">Compiler Log</div>
-                                    <textarea value={errorLogInput} onChange={e => setErrorLogInput(e.target.value)} placeholder="Paste the log here..." className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[12px] font-mono text-black min-h-[120px] max-h-[200px]" rows={4} autoFocus />
-                                    <div className="px-2 pt-2 flex justify-end">
+                                    <textarea value={errorLogInput} onChange={e => setErrorLogInput(e.target.value)} placeholder="Paste the compiler log here…" className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[12px] font-mono text-black min-h-[100px] max-h-[180px]" rows={4} autoFocus />
+                                    <div className="px-5 py-1 text-[9px] font-black text-black uppercase tracking-[0.3em]">Additional guidance <span className="text-gray-300 normal-case font-medium">(optional)</span></div>
+                                    <textarea value={fixGuidance} onChange={e => setFixGuidance(e.target.value)} placeholder="e.g. Keep the table structure, don't change fonts…" className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[13px] text-black min-h-[52px] max-h-[100px]" rows={2} />
+                                    <div className="px-2 pt-1 pb-1 flex justify-end">
                                         <button onClick={fixErrors} disabled={!errorLogInput.trim()} className="px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all flex items-center gap-2">Identify & Solve <IconBug className="w-4 h-4" /></button>
                                     </div>
                                 </div>
