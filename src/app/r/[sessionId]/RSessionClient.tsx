@@ -3,9 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    IconArrowUp, IconLoader2, IconCode, IconX,
+    IconLoader2, IconCode, IconX,
     IconCopy, IconCheck, IconRefresh, IconDownload,
-    IconPaperclip, IconFile, IconSparkles, IconMaximize,
+    IconMaximize,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import RSidebar from "../RSidebar";
@@ -263,7 +263,7 @@ interface Props {
     userId: number;
 }
 
-export default function RSessionClient({ initialSession, sessions: initialSessions, userId }: Props) {
+export default function RSessionClient({ initialSession }: Props) {
     const router = useRouter();
 
     // Parse results from session
@@ -283,7 +283,6 @@ export default function RSessionClient({ initialSession, sessions: initialSessio
         }
     });
 
-    const [sessions, setSessions] = useState<RSessionSummary[]>(initialSessions);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [multiLoading, setMultiLoading] = useState(initialSession.status === 'generating');
     const [elapsed, setElapsed] = useState(0);
@@ -291,6 +290,7 @@ export default function RSessionClient({ initialSession, sessions: initialSessio
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const currentSessionId = initialSession.id;
+    const [sidebarRefresh, setSidebarRefresh] = useState(0);
 
     // ── Stop polling helper ──
     const stopPolling = useCallback(() => {
@@ -324,8 +324,12 @@ export default function RSessionClient({ initialSession, sessions: initialSessio
                 setMultiResults(results);
 
                 if (s.status === "done" || s.status === "error") {
+                    // Freeze timer at final elapsed, then stop
+                    const finalElapsed = (Date.now() - startTime) / 1000;
+                    setElapsed(finalElapsed);
                     stopPolling();
                     setMultiLoading(false);
+                    setSidebarRefresh(n => n + 1);
                 }
             } catch { /* ignore transient errors */ }
         }, 2500);
@@ -335,15 +339,52 @@ export default function RSessionClient({ initialSession, sessions: initialSessio
     useEffect(() => {
         if (initialSession.status === 'generating') {
             pollSession(currentSessionId, new Date(initialSession.created_at).getTime());
+        } else {
+            // Session already done — show elapsed from created→updated
+            const dur = (new Date(initialSession.updated_at).getTime() - new Date(initialSession.created_at).getTime()) / 1000;
+            setElapsed(dur);
         }
         return () => stopPolling();
-    }, [currentSessionId, initialSession.status, initialSession.created_at, pollSession, stopPolling]);
+    }, [currentSessionId, initialSession.status, initialSession.created_at, initialSession.updated_at, pollSession, stopPolling]);
 
-    // Retry a single chart
-    const retryMultiChart = async (index: number, chartType: string) => {
-        // This would need implementation - for now just a placeholder
-        console.log('Retry chart:', index, chartType);
-    };
+    // ── Retry a single chart (in-memory, uses prompt only since files aren't stored) ──
+    const retryMultiChart = useCallback(async (index: number, chartType: string) => {
+        setMultiResults(prev => prev.map((c, i) =>
+            i === index ? { ...c, status: "generating" as const, error: undefined } : c
+        ));
+
+        try {
+            const res = await fetch("/api/r/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: "generate",
+                    prompt: initialSession.prompt,
+                    chartType,
+                    contextFiles: [],
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                setMultiResults(prev => prev.map((c, i) =>
+                    i === index ? { ...c, status: "error" as const, error: data.error || `HTTP ${res.status}` } : c
+                ));
+                return;
+            }
+
+            const name = (data.chartType || chartType).replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+            setMultiResults(prev => prev.map((c, i) =>
+                i === index
+                    ? { ...c, chartType: data.chartType || chartType, name, image: data.image, code: data.code, status: "done" as const, error: undefined }
+                    : c
+            ));
+        } catch (e: any) {
+            setMultiResults(prev => prev.map((c, i) =>
+                i === index ? { ...c, status: "error" as const, error: e.message || "Retry failed." } : c
+            ));
+        }
+    }, [initialSession.prompt]);
 
     const loadSession = (id: string) => {
         router.push(`/r/${id}`);
@@ -361,7 +402,7 @@ export default function RSessionClient({ initialSession, sessions: initialSessio
                 open={sidebarOpen}
                 onToggle={() => setSidebarOpen(v => !v)}
                 activeSessionId={currentSessionId}
-                refreshTrigger={0}
+                refreshTrigger={sidebarRefresh}
                 onSelectSession={loadSession}
                 onNewSession={handleNewSession}
             />
