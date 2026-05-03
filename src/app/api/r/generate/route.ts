@@ -89,9 +89,12 @@ ${dataSection}
 
 VISUAL STYLE — Black & White / Grayscale:
 - Use theme_minimal(base_size = 13) or theme_classic(base_size = 13)
-- Use scale_fill_grey(start = 0.15, end = 0.85) for fills
-- Use scale_color_grey(start = 0.1, end = 0.7) for lines/points
 - White background, minimal grid (#e8e8e8 lines or none)
+- FILL SCALE RULES (wrong scale = immediate crash):
+  • Discrete fill (bar, boxplot, violin, grouped charts, pie) → scale_fill_grey(start=0.15, end=0.85)
+  • Continuous fill (heatmap, density2d, raster, any numeric fill) → scale_fill_gradient(low="grey95", high="grey10")  OR  scale_fill_gradient2(low="grey90", mid="white", high="grey10", midpoint=0)
+  • NEVER use scale_fill_grey() when aes(fill=<numeric_column>) — it will crash with "continuous values supplied to discrete scale"
+- Color scales: scale_color_grey(start=0.1, end=0.7) for discrete; scale_color_gradient(low="grey80", high="grey10") for continuous
 
 CRITICAL CODE RULES:
 1. End the script with the ggplot object \`p\` (for ggplot2), or the bare function call for base-R (circlize, treemap, wordcloud, scatterplot3d, lattice).
@@ -100,12 +103,22 @@ CRITICAL CODE RULES:
 4. Prevent text overlap with ggrepel::geom_text_repel when labeling many points.
 5. Keep code under 90 lines.
 6. Always filter NA before plotting: filter(!is.na(col)) or na.omit().
+7. For heatmaps: melt/pivot to long format first, then geom_tile() + scale_fill_gradient2().
 
 ABSOLUTELY BANNED (produce HTML/widget output, NOT a PNG image):
 - plotly / ggplotly() / plot_ly()
 - htmlwidgets / networkD3 / sankeyNetwork() / forceNetwork()
 - leaflet / dygraphs / rbokeh / highcharter
-Instead use: ggalluvial (Sankey), ggraph/igraph (network), scatterplot3d (3D scatter), lattice wireframe (3D surface).
+Instead use: ggalluvial (Sankey), ggraph/igraph (network/arc), scatterplot3d (3D scatter), lattice wireframe (3D surface).
+
+ARC DIAGRAM / NETWORK — safe pattern (do NOT use custom left_join or manual coord tables):
+  library(igraph); library(ggraph)
+  edges <- data.frame(from=c("A","B"), to=c("B","C"), weight=c(1,2))
+  g <- graph_from_data_frame(edges, directed=FALSE)
+  ggraph(g, layout="linear") +
+    geom_edge_arc(aes(width=weight), color="grey50", alpha=0.7) +
+    geom_node_point(size=5, color="grey30") +
+    geom_node_text(aes(label=name), vjust=-1, size=3) + theme_void()
 
 ${knowledge}
 

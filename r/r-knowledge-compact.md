@@ -200,6 +200,37 @@ library(ggrepel)
 geom_text_repel(aes(label=name), size=3, max.overlaps=20)
 ```
 
+### Fill Scale Rules (CRITICAL — wrong scale = immediate crash)
+```r
+# DISCRETE fill (bar, boxplot, violin, grouped charts, pie, stacked area, ridgeline)
+# aes(fill = <categorical/factor column>) → use scale_fill_grey()
+ggplot(df, aes(x=group, y=value, fill=group)) +
+  geom_boxplot() + scale_fill_grey(start=0.15, end=0.85) + theme_minimal()
+
+# CONTINUOUS fill (heatmap, geom_tile, density2d, raster, choropleth map)
+# aes(fill = <numeric column>) → use scale_fill_gradient() or scale_fill_gradient2()
+ggplot(melted, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() + scale_fill_gradient2(low="grey90", mid="white", high="grey10", midpoint=0) +
+  theme_minimal()
+
+# RULE: if fill= maps to numbers → gradient; if fill= maps to categories → grey
+# NEVER use scale_fill_grey() when aes(fill=<numeric>) — crashes with:
+#   "Continuous values supplied to discrete scale"
+```
+
+### Arc / Network Diagrams (safe pattern)
+```r
+# Arc diagram — use igraph + ggraph with geom_edge_arc (NOT custom left_join)
+library(igraph); library(ggraph)
+edges <- data.frame(from=c("A","B","C"), to=c("B","C","A"), weight=c(1,2,3))
+g <- graph_from_data_frame(edges, directed=FALSE)
+ggraph(g, layout="linear") +
+  geom_edge_arc(aes(width=weight), color="grey50", alpha=0.7) +
+  geom_node_point(size=5, color="grey30") +
+  geom_node_text(aes(label=name), vjust=-1, size=3) +
+  theme_void()
+```
+
 ## Non-negotiable Rules
 1. End script with `p` (ggplot object) or the bare function call for base-R
 2. NEVER call `png()`, `pdf()`, `ggsave()`, `dev.off()`
@@ -208,3 +239,4 @@ geom_text_repel(aes(label=name), size=3, max.overlaps=20)
 5. `set.seed(42)` before any random generation
 6. `filter(!is.na(col))` before plotting to avoid NA crashes
 7. Keep code under 90 lines
+8. FILL SCALES: `scale_fill_grey()` for categorical fill, `scale_fill_gradient()`/`scale_fill_gradient2()` for numeric fill — mixing them crashes immediately
