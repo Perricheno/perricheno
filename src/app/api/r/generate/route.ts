@@ -94,11 +94,18 @@ VISUAL STYLE — Black & White / Grayscale:
 - White background, minimal grid (#e8e8e8 lines or none)
 
 CRITICAL CODE RULES:
-1. End the script with the ggplot object \`p\` (for ggplot2), or let the rendering function be the last call (for base-R plots).
-2. NEVER call png(), pdf(), ggsave(), cairo_pdf(), dev.off() — compiler captures output.
+1. End the script with the ggplot object \`p\` (for ggplot2), or the bare function call for base-R (circlize, treemap, wordcloud, scatterplot3d, lattice).
+2. NEVER call png(), pdf(), ggsave(), cairo_pdf(), dev.off() — compiler captures the graphics device automatically.
 3. set.seed(42) before any random generation.
 4. Prevent text overlap with ggrepel::geom_text_repel when labeling many points.
-5. Keep code under 80 lines.
+5. Keep code under 90 lines.
+6. Always filter NA before plotting: filter(!is.na(col)) or na.omit().
+
+ABSOLUTELY BANNED (produce HTML/widget output, NOT a PNG image):
+- plotly / ggplotly() / plot_ly()
+- htmlwidgets / networkD3 / sankeyNetwork() / forceNetwork()
+- leaflet / dygraphs / rbokeh / highcharter
+Instead use: ggalluvial (Sankey), ggraph/igraph (network), scatterplot3d (3D scatter), lattice wireframe (3D surface).
 
 ${knowledge}
 
@@ -126,6 +133,68 @@ Flow: chord, network, sankey, arc_diagram, edge_bundling
 3D: 3d_scatter, 3d_surface
 
 Pick ${maxCharts <= 4 ? "2-4" : `up to ${maxCharts}`} that best fit the data shape and question. Order by relevance.`;
+}
+
+// ── OpenAI fetch with exponential backoff ────────────────────────────────────
+// Retries on 429 (rate limit) and 5xx (transient server errors / HTML responses).
+// Also retries if the response body is HTML instead of JSON.
+
+async function callOpenAI(
+    apiKey: string,
+    body: object,
+    timeoutMs = 60_000,
+    maxAttempts = 4,
+): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
+    const RETRY_STATUSES = new Set([429, 500, 502, 503, 524, 0]);
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const backoffMs = attempt > 0 ? Math.min(2 ** attempt * 1500, 16_000) : 0;
+        if (backoffMs > 0) {
+            await new Promise(r => setTimeout(r, backoffMs));
+        }
+
+        let res: Response;
+        try {
+            res = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(timeoutMs),
+            });
+        } catch (err: any) {
+            const isLast = attempt === maxAttempts - 1;
+            if (isLast) return { ok: false, error: `Network error: ${err?.message ?? "timeout"}` };
+            continue; // retry on network / timeout
+        }
+
+        const rawText = await res.text();
+
+        // Detect HTML response (Cloudflare, CDN error page, etc.)
+        if (rawText.trimStart().startsWith("<")) {
+            const isLast = attempt === maxAttempts - 1;
+            if (!isLast && (res.status === 0 || RETRY_STATUSES.has(res.status) || res.status >= 500)) continue;
+            return { ok: false, error: `OpenAI returned HTML (status ${res.status}) — likely a rate limit or outage` };
+        }
+
+        let data: any;
+        try {
+            data = JSON.parse(rawText);
+        } catch {
+            const isLast = attempt === maxAttempts - 1;
+            if (!isLast) continue;
+            return { ok: false, error: `OpenAI returned non-JSON response (status ${res.status})` };
+        }
+
+        if (!res.ok) {
+            const isLast = attempt === maxAttempts - 1;
+            if (!isLast && RETRY_STATUSES.has(res.status)) continue;
+            return { ok: false, error: `OpenAI HTTP ${res.status}: ${data?.error?.message ?? rawText.slice(0, 200)}` };
+        }
+
+        return { ok: true, data };
+    }
+
+    return { ok: false, error: "OpenAI: max retries exceeded" };
 }
 
 // ── Logger ────────────────────────────────────────────────────────────────────
@@ -222,21 +291,15 @@ async function runMultiGeneration(params: {
                 rLog(sessionId, chartId, `Calling AI (attempt ${attempt + 1})`);
                 const aiStart = Date.now();
 
-                const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                    body: JSON.stringify({ model: MODEL, messages }),
-                    signal: AbortSignal.timeout(60_000),
-                });
+                const aiResult = await callOpenAI(apiKey, { model: MODEL, messages });
 
-                if (!aiRes.ok) {
-                    const errBody = await aiRes.text().catch(() => "");
-                    lastError = `AI HTTP ${aiRes.status}: ${errBody.slice(0, 200)}`;
-                    rLog(sessionId, chartId, `AI failed`, { status: aiRes.status, body: errBody.slice(0, 200) });
+                if (!aiResult.ok) {
+                    lastError = aiResult.error;
+                    rLog(sessionId, chartId, `AI failed`, { error: lastError });
                     continue;
                 }
 
-                const aiData = await aiRes.json();
+                const aiData = aiResult.data;
                 const tokens = aiData.usage?.total_tokens ?? 0;
                 const aiMs = Date.now() - aiStart;
                 rLog(sessionId, chartId, `AI ok`, { ms: aiMs, tokens, finish: aiData.choices?.[0]?.finish_reason });
@@ -353,22 +416,17 @@ export async function POST(req: Request) {
     if (action === "suggest") {
         if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
 
-        const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-            body: JSON.stringify({
-                model: MODEL,
-                messages: [
-                    { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
-                    { role: "user", content: buildSuggestPrompt(prompt, combinedContext) },
-                ],
-            }),
-            signal: AbortSignal.timeout(30_000),
-        });
+        const aiResult = await callOpenAI(OPENAI_API_KEY, {
+            model: MODEL,
+            messages: [
+                { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
+                { role: "user", content: buildSuggestPrompt(prompt, combinedContext) },
+            ],
+        }, 30_000);
 
-        if (!aiRes.ok) return NextResponse.json({ error: "Suggestion failed." }, { status: 500 });
+        if (!aiResult.ok) return NextResponse.json({ error: "Suggestion failed." }, { status: 500 });
 
-        const data = await aiRes.json();
+        const data = aiResult.data;
         let raw = data.choices?.[0]?.message?.content ?? "{}";
         raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
 
@@ -397,23 +455,17 @@ export async function POST(req: Request) {
         if (Array.isArray(chartTypes) && chartTypes.length > 0) {
             chartsToGenerate = chartTypes.slice(0, maxCharts);
         } else {
-            const suggestRes = await fetch("https://api.openai.com/v1/chat/completions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-                body: JSON.stringify({
-                    model: MODEL,
-                    messages: [
-                        { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
-                        { role: "user", content: buildSuggestPrompt(prompt, combinedContext, maxCharts) },
-                    ],
-                }),
-                signal: AbortSignal.timeout(30_000),
-            });
+            const suggestResult = await callOpenAI(OPENAI_API_KEY, {
+                model: MODEL,
+                messages: [
+                    { role: "system", content: "You are a data visualization expert. Output only valid JSON." },
+                    { role: "user", content: buildSuggestPrompt(prompt, combinedContext, maxCharts) },
+                ],
+            }, 30_000);
 
             let suggestedCharts: string[] = ["bar", "histogram", "scatter"];
-            if (suggestRes.ok) {
-                const suggestData = await suggestRes.json();
-                let raw = suggestData.choices?.[0]?.message?.content ?? "{}";
+            if (suggestResult.ok) {
+                let raw = suggestResult.data.choices?.[0]?.message?.content ?? "{}";
                 raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
                 try { suggestedCharts = JSON.parse(raw).charts ?? suggestedCharts; } catch { /* use defaults */ }
             }
@@ -477,21 +529,15 @@ export async function POST(req: Request) {
     console.log(`${new Date().toISOString()} [R][${sid}] Single chart: ${chartType || "auto"}`);
 
     const aiStart = Date.now();
-    const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
-        body: JSON.stringify({ model: MODEL, messages }),
-        signal: AbortSignal.timeout(60_000),
-    });
+    const aiResult = await callOpenAI(OPENAI_API_KEY, { model: MODEL, messages });
 
-    if (!aiRes.ok) {
-        const err = await aiRes.text();
-        console.error(`${new Date().toISOString()} [R][${sid}] AI failed HTTP ${aiRes.status}: ${err.slice(0, 200)}`);
+    if (!aiResult.ok) {
+        console.error(`${new Date().toISOString()} [R][${sid}] AI failed: ${aiResult.error}`);
         await updateRSession(session.id, { status: "error" });
-        return NextResponse.json({ error: "AI generation failed: " + err.slice(0, 200) }, { status: 500 });
+        return NextResponse.json({ error: aiResult.error }, { status: 500 });
     }
 
-    const aiData = await aiRes.json();
+    const aiData = aiResult.data;
     const tokens = aiData.usage?.total_tokens ?? 0;
     console.log(`${new Date().toISOString()} [R][${sid}] AI ok — ${Date.now() - aiStart}ms, tokens=${tokens}`);
 
