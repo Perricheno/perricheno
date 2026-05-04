@@ -104,9 +104,9 @@ async function readFileAsContext(file: File): Promise<{ content: string; rFileNa
             const header = lines[0] ?? "";
             const totalRows = lines.length - 1;
             const sample = lines.slice(1, 4).join("\n");
-            // Schema snippet — just enough for LLM to know columns & types
+            // Schema snippet - just enough for LLM to know columns & types
             const content = [
-                `FILE: "${file.name}" — ${totalRows} rows`,
+                `FILE: "${file.name}" - ${totalRows} rows`,
                 `COLUMNS: ${header.split(sep).join(" | ")}`,
                 `SAMPLE (3 rows):\n${sample}`,
             ].join("\n");
@@ -131,7 +131,7 @@ async function readFileAsContext(file: File): Promise<{ content: string; rFileNa
             const sample = lines.slice(1, 4).join("\n");
             const rFileName = file.name.replace(/\.[^.]+$/, ".csv");
             const content = [
-                `FILE: "${rFileName}" — ${totalRows} rows (converted from Excel)`,
+                `FILE: "${rFileName}" - ${totalRows} rows (converted from Excel)`,
                 `COLUMNS: ${header.split(",").join(" | ")}`,
                 `SAMPLE (3 rows):\n${sample}`,
             ].join("\n");
@@ -139,7 +139,7 @@ async function readFileAsContext(file: File): Promise<{ content: string; rFileNa
             const csvBuf = new TextEncoder().encode(csv).buffer;
             return { content, fileData: bufToBase64(csvBuf), rFileName };
         } catch {
-            return { content: "[Excel parsing failed — please convert to CSV]" };
+            return { content: "[Excel parsing failed - please convert to CSV]" };
         }
     }
 
@@ -515,7 +515,7 @@ export default function RPage() {
     }, []);
 
     // ── Poll a session until done ──
-    // startedAt: epoch ms of session creation — timer counts from there so reloads don't reset it
+    // startedAt: epoch ms of session creation - timer counts from there so reloads don't reset it
     const pollSession = useCallback((sessionId: string, startedAt?: number) => {
         stopPolling();
         const startTime = startedAt ?? Date.now();
@@ -1116,7 +1116,7 @@ export default function RPage() {
                                         generate();
                                     }
                                 }}
-                                placeholder="Describe the visualization — topic, data shape, or insight…"
+                                placeholder="Describe the visualization - topic, data shape, or insight…"
                                 className="w-full text-[14px] leading-relaxed text-[#1a1a1a] bg-transparent outline-none
                                            placeholder:text-[#bbb] resize-none min-h-[52px]"
                                 autoFocus

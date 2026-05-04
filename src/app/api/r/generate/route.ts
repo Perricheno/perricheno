@@ -1,4 +1,4 @@
-// R Studio — generate + compile R visualization.
+// R Studio - generate + compile R visualization.
 // Multi mode: fire-and-forget background job, client polls session via GET /api/r/sessions/[id].
 // Single mode: synchronous, returns result directly.
 
@@ -63,23 +63,23 @@ function buildGeneratePrompt(
         : "the most appropriate chart type";
 
     const dataSection = hasFiles
-        ? `DATA FILES — pre-loaded into the R working directory:
+        ? `DATA FILES - pre-loaded into the R working directory:
 ${rFileNames.map(n => `  • "${n}"`).join("\n")}
 
 READ THE DATA with (choose based on file type):
   df <- read.csv("${rFileNames[0]}")          # CSV
   df <- read.table("${rFileNames[0]}", header=TRUE, sep="\\t")  # TSV
 
-FILE SCHEMA (use for column names — all rows are in the file, not just this sample):
+FILE SCHEMA (use for column names - all rows are in the file, not just this sample):
 ${combinedContext}
 
 RULES FOR REAL DATA:
 - ALWAYS load with read.csv() / read.table() from the filename above.
 - NEVER hardcode data values or build a data.frame manually from the sample.
-- NEVER use synthetic or example data — the full dataset is available on disk.`
+- NEVER use synthetic or example data - the full dataset is available on disk.`
         : hasTextData
             ? `USER PROVIDED TEXT/DATA:\n${combinedContext}\n\nExtract facts/numbers and build a data.frame manually.`
-            : "No dataset provided — generate realistic synthetic data with set.seed(42).";
+            : "No dataset provided - generate realistic synthetic data with set.seed(42).";
 
     return `You are a strict Data Analytics and Visualization Agent using R/ggplot2.
 
@@ -87,18 +87,18 @@ TASK: Create ${chartDesc} for this request: "${prompt}"
 
 ${dataSection}
 
-VISUAL STYLE — Black & White / Grayscale:
+VISUAL STYLE - Black & White / Grayscale:
 - Use theme_minimal(base_size = 13) or theme_classic(base_size = 13)
 - White background, minimal grid (#e8e8e8 lines or none)
 - FILL SCALE RULES (wrong scale = immediate crash):
   • Discrete fill (bar, boxplot, violin, grouped charts, pie) → scale_fill_grey(start=0.15, end=0.85)
   • Continuous fill (heatmap, density2d, raster, any numeric fill) → scale_fill_gradient(low="grey95", high="grey10")  OR  scale_fill_gradient2(low="grey90", mid="white", high="grey10", midpoint=0)
-  • NEVER use scale_fill_grey() when aes(fill=<numeric_column>) — it will crash with "continuous values supplied to discrete scale"
+  • NEVER use scale_fill_grey() when aes(fill=<numeric_column>) - it will crash with "continuous values supplied to discrete scale"
 - Color scales: scale_color_grey(start=0.1, end=0.7) for discrete; scale_color_gradient(low="grey80", high="grey10") for continuous
 
 CRITICAL CODE RULES:
 1. End the script with the ggplot object \`p\` (for ggplot2), or the bare function call for base-R (circlize, treemap, wordcloud, scatterplot3d, lattice).
-2. NEVER call png(), pdf(), ggsave(), cairo_pdf(), dev.off() — compiler captures the graphics device automatically.
+2. NEVER call png(), pdf(), ggsave(), cairo_pdf(), dev.off() - compiler captures the graphics device automatically.
 3. set.seed(42) before any random generation.
 4. Prevent text overlap with ggrepel::geom_text_repel when labeling many points.
 5. Keep code under 90 lines.
@@ -111,7 +111,7 @@ ABSOLUTELY BANNED (produce HTML/widget output, NOT a PNG image):
 - leaflet / dygraphs / rbokeh / highcharter
 Instead use: ggalluvial (Sankey), ggraph/igraph (network/arc), scatterplot3d (3D scatter), lattice wireframe (3D surface).
 
-ARC DIAGRAM / NETWORK — safe pattern (do NOT use custom left_join or manual coord tables):
+ARC DIAGRAM / NETWORK - safe pattern (do NOT use custom left_join or manual coord tables):
   library(igraph); library(ggraph)
   edges <- data.frame(from=c("A","B"), to=c("B","C"), weight=c(1,2))
   g <- graph_from_data_frame(edges, directed=FALSE)
@@ -186,7 +186,7 @@ async function callOpenAI(
         if (rawText.trimStart().startsWith("<")) {
             const isLast = attempt === maxAttempts - 1;
             if (!isLast && (res.status === 0 || RETRY_STATUSES.has(res.status) || res.status >= 500)) continue;
-            return { ok: false, error: `OpenAI returned HTML (status ${res.status}) — likely a rate limit or outage` };
+            return { ok: false, error: `OpenAI returned HTML (status ${res.status}) - likely a rate limit or outage` };
         }
 
         let data: any;
@@ -241,14 +241,14 @@ async function runMultiGeneration(params: {
         combinedContext, rFileNames, rFiles, contextImages, knowledge, apiKey,
     } = params;
 
-    console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Starting session — ${chartsToGenerate.length} charts: ${chartsToGenerate.join(", ")}`);
+    console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Starting session - ${chartsToGenerate.length} charts: ${chartsToGenerate.join(", ")}`);
     if (rFileNames.length > 0) {
         console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Files: ${rFileNames.join(", ")}`);
     }
 
     const systemPrompt = `You are an expert R programmer. Output ONLY raw executable R code. No markdown fences. No commentary.`;
 
-    // Initialize all charts as pending immediately — client sees full list on first poll
+    // Initialize all charts as pending immediately - client sees full list on first poll
     const results: RResultItem[] = chartsToGenerate.map(id => ({
         chartType: id,
         name: id.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
@@ -276,7 +276,7 @@ async function runMultiGeneration(params: {
         // Attempt generation + 1 auto-retry on failure with error feedback
         for (let attempt = 0; attempt <= 1 && !finalResult; attempt++) {
             if (attempt > 0) {
-                rLog(sessionId, chartId, `Retry attempt ${attempt} — previous error: ${lastError.slice(0, 200)}`);
+                rLog(sessionId, chartId, `Retry attempt ${attempt} - previous error: ${lastError.slice(0, 200)}`);
             }
 
             try {
@@ -366,7 +366,7 @@ async function runMultiGeneration(params: {
         }
 
         if (!finalResult) {
-            rLog(sessionId, chartId, `All attempts failed — final error: ${lastError.slice(0, 300)}`);
+            rLog(sessionId, chartId, `All attempts failed - final error: ${lastError.slice(0, 300)}`);
         }
 
         results[i] = finalResult ?? {
@@ -377,7 +377,7 @@ async function runMultiGeneration(params: {
     }
 
     await updateRSession(sessionId, { status: "done" });
-    console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Session complete — ${successCount}/${chartsToGenerate.length} succeeded`);
+    console.log(`${new Date().toISOString()} [R][${sessionId.slice(0, 8)}] Session complete - ${successCount}/${chartsToGenerate.length} succeeded`);
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
@@ -454,7 +454,7 @@ export async function POST(req: Request) {
         }
     }
 
-    // ── MULTI mode — fire-and-forget ──────────────────────────────────────────
+    // ── MULTI mode - fire-and-forget ──────────────────────────────────────────
     if (action === "multi") {
         if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
 
@@ -485,10 +485,10 @@ export async function POST(req: Request) {
             chartsToGenerate = suggestedCharts.slice(0, maxCharts);
         }
 
-        // Create session — visible in sidebar immediately
+        // Create session - visible in sidebar immediately
         const session = await createRSession({ userId, title: makeTitle(prompt), prompt });
 
-        // Fire background job — does NOT block the response
+        // Fire background job - does NOT block the response
         runMultiGeneration({
             sessionId: session.id,
             userId,
@@ -504,14 +504,14 @@ export async function POST(req: Request) {
             await updateRSession(session.id, { status: "error" });
         });
 
-        // Return immediately — client will poll
+        // Return immediately - client will poll
         return NextResponse.json({
             sessionId: session.id,
             chartsPlanned: chartsToGenerate,
         });
     }
 
-    // ── GENERATE mode (single chart) — synchronous ────────────────────────────
+    // ── GENERATE mode (single chart) - synchronous ────────────────────────────
     if (!prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
 
     const knowledge = getVisualKnowledge();
@@ -552,7 +552,7 @@ export async function POST(req: Request) {
 
     const aiData = aiResult.data;
     const tokens = aiData.usage?.total_tokens ?? 0;
-    console.log(`${new Date().toISOString()} [R][${sid}] AI ok — ${Date.now() - aiStart}ms, tokens=${tokens}`);
+    console.log(`${new Date().toISOString()} [R][${sid}] AI ok - ${Date.now() - aiStart}ms, tokens=${tokens}`);
 
     const code = cleanCode(aiData.choices?.[0]?.message?.content ?? "");
     if (!code) {
@@ -561,7 +561,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "AI returned empty code." }, { status: 500 });
     }
 
-    console.log(`${new Date().toISOString()} [R][${sid}] Code: ${code.split("\n").length} lines — compiling`);
+    console.log(`${new Date().toISOString()} [R][${sid}] Code: ${code.split("\n").length} lines - compiling`);
     const compileStart = Date.now();
 
     const compileRes = await fetch(`${R_COMPILER_URL}/compile`, {
@@ -584,7 +584,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: result.log || "R execution failed.", code }, { status: 422 });
     }
 
-    console.log(`${new Date().toISOString()} [R][${sid}] Compiled ok — ${Date.now() - compileStart}ms`);
+    console.log(`${new Date().toISOString()} [R][${sid}] Compiled ok - ${Date.now() - compileStart}ms`);
 
     if (tokens > 0) await checkAndDeductUsage(userId, "visuals", tokens);
 

@@ -348,7 +348,7 @@ export default function UnderConstructionPage() {
               <p style={{ fontFamily: 'var(--font-garamond)', fontStyle: 'italic',
                 fontSize: '1.05rem', lineHeight: 1.65, color: 'var(--foreground)',
                 opacity: .72, margin: 0 }}>
-                Perricheno turns a topic into a compiled LaTeX paper — with real citations
+                Perricheno turns a topic into a compiled LaTeX paper - with real citations
                 from arXiv and OpenAlex, publication-ready R&nbsp;+&nbsp;Python figures,
                 and shareable PDFs. Built for students and researchers who want depth,
                 not boilerplate.
@@ -359,7 +359,7 @@ export default function UnderConstructionPage() {
               </div>
             </motion.div>
 
-            {/* Typewriter — compile progress */}
+            {/* Typewriter - compile progress */}
             <motion.div
               className="flex items-center gap-1 mb-7"
               initial={{ opacity: 0 }}
@@ -387,7 +387,7 @@ export default function UnderConstructionPage() {
                 letterSpacing: '.2em', color: 'var(--muted)',
                 borderBottom: '1px solid var(--border)',
                 paddingBottom: 6, marginBottom: 7 }}>
-                COMPILE LOG — LIVE
+                COMPILE LOG - LIVE
               </div>
               <AnimatePresence mode="popLayout">
                 {logs.map((entry, i) => (

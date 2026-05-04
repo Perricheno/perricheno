@@ -326,7 +326,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         if (!editPrompt.trim()) return;
         const text = editPrompt;
         setEditPrompt("");
-        // prompt must come AFTER ...settings — settings.prompt (original prompt) would
+        // prompt must come AFTER ...settings - settings.prompt (original prompt) would
         // otherwise overwrite the user's edit instruction
         streamGenerate({
             ...settings,
@@ -660,7 +660,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             </motion.div>
                         </div>
                     </div>
-                    )} {/* end isEditMode ternary — closes the stepper div */}
+                    )} {/* end isEditMode ternary - closes the stepper div */}
                 </motion.div>
             </div>
         );

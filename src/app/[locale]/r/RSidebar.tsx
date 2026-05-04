@@ -123,7 +123,7 @@ export default function RSidebar({
 
     return (
         <>
-            {/* Hamburger toggle — only when closed */}
+            {/* Hamburger toggle - only when closed */}
             <AnimatePresence>
                 {!open && (
                     <motion.button

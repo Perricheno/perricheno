@@ -171,7 +171,7 @@ function injectBiblatexIfNeeded(preamble: string, useReferences: boolean): strin
 function resolveTemplate(settings: PipelineSettings): { preamble: string; useFancyTitle: boolean } {
     // 1. Custom Overleaf ZIP preamble
     if (settings.customTemplatePreamble) {
-        // Strip \begin{document} and anything after it — Stage 4 adds that.
+        // Strip \begin{document} and anything after it - Stage 4 adds that.
         const raw = settings.customTemplatePreamble.replace(/\\begin\s*\{document\}[\s\S]*$/, "").trim();
         const preamble = injectBiblatexIfNeeded(raw, !!settings.useReferences);
         return { preamble, useFancyTitle: false };

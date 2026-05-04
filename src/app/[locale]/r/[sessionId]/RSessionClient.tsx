@@ -340,7 +340,7 @@ export default function RSessionClient({ initialSession }: Props) {
         if (initialSession.status === 'generating') {
             pollSession(currentSessionId, new Date(initialSession.created_at).getTime());
         } else {
-            // Session already done — show elapsed from created→updated
+            // Session already done - show elapsed from created→updated
             const dur = (new Date(initialSession.updated_at).getTime() - new Date(initialSession.created_at).getTime()) / 1000;
             setElapsed(dur);
         }

@@ -1,4 +1,4 @@
-// No external imports — works in standalone Docker containers where
+// No external imports - works in standalone Docker containers where
 // node_modules/prisma may not be present (npx downloads to temp dir).
 export default {
   schema: "prisma/schema.prisma",

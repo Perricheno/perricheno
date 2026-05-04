@@ -3,7 +3,7 @@
 ## CRITICAL: Output Constraints
 The compiler captures the graphics device as PNG. Only use libraries that write to R's graphics device.
 
-**BANNED — produce HTML/interactive output, NOT PNG:**
+**BANNED - produce HTML/interactive output, NOT PNG:**
 - `plotly`, `ggplotly()`, `htmlwidgets`, `networkD3`, `leaflet`, `dygraphs`, `rbokeh`
 - `sankeyNetwork()`, `chordNetwork()`, `forceNetwork()`
 
@@ -118,7 +118,7 @@ ggplot(df, aes(x=factor(category), y=value)) +
 
 ### Networks & Flow
 ```r
-# Network (igraph + ggraph — ggplot2 based, produces PNG)
+# Network (igraph + ggraph - ggplot2 based, produces PNG)
 library(igraph); library(ggraph)
 g <- graph_from_data_frame(edges, vertices=nodes, directed=FALSE)
 ggraph(g, layout="fr") +
@@ -127,7 +127,7 @@ ggraph(g, layout="fr") +
   geom_node_text(aes(label=name), repel=TRUE, size=3) +
   theme_void()
 
-# Sankey / Alluvial — use ggalluvial (NOT networkD3)
+# Sankey / Alluvial - use ggalluvial (NOT networkD3)
 library(ggalluvial)
 ggplot(df, aes(axis1=from, axis2=to, y=value)) +
   geom_alluvium(fill="grey50", alpha=0.7) +
@@ -135,7 +135,7 @@ ggplot(df, aes(axis1=from, axis2=to, y=value)) +
   geom_text(stat="stratum", aes(label=after_stat(stratum)), size=3) +
   theme_void()
 
-# Chord diagram — circlize writes to graphics device
+# Chord diagram - circlize writes to graphics device
 library(circlize)
 mat <- as.matrix(df_wide)  # adjacency matrix
 chordDiagram(mat, col=grey.colors(nrow(mat), start=0.2, end=0.8), transparency=0.4)
@@ -157,14 +157,14 @@ ggplot(df, aes(x=long, y=lat, size=value)) +
   geom_point(color="grey30", alpha=0.5) + theme_void()
 ```
 
-### 3D Charts (base-R — NOT plotly)
+### 3D Charts (base-R - NOT plotly)
 ```r
-# 3D Scatter — use scatterplot3d (NOT plotly)
+# 3D Scatter - use scatterplot3d (NOT plotly)
 library(scatterplot3d)
 scatterplot3d(df$x, df$y, df$z, pch=16, color="grey40",
               xlab="X", ylab="Y", zlab="Z", main="3D Scatter")
 
-# 3D Surface — use lattice wireframe (NOT plotly)
+# 3D Surface - use lattice wireframe (NOT plotly)
 library(lattice)
 wireframe(z ~ x + y, data=df, shade=TRUE, col.regions=grey.colors(100))
 ```
@@ -200,7 +200,7 @@ library(ggrepel)
 geom_text_repel(aes(label=name), size=3, max.overlaps=20)
 ```
 
-### Fill Scale Rules (CRITICAL — wrong scale = immediate crash)
+### Fill Scale Rules (CRITICAL - wrong scale = immediate crash)
 ```r
 # DISCRETE fill (bar, boxplot, violin, grouped charts, pie, stacked area, ridgeline)
 # aes(fill = <categorical/factor column>) → use scale_fill_grey()
@@ -214,13 +214,13 @@ ggplot(melted, aes(x=Var1, y=Var2, fill=value)) +
   theme_minimal()
 
 # RULE: if fill= maps to numbers → gradient; if fill= maps to categories → grey
-# NEVER use scale_fill_grey() when aes(fill=<numeric>) — crashes with:
+# NEVER use scale_fill_grey() when aes(fill=<numeric>) - crashes with:
 #   "Continuous values supplied to discrete scale"
 ```
 
 ### Arc / Network Diagrams (safe pattern)
 ```r
-# Arc diagram — use igraph + ggraph with geom_edge_arc (NOT custom left_join)
+# Arc diagram - use igraph + ggraph with geom_edge_arc (NOT custom left_join)
 library(igraph); library(ggraph)
 edges <- data.frame(from=c("A","B","C"), to=c("B","C","A"), weight=c(1,2,3))
 g <- graph_from_data_frame(edges, directed=FALSE)
@@ -234,9 +234,9 @@ ggraph(g, layout="linear") +
 ## Non-negotiable Rules
 1. End script with `p` (ggplot object) or the bare function call for base-R
 2. NEVER call `png()`, `pdf()`, `ggsave()`, `dev.off()`
-3. NEVER use `plotly`, `ggplotly()`, `networkD3`, `htmlwidgets` — they produce HTML, not PNG
-4. NEVER hardcode data when a file is provided — use `read.csv("filename")`
+3. NEVER use `plotly`, `ggplotly()`, `networkD3`, `htmlwidgets` - they produce HTML, not PNG
+4. NEVER hardcode data when a file is provided - use `read.csv("filename")`
 5. `set.seed(42)` before any random generation
 6. `filter(!is.na(col))` before plotting to avoid NA crashes
 7. Keep code under 90 lines
-8. FILL SCALES: `scale_fill_grey()` for categorical fill, `scale_fill_gradient()`/`scale_fill_gradient2()` for numeric fill — mixing them crashes immediately
+8. FILL SCALES: `scale_fill_grey()` for categorical fill, `scale_fill_gradient()`/`scale_fill_gradient2()` for numeric fill - mixing them crashes immediately

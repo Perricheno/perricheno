@@ -38,7 +38,7 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  // Only load messages for the current locale — never all languages at once
+  // Only load messages for the current locale - never all languages at once
   const messages = await getMessages();
 
   return (

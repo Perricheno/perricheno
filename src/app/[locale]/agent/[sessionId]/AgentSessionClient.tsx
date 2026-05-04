@@ -308,7 +308,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
         if (!editPrompt.trim()) return;
         const text = editPrompt;
         setEditPrompt("");
-        // prompt must come AFTER ...settings — settings.prompt (original generation prompt)
+        // prompt must come AFTER ...settings - settings.prompt (original generation prompt)
         // would otherwise overwrite the user's edit instruction
         streamGenerate({
             ...settings,

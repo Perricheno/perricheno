@@ -187,7 +187,7 @@ async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
     let userMsg: string;
     if (body.errorLog && body.currentTex) {
         const extraGuidance = body.prompt?.trim() ? `\n\nADDITIONAL GUIDANCE FROM USER:\n${body.prompt}` : '';
-        userMsg = `Fix ALL compilation errors and return full corrected files. Preserve prose and structure — minimal surgical edits only.${extraGuidance}\n\nERROR LOG:\n${body.errorLog}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
+        userMsg = `Fix ALL compilation errors and return full corrected files. Preserve prose and structure - minimal surgical edits only.${extraGuidance}\n\nERROR LOG:\n${body.errorLog}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
     } else if (body.currentTex) {
         userMsg = `Apply these changes to the document and return full updated files.\n\nCHANGE REQUEST:\n${body.prompt || '(none)'}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
     } else {

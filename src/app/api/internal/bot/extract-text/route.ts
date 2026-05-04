@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
                 const res = await fetch(`${PDF_EXTRACTOR_URL}/extract`, {
                     method: "POST",
                     body: form,
-                    signal: AbortSignal.timeout(300_000), // 5 min — async job can take a while
+                    signal: AbortSignal.timeout(300_000), // 5 min - async job can take a while
                 });
                 if (res.ok) {
                     const data = await res.json();

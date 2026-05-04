@@ -40,7 +40,7 @@ const (
 	maxFileSize = 100 * 1024 * 1024
 	tempDir     = "/tmp/pdf-extractor"
 
-	// PaddleOCR-VL async job API (primary — better model, handles large PDFs)
+	// PaddleOCR-VL async job API (primary - better model, handles large PDFs)
 	asyncJobURL = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs"
 	asyncModel  = "PaddleOCR-VL"
 
@@ -128,7 +128,7 @@ func extractPDF(pdfPath, filename string) ExtractResponse {
 		resp.ImageCount = len(images)
 		return resp
 	}
-	log.Printf("[Async API] Failed: %v — trying sync API", err)
+	log.Printf("[Async API] Failed: %v - trying sync API", err)
 
 	// ── 2. Sync Layout Parsing API (fallback) ─────────────────────────────────
 	text, err = callSyncAPI(pdfPath)
@@ -142,7 +142,7 @@ func extractPDF(pdfPath, filename string) ExtractResponse {
 		resp.ImageCount = len(images)
 		return resp
 	}
-	log.Printf("[Sync API] Failed: %v — falling back to pdftotext", err)
+	log.Printf("[Sync API] Failed: %v - falling back to pdftotext", err)
 
 	// ── 3. pdftotext (last resort) ────────────────────────────────────────────
 	text, err = extractText(pdfPath)

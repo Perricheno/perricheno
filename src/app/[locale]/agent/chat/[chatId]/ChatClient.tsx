@@ -752,7 +752,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                                 <p className="text-[11px] text-gray-400 leading-relaxed">
                                                     Your {uploadError.planTier || 'current'} plan allows&nbsp;
                                                     <span className="text-white font-bold">
-                                                        {uploadError.stagingCap ? `${(uploadError.stagingCap / 1000).toFixed(0)}K` : '—'}
+                                                        {uploadError.stagingCap ? `${(uploadError.stagingCap / 1000).toFixed(0)}K` : '-'}
                                                     </span>
                                                     &nbsp;chars staged at once. Files auto-clear after 24h.
                                                     {(uploadError.remaining ?? 0) > 0 && (

@@ -1,4 +1,4 @@
-// R Studio — server-side file extraction proxy.
+// R Studio - server-side file extraction proxy.
 // Supports PDF, Office formats (docx/xlsx/pptx), CSV, TXT via internal extract-text endpoint.
 // Returns { name, content, images } where content is extracted text and images are base64 page renders.
 

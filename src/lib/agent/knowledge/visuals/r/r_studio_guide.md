@@ -1,4 +1,4 @@
-# R Studio — Visualization Guide & Coding Standards
+# R Studio - Visualization Guide & Coding Standards
 
 ## Aesthetic Philosophy
 The R Studio page uses a **black-and-white / grayscale** design system. Default all generated visuals to match:
@@ -199,9 +199,9 @@ persp3D(x = xseq, y = yseq, z = z_matrix, theta = 40, phi = 25,
 
 ## Critical Rules
 1. ALWAYS end the script with the plot object `p` or equivalent (for ggplot2).
-   For base-R plots (radarchart, wordcloud, dendrogram, chord, 3D), the plot is produced by the function call itself — no assignment needed.
-2. NEVER use `png()`, `pdf()`, `cairo_pdf()`, `dev.off()` — the compiler handles output capture.
-3. NEVER use external files — generate all data inline.
+   For base-R plots (radarchart, wordcloud, dendrogram, chord, 3D), the plot is produced by the function call itself - no assignment needed.
+2. NEVER use `png()`, `pdf()`, `cairo_pdf()`, `dev.off()` - the compiler handles output capture.
+3. NEVER use external files - generate all data inline.
 4. Use `set.seed(42)` before any `rnorm()` / `sample()` for reproducibility.
 5. Text overlap: always add `ggrepel::geom_text_repel()` when labeling many points.
-6. Keep code under 80 lines — concise, production-quality.
+6. Keep code under 80 lines - concise, production-quality.

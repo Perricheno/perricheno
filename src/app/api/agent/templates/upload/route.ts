@@ -1,5 +1,5 @@
 // Accepts an Overleaf-style ZIP, extracts the preamble from main.tex, and
-// returns it as a plain string. No DB storage — the client passes it to
+// returns it as a plain string. No DB storage - the client passes it to
 // /api/agent/generate via customTemplatePreamble in settings.
 
 import { NextResponse } from "next/server";
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Could not read ZIP file. Make sure it is a valid Overleaf project export." }, { status: 422 });
     }
 
-    // Find main.tex — look for an exact match first, then any top-level .tex file.
+    // Find main.tex - look for an exact match first, then any top-level .tex file.
     const allFiles = Object.keys(zip.files).filter(f => !zip.files[f].dir);
     const mainEntry =
         zip.files["main.tex"] ||
