@@ -44,7 +44,7 @@ else
     matches() { echo "$CHANGED_FILES" | grep -qE "$1"; }
 
     # perricheno-site owns the whole Next.js tree + root Dockerfile
-    if matches '^(src/|public/|package(-lock)?\.json$|next\.config|tsconfig\.json|tailwind\.config|postcss\.config|middleware\.ts$|Dockerfile$|\.dockerignore$)'; then
+    if matches '^(src/|public/|messages/|package(-lock)?\.json$|next\.config|tsconfig\.json|tailwind\.config|postcss\.config|middleware\.ts$|Dockerfile$|\.dockerignore$)'; then
         SERVICES="$SERVICES perricheno-site"
     fi
     matches '^research-api/'    && SERVICES="$SERVICES research-api"

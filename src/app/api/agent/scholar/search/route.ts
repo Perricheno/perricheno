@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AgentSettings, ScholarArticle } from "@/app/agent/types";
+import { AgentSettings, ScholarArticle } from "@/app/[locale]/agent/types";
 import { verifySession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';

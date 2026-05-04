@@ -48,6 +48,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 # Settings and DB data (writeable by nextjs user)
+COPY --from=builder --chown=nextjs:nodejs /app/messages ./messages
 COPY --from=builder --chown=nextjs:nodejs /app/src/data ./src/data
 RUN mkdir -p /app/db && chown nextjs:nodejs /app/db
 

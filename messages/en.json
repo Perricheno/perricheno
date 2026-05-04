@@ -1,0 +1,191 @@
+{
+  "nav": {
+    "groups": {
+      "mainMenu": "Main menu",
+      "activity": "Activity",
+      "setUp": "Set Up"
+    },
+    "links": {
+      "home": "Home",
+      "canvas": "Canvas",
+      "rStudio": "R Studio",
+      "aiAgent": "AI Agent",
+      "citations": "Citations",
+      "space": "Space",
+      "pdfTools": "PDF Tools",
+      "settings": "Settings",
+      "billings": "Billings & Usage",
+      "agent": "Agent",
+      "r": "R Studio",
+      "pdf": "PDF"
+    },
+    "account": "Account",
+    "signIn": "Sign In",
+    "admin": "Admin",
+    "dragToSpin": "← drag to spin →"
+  },
+  "agent": {
+    "title": "Perricheno Intelligence.",
+    "placeholder": "What would you like to research?",
+    "dropFiles": "Drop files here",
+    "uploading": "Uploading...",
+    "analyzing": "Analyzing your data...",
+    "analyzingDesc": "AI is recommending the best chart types",
+    "initializing": "Initializing Session...",
+    "initializingDesc": "Preparing your isolated environment",
+    "back": "Back",
+    "generate": "Generate",
+    "charts": "Chart",
+    "charts_plural": "Charts",
+    "charts_many": "Charts",
+    "configureViz": "Configure Visualizations",
+    "selectCharts": "Select chart types",
+    "selected": "selected",
+    "dragHint": "← drag to spin →",
+    "modes": {
+      "research": "Research",
+      "assignment": "Assignment",
+      "diploma": "Thesis",
+      "report": "Report",
+      "dataAnalytics": "Data Analytics",
+      "chat": "Chat",
+      "literatureSearch": "Literature Search"
+    },
+    "suggestions": {
+      "researchPaper": "Research Paper",
+      "literatureReview": "Literature Review",
+      "dataAnalysis": "Data Analysis"
+    },
+    "typewriter": [
+      "Write a thesis on quantum physics...",
+      "Analyze Q4 financial statements...",
+      "Draft a literature review on AI...",
+      "Generate interactive data dashboards...",
+      "Compile advanced LaTeX documents...",
+      "Compile peer-reviewed LaTeX papers...",
+      "Render interactive Plotly dashboards...",
+      "Track precise token usage per task...",
+      "Forecast ARIMA time-series trends...",
+      "Generate high-res Seaborn heatmaps...",
+      "Format PhD-level academic theses..."
+    ],
+    "errors": {
+      "uploadFiles": "Please upload data files (CSV, Excel, etc.) before generating visualizations.",
+      "unknownApi": "Unknown API error",
+      "uploadFailed": "Upload failed"
+    },
+    "deleteConfirm": "Delete this document?",
+    "shareUnshared": "Unshared",
+    "agent": "Agent"
+  },
+  "billings": {
+    "title": "Pick Your Plan",
+    "subtitle": "Scale insights with higher limits, advanced engines, and exclusive features.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "save20": "Save 20%",
+    "active": "Active",
+    "monthsFree": "2 Months Free",
+    "billedAnnually": "Billed annually at ${price}",
+    "currentPlan": "Current Plan",
+    "getPlan": "Get Plan",
+    "transactionHistory": "Transaction History",
+    "noTransactions": "No transactions yet",
+    "support": "Support",
+    "termsOfService": "Terms of Service",
+    "usagePolicy": "Usage Policy",
+    "signInTitle": "Sign in to continue",
+    "signInDesc": "Connect your Telegram account to view usage and upgrade limits.",
+    "signIn": "Sign In",
+    "weeklyTokens": "Weekly Tokens",
+    "resetsMonday": "Resets Monday 00:00 AST",
+    "monthlyBalance": "Available Balance (Monthly)",
+    "stopsWhenDepleted": "Stops entirely when depleted",
+    "pdfStaging": "PDF Staging (24h)",
+    "autoClears": "Active uploads auto-clear after 24h",
+    "legacyCredits": "Legacy Credits",
+    "neverExpires": "Never expires. Automatically used if subscription runs out.",
+    "unlimited": "Unlimited",
+    "subscriptionUpgrade": "Subscription Upgrade",
+    "plans": {
+      "free": {
+        "name": "Free (The Sandbox)",
+        "desc": "Entry level. Shows quality, locks results."
+      },
+      "plus": {
+        "name": "Plus (Standard)",
+        "desc": "Workhorse for students & Python analysts."
+      },
+      "pro": {
+        "name": "Pro (Researcher)",
+        "desc": "Gold standard. Elite R stack & AI corrections."
+      },
+      "ultra": {
+        "name": "Ultra (Absolute Power)",
+        "desc": "Ultimate tier. Max savings & heavy bonuses."
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account and view history.",
+    "signInTitle": "Sign in to continue",
+    "signInDesc": "Connect your Telegram account to view usage and manage settings.",
+    "signIn": "Sign In",
+    "weeklyUsage": "Weekly Usage",
+    "monthlyBalance": "Monthly Balance",
+    "legacyCredits": "Legacy Credits",
+    "neverExpires": "Never expires",
+    "history": "History",
+    "noTransactions": "No transactions yet",
+    "support": "Support",
+    "promoCodes": "Promo Codes",
+    "noPromoCodes": "No promo codes found",
+    "userManagement": "User Management",
+    "noUsersFound": "No users found",
+    "searchPlaceholder": "Search by username, name, or Telegram ID...",
+    "search": "Search",
+    "grantSubscription": "Grant Subscription",
+    "grant": "Grant",
+    "selectPlan": "Select Plan:",
+    "currentPlan": "Current plan:",
+    "user": "User:",
+    "admin": "Admin",
+    "member": "Member",
+    "plan": "Plan",
+    "since": "Since",
+    "weekly": "Weekly",
+    "balance": "Balance",
+    "deletePromoConfirm": "Delete this promo code permanently?",
+    "grantConfirm": "Grant {tier} subscription to this user?",
+    "grantSuccess": "Subscription granted successfully!",
+    "grantFailed": "Failed to grant subscription"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "send": "Send",
+    "copy": "Copy",
+    "copied": "Copied",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "and": "and",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "retry": "Retry",
+    "noData": "No data"
+  },
+  "locale": {
+    "ru": "Русский",
+    "en": "English",
+    "kz": "Қазақша"
+  }
+}
