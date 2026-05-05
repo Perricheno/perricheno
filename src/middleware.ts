@@ -5,22 +5,23 @@ import { type NextRequest, NextResponse } from "next/server";
 const intlMiddleware = createMiddleware(routing);
 
 export default function middleware(request: NextRequest) {
-    // Strip port from Host so next-intl redirect URLs don't include :3000
-    const host = request.headers.get("host") ?? "";
-    const cleanHost = host.replace(/:\d+$/, "");
+    const response = intlMiddleware(request);
 
-    if (cleanHost !== host) {
-        const headers = new Headers(request.headers);
-        headers.set("host", cleanHost);
-        const patched = new Request(request.url, {
-            method: request.method,
-            headers,
-            body: request.body ?? undefined,
-        });
-        return intlMiddleware(patched as NextRequest);
+    // Strip :PORT from redirect Location so Cloudflare Tunnel
+    // doesn't expose internal port in public-facing URLs
+    if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("Location");
+        if (location) {
+            const fixed = location.replace(/:\d{4,5}(\/|$)/, "$1");
+            if (fixed !== location) {
+                const headers = new Headers(response.headers);
+                headers.set("Location", fixed);
+                return new NextResponse(null, { status: response.status, headers });
+            }
+        }
     }
 
-    return intlMiddleware(request);
+    return response;
 }
 
 export const config = {
