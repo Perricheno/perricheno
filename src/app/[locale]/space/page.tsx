@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,6 +15,7 @@ import NewSpaceModal from "./NewSpaceModal";
 import SpaceCard from "./SpaceCard";
 
 export default function SpaceDashboard() {
+    const t = useTranslations("space");
     const { user, setShowLogin } = useAdmin();
     const router = useRouter();
 
@@ -41,7 +43,7 @@ export default function SpaceDashboard() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Delete this project? This cannot be undone.")) return;
+        if (!confirm(t("deleteConfirm"))) return;
         await fetch(`/api/space/${id}`, { method: 'DELETE' });
         setSpaces(prev => prev.filter(s => s.id !== id));
     };
@@ -62,10 +64,10 @@ export default function SpaceDashboard() {
                     <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center mx-auto mb-5">
                         <IconBraces className="w-8 h-8 text-black" />
                     </div>
-                    <h1 className="text-2xl font-black text-black mb-2">Perricheno Space</h1>
-                    <p className="text-sm text-gray-400 mb-6">Professional LaTeX editor with collaboration</p>
+                    <h1 className="text-2xl font-black text-black mb-2">{t("title")}</h1>
+                    <p className="text-sm text-gray-400 mb-6">{t("subtitle")}</p>
                     <button onClick={() => setShowLogin(true)} className="px-6 py-3 bg-black text-white rounded-xl font-bold text-sm hover:bg-[#1a1a1a] transition-all">
-                        Sign in to continue
+                        {t("signIn")}
                     </button>
                 </div>
             </div>
@@ -87,7 +89,7 @@ export default function SpaceDashboard() {
                             <input
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                placeholder="Search projects..."
+                                placeholder={t("searchPlaceholder")}
                                 className="w-full pl-8 pr-3 py-1.5 bg-[#f5f5f5] rounded-lg text-[13px] outline-none placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-gray-200 transition-all"
                             />
                         </div>
@@ -97,7 +99,7 @@ export default function SpaceDashboard() {
                         className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1a1a1a] transition-all active:scale-95 shadow-sm"
                     >
                         <IconPlus className="w-3.5 h-3.5" />
-                        New Project
+                        {t("newProject")}
                     </button>
                 </div>
             </div>
@@ -112,7 +114,7 @@ export default function SpaceDashboard() {
                 ) : (
                     <>
                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-5">
-                            {filtered.length} project{filtered.length !== 1 ? 's' : ''}
+                            {filtered.length} {filtered.length === 1 ? t("projects_singular") : t("projects_plural")}
                         </p>
                         <motion.div
                             layout
@@ -157,6 +159,7 @@ export default function SpaceDashboard() {
 }
 
 function EmptyState({ onNew, hasSearch }: { onNew: () => void; hasSearch: boolean }) {
+    const t = useTranslations("space");
     return (
         <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -168,18 +171,18 @@ function EmptyState({ onNew, hasSearch }: { onNew: () => void; hasSearch: boolea
             </div>
             {hasSearch ? (
                 <>
-                    <p className="text-base font-bold text-black mb-1">No projects found</p>
-                    <p className="text-sm text-gray-400">Try a different search term</p>
+                    <p className="text-base font-bold text-black mb-1">{t("noProjectsFound")}</p>
+                    <p className="text-sm text-gray-400">{t("tryDifferentSearch")}</p>
                 </>
             ) : (
                 <>
-                    <p className="text-base font-bold text-black mb-1">No projects yet</p>
-                    <p className="text-sm text-gray-400 mb-6">Create your first LaTeX project</p>
+                    <p className="text-base font-bold text-black mb-1">{t("noProjectsYet")}</p>
+                    <p className="text-sm text-gray-400 mb-6">{t("createFirstProject")}</p>
                     <button
                         onClick={onNew}
                         className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl font-bold text-sm hover:bg-[#1a1a1a] transition-all active:scale-95"
                     >
-                        <IconPlus className="w-4 h-4" /> New Project
+                        <IconPlus className="w-4 h-4" /> {t("newProject")}
                     </button>
                 </>
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
     IconSearch, IconPlus, IconX, IconCopy, IconCheck, IconStar, IconStarFilled,
     IconTrash, IconExternalLink, IconBook2, IconLoader2, IconFileText,
@@ -111,6 +112,7 @@ function articleToBibtex(article: ScholarArticle): { bibtex: string; citeKey: st
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function CitationsPage() {
+    const t = useTranslations("citations");
     const { user, setShowLogin } = useAdmin();
 
     // Tab state
@@ -184,7 +186,7 @@ export default function CitationsPage() {
             const data = await res.json();
             setSearchResults(data.results ?? []);
             if ((data.results ?? []).length === 0) {
-                setSearchError("No results found. Try a different query or source.");
+                setSearchError(t("noResults"));
             }
         } catch (e: any) {
             setSearchError(e.message);
@@ -248,7 +250,7 @@ export default function CitationsPage() {
             setScholarQueryUsed(data.query || scholarQuery);
 
             if ((data.articles ?? []).length === 0) {
-                setScholarError("No papers found. Try different keywords or adjust settings.");
+                setScholarError(t("noPapers"));
             }
         } catch (e: any) {
             setScholarError(e.message);
@@ -365,10 +367,10 @@ export default function CitationsPage() {
     };
 
     const deleteCitation = async (id: string) => {
-        if (!confirm("Delete this citation from your library?")) return;
+        if (!confirm(t("deleteConfirm"))) return;
         await fetch(`/api/citations/${id}`, { method: "DELETE" });
         setCitations(prev => prev.filter(c => c.id !== id));
-        showToast("Citation deleted");
+        showToast(t("citationDeleted"));
     };
 
     const exportAllBibtex = () => {
@@ -410,17 +412,17 @@ export default function CitationsPage() {
                             <IconBook2 className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-black tracking-tight">Citation Manager</h1>
-                            <p className="text-xs text-gray-400">Search · Discover · Cite - DOI, arXiv, CrossRef, OpenAlex</p>
+                            <h1 className="text-xl font-black text-black tracking-tight">{t("title")}</h1>
+                            <p className="text-xs text-gray-400">{t("subtitle")}</p>
                         </div>
                     </div>
 
                     {/* Tabs */}
                     <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 w-fit">
                         {([
-                            { id: "search" as const, label: "Quick Search", icon: IconSearch },
-                            { id: "scholar" as const, label: "Scholar", icon: IconBook2 },
-                            { id: "library" as const, label: "Library", icon: IconFolder },
+                            { id: "search" as const, label: t("tabSearch"), icon: IconSearch },
+                            { id: "scholar" as const, label: t("tabScholar"), icon: IconBook2 },
+                            { id: "library" as const, label: t("tabLibrary"), icon: IconFolder },
                         ]).map(tab => (
                             <button
                                 key={tab.id}
@@ -471,7 +473,7 @@ export default function CitationsPage() {
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
-                                        placeholder="Search by title, DOI (10.xxxx/...), or arXiv ID (2401.12345)..."
+                                        placeholder={t("searchPlaceholder")}
                                         className="flex-1 text-[14px] text-black bg-transparent outline-none placeholder:text-gray-300 py-2"
                                         autoFocus
                                     />
@@ -491,9 +493,9 @@ export default function CitationsPage() {
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
                                         <IconSearch className="w-10 h-10 text-gray-200" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-300 mb-2">Quick Citation Lookup</h3>
+                                    <h3 className="text-lg font-bold text-gray-300 mb-2">{t("quickLookupTitle")}</h3>
                                     <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
-                                        Enter a DOI, arXiv ID, or title to find papers and generate BibTeX
+                                        {t("quickLookupDesc")}
                                     </p>
                                     <div className="flex flex-wrap justify-center gap-2">
                                         {[
@@ -543,13 +545,13 @@ export default function CitationsPage() {
                                                         <CopyButton text={r.bibtex} label="BibTeX" />
                                                         {isAlreadySaved ? (
                                                             <span className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-emerald-500 bg-emerald-50 border border-emerald-200">
-                                                                <IconCheck className="w-3.5 h-3.5 inline mr-1" />Saved
+                                                                <IconCheck className="w-3.5 h-3.5 inline mr-1" />{t("saved")}
                                                             </span>
                                                         ) : (
                                                             <button onClick={() => saveToLibrary(r)} disabled={savingId === r.cite_key}
                                                                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-black text-white hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50">
                                                                 {savingId === r.cite_key ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconPlus className="w-3.5 h-3.5" />}
-                                                                Save
+                                                                {t("save")}
                                                             </button>
                                                         )}
                                                     </div>
@@ -557,7 +559,7 @@ export default function CitationsPage() {
                                                 <button onClick={() => setExpandedResult(isExpanded ? null : idx)}
                                                     className="mt-2 text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:text-black transition-colors flex items-center gap-1">
                                                     {isExpanded ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />}
-                                                    {isExpanded ? "Less" : "Details"}
+                                                    {isExpanded ? t("less") : t("details")}
                                                 </button>
                                             </div>
                                             <AnimatePresence>
@@ -571,7 +573,7 @@ export default function CitationsPage() {
                                                                 </div>
                                                             )}
                                                             <div>
-                                                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1">BibTeX</p>
+                                                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1">{t("bibtexLabel")}</p>
                                                                 <pre className="text-[11px] font-mono text-gray-600 bg-gray-50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">{r.bibtex}</pre>
                                                             </div>
                                                             <div className="flex items-center gap-2">
@@ -601,7 +603,7 @@ export default function CitationsPage() {
                                         value={scholarQuery}
                                         onChange={e => setScholarQuery(e.target.value)}
                                         onKeyDown={e => { if (e.key === "Enter") handleScholarSearch(); }}
-                                        placeholder="Describe your research topic... (supports any language)"
+                                        placeholder={t("scholarPlaceholder")}
                                         className="flex-1 text-[14px] text-black bg-transparent outline-none placeholder:text-gray-300 py-2 px-2"
                                     />
                                     <button
@@ -627,7 +629,7 @@ export default function CitationsPage() {
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden mb-4">
                                         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-4">
                                             <div className="flex flex-col gap-1">
-                                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Source</label>
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t("source")}</label>
                                                 <select value={scholarSource} onChange={e => setScholarSource(e.target.value as any)}
                                                     className="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none cursor-pointer">
                                                     <option value="openalex">OpenAlex</option>
@@ -635,17 +637,17 @@ export default function CitationsPage() {
                                                 </select>
                                             </div>
                                             <div className="flex flex-col gap-1">
-                                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Results</label>
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t("maxResults")}</label>
                                                 <select value={scholarMaxResults} onChange={e => setScholarMaxResults(Number(e.target.value))}
                                                     className="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none cursor-pointer">
                                                     {[5, 10, 15, 20, 30, 50].map(n => <option key={n} value={n}>{n}</option>)}
                                                 </select>
                                             </div>
                                             <div className="flex flex-col gap-1">
-                                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Year From</label>
+                                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t("yearFrom")}</label>
                                                 <select value={scholarYearFrom} onChange={e => setScholarYearFrom(e.target.value)}
                                                     className="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none cursor-pointer">
-                                                    {["Any", "2024", "2023", "2022", "2020", "2015", "2010"].map(y => <option key={y} value={y}>{y === "Any" ? "Any year" : `${y}+`}</option>)}
+                                                    {["Any", "2024", "2023", "2022", "2020", "2015", "2010"].map(y => <option key={y} value={y}>{y === "Any" ? t("anyYear") : `${y}+`}</option>)}
                                                 </select>
                                             </div>
                                         </div>
@@ -659,8 +661,8 @@ export default function CitationsPage() {
                                     <div className="bg-white border border-gray-100 p-8 rounded-2xl shadow-sm text-center max-w-sm w-full">
                                         <IconBook2 className="w-12 h-12 text-black mx-auto mb-4" stroke={1.5} />
                                         <IconLoader2 className="w-6 h-6 animate-spin text-black mx-auto mb-4" />
-                                        <h3 className="font-bold text-black mb-2">Searching Academic Papers...</h3>
-                                        <p className="text-sm text-gray-400">Querying {scholarSource === 'openalex' ? 'OpenAlex' : 'arXiv'} for relevant papers</p>
+                                        <h3 className="font-bold text-black mb-2">{t("searching")}</h3>
+                                        <p className="text-sm text-gray-400">{t("querying").replace("{source}", scholarSource === 'openalex' ? 'OpenAlex' : 'arXiv')}</p>
                                     </div>
                                 </div>
                             )}
@@ -671,9 +673,9 @@ export default function CitationsPage() {
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
                                         <IconBook2 className="w-10 h-10 text-gray-200" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-300 mb-2">Deep Academic Search</h3>
+                                    <h3 className="text-lg font-bold text-gray-300 mb-2">{t("deepSearchTitle")}</h3>
                                     <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
-                                        Search arXiv and OpenAlex for academic papers. Supports queries in any language - auto-translated to English.
+                                        {t("deepSearchDesc")}
                                     </p>
                                     <div className="flex flex-wrap justify-center gap-2">
                                         {[
@@ -699,10 +701,10 @@ export default function CitationsPage() {
                                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-4">
                                         <div>
                                             <h2 className="text-lg font-black text-black">
-                                                {filteredScholarResults.length} Papers Found
+                                                {t("papersFound").replace("{count}", String(filteredScholarResults.length))}
                                             </h2>
                                             {scholarQueryUsed && scholarQueryUsed !== scholarQuery && (
-                                                <p className="text-[11px] text-gray-400 font-mono mt-0.5">Translated query: {scholarQueryUsed}</p>
+                                                <p className="text-[11px] text-gray-400 font-mono mt-0.5">{t("translatedQuery")} {scholarQueryUsed}</p>
                                             )}
                                         </div>
                                     </div>
@@ -712,11 +714,11 @@ export default function CitationsPage() {
                                         <div className="flex-1 relative">
                                             <IconSearch className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
                                             <input value={scholarFilterText} onChange={e => setScholarFilterText(e.target.value)}
-                                                placeholder="Filter results..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm outline-none focus:border-gray-300 transition-colors" />
+                                                placeholder={t("filterPlaceholder")} className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm outline-none focus:border-gray-300 transition-colors" />
                                         </div>
                                         <select value={scholarSortKey} onChange={e => setScholarSortKey(e.target.value as SortKey)}
                                             className="px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm outline-none cursor-pointer">
-                                            <option value="relevance">Relevance</option>
+                                            <option value="relevance">{t("relevance")}</option>
                                             <option value="year_desc">Year ↓</option>
                                             <option value="year_asc">Year ↑</option>
                                         </select>
@@ -756,13 +758,13 @@ export default function CitationsPage() {
                                                                 <CopyButton text={bibtex} label="BibTeX" />
                                                                 {isAlreadySaved ? (
                                                                     <span className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-emerald-500 bg-emerald-50 border border-emerald-200">
-                                                                        <IconCheck className="w-3.5 h-3.5 inline mr-1" />Saved
+                                                                        <IconCheck className="w-3.5 h-3.5 inline mr-1" />{t("saved")}
                                                                     </span>
                                                                 ) : (
                                                                     <button onClick={() => saveScholarToLibrary(article)} disabled={savingId === citeKey}
                                                                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-black text-white hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50">
                                                                         {savingId === citeKey ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconPlus className="w-3.5 h-3.5" />}
-                                                                        Save
+                                                                        {t("save")}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -771,7 +773,7 @@ export default function CitationsPage() {
                                                         <button onClick={() => setExpandedScholar(isExpanded ? null : idx)}
                                                             className="mt-2 text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:text-black transition-colors flex items-center gap-1">
                                                             {isExpanded ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />}
-                                                            {isExpanded ? "Less" : "Abstract & Links"}
+                                                            {isExpanded ? t("less") : t("abstractLinks")}
                                                         </button>
                                                     </div>
 
@@ -781,18 +783,18 @@ export default function CitationsPage() {
                                                                 <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
                                                                     {article.summary && (
                                                                         <div>
-                                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1">Abstract</p>
+                                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1">{t("abstractLabel")}</p>
                                                                             <p className="text-[12px] text-gray-500 leading-relaxed">{article.summary}</p>
                                                                         </div>
                                                                     )}
                                                                     <div>
-                                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1">BibTeX</p>
+                                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1">{t("bibtexLabel")}</p>
                                                                         <pre className="text-[11px] font-mono text-gray-600 bg-gray-50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">{bibtex}</pre>
                                                                     </div>
                                                                     <div className="flex gap-2 flex-wrap">
                                                                         <a href={article.url} target="_blank" rel="noopener noreferrer"
                                                                             className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-black hover:text-white px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5">
-                                                                            <IconExternalLink className="w-3 h-3" /> View Paper
+                                                                            <IconExternalLink className="w-3 h-3" /> {t("viewPaper")}
                                                                         </a>
                                                                         {article.url?.includes('arxiv.org') && (
                                                                             <>
@@ -835,7 +837,7 @@ export default function CitationsPage() {
                                 <div className="flex-1 relative">
                                     <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
                                     <input value={libraryFilter} onChange={e => setLibraryFilter(e.target.value)}
-                                        placeholder="Filter citations..." className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] outline-none focus:border-gray-400 transition-colors" />
+                                        placeholder={t("libraryFilterPlaceholder")} className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] outline-none focus:border-gray-400 transition-colors" />
                                 </div>
                                 <button onClick={() => setShowStarredOnly(!showStarredOnly)}
                                     className={`p-2.5 rounded-xl border transition-all ${showStarredOnly ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-white border-gray-200 text-gray-300 hover:text-amber-400"}`}
@@ -844,7 +846,7 @@ export default function CitationsPage() {
                                 </button>
                                 <button onClick={exportAllBibtex} disabled={filteredCitations.length === 0}
                                     className="flex items-center gap-1.5 px-4 py-2.5 bg-black text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-20">
-                                    <IconDownload className="w-3.5 h-3.5" /> Export .bib
+                                    <IconDownload className="w-3.5 h-3.5" /> {t("exportBib")}
                                 </button>
                             </div>
 
@@ -853,11 +855,11 @@ export default function CitationsPage() {
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
                                         <IconFolder className="w-10 h-10 text-gray-200" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-300 mb-2">Your library is empty</h3>
-                                    <p className="text-sm text-gray-300 mb-4">Search for papers and save them to build your citation library</p>
+                                    <h3 className="text-lg font-bold text-gray-300 mb-2">{t("emptyLibraryTitle")}</h3>
+                                    <p className="text-sm text-gray-300 mb-4">{t("emptyLibraryDesc")}</p>
                                     <button onClick={() => setActiveTab("search")}
                                         className="px-5 py-2.5 bg-black text-white rounded-xl text-[12px] font-bold hover:bg-gray-800 transition-all">
-                                        <IconSearch className="w-4 h-4 inline mr-1.5" /> Start Searching
+                                        <IconSearch className="w-4 h-4 inline mr-1.5" /> {t("startSearching")}
                                     </button>
                                 </div>
                             )}
@@ -896,7 +898,7 @@ export default function CitationsPage() {
 
                             {citations.length > 0 && (
                                 <div className="text-center mt-6 text-[11px] text-gray-300 font-mono">
-                                    {filteredCitations.length} of {citations.length} citations
+                                    {filteredCitations.length} {t("of")} {citations.length} citations
                                 </div>
                             )}
                         </div>

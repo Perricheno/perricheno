@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { IconCheck, IconArrowRight } from '@tabler/icons-react';
+import { getTranslations } from 'next-intl/server';
 
-export default function SuccessfulPayment() {
+export default async function SuccessfulPayment() {
+    const t = await getTranslations("payment");
+
     return (
         <div className="min-h-screen bg-[#FBFBFC] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
             <div className="absolute inset-0 z-0 opacity-40">
@@ -12,15 +15,15 @@ export default function SuccessfulPayment() {
                 <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl shadow-green-500/30">
                     <IconCheck className="w-12 h-12 text-white" stroke={3} />
                 </div>
-                
-                <h1 className="text-3xl font-black mb-3 tracking-tight text-black">Payment Successful!</h1>
+
+                <h1 className="text-3xl font-black mb-3 tracking-tight text-black">{t("successTitle")}</h1>
                 <p className="text-[#A1A1AA] font-medium text-sm mb-10 leading-relaxed">
-                    Your subscription has been activated. You can now return to the agent and continue unleashing your productivity.
+                    {t("successDesc")}
                 </p>
 
                 <Link href="/agent">
                     <button className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-black text-white rounded-2xl font-black text-[12px] uppercase tracking-widest hover:bg-[#222] transition-all shadow-xl active:scale-95 group">
-                        Back to Agent <IconArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        {t("backToAgent")} <IconArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
                 </Link>
             </div>

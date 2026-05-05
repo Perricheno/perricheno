@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { IconDownload, IconArrowRight, IconLoader2, IconSparkles, IconPaperclip, IconCode } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 
 type Message = { id: string; role: "user" | "assistant"; text: string };
 
 export default function CanvasPage() {
+    const t = useTranslations("canvas");
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
@@ -14,12 +16,17 @@ export default function CanvasPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const suggestions = [
-        "Project Architecture", "Database Schema", "User Journey", "System Design", "Mind Map", "E-commerce Flow"
+        t("suggestions.projectArchitecture"),
+        t("suggestions.databaseSchema"),
+        t("suggestions.userJourney"),
+        t("suggestions.systemDesign"),
+        t("suggestions.mindMap"),
+        t("suggestions.ecommerceFlow"),
     ];
 
     const generateCanvas = async (userText: string) => {
         if (!userText.trim()) return;
-        
+
         setIsGenerating(true);
         if (!hasStarted) {
             setHasStarted(true);
@@ -37,23 +44,23 @@ export default function CanvasPage() {
                 body: JSON.stringify({ prompt: userText })
             });
             const data = await res.json();
-            
+
             if (!res.ok) throw new Error(data.error || "Failed to generate");
-            
+
             // Format JSON nicely
             const formattedJson = JSON.stringify(data.canvas, null, 2);
             setCanvasJson(formattedJson);
-            
-            setMessages(prev => [...prev, { 
-                id: String(Date.now()), 
-                role: "assistant", 
-                text: "Here is your updated Canvas design. You can download it to use in Obsidian or ask me to make modifications." 
+
+            setMessages(prev => [...prev, {
+                id: String(Date.now()),
+                role: "assistant",
+                text: t("assistantReply")
             }]);
         } catch (err: any) {
-            setMessages(prev => [...prev, { 
-                id: String(Date.now()), 
-                role: "assistant", 
-                text: "Sorry, I encountered an error: " + err.message 
+            setMessages(prev => [...prev, {
+                id: String(Date.now()),
+                role: "assistant",
+                text: t("errorPrefix") + err.message
             }]);
         } finally {
             setIsGenerating(false);
@@ -82,12 +89,12 @@ export default function CanvasPage() {
             <div className="w-full h-full flex flex-col items-center justify-center font-sans bg-[var(--background)]">
                 <div className="w-full max-w-3xl px-6 flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-700">
                     <h2 className="text-3xl md:text-4xl font-semibold text-[var(--foreground)] mb-10 text-center tracking-tight">
-                        What do you want to build?
+                        {t("whatToBuild")}
                     </h2>
 
                     <div className="w-full relative shadow-sm hover:shadow-md transition-shadow duration-300 rounded-[calc(var(--radius)+0.5rem)] bg-[var(--card)] border border-[var(--border)] overflow-hidden">
                         <div className="px-5 pt-5 pb-16">
-                            <span className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wider">Prototype a canvas with AI</span>
+                            <span className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wider">{t("prototypeLabel")}</span>
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
@@ -97,12 +104,12 @@ export default function CanvasPage() {
                                         generateCanvas(prompt);
                                     }
                                 }}
-                                placeholder="An app that creates recipes from photos..."
+                                placeholder={t("placeholder")}
                                 className="w-full h-14 outline-none resize-none bg-transparent text-lg md:text-xl placeholder:text-gray-300 font-medium"
                                 autoFocus
                             />
                         </div>
-                        
+
                         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
                              <div className="flex items-center gap-2">
                                 <button className="p-2.5 text-gray-400 hover:text-[var(--foreground)] hover:bg-black/5 rounded-full transition-colors">
@@ -116,7 +123,7 @@ export default function CanvasPage() {
                                     ))}
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => generateCanvas(prompt)}
                                 disabled={!prompt.trim() || isGenerating}
                                 className="p-3 rounded-full bg-[var(--foreground)] text-[var(--card)] hover:opacity-90 disabled:opacity-30 disabled:hover:opacity-30 transition-all flex items-center justify-center shrink-0 shadow-sm"
@@ -132,21 +139,21 @@ export default function CanvasPage() {
 
     return (
         <div className="w-full h-full flex flex-col md:flex-row overflow-hidden font-sans bg-[var(--background)]">
-            
+
             {/* LEFT PANE - CHAT */}
             <div className="w-full md:w-[35%] lg:w-[30%] h-[50vh] md:h-full bg-[var(--card)] border-b md:border-b-0 md:border-r border-[var(--border)] flex flex-col overflow-hidden">
                 <div className="h-16 border-b border-[var(--border)] flex items-center px-6 shrink-0 bg-[var(--card)] z-10 justify-between">
                     <h2 className="font-semibold text-[15px] flex items-center gap-2 text-[var(--foreground)]">
-                        <IconSparkles className="w-5 h-5 text-purple-500" /> Canvas Builder
+                        <IconSparkles className="w-5 h-5 text-purple-500" /> {t("builderTitle")}
                     </h2>
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
                     {messages.map((msg, i) => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] rounded-[1.25rem] px-5 py-3.5 text-[15px] leading-relaxed ${
-                                msg.role === 'user' 
-                                ? 'bg-[#f4f4f5] text-[var(--foreground)] rounded-br-sm' 
+                                msg.role === 'user'
+                                ? 'bg-[#f4f4f5] text-[var(--foreground)] rounded-br-sm'
                                 : 'bg-transparent text-[var(--foreground)] px-1'
                             }`}>
                                 {msg.text}
@@ -164,7 +171,7 @@ export default function CanvasPage() {
                     )}
                     <div ref={messagesEndRef} />
                 </div>
-                
+
                 <div className="p-4 bg-[var(--card)] mt-auto shrink-0 pb-6">
                     <div className="relative border border-[var(--border)] rounded-[1.25rem] bg-[var(--background)] shadow-sm focus-within:shadow-md transition-shadow">
                         <textarea
@@ -177,11 +184,11 @@ export default function CanvasPage() {
                                 }
                             }}
                             disabled={isGenerating}
-                            placeholder="Tell me how to improve this..."
+                            placeholder={t("improvePlaceholder")}
                             className="w-full bg-transparent p-4 pr-12 outline-none resize-none text-[15px] placeholder:text-gray-400 max-h-32 min-h-[56px] font-medium"
                             rows={1}
                         />
-                        <button 
+                        <button
                             onClick={() => generateCanvas(prompt)}
                             disabled={!prompt.trim() || isGenerating}
                             className="absolute right-3 bottom-3 p-1.5 rounded-full bg-[var(--foreground)] text-[var(--card)] disabled:opacity-30 disabled:bg-gray-200 transition-colors"
@@ -195,7 +202,7 @@ export default function CanvasPage() {
             {/* RIGHT PANE - CODE GENERATION */}
             <div className="flex-1 h-[50vh] md:h-full bg-[var(--background)] flex flex-col overflow-hidden relative p-4 md:p-6 pb-20 md:pb-6">
                 <div className="w-full h-full bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] shadow-sm flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-500 relative">
-                    
+
                     {/* Toolbar */}
                     <div className="h-14 bg-white border-b border-[var(--border)] flex items-center justify-between px-4 shrink-0">
                         <div className="flex items-center gap-3">
@@ -206,18 +213,18 @@ export default function CanvasPage() {
                         </div>
                         <div className="flex items-center gap-2">
                              <button onClick={handleDownload} disabled={!canvasJson || isGenerating} className="flex items-center gap-2 text-xs font-semibold px-4 py-2 bg-[var(--foreground)] hover:bg-opacity-90 disabled:opacity-30 disabled:bg-gray-300 text-[var(--card)] rounded-full transition-colors shadow-sm">
-                                <IconDownload className="w-4 h-4" /> Download Canvas
+                                <IconDownload className="w-4 h-4" /> {t("downloadCanvas")}
                             </button>
                         </div>
                     </div>
-                    
+
                     {/* Code Content */}
                     <div className="flex-1 overflow-auto p-6 font-mono text-sm leading-relaxed text-gray-700 bg-gray-50/50 relative minimal-scrollbar">
                         {isGenerating && !canvasJson ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-10 transition-all">
                                 <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white shadow-sm border border-[var(--border)] text-gray-600">
                                     <IconLoader2 className="w-5 h-5 animate-spin text-blue-500" />
-                                    <span className="font-sans font-medium text-[15px]">Synthesizing JSON design...</span>
+                                    <span className="font-sans font-medium text-[15px]">{t("synthesizing")}</span>
                                 </div>
                             </div>
                         ) : null}

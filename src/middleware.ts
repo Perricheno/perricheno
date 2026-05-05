@@ -1,7 +1,27 @@
 import createMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
+import { type NextRequest, NextResponse } from "next/server";
 
-export default createMiddleware(routing);
+const intlMiddleware = createMiddleware(routing);
+
+export default function middleware(request: NextRequest) {
+    // Strip port from Host so next-intl redirect URLs don't include :3000
+    const host = request.headers.get("host") ?? "";
+    const cleanHost = host.replace(/:\d+$/, "");
+
+    if (cleanHost !== host) {
+        const headers = new Headers(request.headers);
+        headers.set("host", cleanHost);
+        const patched = new Request(request.url, {
+            method: request.method,
+            headers,
+            body: request.body ?? undefined,
+        });
+        return intlMiddleware(patched as NextRequest);
+    }
+
+    return intlMiddleware(request);
+}
 
 export const config = {
   matcher: [

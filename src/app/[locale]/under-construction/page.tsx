@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { EB_Garamond, IBM_Plex_Mono, Syne } from 'next/font/google';
+import { useTranslations } from 'next-intl';
 
 const garamond = EB_Garamond({
   subsets: ['latin'],
@@ -83,16 +84,6 @@ function useNeuralCanvas(ref: React.RefObject<HTMLCanvasElement | null>) {
 
 // ─── Typewriter ────────────────────────────────────────────────────────────────
 
-const PHRASES = [
-  'fetching citations from arXiv…',
-  'querying OpenAlex index…',
-  'compiling bibliography…',
-  'rendering Python figures…',
-  'typesetting LaTeX document…',
-  'repairing compilation errors…',
-  'exporting to PDF…',
-];
-
 function useTypewriter(phrases: string[], speed = 48, pause = 2200) {
   const [text, setText] = useState('');
   const [idx, setIdx]   = useState(0);
@@ -115,28 +106,16 @@ function useTypewriter(phrases: string[], speed = 48, pause = 2200) {
 
 // ─── Compile log ───────────────────────────────────────────────────────────────
 
-const LOG_ENTRIES = [
-  { ok: true,  line: 'pdflatex engine ············· v3.14159' },
-  { ok: true,  line: 'arXiv index ················· connected' },
-  { ok: true,  line: 'OpenAlex index ·············· connected' },
-  { ok: false, line: 'citations resolver ·········· building' },
-  { ok: true,  line: 'Python runtime (matplotlib) · ready' },
-  { ok: true,  line: 'R runtime (ggplot2) ·········· ready' },
-  { ok: false, line: 'LaTeX compiler pipeline ····· assembling' },
-  { ok: true,  line: 'bibliography (.bib) ·········· indexed' },
-  { ok: false, line: 'PDF export pipeline ·········· pending' },
-  { ok: true,  line: 'OCR engine ··················· loaded' },
-];
-
-function useCompileLog() {
-  const [lines, setLines] = useState(LOG_ENTRIES.slice(0, 3));
+function useCompileLog(logEntries: { ok: boolean; line: string }[]) {
+  const [lines, setLines] = useState(logEntries.slice(0, 3));
   useEffect(() => {
     let i = 3;
     const id = setInterval(() => {
-      setLines(p => [...p.slice(-4), LOG_ENTRIES[i % LOG_ENTRIES.length]]);
+      setLines(p => [...p.slice(-4), logEntries[i % logEntries.length]]);
       i++;
     }, 1700);
     return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return lines;
 }
@@ -159,10 +138,26 @@ const EQ_POSITIONS = [
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function UnderConstructionPage() {
+  const t = useTranslations("underConstruction");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useNeuralCanvas(canvasRef);
+
+  const PHRASES = (t.raw("phrases") as string[]);
+  const logEntries = [
+    { ok: true,  line: 'pdflatex engine ············· v3.14159' },
+    { ok: true,  line: 'arXiv index ················· connected' },
+    { ok: true,  line: 'OpenAlex index ·············· connected' },
+    { ok: false, line: `citations resolver ·········· ${t("logEntries.building")}` },
+    { ok: true,  line: 'Python runtime (matplotlib) · ready' },
+    { ok: true,  line: 'R runtime (ggplot2) ·········· ready' },
+    { ok: false, line: `LaTeX compiler pipeline ····· ${t("logEntries.assembling")}` },
+    { ok: true,  line: 'bibliography (.bib) ·········· indexed' },
+    { ok: false, line: `PDF export pipeline ·········· ${t("logEntries.pending")}` },
+    { ok: true,  line: 'OCR engine ··················· loaded' },
+  ];
+
   const typed = useTypewriter(PHRASES);
-  const logs  = useCompileLog();
+  const logs  = useCompileLog(logEntries);
 
   const now = new Date();
   const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -239,12 +234,12 @@ export default function UnderConstructionPage() {
             style={{ fontFamily: 'var(--font-mono-px)', fontSize: '10px', color: 'var(--muted)', letterSpacing: '.08em' }}>
             <span>{dateStr}</span>
             <span style={{ color: 'var(--border)' }}>·</span>
-            <span style={{ color: 'var(--foreground)', opacity: .45 }}>compile status:</span>
+            <span style={{ color: 'var(--foreground)', opacity: .45 }}>{t("compileStatus")}</span>
             <span>
               <span style={{ animation: 'blink 1.4s ease-in-out infinite', display: 'inline-block',
                 width: 6, height: 6, borderRadius: '50%', background: 'var(--foreground)',
                 opacity: .4, marginRight: 6, verticalAlign: 'middle' }} />
-              building
+              {t("building")}
             </span>
           </div>
         </motion.header>
@@ -348,10 +343,7 @@ export default function UnderConstructionPage() {
               <p style={{ fontFamily: 'var(--font-garamond)', fontStyle: 'italic',
                 fontSize: '1.05rem', lineHeight: 1.65, color: 'var(--foreground)',
                 opacity: .72, margin: 0 }}>
-                Perricheno turns a topic into a compiled LaTeX paper - with real citations
-                from arXiv and OpenAlex, publication-ready R&nbsp;+&nbsp;Python figures,
-                and shareable PDFs. Built for students and researchers who want depth,
-                not boilerplate.
+                {t("abstract")}
               </p>
               <div style={{ fontFamily: 'var(--font-mono-px)', fontSize: '9.5px',
                 color: 'var(--border)', letterSpacing: '.25em', marginTop: '.6rem' }}>
@@ -387,7 +379,7 @@ export default function UnderConstructionPage() {
                 letterSpacing: '.2em', color: 'var(--muted)',
                 borderBottom: '1px solid var(--border)',
                 paddingBottom: 6, marginBottom: 7 }}>
-                COMPILE LOG - LIVE
+                {t("compileLogHeader")}
               </div>
               <AnimatePresence mode="popLayout">
                 {logs.map((entry, i) => (

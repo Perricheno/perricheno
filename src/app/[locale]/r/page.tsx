@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     IconArrowUp, IconLoader2, IconCode, IconX,
@@ -408,6 +409,7 @@ interface AttachedFile {
 }
 
 export default function RPage() {
+    const t = useTranslations("r");
     const { user, setShowLogin } = useAdmin();
     const router = useRouter();
 
@@ -545,7 +547,7 @@ export default function RPage() {
                     setMultiLoading(false);
                     setSidebarRefresh(n => n + 1);
                     if (s.status === "error" && results.length === 0) {
-                        setMultiError("Generation failed. Please try again.");
+                        setMultiError(t("generationFailed"));
                     }
                 }
             } catch { /* ignore transient errors */ }
@@ -582,7 +584,7 @@ export default function RPage() {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                setMultiError(res.status === 402 ? "Quota reached. Please top up your balance." : data.error || `HTTP ${res.status}`);
+                setMultiError(res.status === 402 ? t("quotaReached") : data.error || `HTTP ${res.status}`);
                 setMultiLoading(false);
                 return;
             }
@@ -691,13 +693,13 @@ export default function RPage() {
 
             if (!res.ok) {
                 if (res.status === 402) {
-                    setError("Quota reached. Please top up your balance.");
+                    setError(t("quotaReached"));
                     if (data.code) setResultCode(data.code);
                     return;
                 }
                 if (res.status === 422 && data.code) {
                     setResultCode(data.code);
-                    setError(data.error || "R execution failed.");
+                    setError(data.error || t("generationFailed"));
                     return;
                 }
                 throw new Error(data.error || `HTTP ${res.status}`);
@@ -776,9 +778,9 @@ export default function RPage() {
                     {/* Spacer for hamburger when sidebar closed */}
                     <div className="w-8 shrink-0" />
                     <div>
-                        <p className="text-[11px] font-bold text-gray-300 uppercase tracking-[0.2em] mb-1 font-mono">R Studio</p>
+                        <p className="text-[11px] font-bold text-gray-300 uppercase tracking-[0.2em] mb-1 font-mono">{t("studioLabel")}</p>
                         <h1 className="text-[28px] md:text-[34px] font-black text-[#1a1a1a] tracking-tight leading-none">
-                            Statistical Visualization
+                            {t("title")}
                         </h1>
                     </div>
                 </div>
@@ -792,14 +794,14 @@ export default function RPage() {
                 <section className="pb-4">
                     <div className="flex items-center justify-between mb-3">
                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em]">
-                            Chart Types · {CHARTS.length} available
+                            {t("chartTypes")} · {CHARTS.length} {t("available")}
                         </p>
                         {(selectedCharts.length > 0 || suggestedCharts.length > 0) && (
                             <button
                                 onClick={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
                                 className="text-[11px] text-gray-400 hover:text-[#1a1a1a] font-medium transition-colors"
                             >
-                                Clear
+                                {t("clear")}
                             </button>
                         )}
                     </div>
@@ -840,7 +842,7 @@ export default function RPage() {
                     </div>
 
                     <p className="text-[10px] text-gray-300 mt-3 font-medium">
-                        Hover to preview · click to select · attach CSV, Excel, PDF or Word for real-data plots
+                        {t("hoverHint")}
                     </p>
                 </section>
 
@@ -910,7 +912,7 @@ export default function RPage() {
                                             <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a]" />
                                         </div>
                                         <p className="text-[12px] text-gray-400 font-medium">
-                                            {suggesting ? "Analysing data…" : "Running R…"}
+                                            {suggesting ? t("analysing") : t("runningR")}
                                         </p>
                                     </div>
                                 ) : resultImage ? (
@@ -1025,7 +1027,7 @@ export default function RPage() {
                                         <div className="flex items-center gap-3 mb-4">
                                             <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
                                             <p className="text-[13px] font-bold text-[#1a1a1a] flex-1">
-                                                {done === 0 ? "Generating visualizations…" : `${done} of ${total} charts ready`}
+                                                {done === 0 ? t("generating") : t("chartsReady").replace("{done}", String(done)).replace("{total}", String(total))}
                                             </p>
                                             <span className="text-[11px] font-mono text-gray-300 tabular-nums shrink-0">
                                                 {elapsed.toFixed(1)}s
@@ -1075,7 +1077,7 @@ export default function RPage() {
                                         {multiResults.filter(c => c.status === "done").length} charts · {elapsed.toFixed(1)}s
                                     </p>
                                     <button onClick={handleNew} className="text-[11px] text-gray-400 hover:text-[#1a1a1a] font-medium transition-colors">
-                                        Clear
+                                        {t("clear")}
                                     </button>
                                 </div>
                             )}
@@ -1116,7 +1118,7 @@ export default function RPage() {
                                         generate();
                                     }
                                 }}
-                                placeholder="Describe the visualization - topic, data shape, or insight…"
+                                placeholder={t("placeholder")}
                                 className="w-full text-[14px] leading-relaxed text-[#1a1a1a] bg-transparent outline-none
                                            placeholder:text-[#bbb] resize-none min-h-[52px]"
                                 autoFocus
@@ -1145,7 +1147,7 @@ export default function RPage() {
                                 {uploading && (
                                     <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg text-[11px] text-gray-400">
                                         <IconLoader2 className="w-3 h-3 animate-spin" />
-                                        Reading…
+                                        {t("reading")}
                                     </span>
                                 )}
                             </div>
@@ -1185,11 +1187,11 @@ export default function RPage() {
                                     <span className="flex items-center gap-1 px-2 py-1 bg-[#f5f5f5] text-[#555] border border-[#e8e8e8]
                                                      rounded-lg text-[11px] font-semibold">
                                         <IconSparkles className="w-3 h-3" />
-                                        Multi-chart
+                                        {t("multiChart")}
                                     </span>
                                 ) : (
                                     <span className="text-[11px] text-gray-300 px-1 hidden sm:block">
-                                        Select chart(s) above or let AI choose
+                                        {t("selectOrLetAi")}
                                     </span>
                                 )}
                             </div>

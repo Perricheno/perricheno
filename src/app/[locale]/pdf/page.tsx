@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useAdmin } from "@/components/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
@@ -294,6 +295,7 @@ const TOOL_SETTINGS: Record<string, SettingField[]> = {
 };
 
 export default function PDFPage() {
+    const t = useTranslations("pdf");
     const { user } = useAdmin();
     const { showToast } = useToast();
     const [activeTool, setActiveTool] = useState<ToolType | null>(null);
@@ -367,9 +369,9 @@ export default function PDFPage() {
         setErrorMsg("");
 
         if (user) {
-             showToast("Processing started. Files will be sent to your Telegram automatically.", "success");
+             showToast(t("processingStarted"), "success");
         } else {
-             showToast("Don't close this tab until the download is ready.", "info");
+             showToast(t("keepTabOpen"), "info");
         }
 
         try {
@@ -508,7 +510,7 @@ export default function PDFPage() {
                         <input type="range" value={val} onChange={e => update(parseInt(e.target.value))} min={field.min} max={field.max} step={field.step}
                             className="w-full accent-[var(--foreground)]" />
                         <div className="flex justify-between text-[10px] text-gray-400">
-                            <span>Low</span><span>High</span>
+                            <span>{t("low")}</span><span>{t("high")}</span>
                         </div>
                     </div>
                 );
@@ -520,7 +522,7 @@ export default function PDFPage() {
         <div className="w-full h-full font-sans">
             <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-24">
                 {activeTool && user && <div className="absolute top-6 right-6 z-40 px-4 py-2 bg-[var(--card)] rounded-full shadow-sm border border-[var(--border)] text-sm font-medium flex items-center gap-2">
-                    <IconBrandTelegram className="w-4 h-4 text-blue-500" /> Auto-delivery active
+                    <IconBrandTelegram className="w-4 h-4 text-blue-500" /> {t("autoDelivery")}
                 </div>}
 
                 <AnimatePresence mode="wait">
@@ -528,9 +530,9 @@ export default function PDFPage() {
                         <motion.div key="grid" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
                             className="flex flex-col">
                             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
-                                Document Tools
+                                {t("title")}
                             </h1>
-                            <p className="text-lg text-gray-500 mb-10 max-w-xl">Supercharge your workflow with our advanced suite of PDF utilities.</p>
+                            <p className="text-lg text-gray-500 mb-10 max-w-xl">{t("subtitle")}</p>
 
                             {/* Categories */}
                             <div className="flex flex-wrap gap-2 mb-8 bg-[var(--card)] p-1.5 rounded-[var(--radius)] w-fit border border-[var(--border)] shadow-sm">
@@ -573,7 +575,7 @@ export default function PDFPage() {
                             <div className="w-full flex items-center justify-between mb-6">
                                 <button onClick={() => { setActiveTool(null); reset(); }}
                                     className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5 -ml-3">
-                                    <IconArrowLeft className="w-4 h-4" /> Back to tools
+                                    <IconArrowLeft className="w-4 h-4" /> {t("backToTools")}
                                 </button>
                                 <div className="px-3 py-1 bg-[var(--card)] rounded-full border border-[var(--border)] text-xs font-semibold text-gray-500 shadow-sm">
                                     {tool?.category} / {tool?.title}
@@ -590,7 +592,7 @@ export default function PDFPage() {
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <IconCloudUpload className="w-4 h-4 text-blue-500" stroke={1.5} />
-                                                        <span className="text-xs font-semibold text-gray-700">Upload</span>
+                                                        <span className="text-xs font-semibold text-gray-700">{t("uploadLabel")}</span>
                                                     </div>
                                                     <span className="text-xs font-bold tabular-nums text-blue-600">{uploadedCount}/{totalFiles}</span>
                                                 </div>
@@ -604,7 +606,7 @@ export default function PDFPage() {
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <IconLoader2 className={`w-4 h-4 text-green-500 ${convertedCount < totalFiles ? 'animate-spin' : ''}`} stroke={1.5} />
-                                                        <span className="text-xs font-semibold text-gray-700">Convert</span>
+                                                        <span className="text-xs font-semibold text-gray-700">{t("convertLabel")}</span>
                                                     </div>
                                                     <span className="text-xs font-bold tabular-nums text-green-600">{convertedCount}/{totalFiles}</span>
                                                 </div>
@@ -615,19 +617,19 @@ export default function PDFPage() {
                                         </div>
                                         
                                         <h3 className="font-semibold text-lg mb-1 text-[var(--foreground)]">
-                                            {status === "zipping" ? "Packaging results..." : uploadedCount < totalFiles ? "Uploading files..." : "Converting..."}
+                                            {status === "zipping" ? t("packaging") : uploadedCount < totalFiles ? t("uploading") : t("converting")}
                                         </h3>
                                         <p className="text-xs text-gray-500 mb-4">
-                                            {status === "zipping" ? "Almost done" : `${convertedCount} of ${totalFiles} files done`}
+                                            {status === "zipping" ? t("almostDone") : t("filesProcessed").replace("{done}", String(convertedCount)).replace("{total}", String(totalFiles))}
                                         </p>
                                         
                                         {user ? (
                                             <p className="text-sm text-gray-500 max-w-xs">
-                                                You can safely close this page. Results will arrive via Telegram. ✨
+                                                {t("telegramNote")}
                                             </p>
                                         ) : (
                                             <div className="bg-blue-50 text-blue-600 p-3 rounded-xl border border-blue-100 max-w-sm">
-                                                <p className="text-xs"><strong>Guest:</strong> Keep this tab open until done.</p>
+                                                <p className="text-xs">{t("guestNote")}</p>
                                             </div>
                                         )}
                                     </div>
@@ -645,8 +647,8 @@ export default function PDFPage() {
                                             <IconCloudUpload className="w-8 h-8 text-gray-400 group-hover:text-[var(--foreground)] transition-colors" stroke={1.5} />
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-lg font-semibold mb-1">Click to upload or drag & drop</p>
-                                            <p className="text-sm text-gray-500">Supports {tool?.accept} files up to 50MB</p>
+                                            <p className="text-lg font-semibold mb-1">{t("uploadOrDrop")}</p>
+                                            <p className="text-sm text-gray-500">{t("supportsFiles").replace("{accept}", tool?.accept ?? "")}</p>
                                         </div>
                                     </div>
                                 ) : (
@@ -657,11 +659,11 @@ export default function PDFPage() {
                                                     <IconFileDescription className="w-5 h-5" stroke={1.5} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-semibold text-sm leading-tight">Selected Files</h3>
-                                                    <p className="text-xs text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} queued</p>
+                                                    <h3 className="font-semibold text-sm leading-tight">{t("selectedFiles")}</h3>
+                                                    <p className="text-xs text-gray-500">{files.length} {t("queued")}</p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => fileInputRef.current?.click()} className="text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-black/5 transition-colors">+ Add</button>
+                                            <button onClick={() => fileInputRef.current?.click()} className="text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-black/5 transition-colors">{t("add")}</button>
                                             <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                         </div>
 
@@ -691,7 +693,7 @@ export default function PDFPage() {
                                                     className="w-full flex items-center justify-between px-4 py-3 bg-black/[0.02] hover:bg-black/5 transition-colors">
                                                     <div className="flex items-center gap-2">
                                                         <IconSettings className="w-4 h-4 text-gray-500" stroke={1.5} />
-                                                        <span className="text-sm font-semibold text-gray-700">Conversion Settings</span>
+                                                        <span className="text-sm font-semibold text-gray-700">{t("conversionSettings")}</span>
                                                     </div>
                                                     {showSettings ? <IconChevronUp className="w-4 h-4 text-gray-400" /> : <IconChevronDown className="w-4 h-4 text-gray-400" />}
                                                 </button>
@@ -708,22 +710,22 @@ export default function PDFPage() {
                                                 <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4">
                                                     <IconFileCheck className="w-8 h-8" stroke={1.5} />
                                                 </div>
-                                                <p className="font-bold text-xl mb-1 text-[var(--foreground)]">Success!</p>
+                                                <p className="font-bold text-xl mb-1 text-[var(--foreground)]">{t("success")}</p>
                                                 <p className="text-sm text-gray-500 text-center max-w-xs mb-6">
-                                                   Your document has been processed. Download it below.
+                                                   {t("successDesc")}
                                                 </p>
                                                 
                                                 <a href={downloadUrl} download={downloadName}
                                                     className="w-full py-3.5 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-semibold hover:opacity-90 hover:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md">
-                                                    <IconDownload className="w-5 h-5" /> Download Result
+                                                    <IconDownload className="w-5 h-5" /> {t("downloadResult")}
                                                 </a>
-                                                <button onClick={reset} className="mt-4 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors">Process another file</button>
+                                                <button onClick={reset} className="mt-4 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors">{t("processAnother")}</button>
                                             </div>
                                         ) : (
                                             <button onClick={convert}
                                                 disabled={status !== "idle" && status !== "error"}
                                                 className="w-full py-4 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-bold hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-md mt-2 flex items-center justify-center gap-2">
-                                                Start Processing
+                                                {t("startProcessing")}
                                             </button>
                                         )}
 
@@ -731,7 +733,7 @@ export default function PDFPage() {
                                             <div className="p-4 rounded-xl border border-red-200 bg-red-50 mt-2 flex gap-3 text-red-600">
                                                 <IconX className="w-5 h-5 shrink-0 mt-0.5" />
                                                 <div>
-                                                    <p className="font-semibold text-sm mb-0.5">Operation failed</p>
+                                                    <p className="font-semibold text-sm mb-0.5">{t("operationFailed")}</p>
                                                     <p className="text-xs opacity-80 break-all">{errorMsg}</p>
                                                 </div>
                                             </div>

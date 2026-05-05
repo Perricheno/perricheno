@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import { useAdmin } from "@/components/AdminContext";
 import { 
     IconSend, IconClock, IconCheck, IconTrash, IconLoader2, 
@@ -17,6 +18,7 @@ interface Task {
 }
 
 export default function TasksPage() {
+    const t = useTranslations("tasks");
     const { user, setShowLogin, setIsEditing } = useAdmin();
     const { showToast } = useToast();
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -85,9 +87,9 @@ export default function TasksPage() {
             });
             const data = await res.json();
             if (!res.ok) {
-                showToast(data.error || "Failed to schedule task", "error");
+                showToast(data.error || t("failedToUpdate"), "error");
             } else {
-                showToast("Task scheduled via AI ✨", "success");
+                showToast(t("taskScheduled"), "success");
                 if (data.task) {
                     setTasks(prev => [...prev, data.task].sort((a, b) => new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime()));
                 } else {
@@ -95,7 +97,7 @@ export default function TasksPage() {
                 }
             }
         } catch (e) {
-            showToast("Network error", "error");
+            showToast(t("networkError"), "error");
         } finally {
             setIsParsing(false);
         }
@@ -115,16 +117,16 @@ export default function TasksPage() {
             });
             const data = await res.json();
             if (res.ok) {
-                showToast("Task created!", "success");
+                showToast(t("taskCreated"), "success");
                 setTasks(prev => [...prev, data].sort((a, b) => new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime()));
                 setManualText("");
                 setManualDate("");
                 setManualTime("");
             } else {
-                showToast(data.error || "Failed to create task", "error");
+                showToast(data.error || t("failedToUpdate"), "error");
             }
         } catch (e) {
-            showToast("Network error", "error");
+            showToast(t("networkError"), "error");
         } finally {
             setIsCreating(false);
         }
@@ -153,9 +155,9 @@ export default function TasksPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ taskId: editingId, text: editText, remindAt, status: 'pending' })
             });
-            showToast("Task updated!", "success");
+            showToast(t("taskUpdated"), "success");
         } catch (e) {
-            showToast("Failed to update", "error");
+            showToast(t("failedToUpdate"), "error");
             fetchTasks();
         }
     };
@@ -170,8 +172,8 @@ export default function TasksPage() {
                 body: JSON.stringify({ taskId: task.id, status: newStatus })
             });
         } catch (e) {
-            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: task.status } : t));
-            showToast("Failed to update", "error");
+            setTasks(prev => prev.map(tk => tk.id === task.id ? { ...tk, status: task.status } : tk));
+            showToast(t("failedToUpdate"), "error");
         }
     };
 
@@ -180,7 +182,7 @@ export default function TasksPage() {
         try {
             await fetch(`/api/tasks?id=${taskId}`, { method: 'DELETE' });
         } catch (e) {
-            showToast("Failed to delete", "error");
+            showToast(t("failedToDelete"), "error");
             fetchTasks();
         }
     };
@@ -208,8 +210,8 @@ export default function TasksPage() {
         <div className="w-full h-full font-sans">
             <div className="max-w-3xl mx-auto px-6 py-12 md:py-24">
                 <div className="mb-8">
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Schedule Tasks</h1>
-                    <p className="text-gray-500">Create tasks with AI or manually. Get reminders via Telegram Bot.</p>
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">{t("title")}</h1>
+                    <p className="text-gray-500">{t("subtitle")}</p>
                 </div>
 
                 {!user ? (
@@ -217,13 +219,13 @@ export default function TasksPage() {
                         <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
                             <IconClock className="w-8 h-8 text-gray-400" />
                         </div>
-                        <h2 className="text-xl font-bold mb-2">Telegram Authentication Required</h2>
+                        <h2 className="text-xl font-bold mb-2">{t("signInTitle")}</h2>
                         <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                            Connect Telegram to schedule tasks and receive reminders via Bot.
+                            {t("signInDesc")}
                         </p>
                         <button onClick={() => setShowLogin(true)}
                             className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-[var(--radius)] font-semibold hover:opacity-90 transition-opacity shadow-sm">
-                            Connect Telegram
+                            {t("connectTelegram")}
                         </button>
                     </div>
                 ) : (
@@ -236,7 +238,7 @@ export default function TasksPage() {
                                         ? 'bg-[var(--card)] shadow-sm text-[var(--foreground)]' 
                                         : 'text-gray-500 hover:text-[var(--foreground)]'
                                 }`}>
-                                <IconSparkles className="w-4 h-4" /> AI Assistant
+                                <IconSparkles className="w-4 h-4" /> {t("aiAssistant")}
                             </button>
                             <button onClick={() => { setActiveTab('manual'); if (!manualDate) setManualDate(getDefaultDate()); if (!manualTime) setManualTime(getDefaultTime()); }}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -244,7 +246,7 @@ export default function TasksPage() {
                                         ? 'bg-[var(--card)] shadow-sm text-[var(--foreground)]' 
                                         : 'text-gray-500 hover:text-[var(--foreground)]'
                                 }`}>
-                                <IconPlus className="w-4 h-4" /> Manual
+                                <IconPlus className="w-4 h-4" /> {t("manual")}
                             </button>
                         </div>
 
@@ -253,7 +255,7 @@ export default function TasksPage() {
                             <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <IconSparkles className="w-4 h-4 text-yellow-500" />
-                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ask AI to schedule</span>
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("askAiLabel")}</span>
                                 </div>
                                 <div className="relative">
                                     <input
@@ -262,7 +264,7 @@ export default function TasksPage() {
                                         onChange={e => setAiInput(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && handleAiSend()}
                                         disabled={isParsing}
-                                        placeholder={`"19:00 напомни о лекарствах" or "remind me to call mom tomorrow at 3pm"`}
+                                        placeholder={t("aiPlaceholder")}
                                         className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-3 pr-12 text-sm outline-none focus:border-gray-400 transition-colors disabled:opacity-50"
                                     />
                                     <button onClick={handleAiSend} disabled={isParsing || !aiInput.trim()}
@@ -278,19 +280,19 @@ export default function TasksPage() {
                             <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
                                     <IconCalendar className="w-4 h-4 text-blue-500" />
-                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Create task manually</span>
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("manualLabel")}</span>
                                 </div>
                                 <div className="space-y-3">
                                     <input
                                         type="text"
                                         value={manualText}
                                         onChange={e => setManualText(e.target.value)}
-                                        placeholder="What do you need to do?"
+                                        placeholder={t("taskPlaceholder")}
                                         className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
                                     />
                                     <div className="flex gap-3">
                                         <div className="flex-1">
-                                            <label className="text-xs text-gray-500 mb-1 block">Date</label>
+                                            <label className="text-xs text-gray-500 mb-1 block">{t("dateLabel")}</label>
                                             <input
                                                 type="date"
                                                 value={manualDate}
@@ -299,7 +301,7 @@ export default function TasksPage() {
                                             />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="text-xs text-gray-500 mb-1 block">Time</label>
+                                            <label className="text-xs text-gray-500 mb-1 block">{t("timeLabel")}</label>
                                             <input
                                                 type="time"
                                                 value={manualTime}
@@ -311,7 +313,7 @@ export default function TasksPage() {
                                     <button onClick={handleManualCreate} disabled={isCreating || !manualText.trim() || !manualDate || !manualTime}
                                         className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-lg font-semibold text-sm disabled:opacity-40 hover:opacity-90 transition-opacity">
                                         {isCreating ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconPlus className="w-4 h-4" />}
-                                        Add Task
+                                        {t("addTask")}
                                     </button>
                                 </div>
                             </div>
@@ -328,7 +330,7 @@ export default function TasksPage() {
                                 {pendingTasks.length > 0 && (
                                     <div>
                                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                                            Upcoming ({pendingTasks.length})
+                                            {t("upcoming").replace("{count}", String(pendingTasks.length))}
                                         </h3>
                                         <div className="space-y-2">
                                             {pendingTasks.map(task => (
@@ -347,11 +349,11 @@ export default function TasksPage() {
                                                             <div className="flex gap-2 justify-end">
                                                                 <button onClick={() => setEditingId(null)}
                                                                     className="px-3 py-1.5 text-xs text-gray-500 hover:text-[var(--foreground)] rounded-md hover:bg-black/5 transition-colors">
-                                                                    Cancel
+                                                                    {t("cancel")}
                                                                 </button>
                                                                 <button onClick={saveEdit}
                                                                     className="px-4 py-1.5 text-xs bg-[var(--foreground)] text-[var(--background)] rounded-md font-semibold hover:opacity-90 transition-opacity">
-                                                                    Save
+                                                                    {t("save")}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -393,7 +395,7 @@ export default function TasksPage() {
                                 {doneTasks.length > 0 && (
                                     <div>
                                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                                            Completed ({doneTasks.length})
+                                            {t("completed").replace("{count}", String(doneTasks.length))}
                                         </h3>
                                         <div className="space-y-2">
                                             {doneTasks.map(task => (
@@ -422,8 +424,8 @@ export default function TasksPage() {
                                         <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
                                             <IconCalendar className="w-7 h-7 text-gray-400" />
                                         </div>
-                                        <p className="text-gray-500 text-sm mb-1">No tasks yet</p>
-                                        <p className="text-gray-400 text-xs">Use AI or Manual mode to create your first task</p>
+                                        <p className="text-gray-500 text-sm mb-1">{t("noTasksTitle")}</p>
+                                        <p className="text-gray-400 text-xs">{t("noTasksDesc")}</p>
                                     </div>
                                 )}
                             </div>

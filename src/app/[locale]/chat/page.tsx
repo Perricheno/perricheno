@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
     IconSend, IconPaperclip, IconMicrophone, IconPlayerStop,
     IconPhoto, IconFile, IconX, IconSettings, IconPlus, IconMessage,
@@ -86,10 +87,12 @@ function getSystemInfo() {
 }
 
 export default function ChatPage() {
+    const t = useTranslations("chat");
+
     /* ── State ── */
     const [initialChatId] = useState(() => genId());
     const [threads, setThreads] = useState<ChatThread[]>([
-        { id: initialChatId, title: "New Chat", messages: [], createdAt: new Date() }
+        { id: initialChatId, title: t("newChat"), messages: [], createdAt: new Date() }
     ]);
     const [activeThreadId, setActiveThreadId] = useState(initialChatId);
     
@@ -193,7 +196,7 @@ export default function ChatPage() {
     /* ── Thread management ── */
     const createThread = async () => {
         const id = genId();
-        const newThread = { id, title: "New Chat", messages: [], createdAt: new Date() };
+        const newThread = { id, title: t("newChat"), messages: [], createdAt: new Date() };
         setThreads(prev => [newThread, ...prev]);
         setActiveThreadId(id);
         setMobileMenuOpen(false);
@@ -202,7 +205,7 @@ export default function ChatPage() {
         if (user) {
             await fetch("/api/chat/history", {
                 method: "POST",
-                body: JSON.stringify({ action: "create_session", sessionId: id, title: "New Chat" })
+                body: JSON.stringify({ action: "create_session", sessionId: id, title: t("newChat") })
             });
         }
     };
@@ -215,11 +218,11 @@ export default function ChatPage() {
                     method: "DELETE"
                 });
                 if (!res.ok) {
-                    showToast("Failed to delete chat on server", "error");
+                    showToast(t("failedToDelete"), "error");
                 }
             } catch (e) {
                 console.error("Failed to delete thread on server:", e);
-                showToast("Connection error during deletion", "error");
+                showToast(t("connectionError"), "error");
             }
         }
 
@@ -252,7 +255,7 @@ export default function ChatPage() {
 
         if (!user) {
             setShowLogin(true);
-            showToast("Please sign in to send messages", "info");
+            showToast(t("signInToChat"), "info");
             return;
         }
 
@@ -390,7 +393,7 @@ export default function ChatPage() {
                 error: true
             };
             updateThreadMessages(activeThreadId, [...updatedMessages, errorMsg]);
-            showToast("Failed to send message", "error");
+            showToast(t("failedToSend"), "error");
         } finally {
             setIsLoading(false);
         }
@@ -418,7 +421,7 @@ export default function ChatPage() {
             setIsRecording(true);
             setRecordingTime(0);
             timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-        } catch { showToast("Microphone access denied", "error"); }
+        } catch { showToast(t("micDenied"), "error"); }
     };
     const stopRecording = () => {
         mediaRecorderRef.current?.stop();
@@ -430,7 +433,7 @@ export default function ChatPage() {
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-[var(--background)] border-r border-[var(--border)]">
             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-                <h2 className="font-bold text-sm tracking-wide">CHATS</h2>
+                <h2 className="font-bold text-sm tracking-wide">{t("chats")}</h2>
                 <button onClick={createThread} className="text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
                     <IconPlus className="w-5 h-5" />
                 </button>
@@ -455,7 +458,7 @@ export default function ChatPage() {
 
     return (
         <div className="w-full h-full flex overflow-hidden font-sans">
-            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); showToast("Welcome back!", "success"); }} onClose={() => setShowLogin(false)} />}
+            {showLogin && <LoginModal onSuccess={() => { setIsEditing(true); setShowLogin(false); showToast(t("welcomeBack"), "success"); }} onClose={() => setShowLogin(false)} />}
             <ChatSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} onSettingsChanged={setSettings} />
 
             {/* Desktop Sidebar */}
@@ -487,7 +490,7 @@ export default function ChatPage() {
                         </button>
                         <div className="flex flex-col">
                             <span className="font-bold text-sm md:text-base truncate max-w-[150px] md:max-w-md">{activeThread.title}</span>
-                            <span className="text-[10px] opacity-40 uppercase tracking-widest">{messages.length} messages</span>
+                            <span className="text-[10px] opacity-40 uppercase tracking-widest">{messages.length} {t("messages")}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -504,7 +507,7 @@ export default function ChatPage() {
                     {messages.length === 0 && (
                         <div className="h-full flex flex-col items-center justify-center opacity-20 select-none">
                             <IconRobot className="w-24 h-24 mb-6 stroke-1" />
-                            <p className="text-xl font-light">How can I help you?</p>
+                            <p className="text-xl font-light">{t("howCanIHelp")}</p>
                         </div>
                     )}
                     {messages.map((msg) => (
@@ -587,7 +590,7 @@ export default function ChatPage() {
                                         sendMessage();
                                     }
                                 }}
-                                placeholder={!user ? "Sign in to chat..." : "Type your message..."}
+                                placeholder={!user ? t("signInPlaceholder") : t("typePlaceholder")}
                                 disabled={isRecording}
                                 className="flex-1 bg-transparent max-h-[150px] py-3 px-1 outline-none resize-none text-sm md:text-base leading-relaxed cursor-text disabled:cursor-pointer"
                                 rows={1}
