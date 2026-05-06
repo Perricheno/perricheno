@@ -5,12 +5,31 @@ import { motion } from "framer-motion";
 import { IconCheck, IconLock } from "@tabler/icons-react";
 import { RotatingBorderWrapper } from "./RotatingBorderWrapper";
 import type { PLANS } from "./constants";
+import type { PricingCurrency } from "./PricingSection";
 
 // ── Pricing Card ───────────────────────────────────────────────────────────────
-export function PricingCard({ plan, isAnnual }: { plan: typeof PLANS[number]; isAnnual: boolean }) {
-    const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
+    plan: typeof PLANS[number];
+    isAnnual: boolean;
+    currency?: PricingCurrency;
+}) {
     const isFree = plan.priceMonthly === 0;
     const showSavingBadge = isAnnual && !isFree;
+
+    const price = currency === 'kzt'
+        ? (isAnnual ? plan.priceKZTAnnual : plan.priceKZT)
+        : currency === 'rub'
+        ? (isAnnual ? plan.priceRUBAnnual : plan.priceRUB)
+        : (isAnnual ? plan.priceAnnual : plan.priceMonthly);
+
+    const symbol = currency === 'kzt' ? '₸' : currency === 'rub' ? '₽' : '$';
+
+    // Sub-label: per-month breakdown when billing annually
+    const annualPerMonth = currency === 'kzt'
+        ? `~${Math.round(plan.priceKZTAnnual / 12).toLocaleString('ru-RU')} ₸/мес`
+        : currency === 'rub'
+        ? `~${Math.round(plan.priceRUBAnnual / 12).toLocaleString('ru-RU')} ₽/мес`
+        : `~$${(plan.priceAnnual / 12).toFixed(2)}/mo`;
 
     const cardInner = (
         <div className="p-8 flex flex-col h-full">
@@ -36,19 +55,21 @@ export function PricingCard({ plan, isAnnual }: { plan: typeof PLANS[number]; is
             {/* Price */}
             <div className="mb-8">
                 {isFree ? (
-                    <div className="text-4xl md:text-5xl font-bold tracking-tighter">$0</div>
+                    <div className="text-4xl md:text-5xl font-bold tracking-tighter">{symbol}0</div>
                 ) : (
                     <>
                         <div className="flex items-end gap-1">
-                            <span className={`text-lg font-bold mb-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>$</span>
-                            <span className="text-4xl md:text-5xl font-bold tracking-tighter">{price}</span>
+                            <span className={`text-lg font-bold mb-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>{symbol}</span>
+                            <span className="text-4xl md:text-5xl font-bold tracking-tighter">
+                                {currency === 'usd' ? price : price.toLocaleString('ru-RU')}
+                            </span>
                             <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ml-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
                                 /{isAnnual ? "yr" : "mo"}
                             </span>
                         </div>
                         {isAnnual && (
                             <p className={`text-xs mt-1 ${plan.highlighted ? "opacity-40" : "opacity-40"}`}>
-                                ~${(plan.priceAnnual / 12).toFixed(2)}/mo billed annually
+                                {annualPerMonth} {currency !== 'usd' && <span className="opacity-60">· via {currency === 'kzt' ? 'Kaspi' : 'Crypto'}</span>}
                             </p>
                         )}
                     </>

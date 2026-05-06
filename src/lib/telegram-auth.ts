@@ -1,9 +1,10 @@
 import { createHmac, createHash } from 'crypto';
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-if (!BOT_TOKEN) {
+const _botToken = process.env.TELEGRAM_BOT_TOKEN;
+if (!_botToken) {
     throw new Error("TELEGRAM_BOT_TOKEN env var is not set");
 }
+const BOT_TOKEN: string = _botToken;
 
 export function verifyTelegramAuth(data: Record<string, any>): boolean {
     if (!data || !data.hash) {

@@ -16,6 +16,10 @@ const PLAN_STATIC = [
         id: "free",
         priceMonthly: 0,
         priceAnnual: 0,
+        priceKZT: 0,
+        priceKZTAnnual: 0,
+        priceRUB: 0,
+        priceRUBAnnual: 0,
         tag: null,
         accent: "#666",
         features: [
@@ -25,7 +29,7 @@ const PLAN_STATIC = [
             { text: "7-day chat retention", included: true },
             { text: "Quota resets: Mon, 00:00 AST", included: true },
             { text: "200K chars PDF staging (24h)", included: true },
-            { text: "ZIP Project Export", included: false },
+            { text: "ZIP Project Export", included: true },
             { text: "R Environment (CRAN)", included: false },
             { text: "AI Code Editing", included: false },
         ]
@@ -34,6 +38,10 @@ const PLAN_STATIC = [
         id: "plus",
         priceMonthly: 3.99,
         priceAnnual: 39.00,
+        priceKZT: 1990,
+        priceKZTAnnual: 19900,
+        priceRUB: 390,
+        priceRUBAnnual: 3900,
         tag: null,
         accent: "#a8a8a8",
         features: [
@@ -52,6 +60,10 @@ const PLAN_STATIC = [
         id: "pro",
         priceMonthly: 7.99,
         priceAnnual: 69.00,
+        priceKZT: 3990,
+        priceKZTAnnual: 39900,
+        priceRUB: 790,
+        priceRUBAnnual: 7900,
         tag: "Popular",
         accent: "#10b981",
         features: [
@@ -69,6 +81,10 @@ const PLAN_STATIC = [
         id: "ultra",
         priceMonthly: 14.99,
         priceAnnual: 149.00,
+        priceKZT: 6990,
+        priceKZTAnnual: 69900,
+        priceRUB: 1490,
+        priceRUBAnnual: 14900,
         tag: "Best Value",
         accent: "#f59e0b",
         features: [
@@ -102,6 +118,7 @@ export default function BillingsPage() {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [receipts, setReceipts] = useState<any[]>([]);
     const [isAnnual, setIsAnnual] = useState(true);
+    const [currency, setCurrency] = useState<'kzt' | 'usd' | 'rub'>('kzt');
     useEffect(() => {
         // Fetch real-time USD/KZT exchange rate
         fetch("https://open.er-api.com/v6/latest/USD")
@@ -142,7 +159,7 @@ export default function BillingsPage() {
             const res = await fetch("/api/billing/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ planId: fullPlanId })
+                body: JSON.stringify({ planId: fullPlanId, currency })
             });
 
             const data = await res.json();
@@ -303,23 +320,47 @@ export default function BillingsPage() {
                         </div>
                     )}
 
-                    {/* Toggle */}
-                    <div className="flex items-center justify-center gap-3 mb-10">
-                        <span className={`text-sm font-semibold transition-colors ${!isAnnual ? 'text-[#1a1a1a]' : 'text-gray-400'}`}>{t("monthly")}</span>
-                        <button 
-                            onClick={() => setIsAnnual(!isAnnual)}
-                            className="relative w-14 h-7 bg-[#111] rounded-full p-1 transition-colors"
-                        >
-                            <motion.div 
-                                layout 
-                                className="w-5 h-5 bg-white rounded-full shadow-md"
-                                animate={{ x: isAnnual ? 28 : 0 }}
-                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                            />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <span className={`text-sm font-semibold transition-colors ${isAnnual ? 'text-[#1a1a1a]' : 'text-gray-400'}`}>{t("annual")}</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">{t("save20")}</span>
+                    {/* Toggle + currency switcher */}
+                    <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+                        {/* Period toggle */}
+                        <div className="flex items-center gap-3">
+                            <span className={`text-sm font-semibold transition-colors ${!isAnnual ? 'text-[#1a1a1a]' : 'text-gray-400'}`}>{t("monthly")}</span>
+                            <button
+                                onClick={() => setIsAnnual(!isAnnual)}
+                                className="relative w-14 h-7 bg-[#111] rounded-full p-1 transition-colors"
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-5 h-5 bg-white rounded-full shadow-md"
+                                    animate={{ x: isAnnual ? 28 : 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            </button>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-sm font-semibold transition-colors ${isAnnual ? 'text-[#1a1a1a]' : 'text-gray-400'}`}>{t("annual")}</span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">{t("save20")}</span>
+                            </div>
+                        </div>
+
+                        {/* Currency switcher */}
+                        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-full p-1 shadow-sm">
+                            {([
+                                { id: 'kzt' as const, label: '₸ KZT' },
+                                { id: 'usd' as const, label: '$ USD' },
+                                { id: 'rub' as const, label: '₽ RUB' },
+                            ]).map(c => (
+                                <button
+                                    key={c.id}
+                                    onClick={() => setCurrency(c.id)}
+                                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${
+                                        currency === c.id
+                                            ? 'bg-[#111] text-white shadow-sm'
+                                            : 'text-gray-400 hover:text-[#1a1a1a]'
+                                    }`}
+                                >
+                                    {c.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -328,7 +369,12 @@ export default function BillingsPage() {
                         {PLANS.map((plan, idx) => {
                             const isPro = plan.id === "pro";
                             const isCurrent = plan.id === currentPlanId;
-                            const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+                            const price = currency === 'kzt'
+                                ? (isAnnual ? plan.priceKZTAnnual : plan.priceKZT)
+                                : currency === 'rub'
+                                ? (isAnnual ? plan.priceRUBAnnual : plan.priceRUB)
+                                : (isAnnual ? plan.priceAnnual : plan.priceMonthly);
+                            const sym = currency === 'kzt' ? '₸' : currency === 'rub' ? '₽' : '$';
 
                             return (
                                 <motion.div
@@ -370,23 +416,31 @@ export default function BillingsPage() {
                                     {/* Price */}
                                     <div className="mb-6">
                                         {plan.priceMonthly === 0 ? (
-                                            <div className="text-4xl font-black text-[#F1F1F3]">$0</div>
+                                            <div className="text-4xl font-black text-[#F1F1F3]">{sym}0</div>
                                         ) : (
                                             <>
                                                 <div className="flex items-end gap-1">
-                                                    <span className="text-xl font-bold text-gray-500 mb-1">$</span>
-                                                    <span className="text-4xl font-black text-[#F1F1F3]">{price}</span>
+                                                    <span className="text-xl font-bold text-gray-500 mb-1">{sym}</span>
+                                                    <span className="text-4xl font-black text-[#F1F1F3]">
+                                                        {currency === 'usd' ? price : price.toLocaleString('ru-RU')}
+                                                    </span>
                                                     <span className="text-xs font-semibold text-gray-500 mb-2">/{isAnnual ? 'yr' : 'mo'}</span>
                                                 </div>
-                                                {exchangeRate && (
-                                                    <div className="text-[15px] font-bold text-gray-400 mt-1">
+                                                {currency === 'usd' && exchangeRate && (
+                                                    <div className="text-[13px] font-bold text-gray-400 mt-1">
                                                         ~{(price * exchangeRate).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₸
                                                     </div>
+                                                )}
+                                                {currency === 'kzt' && (
+                                                    <div className="text-[11px] font-semibold text-emerald-400 mt-1">Оплата через Kaspi Pay</div>
+                                                )}
+                                                {currency === 'rub' && (
+                                                    <div className="text-[11px] font-semibold text-gray-400 mt-1">Оплата через CryptoCloud</div>
                                                 )}
                                             </>
                                         )}
                                         <div className="text-[10px] text-gray-500 font-medium mt-1 h-4">
-                                            {isAnnual && price > 0 ? t("billedAnnually", { price: price.toFixed(2) }) : ''}
+                                            {isAnnual && price > 0 && currency === 'usd' ? t("billedAnnually", { price: price.toFixed(2) }) : ''}
                                         </div>
                                     </div>
 

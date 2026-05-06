@@ -50,13 +50,7 @@ export async function POST(req: Request) {
             return new NextResponse('OK', { status: 200 });
         }
 
-        // --- IDEMPOTENCY CHECK ---
-        if (orderId && await isPaymentProcessed(orderId)) {
-            console.log(`ℹ️ Webhook: Skipping already processed order ${orderId}`);
-            return new NextResponse('Already processed', { status: 200 });
-        }
-
-        // Signature MUST always be verified — reject if secret is not configured (misconfiguration)
+        // --- SIGNATURE FIRST (prevents timing oracle on order IDs) ---
         if (!CRYPTOCLOUD_SECRET) {
             console.error('🚨 CRITICAL: CRYPTOCLOUD_SECRET is not set — billing webhook disabled for safety');
             return new NextResponse('Server misconfiguration', { status: 500 });
@@ -70,6 +64,12 @@ export async function POST(req: Request) {
         if (expectedSign !== receivedSign) {
             console.error(`🚨 SECURITY: Billing webhook signature mismatch`);
             return new NextResponse('Invalid signature', { status: 403 });
+        }
+
+        // --- IDEMPOTENCY CHECK (after signature) ---
+        if (orderId && await isPaymentProcessed(orderId)) {
+            console.log(`ℹ️ Webhook: Skipping already processed order ${orderId}`);
+            return new NextResponse('Already processed', { status: 200 });
         }
 
         if (!orderId || !orderId.startsWith("UID_")) {
