@@ -7,17 +7,24 @@ const intlMiddleware = createMiddleware(routing);
 export default function middleware(request: NextRequest) {
     const response = intlMiddleware(request);
 
-    // Strip :PORT from redirect Location so Cloudflare Tunnel
-    // doesn't expose internal port in public-facing URLs
+    // Strip :PORT from redirect Location only for external (public) requests.
+    // Internal requests (localhost, health checks) must keep the port so wget
+    // follows the redirect to the correct port instead of defaulting to :80.
     if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get("Location");
-        if (location) {
-            const fixed = location.replace(/:\d{4,5}(\/|$)/, "$1");
-            if (fixed !== location) {
-                const headers = new Headers(response.headers);
-                headers.set("Location", fixed);
-                return new NextResponse(null, { status: response.status, headers });
-            }
+        const requestHost = request.headers.get("host") ?? "";
+        const isInternal = requestHost.startsWith("localhost") || requestHost.startsWith("127.");
+
+        if (location && !isInternal) {
+            try {
+                const locUrl = new URL(location);
+                if (locUrl.port) {
+                    locUrl.port = "";
+                    const headers = new Headers(response.headers);
+                    headers.set("Location", locUrl.toString());
+                    return new NextResponse(null, { status: response.status, headers });
+                }
+            } catch {}
         }
     }
 
