@@ -33,6 +33,30 @@ export interface PlanSection {
     wordTarget: number;
     tasks: string[];          // bullet points the drafter must cover
     refFocus?: string[];      // filenames of uploads most relevant here (advisory)
+    visualIds?: string[];     // ids of visuals planned for this section
+}
+
+export type VisualType = "flowchart" | "diagram" | "chart" | "timeline" | "architecture" | "comparison" | "other";
+
+export interface PlannedVisual {
+    id: string;              // slug, e.g. "fig_pipeline_arch"
+    sectionHeading: string;  // which section this belongs to
+    type: VisualType;
+    description: string;     // what the visual should depict (for LLM prompt)
+    caption: string;         // LaTeX \caption{} text
+    label: string;           // LaTeX \label{} key, e.g. "fig:pipeline_arch"
+}
+
+export interface GeneratedVisual {
+    id: string;
+    sectionHeading: string;
+    filename: string;        // e.g. "fig_pipeline_arch.png"
+    caption: string;
+    label: string;
+    pngBase64: string;       // base64-encoded PNG
+    type: VisualType;
+    failed?: boolean;
+    error?: string;
 }
 
 export interface Plan {
@@ -41,6 +65,7 @@ export interface Plan {
     totalWordTarget: number;
     docType: DocType;
     language: string;
+    visuals: PlannedVisual[];
 }
 
 export interface ExtractedRef {
@@ -77,6 +102,7 @@ export interface AssembledDoc {
     referencesBib: string | null;
     warnings: string[];
     unresolvedCitations: string[];
+    visuals?: GeneratedVisual[];
 }
 
 

@@ -2,11 +2,12 @@
 // Called from /api/agent/generate in a fire-and-forget background task.
 // Streams progress updates into agent_sessions.stage_json so the UI can poll.
 
-import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult } from "./types";
+import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult, GeneratedVisual } from "./types";
 import type { StageProgress } from "../stages";
 import type { AgentUpload } from "@/lib/db";
 import { runStage1 } from "./stage1_plan";
 import { runStage2 } from "./stage2_extract";
+import { runStage2_3 } from "./stage2_3_visuals";
 import { runStage2_5 } from "./stage2_5_verify";
 import { runStage2_7 } from "./stage2_7_enrich_doi";
 import { runStage3 } from "./stage3_draft";
@@ -26,6 +27,7 @@ export interface RunPipelineOutput {
     plan: Plan;
     refs: ExtractedRef[];
     verifications: VerificationResult[];
+    generatedVisuals: GeneratedVisual[];
     sections: SectionDraft[];
     assembled: AssembledDoc;
     mainTex: string;
@@ -110,6 +112,30 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         totalTokens += t2_5;
     }
 
+    // ── Stage 3b: Visual Generation ──
+    let generatedVisuals: GeneratedVisual[] = [];
+    if (plan.visuals.length > 0) {
+        await updateProgress({
+            current_stage: 3,
+            label: `Generating ${plan.visuals.length} figure(s)`,
+            completed_stages: [1, 2],
+        });
+        await addLog(`Planned ${plan.visuals.length} visual(s): ${plan.visuals.map(v => v.id).join(", ")}`, "info");
+
+        const { generatedVisuals: gv, tokensUsed: tv } = await runStage2_3(
+            plan.visuals,
+            settings.language,
+            async (done, total, id) => {
+                await updateProgress({ progress: { done, total }, label: `Rendering figure ${id} (${done}/${total})` });
+            },
+        );
+        generatedVisuals = gv;
+        totalTokens += tv;
+
+        const okCount = generatedVisuals.filter(v => !v.failed).length;
+        await addLog(`Figures ready: ${okCount}/${generatedVisuals.length}`, okCount > 0 ? "success" : "info");
+    }
+
     // ── Stage 4: Draft ──
     await updateProgress({
         current_stage: 4,
@@ -123,6 +149,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         enrichedRefs,
         uploads,
         verifications,
+        generatedVisuals,
         async (done, total, heading) => {
             await updateProgress({ progress: { done, total }, label: `Drafting ${heading} (${done}/${total})` });
         },
@@ -136,7 +163,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         completed_stages: [1, 2, 3, 4],
     });
 
-    const assembled = runStage4(settings, plan, enrichedRefs, sections);
+    const assembled = runStage4(settings, plan, enrichedRefs, sections, generatedVisuals);
     await addLog("Assembly complete", "success");
 
     // ── Stage 6: Validate & Repair ──
@@ -164,6 +191,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         plan,
         refs: enrichedRefs,
         verifications,
+        generatedVisuals,
         sections,
         assembled,
         mainTex: validated.finalMainTex,

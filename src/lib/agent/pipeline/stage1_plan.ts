@@ -4,7 +4,7 @@
 // can proceed even if the model misbehaves.
 
 import { chatCompletion, parseJsonLoose, LlmError } from "./llm";
-import type { Plan, PlanSection, PipelineSettings, DocType } from "./types";
+import type { Plan, PlanSection, PipelineSettings, DocType, PlannedVisual, VisualType } from "./types";
 import { withRetry, BABEL_LANG_MAP } from "../stages";
 
 const LANG_DISPLAY_NAMES: Record<string, string> = {
@@ -59,6 +59,8 @@ function localizedHeadings(docType: DocType, lang: string): string[] {
     return en.map(h => map[h] ?? h);
 }
 
+const VISUAL_CAPABLE_DOCTYPES = new Set<DocType>(["research", "diploma", "report", "lab_report", "case_study"]);
+
 function buildFallbackPlan(s: PipelineSettings, filenames: string[]): Plan {
     const headings = localizedHeadings(s.docType, s.language);
     const n = headings.length;
@@ -68,7 +70,7 @@ function buildFallbackPlan(s: PipelineSettings, filenames: string[]): Plan {
         heading: h,
         wordTarget: Math.min(perSection, MAX_WORDS_PER_SECTION),
         tasks: [],
-        refFocus: filenames.slice(0, 3), // broad hint
+        refFocus: filenames.slice(0, 3),
     }));
 
     return {
@@ -77,6 +79,7 @@ function buildFallbackPlan(s: PipelineSettings, filenames: string[]): Plan {
         totalWordTarget: s.wordCount,
         docType: s.docType,
         language: s.language,
+        visuals: [],
     };
 }
 
@@ -108,6 +111,19 @@ function buildSystemPrompt(s: PipelineSettings, filenames: string[]): string {
 
     const hasRefs = s.useReferences && filenames.length > 0;
 
+    const wantsVisuals = VISUAL_CAPABLE_DOCTYPES.has(s.docType);
+    const visualSchema = wantsVisuals ? `
+  "visuals": [
+    {
+      "id": "fig_slug_no_spaces",
+      "sectionHeading": "exact section heading string",
+      "type": "flowchart|diagram|chart|timeline|architecture|comparison|other",
+      "description": "exactly what this visual shows (1-2 sentences for the renderer)",
+      "caption": "Figure caption text in ${lang}",
+      "label": "fig:slug_no_spaces"
+    }
+  ]` : `\n  "visuals": []`;
+
     return `You are a scientific writing planner. Given a topic and constraints, you produce a structured outline for a ${s.docType} in ${lang}.
 
 Output ONLY valid JSON:
@@ -118,9 +134,10 @@ Output ONLY valid JSON:
       "heading": "string",
       "wordTarget": <integer - approximate word count for this section>,
       "tasks": ["bullet points describing what must be covered"${hasRefs ? `, 3-6 items` : ``}],
-      "refFocus": [${hasRefs ? `"filenames.pdf" from the provided reference list that are most relevant to this section; pick at most 3` : `leave empty`}]
+      "refFocus": [${hasRefs ? `"filenames.pdf" from the provided reference list that are most relevant to this section; pick at most 3` : `leave empty`}],
+      "visualIds": ["fig_slug if a visual is planned for this section, else leave empty"]
     }
-  ]
+  ],${visualSchema}
 }
 
 Rules:
@@ -129,9 +146,13 @@ Rules:
 - Section headings must be in ${lang}.
 - Style: ${styleNotes}
 ${hasRefs ? `- Reference files available (filenames only, content not yet read): ${filenames.map(f => `"${f}"`).join(", ")}. Match each section to the files whose titles suggest relevance.` : `- No external references. Do not fabricate citations in tasks.`}
+${wantsVisuals ? `- Plan 1-3 visuals total. Only add a visual where a diagram genuinely clarifies structure, process, or comparison that prose alone cannot convey. Leave visuals empty for simple assignment/review types.
+- Visual ids must be unique slugs using only lowercase letters, digits, underscores. Label must be "fig:" + that id.` : ``}
 
 Do NOT output markdown fences. Do NOT add commentary. JSON only.`;
 }
+
+const VALID_VISUAL_TYPES = new Set<VisualType>(["flowchart", "diagram", "chart", "timeline", "architecture", "comparison", "other"]);
 
 function validatePlan(p: any): Plan | null {
     if (!p || typeof p !== "object") return null;
@@ -146,15 +167,34 @@ function validatePlan(p: any): Plan | null {
             wordTarget: Math.max(100, Math.min(MAX_WORDS_PER_SECTION * 2, Math.round(wt))),
             tasks: Array.isArray(s.tasks) ? s.tasks.map(String).slice(0, 10) : [],
             refFocus: Array.isArray(s.refFocus) ? s.refFocus.map(String).slice(0, 5) : [],
+            visualIds: Array.isArray(s.visualIds) ? s.visualIds.map(String).filter(Boolean) : [],
         });
     }
     if (sections.length === 0) return null;
+
+    // Validate visuals array
+    const visuals: PlannedVisual[] = [];
+    if (Array.isArray(p.visuals)) {
+        for (const v of p.visuals) {
+            if (!v || typeof v !== "object") continue;
+            const id = typeof v.id === "string" ? v.id.trim().replace(/[^a-z0-9_]/g, "_").slice(0, 50) : "";
+            const sectionHeading = typeof v.sectionHeading === "string" ? v.sectionHeading.trim() : "";
+            const type = VALID_VISUAL_TYPES.has(v.type) ? (v.type as VisualType) : "other";
+            const description = typeof v.description === "string" ? v.description.trim() : "";
+            const caption = typeof v.caption === "string" ? v.caption.trim() : "";
+            const label = typeof v.label === "string" ? v.label.trim() : `fig:${id}`;
+            if (!id || !sectionHeading || !description || !caption) continue;
+            visuals.push({ id, sectionHeading, type, description, caption, label });
+        }
+    }
+
     return {
         title: p.title.trim().slice(0, 200),
         sections,
         totalWordTarget: sections.reduce((a, s) => a + s.wordTarget, 0),
         docType: "research", // filled in by caller
         language: "en",
+        visuals,
     };
 }
 

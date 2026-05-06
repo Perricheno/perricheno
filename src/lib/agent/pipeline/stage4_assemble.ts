@@ -5,7 +5,7 @@
 // bibliography, and stubs any that the bib is missing so pdflatex won't die
 // on the first pass.
 
-import type { AssembledDoc, ExtractedRef, Plan, SectionDraft, PipelineSettings } from "./types";
+import type { AssembledDoc, ExtractedRef, GeneratedVisual, Plan, SectionDraft, PipelineSettings } from "./types";
 import {
     normalizeLatexText,
     ensureRussianPreamble,
@@ -51,7 +51,7 @@ function buildPreamble(s: PipelineSettings): string {
     lines.push(
         "\\usepackage{amsmath,amssymb,amsthm}",
         "\\usepackage{graphicx}",
-        "\\graphicspath{{images/}}",
+        "\\graphicspath{{images/}{figures/}}",
         "\\usepackage{hyperref}",
         "\\usepackage{geometry}",
         "\\usepackage{booktabs}",
@@ -195,6 +195,7 @@ export function runStage4(
     plan: Plan,
     refs: ExtractedRef[],
     sections: SectionDraft[],
+    generatedVisuals: GeneratedVisual[] = [],
 ): AssembledDoc {
     const warnings: string[] = [];
 
@@ -247,5 +248,6 @@ export function runStage4(
         referencesBib,
         warnings,
         unresolvedCitations: missing,
+        visuals: generatedVisuals.filter(v => !v.failed && v.pngBase64),
     };
 }
