@@ -2,7 +2,11 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies, headers } from 'next/headers';
 import { createSessionRecord, getSessionById, deleteSessionRecord } from './db';
 
-const SECRET_KEY = new TextEncoder().encode(process.env.SESSION_SECRET || "fallback-secret-key-at-least-thirty-two-chars-long");
+const rawSecret = process.env.SESSION_SECRET;
+if (!rawSecret) {
+    throw new Error("SESSION_SECRET env var is not set — refusing to start with a predictable JWT key");
+}
+const SECRET_KEY = new TextEncoder().encode(rawSecret);
 const SESSION_DURATION = 3650 * 24 * 60 * 60 * 1000; // 10 years (immortal)
 
 async function getIpLocation(ip: string) {
