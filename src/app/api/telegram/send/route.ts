@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifySession } from "@/lib/session";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export async function POST(req: NextRequest) {
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     try {
         if (!BOT_TOKEN) {
             console.error("TELEGRAM_BOT_TOKEN is not defined in environment variables");

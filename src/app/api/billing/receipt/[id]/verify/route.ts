@@ -14,14 +14,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             where: { id }
         });
 
-        // Fetch user data separately
-        let username = 'ANONYMOUS';
-        let telegramId = '';
+        // Fetch user data — mask PII to avoid exposing raw telegram_id
+        let displayId = 'ANONYMOUS';
         if (result) {
             const userData = await prisma.user.findUnique({ select: { username: true, telegram_id: true }, where: { id: result.user_id } });
-            if (userData) {
-                username = userData.username || '';
-                telegramId = userData.telegram_id || '';
+            if (userData?.username) {
+                displayId = `@${userData.username.slice(0, 2)}${'*'.repeat(Math.max(0, userData.username.length - 2))}`;
+            } else if (userData?.telegram_id) {
+                const tid = userData.telegram_id;
+                displayId = `${tid.slice(0, 3)}${'*'.repeat(Math.max(0, tid.length - 3))}`;
             }
         }
 
@@ -193,7 +194,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                         <div class="value">${date}</div>
                         
                         <div class="label">Beneficiary</div>
-                        <div class="value">${telegramId || username || 'ANONYMOUS'}</div>
+                        <div class="value">${displayId}</div>
                         
                         <div class="label">Tx Type</div>
                         <div class="value" style="text-transform: uppercase;">${result.type}</div>

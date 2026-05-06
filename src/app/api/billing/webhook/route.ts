@@ -56,17 +56,20 @@ export async function POST(req: Request) {
             return new NextResponse('Already processed', { status: 200 });
         }
 
-        if (CRYPTOCLOUD_SECRET && receivedSign) {
-            const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
-            const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
-            
-            if (expectedSign !== receivedSign) {
-                console.error(`🚨 SECURITY WARNING: Webhook signature mismatch! Expected ${expectedSign}, got ${receivedSign}.`);
-                return new NextResponse('Invalid signature', { status: 403 });
-            }
-        } else if (CRYPTOCLOUD_SECRET && !receivedSign) {
-            console.error(`🚨 SECURITY WARNING: Webhook received without signature but secret is configured!`);
+        // Signature MUST always be verified — reject if secret is not configured (misconfiguration)
+        if (!CRYPTOCLOUD_SECRET) {
+            console.error('🚨 CRITICAL: CRYPTOCLOUD_SECRET is not set — billing webhook disabled for safety');
+            return new NextResponse('Server misconfiguration', { status: 500 });
+        }
+        if (!receivedSign) {
+            console.error(`🚨 SECURITY: Billing webhook received without signature`);
             return new NextResponse('Missing signature', { status: 403 });
+        }
+        const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
+        const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
+        if (expectedSign !== receivedSign) {
+            console.error(`🚨 SECURITY: Billing webhook signature mismatch`);
+            return new NextResponse('Invalid signature', { status: 403 });
         }
 
         if (!orderId || !orderId.startsWith("UID_")) {
