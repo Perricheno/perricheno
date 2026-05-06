@@ -16,6 +16,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - run: npx prisma generate
       - run: npx tsc --noEmit
 
   # ── SSH deploy (only runs when typecheck passes) ───────────────────────────
