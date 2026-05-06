@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { IconCheck, IconLock } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 import { RotatingBorderWrapper } from "./RotatingBorderWrapper";
 import type { PLANS } from "./constants";
 import type { PricingCurrency } from "./PricingSection";
@@ -13,6 +14,7 @@ export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
     isAnnual: boolean;
     currency?: PricingCurrency;
 }) {
+    const t = useTranslations("home");
     const isFree = plan.priceMonthly === 0;
     const showSavingBadge = isAnnual && !isFree;
 
@@ -23,33 +25,45 @@ export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
         : (isAnnual ? plan.priceAnnual : plan.priceMonthly);
 
     const symbol = currency === 'kzt' ? '₸' : currency === 'rub' ? '₽' : '$';
+    const perPeriod = isAnnual ? t("pricing.perYear") : t("pricing.perMonth");
 
-    // Sub-label: per-month breakdown when billing annually
     const annualPerMonth = currency === 'kzt'
-        ? `~${Math.round(plan.priceKZTAnnual / 12).toLocaleString('ru-RU')} ₸/мес`
+        ? `~${Math.round(plan.priceKZTAnnual / 12).toLocaleString('ru-RU')} ₸/${t("pricing.perMonth")}`
         : currency === 'rub'
-        ? `~${Math.round(plan.priceRUBAnnual / 12).toLocaleString('ru-RU')} ₽/мес`
-        : `~$${(plan.priceAnnual / 12).toFixed(2)}/mo`;
+        ? `~${Math.round(plan.priceRUBAnnual / 12).toLocaleString('ru-RU')} ₽/${t("pricing.perMonth")}`
+        : `~$${(plan.priceAnnual / 12).toFixed(2)}/${t("pricing.perMonth")}`;
+
+    const planName   = t(`pricing.plans.${plan.id}.name` as any);
+    const planTagline = t(`pricing.plans.${plan.id}.tagline` as any);
+    const planCta    = t(`pricing.plans.${plan.id}.cta` as any);
+    const planTag    = (plan.id === 'pro' || plan.id === 'ultra')
+        ? t(`pricing.plans.${plan.id}.tag` as any)
+        : null;
+
+    const translatedFeatures = plan.features.map((f, i) => ({
+        ...f,
+        text: t(`pricing.plans.${plan.id}.features.${i}` as any),
+    }));
 
     const cardInner = (
         <div className="p-8 flex flex-col h-full">
             {/* Tag badge */}
-            {(plan.tag || showSavingBadge) && (
+            {(planTag || showSavingBadge) && (
                 <div className={`absolute top-5 right-5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full z-10 ${
                     plan.id === "pro"   ? "bg-emerald-500 text-white" :
                     plan.id === "ultra" ? "bg-amber-400 text-black"  :
                     "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)]"
                 }`}>
-                    {showSavingBadge ? "2 months free" : plan.tag}
+                    {showSavingBadge ? t("pricing.monthsFree") : planTag}
                 </div>
             )}
 
             {/* Header */}
             <div className="mb-6">
                 <p className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
-                    {plan.tagline}
+                    {planTagline}
                 </p>
-                <h3 className="text-2xl font-bold tracking-tight">{plan.name}</h3>
+                <h3 className="text-2xl font-bold tracking-tight">{planName}</h3>
             </div>
 
             {/* Price */}
@@ -64,7 +78,7 @@ export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
                                 {currency === 'usd' ? price : price.toLocaleString('ru-RU')}
                             </span>
                             <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ml-1 ${plan.highlighted ? "opacity-50" : "opacity-40"}`}>
-                                /{isAnnual ? "yr" : "mo"}
+                                /{perPeriod}
                             </span>
                         </div>
                         {isAnnual && (
@@ -78,7 +92,7 @@ export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
 
             {/* Features */}
             <ul className="space-y-3 mb-8 flex-1">
-                {plan.features.map((f, i) => (
+                {translatedFeatures.map((f, i) => (
                     <li key={i} className="flex items-start gap-3 text-[13px]">
                         {f.included ? (
                             <IconCheck
@@ -104,7 +118,7 @@ export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
                         : "bg-[var(--foreground)] text-[var(--background)] hover:opacity-80"
                 }`}
             >
-                {plan.cta}
+                {planCta}
             </Link>
         </div>
     );

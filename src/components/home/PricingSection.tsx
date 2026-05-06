@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { SectionLabel } from "./primitives";
 import { PricingCard } from "./PricingCard";
 import { PLANS } from "./constants";
@@ -23,25 +24,28 @@ const CURRENCY_OPTIONS: { id: PricingCurrency; label: string }[] = [
 // ── Pricing Section ────────────────────────────────────────────────────────────
 export function PricingSection({ isAnnual, onToggle, sectionRef }: PricingSectionProps) {
     const [currency, setCurrency] = useState<PricingCurrency>('kzt');
+    const t = useTranslations("home");
 
     return (
         <section id="pricing" className="py-24 md:py-32 border-t border-[var(--border)]" ref={sectionRef}>
-            <SectionLabel>Pricing</SectionLabel>
+            <SectionLabel>{t("pricing.label")}</SectionLabel>
             <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-2 max-w-3xl leading-[1.05]">
-                Start free.
+                {t("pricing.h1")}
             </h2>
             <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6 max-w-3xl leading-[1.05] opacity-30">
-                Scale when you need to.
+                {t("pricing.h2")}
             </h2>
             <p className="text-base md:text-lg opacity-60 font-light max-w-2xl mb-10">
-                No hidden fees. Cancel anytime. Annual billing saves ~20% - that's two months free.
+                {t("pricing.desc")}
             </p>
 
             {/* Controls row */}
             <div className="flex flex-wrap items-center gap-4 mb-12">
                 {/* Period toggle */}
                 <div className="flex items-center gap-3">
-                    <span className={`text-sm font-semibold transition-opacity ${!isAnnual ? "opacity-100" : "opacity-40"}`}>Monthly</span>
+                    <span className={`text-sm font-semibold transition-opacity ${!isAnnual ? "opacity-100" : "opacity-40"}`}>
+                        {t("pricing.monthly")}
+                    </span>
                     <button
                         onClick={onToggle}
                         className="relative w-12 h-6 bg-[var(--foreground)] rounded-full p-1"
@@ -55,9 +59,11 @@ export function PricingSection({ isAnnual, onToggle, sectionRef }: PricingSectio
                         />
                     </button>
                     <div className="flex items-center gap-2">
-                        <span className={`text-sm font-semibold transition-opacity ${isAnnual ? "opacity-100" : "opacity-40"}`}>Annual</span>
+                        <span className={`text-sm font-semibold transition-opacity ${isAnnual ? "opacity-100" : "opacity-40"}`}>
+                            {t("pricing.annual")}
+                        </span>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">
-                            Save 20%
+                            {t("pricing.save20")}
                         </span>
                     </div>
                 </div>
@@ -97,8 +103,7 @@ export function PricingSection({ isAnnual, onToggle, sectionRef }: PricingSectio
             </div>
 
             <p className="text-[12px] opacity-40 mt-8 text-center max-w-xl mx-auto">
-                All plans include core features. ₸ — Kaspi Pay · $ / ₽ — CryptoCloud (crypto).
-                Purchased tokens never expire and roll over automatically.
+                {t("pricing.footnote")}
             </p>
         </section>
     );

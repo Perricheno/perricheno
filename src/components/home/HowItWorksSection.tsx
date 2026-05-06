@@ -2,23 +2,26 @@
 
 import { motion } from "framer-motion";
 import { IconArrowUpRight } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 import { SectionLabel } from "./primitives";
 import { STEPS } from "./constants";
 
 // ── How It Works Section ───────────────────────────────────────────────────────
 export function HowItWorksSection() {
+    const t = useTranslations("home");
+
     return (
         <section id="how" className="py-24 md:py-32 border-t border-[var(--border)]">
-            <SectionLabel>How it works</SectionLabel>
+            <SectionLabel>{t("how.label")}</SectionLabel>
             <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 max-w-3xl leading-[1.05]">
-                From prompt to PDF
+                {t("how.h1")}
             </h2>
             <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-16 max-w-3xl leading-[1.05] opacity-30">
-                in three steps.
+                {t("how.h2")}
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-4">
-                {STEPS.map(({ n, title, desc }, i) => (
+                {STEPS.map(({ n }, i) => (
                     <motion.div
                         key={n}
                         initial={{ opacity: 0, y: 16 }}
@@ -38,8 +41,12 @@ export function HowItWorksSection() {
 
                         <div className="relative z-10">
                             <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-8">{n}</div>
-                            <h3 className="text-xl font-bold tracking-tight mb-3">{title}</h3>
-                            <p className="text-[14px] leading-relaxed opacity-60 font-light">{desc}</p>
+                            <h3 className="text-xl font-bold tracking-tight mb-3">
+                                {t(`how.steps.${i}.title` as any)}
+                            </h3>
+                            <p className="text-[14px] leading-relaxed opacity-60 font-light">
+                                {t(`how.steps.${i}.desc` as any)}
+                            </p>
                         </div>
 
                         {/* Step connector arrow (not on last) */}

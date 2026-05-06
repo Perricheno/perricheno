@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef } from "react";
 import { IconArrowUpRight } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 
 import { MagneticButton, NavLink } from "./home/primitives";
 import { LogoMarquee } from "./home/LogoMarquee";
@@ -20,6 +21,7 @@ import { FinalCtaSection } from "./home/FinalCtaSection";
 export default function HomePage() {
     const [isAnnual, setIsAnnual] = useState(true);
     const pricingRef = useRef<HTMLElement | null>(null);
+    const t = useTranslations("home");
 
     return (
         <div className="min-h-full bg-[var(--background)] text-[var(--foreground)] selection:bg-black selection:text-white overflow-x-hidden">
@@ -41,16 +43,16 @@ export default function HomePage() {
                 <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
                     <Link href="/" className="text-sm font-bold tracking-tight">Perricheno</Link>
                     <div className="hidden md:flex items-center gap-8">
-                        <NavLink href="#product">Product</NavLink>
-                        <NavLink href="#how">How it works</NavLink>
-                        <NavLink href="#pricing">Pricing</NavLink>
-                        <NavLink href="#faq">FAQ</NavLink>
+                        <NavLink href="#product">{t("nav.product")}</NavLink>
+                        <NavLink href="#how">{t("nav.how")}</NavLink>
+                        <NavLink href="#pricing">{t("nav.pricing")}</NavLink>
+                        <NavLink href="#faq">{t("nav.faq")}</NavLink>
                     </div>
                     <MagneticButton
                         href="/agent"
                         className="inline-flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:opacity-80 transition-opacity"
                     >
-                        Launch Agent <IconArrowUpRight className="w-3.5 h-3.5" />
+                        {t("nav.launchAgent")} <IconArrowUpRight className="w-3.5 h-3.5" />
                     </MagneticButton>
                 </div>
             </nav>
@@ -60,7 +62,7 @@ export default function HomePage() {
 
                 {/* Logo Marquee */}
                 <div className="py-10 border-t border-[var(--border)]">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-6 text-center">Powered by</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 mb-6 text-center">{t("poweredBy")}</p>
                     <LogoMarquee />
                 </div>
 

@@ -110,21 +110,65 @@
     "plans": {
       "free": {
         "name": "Free (The Sandbox)",
-        "desc": "Entry level. Shows quality, locks results."
+        "desc": "Entry level. Shows quality, locks results.",
+        "features": {
+          "0": "50,000 tokens / week",
+          "1": "150,000 tokens / month (Hard Stop)",
+          "2": "Stack: Basic Python (5 chart types)",
+          "3": "7-day chat retention",
+          "4": "Quota resets: Mon, 00:00 AST",
+          "5": "200K chars PDF staging (24h)",
+          "6": "ZIP Project Export",
+          "7": "R Environment (CRAN)",
+          "8": "AI Code Editing"
+        }
       },
       "plus": {
         "name": "Plus (Standard)",
-        "desc": "Workhorse for students & Python analysts."
+        "desc": "Workhorse for students & Python analysts.",
+        "features": {
+          "0": "150,000 tokens / week",
+          "1": "450,000 tokens / month",
+          "2": "Stack: Full Python (35+ visualizations)",
+          "3": "ZIP Project Export unlocked",
+          "4": "500K chars PDF staging (24h)",
+          "5": "Priority Rendering",
+          "6": "14-day chat retention",
+          "7": "R Environment",
+          "8": "AI Code Editing"
+        }
       },
       "pro": {
         "name": "Pro (Researcher)",
-        "desc": "Gold standard. Elite R stack & AI corrections."
+        "desc": "Gold standard. Elite R stack & AI corrections.",
+        "features": {
+          "0": "250,000 tokens / week",
+          "1": "800,000 tokens / month",
+          "2": "Stack: R-Infrastructure + Python",
+          "3": "AI Code Editor enabled",
+          "4": "1M chars PDF staging (24h)",
+          "5": "Share Reports via link",
+          "6": "Exclusive power giveaways",
+          "7": "30-day chat retention"
+        }
       },
       "ultra": {
         "name": "Ultra (Absolute Power)",
-        "desc": "Ultimate tier. Max savings & heavy bonuses."
+        "desc": "Ultimate tier. Max savings & heavy bonuses.",
+        "features": {
+          "0": "800,000 tokens / week (Cap)",
+          "1": "3,000,000 tokens / month",
+          "2": "Unlimited PDF staging (24h)",
+          "3": "AI Edit: Low Cost Mode (Cost ÷ 2)",
+          "4": "2x Bonus on Referrals & Promos",
+          "5": "Maximum Rendering Priority",
+          "6": "All Giveaways & Events",
+          "7": "90-day chat retention"
+        }
       }
-    }
+    },
+    "kaspiPay": "Pay via Kaspi Pay",
+    "cryptoCloud": "Pay via CryptoCloud"
   },
   "settings": {
     "title": "Settings",
@@ -405,5 +449,155 @@
     "successTitle": "Payment Successful!",
     "successDesc": "Your subscription has been activated. You can now return to the agent and continue unleashing your productivity.",
     "backToAgent": "Back to Agent"
+  },
+  "home": {
+    "nav": {
+      "product": "Product",
+      "how": "How it works",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "launchAgent": "Launch Agent"
+    },
+    "poweredBy": "Powered by",
+    "hero": {
+      "headline1": "Research, write,",
+      "headline2": "analyze, cite, visualize —",
+      "headline3": "all in one place.",
+      "desc": "Perricheno turns a topic into a compiled LaTeX paper, with real citations, publication-ready figures, and shareable PDFs. Built for students and researchers who want depth, not boilerplate.",
+      "launchAgent": "Launch Agent",
+      "seePricing": "See pricing",
+      "viaTelegram": "Via Telegram",
+      "stats": {
+        "searchIndexes": "Search indexes",
+        "vizRuntimes": "Visualization runtimes",
+        "nativeCompiler": "Native compiler",
+        "docLanguages": "Document languages"
+      }
+    },
+    "product": {
+      "label": "Product",
+      "h1": "One workspace for the whole",
+      "h2": "academic pipeline.",
+      "features": {
+        "0": { "title": "Research Writer", "desc": "Full LaTeX documents - research papers, theses, reports - compiled straight to PDF with real citations." },
+        "1": { "title": "Scholar Search", "desc": "Query arXiv and OpenAlex in any language. Relevance-ranked results with abstracts, authors, DOIs." },
+        "2": { "title": "Data Analytics", "desc": "Turn a question into R or Python visualizations. Upload a dataset, pick a chart, get publication-ready figures." },
+        "3": { "title": "Multimodal Chat", "desc": "Fast Q&A with text, images, and file context. Perfect for quick explanations, rewrites, and outlines." },
+        "4": { "title": "LaTeX Compiler", "desc": "Built-in pipeline compiles .tex to PDF with bib, figures, and multi-column layouts. Errors auto-repaired." },
+        "5": { "title": "PDF Toolkit", "desc": "OCR scanned papers, convert PDF ↔ DOCX, extract text for referencing. All in one workspace." }
+      }
+    },
+    "how": {
+      "label": "How it works",
+      "h1": "From prompt to PDF",
+      "h2": "in three steps.",
+      "steps": {
+        "0": { "title": "Describe the task", "desc": "Topic, word count, language, style, references. Attach source files if you have them." },
+        "1": { "title": "Agent works", "desc": "Structure, draft, cite, visualize. Watch progress stream in real time." },
+        "2": { "title": "Download or iterate", "desc": "Compiled PDF, LaTeX source, shareable link. Edit any section on demand." }
+      }
+    },
+    "pricing": {
+      "label": "Pricing",
+      "h1": "Start free.",
+      "h2": "Scale when you need to.",
+      "desc": "No hidden fees. Cancel anytime. Annual billing saves ~20% - that's two months free.",
+      "monthly": "Monthly",
+      "annual": "Annual",
+      "save20": "Save 20%",
+      "monthsFree": "2 months free",
+      "footnote": "All plans include core features. ₸ — Kaspi Pay · $ / ₽ — CryptoCloud (crypto). Purchased tokens never expire.",
+      "plans": {
+        "free": {
+          "tagline": "The Sandbox",
+          "name": "Free",
+          "cta": "Start free",
+          "features": {
+            "0": "50,000 tokens / week",
+            "1": "150,000 tokens / month",
+            "2": "Basic Python (5 chart types)",
+            "3": "Scholar search & PDF tools",
+            "4": "7-day chat retention",
+            "5": "ZIP Project Export",
+            "6": "R Environment (CRAN)",
+            "7": "AI Code Editing"
+          }
+        },
+        "plus": {
+          "tagline": "Standard",
+          "name": "Plus",
+          "cta": "Get Plus",
+          "features": {
+            "0": "150,000 tokens / week",
+            "1": "450,000 tokens / month",
+            "2": "Full Python (35+ visualizations)",
+            "3": "ZIP Project Export unlocked",
+            "4": "Priority rendering",
+            "5": "14-day chat retention",
+            "6": "R Environment",
+            "7": "AI Code Editing"
+          }
+        },
+        "pro": {
+          "tagline": "Researcher",
+          "name": "Pro",
+          "tag": "Popular",
+          "cta": "Get Pro",
+          "features": {
+            "0": "250,000 tokens / week",
+            "1": "800,000 tokens / month",
+            "2": "R-Infrastructure + Python stack",
+            "3": "AI Code Editor enabled",
+            "4": "Share reports via link",
+            "5": "Exclusive power giveaways",
+            "6": "30-day chat retention"
+          }
+        },
+        "ultra": {
+          "tagline": "Absolute Power",
+          "name": "Ultra",
+          "tag": "Best Value",
+          "cta": "Get Ultra",
+          "features": {
+            "0": "800,000 tokens / week (Cap)",
+            "1": "3,000,000 tokens / month",
+            "2": "AI Edit: Low Cost Mode (÷2)",
+            "3": "2× bonus on referrals & promos",
+            "4": "Maximum rendering priority",
+            "5": "All giveaways & events",
+            "6": "90-day chat retention"
+          }
+        }
+      },
+      "perMonth": "mo",
+      "perYear": "yr"
+    },
+    "faq": {
+      "label": "FAQ",
+      "h1": "Frequently asked",
+      "h2": "questions.",
+      "items": {
+        "0": { "q": "How do I sign in?", "a": "Through the Telegram Login Widget. No passwords, no email - one tap opens the agent with your account attached." },
+        "1": { "q": "How is usage billed?", "a": "The free tier resets daily and weekly. Paid plans are billed monthly or annually (save ~20%). Payment is via Kaspi Pay (KZT) or CryptoCloud (crypto)." },
+        "2": { "q": "Can I use it in Russian?", "a": "Yes. Documents can be generated in English or Russian, and Scholar understands any language - queries are translated to English keywords before hitting academic indexes." },
+        "3": { "q": "Do you store my uploaded files?", "a": "Uploaded task descriptions and reference files are used only to generate your document. Session text is stored on your account; you can delete any session at any time." },
+        "4": { "q": "What formats do I get back?", "a": "Compiled PDF, the raw LaTeX source (.tex + bib), and a shareable public link. Visuals download as PNG with the R/Python source embedded." },
+        "5": { "q": "Is there an API?", "a": "Not publicly yet. If you need programmatic access for a lab or classroom, get in touch." }
+      }
+    },
+    "cta": {
+      "readyLabel": "Ready to start?",
+      "h1": "Stop wrestling with LaTeX.",
+      "h2": "Start writing.",
+      "desc": "Free to try. No credit card. One Telegram tap and you're in the agent.",
+      "launchAgent": "Launch Agent",
+      "viewPricing": "View pricing"
+    },
+    "footer": {
+      "copyright": "© 2026 Perricheno Inc. · All rights reserved",
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "support": "Support"
+    }
   }
 }

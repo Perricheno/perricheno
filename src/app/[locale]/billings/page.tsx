@@ -108,6 +108,10 @@ export default function BillingsPage() {
         ...p,
         name: t(`plans.${p.id}.name` as any),
         desc: t(`plans.${p.id}.desc` as any),
+        features: p.features.map((f, i) => ({
+            ...f,
+            text: t(`plans.${p.id}.features.${i}` as any),
+        })),
     }));
     const [limits, setLimits] = useState<any>(null);
     const [fullUser, setFullUser] = useState<any>(null);
@@ -432,10 +436,10 @@ export default function BillingsPage() {
                                                     </div>
                                                 )}
                                                 {currency === 'kzt' && (
-                                                    <div className="text-[11px] font-semibold text-emerald-400 mt-1">Оплата через Kaspi Pay</div>
+                                                    <div className="text-[11px] font-semibold text-emerald-400 mt-1">{t("kaspiPay")}</div>
                                                 )}
                                                 {currency === 'rub' && (
-                                                    <div className="text-[11px] font-semibold text-gray-400 mt-1">Оплата через CryptoCloud</div>
+                                                    <div className="text-[11px] font-semibold text-gray-400 mt-1">{t("cryptoCloud")}</div>
                                                 )}
                                             </>
                                         )}
