@@ -96,7 +96,8 @@ export async function deleteRSession(id: string, userId: number): Promise<boolea
     try {
         await prisma.rSession.deleteMany({ where: { id, user_id: userId } });
         return true;
-    } catch {
+    } catch (e) {
+        console.error('[r-db] deleteRSession error:', e);
         return false;
     }
 }

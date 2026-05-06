@@ -3,6 +3,43 @@ import type { User, Task, AgentSession, AgentUpload, Session, Prisma } from '@pr
 
 export type { User, Task, AgentSession, AgentUpload, Session };
 
+export type AgentSessionSummary = Pick<AgentSession,
+    'id' | 'user_id' | 'title' | 'doc_type' | 'status' | 'share_id' | 'created_at' | 'updated_at'
+>;
+
+// ── DB layer input types ────────────────────────────────────────────────────
+
+export interface CreateAgentSessionData {
+    id: string;
+    user_id: number;
+    title: string;
+    doc_type: string;
+    settings_json?: string | null;
+    stage_json?: string | null;
+    main_tex?: string | null;
+    references_bib?: string | null;
+    visuals_json?: string | null;
+    status?: string;
+    stream_text?: string | null;
+    tg_message_id?: number | null;
+    share_id?: string | null;
+}
+
+export interface UpdateAgentSessionData {
+    title?: string;
+    doc_type?: string;
+    settings_json?: string | Record<string, unknown> | null;
+    stage_json?: string | Record<string, unknown> | null;
+    main_tex?: string | null;
+    references_bib?: string | null;
+    visuals_json?: string | Record<string, unknown> | null;
+    status?: string;
+    stream_text?: string | null;
+    tg_message_id?: number | null;
+    share_id?: string | null;
+    error_msg?: string | null;
+}
+
 export async function getUserByTelegramId(telegramId: string): Promise<User | undefined> {
     const data = await prisma.user.findUnique({ where: { telegram_id: telegramId } });
     return data || undefined;
@@ -158,7 +195,7 @@ export async function checkAndDeductUsage(
         const newPurchased = Math.max(0, purchased - fromPurchased);
 
         try {
-            const updates: any[] = [
+            const updates: Prisma.PrismaPromise<unknown>[] = [
                 prisma.user.update({
                     where: { id: userId },
                     data: {
@@ -323,7 +360,7 @@ if (typeof window === 'undefined') {
 
 // --- Agent Sessions ---
 
-export async function createAgentSession(data: any): Promise<AgentSession> {
+export async function createAgentSession(data: CreateAgentSessionData): Promise<AgentSession> {
     return prisma.agentSession.create({
         data: {
             id: data.id,
@@ -343,7 +380,7 @@ export async function createAgentSession(data: any): Promise<AgentSession> {
     });
 }
 
-export async function getAgentSessionsByUser(userId: number): Promise<AgentSession[]> {
+export async function getAgentSessionsByUser(userId: number): Promise<AgentSessionSummary[]> {
     return prisma.agentSession.findMany({
         where: { user_id: userId },
         select: {
@@ -355,10 +392,10 @@ export async function getAgentSessionsByUser(userId: number): Promise<AgentSessi
             share_id: true,
             created_at: true,
             updated_at: true,
-            // Exclude huge fields: main_tex, references_bib, visuals_json, stage_json, stream_text, settings_json
+            // Exclude large fields: main_tex, references_bib, visuals_json, stage_json, stream_text, settings_json
         },
         orderBy: { updated_at: 'desc' }
-    }) as unknown as Promise<AgentSession[]>;
+    });
 }
 
 export async function getAgentSession(id: string): Promise<AgentSession | undefined> {
@@ -384,7 +421,7 @@ export async function getRecentSessionByTitle(userId: number, title: string): Pr
     return session || undefined;
 }
 
-export async function updateAgentSession(id: string, data: any): Promise<void> {
+export async function updateAgentSession(id: string, data: UpdateAgentSessionData): Promise<void> {
     if (Object.keys(data).length === 0) return;
     
     // Auto-serialize object fields to strings for the DB
@@ -406,7 +443,8 @@ export async function deleteAgentSession(id: string, userId: number): Promise<bo
     try {
         await prisma.agentSession.deleteMany({ where: { id, user_id: userId } });
         return true;
-    } catch {
+    } catch (e) {
+        console.error("deleteAgentSession failed for id", id, e);
         return false;
     }
 }
@@ -451,6 +489,7 @@ export async function sendTelegramNotification(userId: number, message: string):
         }
         return null;
     } catch (e) {
+        console.error("sendTelegramNotification failed for userId", userId, e);
         return null;
     }
 }
@@ -471,7 +510,9 @@ export async function updateTelegramNotification(userId: number, messageId: numb
                 parse_mode: 'Markdown'
             })
         });
-    } catch (e) {}
+    } catch (e) {
+        console.error("updateTelegramNotification failed for userId", userId, e);
+    }
 }
 
 export async function deleteTelegramNotification(userId: number, messageId: number): Promise<void> {
@@ -488,21 +529,24 @@ export async function deleteTelegramNotification(userId: number, messageId: numb
                 message_id: messageId
             })
         });
-    } catch (e) {}
+    } catch (e) {
+        console.error("deleteTelegramNotification failed for userId", userId, e);
+    }
 }
 
 // --- Bot Persistence ---
-export async function getBotSession(telegramId: string): Promise<any | null> {
+export async function getBotSession(telegramId: string): Promise<Record<string, unknown> | null> {
     const data = await prisma.botSession.findUnique({ where: { telegram_id: telegramId } });
     if (!data) return null;
     try {
         return JSON.parse(data.session_data);
-    } catch {
+    } catch (e) {
+        console.error("getBotSession: failed to parse session_data for telegramId", telegramId, e);
         return null;
     }
 }
 
-export async function updateBotSession(telegramId: string, payload: any): Promise<void> {
+export async function updateBotSession(telegramId: string, payload: Record<string, unknown>): Promise<void> {
     const sessionJson = JSON.stringify(payload);
     await prisma.botSession.upsert({
         where: { telegram_id: telegramId },
@@ -524,11 +568,11 @@ export async function createSessionRecord(data: { id: string, user_id: number, u
     });
 }
 
-export async function getSessionById(id: string): Promise<any> {
+export async function getSessionById(id: string): Promise<Session | null> {
     return prisma.session.findUnique({ where: { id } });
 }
 
-export async function getSessionsByUserId(userId: number): Promise<any[]> {
+export async function getSessionsByUserId(userId: number): Promise<Session[]> {
     return prisma.session.findMany({ where: { user_id: userId }, orderBy: { created_at: 'desc' } });
 }
 

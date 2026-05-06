@@ -1,5 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ export async function listCitations(userId: number, opts?: {
     collectionId?: string | null;
     limit?: number;
 }): Promise<Citation[]> {
-    const where: any = { user_id: userId };
+    const where: Prisma.CitationWhereInput = { user_id: userId };
 
     if (opts?.starred) where.starred = true;
     if (opts?.tag) where.tags = { has: opts.tag };
@@ -183,5 +184,9 @@ export async function removeCitationFromCollection(userId: number, collectionId:
         await prisma.citationCollectionItem.delete({
             where: { collection_id_citation_id: { collection_id: collectionId, citation_id: citationId } }
         });
-    } catch {}
+    } catch (e) {
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+            console.error('[citations-db] removeCitationFromCollection unexpected error:', e);
+        }
+    }
 }

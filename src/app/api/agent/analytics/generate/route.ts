@@ -42,7 +42,6 @@ async function runBackground(
         const writeProgress = async (p: StageProgress) => {
             await updateAgentSession(sessionId, {
                 stage_json: JSON.stringify(p),
-                updated_at: new Date().toISOString(),
             });
         };
         
@@ -78,7 +77,6 @@ async function runBackground(
                 verifications: result.verifications,
                 chartPlans: result.chartPlans,
             }),
-            updated_at: new Date().toISOString(),
         });
         
         console.log(`[Analytics-BG] Pipeline complete for ${sessionId}: ${result.charts.length} charts`);
@@ -89,7 +87,6 @@ async function runBackground(
         await updateAgentSession(sessionId, {
             status: 'error',
             error_msg: err?.message || 'Pipeline failed',
-            updated_at: new Date().toISOString(),
         });
     }
 }
@@ -148,7 +145,6 @@ export async function POST(req: Request) {
                 label: "Initializing...",
                 completed_stages: [],
                 started_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
             }),
         });
         

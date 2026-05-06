@@ -1,5 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -425,7 +426,11 @@ export async function deleteSpaceFile(spaceId: string, path: string): Promise<vo
             where: { space_id_path: { space_id: spaceId, path } }
         });
         await touchSpace(spaceId);
-    } catch {}
+    } catch (e) {
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+            console.error('[space-db] deleteSpaceFile unexpected error:', e);
+        }
+    }
 }
 
 export async function renameSpaceFile(spaceId: string, oldPath: string, newPath: string): Promise<void> {
@@ -542,7 +547,11 @@ export async function removeCollaborator(spaceId: string, userId: number): Promi
         await prisma.spaceCollaborator.delete({
             where: { space_id_user_id: { space_id: spaceId, user_id: userId } }
         });
-    } catch {}
+    } catch (e) {
+        if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) {
+            console.error('[space-db] removeCollaborator unexpected error:', e);
+        }
+    }
 }
 
 export async function getUserRoleInSpace(spaceId: string, userId: number): Promise<CollaboratorRole | null> {
