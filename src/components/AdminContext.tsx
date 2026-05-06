@@ -64,7 +64,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
                     localStorage.setItem('tg_user', JSON.stringify(tgObj));
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("Failed to strip sensitive keys from localStorage tg_user", e);
+        }
     }, []);
 
     const login = async (telegramData: any) => {

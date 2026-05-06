@@ -71,8 +71,8 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                     if (pollRef.current) clearInterval(pollRef.current);
                     setTimeout(() => generateLink(), 1000);
                 }
-            } catch {
-                // Silently retry
+            } catch (e) {
+                console.error("Auth poll request failed, will retry", e);
             }
         }, 2000);
 
