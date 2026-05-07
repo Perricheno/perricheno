@@ -1,18 +1,12 @@
 // Stage 2.3 - Visual Generation.
-// LLM generates TikZ code → wrapped in standalone LaTeX → existing LaTeX compiler → PDF
-// → existing pdf-extractor /to-png → PNG base64.
-// Zero new infrastructure. No Chrome. No new services.
+// LLM generates TikZ code (usetikzlibrary + tikzpicture block).
+// The TikZ snippet is stored as-is and later injected inline into main.tex by stage4.
+// Zero compilation here — LaTeX compiler renders TikZ natively in the final document pass.
 
-import JSZip from "jszip";
 import { chatCompletion, type ChatMessage } from "./llm";
 import type { PlannedVisual, GeneratedVisual } from "./types";
-import { withRetry } from "../stages";
 
-const CONCURRENCY = 2;
-
-const LATEX_COMPILER_URL = process.env.LATEX_COMPILER_URL!;
-const LATEX_COMPILER_KEY = process.env.LATEX_COMPILER_KEY!;
-const PDF_EXTRACTOR_URL  = process.env.PDF_EXTRACTOR_URL ?? "http://pdf-extractor:8080";
+const CONCURRENCY = 4;
 
 // ── Per-type TikZ layout blueprints ──────────────────────────────────────────
 // Each blueprint gives exact TikZ style patterns, spacing, and color conventions.
@@ -177,7 +171,8 @@ TECHNICAL RULES:
 - Colors: muted academic palette — teal!30..50, blue!15..40, orange!15..25, gray!10..20. No bright/saturated colors.
 - Line widths: 0.7–1.5pt for edges, 1.5pt for primary flow arrows.
 - Every \\node must have a unique ID. Coordinate all \\draw commands to existing node IDs.
-- Test mentally that every referenced node ID is actually defined before using it in \\draw.`;
+- Test mentally that every referenced node ID is actually defined before using it in \\draw.
+- Do NOT use \\usepackage{fontspec} or \\usepackage{polyglossia} — the document uses T2A/babel encoding.`;
 
     const user = `VISUAL TYPE: ${visual.type}
 SECTION IN DOCUMENT: "${visual.sectionHeading}"
@@ -213,75 +208,6 @@ function stripFences(raw: string): string {
         .trim();
 }
 
-// ── Standalone LaTeX wrapper ───────────────────────────────────────────────────
-
-function wrapInStandalone(tikzSnippet: string, language: string): string {
-    const babel = language === "ru" || language === "kk" || language === "uk"
-        ? "\\usepackage[T2A]{fontenc}\n\\usepackage[utf8]{inputenc}\n\\usepackage[russian]{babel}"
-        : "\\usepackage[T1]{fontenc}\n\\usepackage[utf8]{inputenc}";
-
-    return `\\documentclass[tikz, border=8pt]{standalone}
-${babel}
-\\usepackage{tikz}
-\\usepackage{amsmath}
-\\begin{document}
-${tikzSnippet}
-\\end{document}
-`;
-}
-
-// ── Compile LaTeX → PDF ───────────────────────────────────────────────────────
-
-async function compileTex(mainTex: string): Promise<Buffer> {
-    if (!LATEX_COMPILER_URL || !LATEX_COMPILER_KEY) {
-        throw new Error("LATEX_COMPILER_URL / LATEX_COMPILER_KEY not configured");
-    }
-
-    const zip = new JSZip();
-    zip.file("main.tex", mainTex);
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-
-    const form = new FormData();
-    form.append("file", zipBlob, "project.zip");
-
-    const res = await fetch(LATEX_COMPILER_URL, {
-        method: "POST",
-        headers: { "x-api-key": LATEX_COMPILER_KEY },
-        body: form,
-        signal: AbortSignal.timeout(120_000),
-    });
-
-    const ct = res.headers.get("content-type") ?? "";
-    if (res.ok && !ct.includes("json") && !ct.includes("text")) {
-        return Buffer.from(await res.arrayBuffer());
-    }
-
-    const errText = await res.text();
-    let log = errText;
-    try { log = JSON.parse(errText).error ?? JSON.parse(errText).log ?? errText; } catch {}
-    throw new Error(`LaTeX compile failed: ${log.slice(0, 300)}`);
-}
-
-// ── PDF → PNG via pdf-extractor ───────────────────────────────────────────────
-
-async function pdfToPng(pdfBuf: Buffer): Promise<Buffer> {
-    const res = await fetch(`${PDF_EXTRACTOR_URL}/to-png`, {
-        method: "POST",
-        headers: { "Content-Type": "application/pdf" },
-        body: new Uint8Array(pdfBuf),
-        signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(`pdf-extractor /to-png: ${err.error}`);
-    }
-
-    const { image } = await res.json();
-    if (!image) throw new Error("pdf-extractor returned no image");
-    return Buffer.from(image, "base64");
-}
-
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export async function runStage2_3(
@@ -300,66 +226,36 @@ export async function runStage2_3(
     const workers = Array.from({ length: Math.min(CONCURRENCY, visuals.length) }, async () => {
         while (queue.length > 0) {
             const visual = queue.shift()!;
-            let lastError = "";
-            let lastTikz  = "";
-            let succeeded = false;
+            try {
+                const messages = buildMessages(visual, language);
+                const r = await chatCompletion(messages, { timeoutMs: 120_000 });
+                totalTokens += r.totalTokens;
 
-            for (let attempt = 0; attempt < 3; attempt++) {
-                try {
-                    const messages = buildMessages(visual, language);
+                const tikzCode = stripFences(r.text);
+                console.log(`[Stage2.3] ✓ ${visual.id}  type=${visual.type}  tokens=${r.totalTokens}`);
 
-                    // On retry: append compiler error so LLM can fix the TikZ
-                    if (attempt > 0 && lastError && lastTikz) {
-                        messages.push({ role: "assistant", content: lastTikz });
-                        messages.push({
-                            role: "user",
-                            content: `The TikZ above failed to compile with this LaTeX error:\n${lastError}\n\nFix the TikZ and return the corrected snippet only.`,
-                        });
-                    }
-
-                    const r = await chatCompletion(messages, { timeoutMs: 120_000 });
-                    totalTokens += r.totalTokens;
-
-                    const tikz = stripFences(r.text);
-                    lastTikz = tikz;
-                    const tex = wrapInStandalone(tikz, language);
-                    const pdf = await compileTex(tex);
-                    const png = await pdfToPng(pdf);
-
-                    if (png.length < 500) throw new Error("pdfToPng returned suspiciously small image");
-
-                    const pngBase64 = png.toString("base64");
-                    console.log(`[Stage2.3] ✓ ${visual.id}.png  attempt=${attempt + 1}  type=${visual.type}  size=${(png.length / 1024).toFixed(0)}KB  b64len=${pngBase64.length}`);
-
-                    results.push({
-                        id: visual.id,
-                        sectionHeading: visual.sectionHeading,
-                        filename: `${visual.id}.png`,
-                        caption: visual.caption,
-                        label: visual.label,
-                        pngBase64,
-                        type: visual.type,
-                    });
-                    succeeded = true;
-                    break;
-                } catch (e: any) {
-                    lastError = String(e?.message ?? e).slice(0, 400);
-                    console.warn(`[Stage2.3] attempt ${attempt + 1}/3 failed for ${visual.id}: ${lastError.slice(0, 120)}`);
-                }
-            }
-
-            if (!succeeded) {
-                console.error(`[Stage2.3] ✗ ${visual.id} failed after 3 attempts: ${lastError}`);
                 results.push({
                     id: visual.id,
                     sectionHeading: visual.sectionHeading,
                     filename: `${visual.id}.png`,
                     caption: visual.caption,
                     label: visual.label,
-                    pngBase64: "",
+                    tikzCode,
+                    type: visual.type,
+                });
+            } catch (e: any) {
+                const err = String(e?.message ?? e).slice(0, 300);
+                console.error(`[Stage2.3] ✗ ${visual.id} failed: ${err}`);
+                results.push({
+                    id: visual.id,
+                    sectionHeading: visual.sectionHeading,
+                    filename: `${visual.id}.png`,
+                    caption: visual.caption,
+                    label: visual.label,
+                    tikzCode: "",
                     type: visual.type,
                     failed: true,
-                    error: lastError.slice(0, 200),
+                    error: err,
                 });
             }
 

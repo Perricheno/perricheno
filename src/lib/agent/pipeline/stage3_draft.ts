@@ -148,7 +148,7 @@ function buildVisualBlock(
     visuals: GeneratedVisual[],
     dataFigures: GeneratedDataFigure[],
 ): string {
-    const conceptual = visuals.filter(v => !v.failed && v.pngBase64 && v.sectionHeading === section.heading);
+    const conceptual = visuals.filter(v => !v.failed && v.tikzCode && v.sectionHeading === section.heading);
     const data = dataFigures.filter(v => !v.failed && v.pngBase64 && v.sectionHeading === section.heading);
     if (conceptual.length === 0 && data.length === 0) return "";
 
@@ -266,7 +266,7 @@ export async function runStage3(
         ? buildEnhancedRefBundle(refs, uploads, verifications)
         : buildRefBundle(refs);
 
-    const activeVisuals = generatedVisuals.filter(v => !v.failed && v.pngBase64);
+    const activeVisuals = generatedVisuals.filter(v => !v.failed && v.tikzCode);
     const activeDataFigures = dataFigures.filter(v => !v.failed && v.pngBase64);
     const systemPrompt = buildSystemPrompt(settings, !!refBundle, activeVisuals.length > 0 || activeDataFigures.length > 0);
 

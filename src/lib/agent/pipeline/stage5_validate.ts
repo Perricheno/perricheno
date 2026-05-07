@@ -7,7 +7,7 @@
 import JSZip from "jszip";
 import { chatCompletion, parseJsonLoose, type ChatMessage } from "./llm";
 import { normalizeLatexText, ensureRussianPreamble, BABEL_LANG_MAP } from "../stages";
-import type { AssembledDoc, GeneratedDataFigure, GeneratedVisual, PipelineSettings } from "./types";
+import type { AssembledDoc, GeneratedDataFigure, PipelineSettings } from "./types";
 
 const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
@@ -49,7 +49,6 @@ function stripOrphanedFigures(tex: string, availableFiles: Set<string>): string 
 async function compile(
     mainTex: string,
     referencesBib: string | null,
-    visuals: GeneratedVisual[] = [],
     dataFigures: GeneratedDataFigure[] = [],
 ): Promise<{ ok: true } | { ok: false; log: string }> {
     if (!COMPILER_URL || !COMPILER_KEY) {
@@ -58,14 +57,9 @@ async function compile(
 
     const zip = new JSZip();
 
-    // Build the set of filenames that will actually be in the ZIP
+    // TikZ visuals are already inlined in mainTex by stage4 — no PNG files needed for them.
+    // Only dataFigures (R/Python charts) still use external PNG files.
     const availableFiles = new Set<string>();
-    for (const v of visuals) {
-        if (v.pngBase64) {
-            zip.file(`figures/${v.filename}`, Buffer.from(v.pngBase64, "base64"));
-            availableFiles.add(v.filename);
-        }
-    }
     for (const df of dataFigures) {
         if (df.pngBase64) {
             zip.file(`figures/${df.filename}`, Buffer.from(df.pngBase64, "base64"));
@@ -73,7 +67,7 @@ async function compile(
         }
     }
 
-    // Strip any \begin{figure}...\end{figure} blocks whose PNG isn't in the ZIP
+    // Strip any \includegraphics figure blocks whose dataFigure PNG isn't in the ZIP
     const safeTex = stripOrphanedFigures(mainTex, availableFiles);
     if (safeTex !== mainTex) {
         console.log(`[Stage5] Stripped ${(mainTex.match(/\\begin\{figure\}/g)?.length ?? 0) - (safeTex.match(/\\begin\{figure\}/g)?.length ?? 0)} orphaned figure(s) from LaTeX`);
@@ -180,7 +174,7 @@ export async function runStage5(
     // Attempt 0 = initial compile. Then up to MAX_REPAIR_ATTEMPTS repair cycles.
     for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
         try {
-            const r = await compile(mainTex, referencesBib, visuals, dataFigures);
+            const r = await compile(mainTex, referencesBib, dataFigures);
             if (!r.ok) {
                 lastLog = r.log;
                 onAttempt?.(attempt, "failed");

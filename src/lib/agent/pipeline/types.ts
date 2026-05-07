@@ -63,10 +63,10 @@ export interface PlannedVisual {
 export interface GeneratedVisual {
     id: string;
     sectionHeading: string;
-    filename: string;        // e.g. "fig_pipeline_arch.png"
+    filename: string;        // e.g. "fig_pipeline_arch.png" — used as matching key
     caption: string;
     label: string;
-    pngBase64: string;       // base64-encoded PNG
+    tikzCode: string;        // raw TikZ snippet: \usetikzlibrary{} + \begin{tikzpicture}...\end{tikzpicture}
     type: VisualType;
     failed?: boolean;
     error?: string;

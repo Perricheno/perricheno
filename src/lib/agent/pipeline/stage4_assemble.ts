@@ -52,6 +52,7 @@ function buildPreamble(s: PipelineSettings): string {
         "\\usepackage{amsmath,amssymb,amsthm}",
         "\\usepackage{graphicx}",
         "\\graphicspath{{images/}{figures/}}",
+        "\\usepackage{tikz}",
         "\\usepackage{hyperref}",
         "\\usepackage{geometry}",
         "\\usepackage{booktabs}",
@@ -154,6 +155,46 @@ function stubMissingBibEntries(missingKeys: string[], lang: string): string {
 }`).join("\n\n");
 }
 
+// ── TikZ visual injection ────────────────────────────────────────────────────
+// Collects all \usetikzlibrary{} declarations from generated visuals and appends
+// them to the preamble (deduped). Then replaces each \includegraphics{figures/X.png}
+// inside a figure block with the inline tikzpicture code.
+
+function addTikzLibrariesToPreamble(preamble: string, visuals: GeneratedVisual[]): string {
+    const active = visuals.filter(v => !v.failed && v.tikzCode);
+    if (active.length === 0) return preamble;
+
+    const allLibs = new Set<string>();
+    for (const v of active) {
+        for (const m of v.tikzCode.matchAll(/\\usetikzlibrary\{([^}]+)\}/g)) {
+            m[1].split(",").map(s => s.trim()).filter(Boolean).forEach(l => allLibs.add(l));
+        }
+    }
+
+    if (allLibs.size === 0) return preamble;
+    return preamble + `\n\\usetikzlibrary{${[...allLibs].join(",")}}`;
+}
+
+function injectTikzFigures(mainTex: string, visuals: GeneratedVisual[]): string {
+    const byFilename = new Map(
+        visuals.filter(v => !v.failed && v.tikzCode).map(v => [v.filename, v]),
+    );
+    if (byFilename.size === 0) return mainTex;
+
+    return mainTex.replace(
+        /\\includegraphics(?:\[[^\]]*\])?\{figures\/([^}]+)\}/g,
+        (match, filename) => {
+            const visual = byFilename.get(filename);
+            if (!visual) return match;
+            // Strip \usetikzlibrary lines — already in preamble
+            const tikzPicture = visual.tikzCode
+                .replace(/\\usetikzlibrary\{[^}]+\}\s*/g, "")
+                .trim();
+            return tikzPicture;
+        },
+    );
+}
+
 // ── Template resolution ─────────────────────────────────────────────────────
 // Returns the full preamble string (everything before \begin{document}).
 // Priority: custom ZIP upload → named preset → legacy buildPreamble().
@@ -213,7 +254,8 @@ export function runStage4(
     // ── Title + body ──
     const title = plan.title;
 
-    const { preamble, useFancyTitle } = resolveTemplate(settings);
+    const { preamble: rawPreamble, useFancyTitle } = resolveTemplate(settings);
+    const preamble = addTikzLibrariesToPreamble(rawPreamble, generatedVisuals);
     const titleBlock = buildTitleBlock({ ...settings, useTemplate: useFancyTitle }, title);
     const body = buildSectionBlock(sections);
 
@@ -222,6 +264,9 @@ export function runStage4(
         : "\\end{document}";
 
     let mainTex = `${preamble}\n\n${titleBlock}\n\n${body}\n${closing}\n`;
+
+    // Replace \includegraphics{figures/X.png} with inline TikZ for generated visuals
+    mainTex = injectTikzFigures(mainTex, generatedVisuals);
 
     // ── Normalize and sanity-check ──
     mainTex = normalizeLatexText(mainTex);
@@ -249,7 +294,7 @@ export function runStage4(
         referencesBib,
         warnings,
         unresolvedCitations: missing,
-        visuals: generatedVisuals.filter(v => !v.failed && v.pngBase64),
+        visuals: generatedVisuals.filter(v => !v.failed && v.tikzCode),
         dataFigures: dataFigures.filter(v => !v.failed && v.pngBase64),
     };
 }
