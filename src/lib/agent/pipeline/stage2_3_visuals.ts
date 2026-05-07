@@ -22,22 +22,29 @@ LIBRARY: \\usetikzlibrary{mindmap,backgrounds}
 STRUCTURE:
 \\begin{tikzpicture}[
   mindmap, grow cyclic,
-  every node/.style=concept,
+  every node/.style={concept, align=center},
   concept color=teal!50!blue,
-  level 1/.style={level distance=4.2cm, sibling angle=60, concept color=blue!50},
-  level 2/.style={level distance=2.8cm, sibling angle=40, concept color=blue!25, font=\\small},
-  level 3/.style={level distance=2.0cm, sibling angle=35, concept color=blue!12, font=\\scriptsize},
+  level 1/.style={level distance=3.6cm, sibling angle=72, concept color=blue!50, font=\\small, text width=2.3cm},
+  level 2/.style={level distance=2.3cm, sibling angle=45, concept color=blue!25, font=\\scriptsize, text width=1.8cm},
 ]
-  \\node [root concept] {<<CENTRAL TOPIC>>}
+  \\node [root concept, text width=3cm] {<<CENTRAL TOPIC>>}
     child { node {<<BRANCH 1>>}
-      child { node {<<sub>>} }
-      child { node {<<sub>>} }
+      child { node {<<sub 1a>>} }
+      child { node {<<sub 1b>>} }
     }
-    child { node {<<BRANCH 2>>} ... }
-    ...;
+    child { node {<<BRANCH 2>>}
+      child { node {<<sub 2a>>} }
+    }
+    child { node {<<BRANCH 3>>} }
+    child { node {<<BRANCH 4>>} }
+    child { node {<<BRANCH 5>>} };
 \\end{tikzpicture}
-RULES: 4-6 level-1 branches, 2-3 level-2 children each. Use clip to keep within 14x9cm.
-Every node text MUST reflect actual domain concepts from the description — no "Branch 1".`,
+CRITICAL RULES:
+- EXACTLY 4-5 level-1 branches. NEVER 6+ (causes overlap and text inversion at bottom).
+- NEVER use \\clip — it cuts the circular concept blobs and makes them unreadable.
+- NEVER add edge labels inside child declarations (e.g. edge from parent node{...}). Mindmap edges do not support inline text labels — they cause rotated ghost text.
+- Add text width and align=center to every \\node to prevent text overflow.
+- All node text MUST come from the description — no "Branch 1" or "Sub-topic A".`,
 
     concept_map: `
 LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,fit}
@@ -46,14 +53,20 @@ STYLE:
                 align=center, font=\\small, inner sep=6pt, line width=0.7pt}
   arr/.style = {-{Stealth[length=6pt]}, thick, draw=gray!70}
   lbl/.style = {font=\\scriptsize\\itshape, fill=white, inner sep=2pt}
-STRUCTURE:
-  Place most-connected concept at center. Others around it at 3-4cm spacing.
-  \\node[box] (A) {<<concept>>};
-  \\node[box, right=3.5cm of A] (B) {<<concept>>};
+STRUCTURE: Use at (x,y) absolute coordinates. Spread nodes across the canvas.
+  \\node[box] (A) at (0,0)    {<<concept>>};
+  \\node[box] (B) at (4.5,1)  {<<concept>>};
+  \\node[box] (C) at (4.5,-1) {<<concept>>};
+  \\node[box] (D) at (9,0)    {<<concept>>};
+  \\node[box] (E) at (2,-3)   {<<concept>>};
   \\draw[arr] (A) -- node[lbl,above] {<<verb phrase>>} (B);
-  Use curved edges for long-distance connections: \\draw[arr, bend left=20] ...
-RULES: 7-10 nodes, 8-14 edges. Every edge MUST have a specific relationship label.
-Domain vocabulary from the description is mandatory — no generic "relates to".`,
+  \\draw[arr, bend left=20] (B) to node[lbl,right] {<<verb phrase>>} (D);
+CRITICAL RULES:
+- Use at (x,y) coordinates so nodes don't pile on top of each other.
+- Keep ALL nodes within x in [0,13], y in [-4,4]. If more than 8 nodes, reduce spacing.
+- Every node MUST have a unique ID. NEVER create two nodes with the same content.
+- Every edge MUST carry a specific relationship label — no generic "relates to" or "influences".
+- 7-9 nodes, 8-13 edges. Domain vocabulary only.`,
 
     hierarchy: `
 LIBRARIES: \\usetikzlibrary{positioning,arrows.meta}
@@ -266,25 +279,34 @@ RULES: 4-6 phases. Add a short descriptor below each phase node using
 All phase names from description — no "Phase 1". Fit within 8cm diameter.`,
 
     causal_loop: `
-LIBRARIES: \\usetikzlibrary{arrows.meta,positioning,backgrounds}
-STRUCTURE: Variables as plain text nodes, connected by curved directed arrows.
-  Each arrow has a polarity label: "+" (reinforcing) or "−" (balancing).
-  \\node[var] (V1) at (0,3)   {<<Variable A>>};
-  \\node[var] (V2) at (4,3)   {<<Variable B>>};
-  \\node[var] (V3) at (4,0)   {<<Variable C>>};
-  \\node[var] (V4) at (0,0)   {<<Variable D>>};
-  \\draw[pos] (V1) to[bend left=15]  node[plbl,above]{+} (V2);
-  \\draw[neg] (V2) to[bend left=15]  node[plbl,right]{−} (V3);
-  % Mark feedback loop type in center: R (reinforcing) or B (balancing)
-  \\node[loop] at (2,1.5) {R};
-STYLE:
-  var/.style  = {font=\\small\\bfseries, align=center, text width=2.2cm}
-  pos/.style  = {-{Stealth[length=6pt]}, thick, draw=teal!60}
-  neg/.style  = {-{Stealth[length=6pt]}, thick, draw=orange!70}
-  plbl/.style = {font=\\bfseries\\small, fill=white, inner sep=1pt}
-  loop/.style = {circle, draw=gray!40, fill=gray!8, font=\\bfseries, inner sep=4pt}
-RULES: 5-9 variables, 6-12 arrows. At least one reinforcing and one balancing loop.
-All variable names are domain concepts from the description.`,
+LIBRARIES: \\usetikzlibrary{arrows.meta,backgrounds}
+STYLE (define with \\tikzset BEFORE \\begin{tikzpicture}):
+  var/.style  = {draw, rounded corners=4pt, fill=blue!10, font=\\small\\bfseries,
+                 align=center, text width=2.4cm, inner sep=5pt, minimum height=0.8cm}
+  pos/.style  = {-{Stealth[length=6pt]}, line width=1.0pt, draw=teal!60}
+  neg/.style  = {-{Stealth[length=6pt]}, line width=1.0pt, draw=orange!70}
+  plbl/.style = {font=\\bfseries\\small, fill=white, inner sep=1pt, circle, minimum size=12pt}
+  loop/.style = {circle, draw=gray!40, fill=gray!8, font=\\bfseries\\small, inner sep=4pt, minimum size=18pt}
+STRUCTURE: Place 5-6 variable nodes at explicit hexagonal coordinates, then draw arcs.
+  EXACT COORDINATES TO USE (copy these, only change node content):
+  \\node[var] (V1) at (0, 3.2)   {<<variable>>};   % top
+  \\node[var] (V2) at (3.0, 1.6)  {<<variable>>};  % top-right
+  \\node[var] (V3) at (3.0, -1.6) {<<variable>>};  % bottom-right
+  \\node[var] (V4) at (0, -3.2)   {<<variable>>};  % bottom
+  \\node[var] (V5) at (-3.0,-1.6) {<<variable>>};  % bottom-left
+  \\node[var] (V6) at (-3.0, 1.6) {<<variable>>};  % top-left (omit if only 5 vars)
+  % Causal arcs — use bend left=25 for clockwise, bend right=25 for counter
+  \\draw[pos] (V1) to[bend left=20] node[plbl]{+} (V2);
+  \\draw[neg] (V2) to[bend left=20] node[plbl]{−} (V3);
+  % Loop identity label — place at geometric center of each feedback loop
+  \\node[loop] at (1.5,0) {R};
+  \\node[loop] at (-1.5,0) {B};
+RULES:
+- USE EXACTLY THE COORDINATES ABOVE. Do not invent other coordinates — they cause overlap.
+- 5-6 variables only. Maximum 8 arcs total.
+- Polarity node: \\node[plbl]{+} or \\node[plbl]{−} on EVERY arc, no text labels.
+- R = reinforcing loop, B = balancing loop, placed at loop geometric center.
+- All variable names are domain concepts from the description — no "Variable A".`,
 
     matrix_2x2: `
 LIBRARIES: \\usetikzlibrary{positioning,backgrounds}

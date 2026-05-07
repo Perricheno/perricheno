@@ -197,6 +197,54 @@ function injectTikzFigures(mainTex: string, visuals: GeneratedVisual[]): string 
     );
 }
 
+// ── Figure label reconciliation ─────────────────────────────────────────────
+// When the LLM writes \ref{fig:X} in body text but the figure has \label{fig:Y},
+// the compiled PDF shows "Figure ??". This post-processor fuzzy-matches orphaned
+// \ref{} keys to defined \label{} keys so at least one pass succeeds.
+
+function reconcileFigureRefs(mainTex: string): string {
+    const definedLabels = new Set<string>();
+    for (const m of mainTex.matchAll(/\\label\{(fig:[^}]+)\}/g)) {
+        definedLabels.add(m[1]);
+    }
+    if (definedLabels.size === 0) return mainTex;
+    const labels = [...definedLabels];
+
+    // Longest common substring score (simple char-level)
+    function lcs(a: string, b: string): number {
+        let best = 0;
+        for (let i = 0; i < a.length; i++) {
+            for (let j = 0; j < b.length; j++) {
+                let len = 0;
+                while (i + len < a.length && j + len < b.length && a[i + len] === b[j + len]) len++;
+                if (len > best) best = len;
+            }
+        }
+        return best;
+    }
+
+    return mainTex.replace(/\\ref\{(fig:[^}]+)\}/g, (match, refKey) => {
+        if (definedLabels.has(refKey)) return match;
+
+        // Try exact base match (strip fig: prefix)
+        const refBase = refKey.slice(4);
+        for (const lbl of labels) {
+            if (lbl.slice(4) === refBase) return `\\ref{${lbl}}`;
+        }
+
+        // Best common-substring match
+        let best = labels[0];
+        let bestScore = 0;
+        for (const lbl of labels) {
+            const score = lcs(refKey, lbl);
+            if (score > bestScore) { bestScore = score; best = lbl; }
+        }
+        // Only substitute if score is meaningful (>4 chars shared)
+        if (bestScore > 4) return `\\ref{${best}}`;
+        return match;
+    });
+}
+
 // ── Template resolution ─────────────────────────────────────────────────────
 // Returns the full preamble string (everything before \begin{document}).
 // Priority: custom ZIP upload → named preset → legacy buildPreamble().
@@ -269,6 +317,9 @@ export function runStage4(
 
     // Replace \includegraphics{figures/X.png} with inline TikZ for generated visuals
     mainTex = injectTikzFigures(mainTex, generatedVisuals);
+
+    // Reconcile any \ref{fig:X} that doesn't match a defined \label{fig:Y}
+    mainTex = reconcileFigureRefs(mainTex);
 
     // ── Normalize and sanity-check ──
     mainTex = normalizeLatexText(mainTex);

@@ -16,20 +16,27 @@ const MODEL = "gpt-5-mini-2025-08-07";
 
 const TYPE_BLUEPRINT: Record<string, string> = {
     mind_map: `LIBRARY: \\usetikzlibrary{mindmap,backgrounds}
-\\begin{tikzpicture}[mindmap, grow cyclic, every node/.style=concept, concept color=teal!50!blue,
-  level 1/.style={level distance=4.2cm, sibling angle=60, concept color=blue!50},
-  level 2/.style={level distance=2.8cm, sibling angle=40, concept color=blue!25, font=\\small}]
-  \\node [root concept] {<<CENTRAL TOPIC>>}
-    child { node {<<BRANCH>>} child { node {<<sub>>} } }
-    child { node {<<BRANCH>>} } ...;
+\\begin{tikzpicture}[mindmap, grow cyclic,
+  every node/.style={concept, align=center}, concept color=teal!50!blue,
+  level 1/.style={level distance=3.6cm, sibling angle=72, concept color=blue!50, font=\\small, text width=2.3cm},
+  level 2/.style={level distance=2.3cm, sibling angle=45, concept color=blue!25, font=\\scriptsize, text width=1.8cm}]
+  \\node [root concept, text width=3cm] {<<CENTRAL TOPIC>>}
+    child { node {<<BRANCH 1>>} child { node {<<sub 1a>>} } child { node {<<sub 1b>>} } }
+    child { node {<<BRANCH 2>>} child { node {<<sub 2a>>} } }
+    child { node {<<BRANCH 3>>} }
+    child { node {<<BRANCH 4>>} }
+    child { node {<<BRANCH 5>>} };
 \\end{tikzpicture}
-RULES: 4-6 main branches, 2-3 sub-branches each. All text from user description.`,
+CRITICAL: EXACTLY 4-5 level-1 branches (6+ causes text inversion). NEVER use \\clip. NEVER add edge labels inside child declarations — they produce rotated ghost text. Add text width + align=center to every node.`,
 
     concept_map: `LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,fit}
-Styles: box={draw,rounded corners=5pt,fill=blue!12,text width=2.6cm,align=center,font=\\small,inner sep=6pt}
-        arr={-{Stealth[length=6pt]},thick,draw=gray!70}
-        lbl={font=\\scriptsize\\itshape,fill=white,inner sep=2pt}
-RULES: 7-10 nodes, 8-14 labeled edges. Every edge label = specific relationship verb. Domain terms only.`,
+box={draw,rounded corners=5pt,fill=blue!12,text width=2.6cm,align=center,font=\\small,inner sep=6pt}
+arr={-{Stealth[length=6pt]},thick,draw=gray!70}
+lbl={font=\\scriptsize\\itshape,fill=white,inner sep=2pt}
+Use at (x,y) absolute coordinates. Keep ALL nodes within x∈[0,13], y∈[-4,4].
+\\node[box] (A) at (0,0) {<<concept>>};  \\node[box] (B) at (4.5,1) {<<concept>>};
+\\draw[arr] (A) -- node[lbl,above] {<<verb phrase>>} (B);
+RULES: 7-9 nodes, 8-13 labeled edges. NO duplicate node content. Every edge = specific relationship verb.`,
 
     hierarchy: `LIBRARIES: \\usetikzlibrary{positioning,arrows.meta}
 Styles: root={draw,rounded corners=6pt,fill=teal!60!blue,text=white,font=\\bfseries\\small,align=center,minimum width=3.5cm,inner sep=8pt}
@@ -103,12 +110,23 @@ Curved arrows between consecutive stages: \\draw[-{Stealth},bend left=20].
 Add short descriptor below each stage name.
 RULES: 4-6 stages in closed loop. Arrows go clockwise. All stage names from description.`,
 
-    causal_loop: `LIBRARIES: \\usetikzlibrary{arrows.meta,positioning,backgrounds}
-Place 5-8 variable nodes at varied coordinates.
-var={draw,rounded corners=5pt,fill=blue!10,font=\\small,align=center,text width=2.2cm,inner sep=6pt}
-Arcs: ->{+} reinforcing or ->{-} balancing. Label polarity (+/-) near arrowhead.
-Draw circular feedback loops. Add R or B label for reinforcing/balancing loops.
-RULES: Variables from description, explicit polarity on every arc.`,
+    causal_loop: `LIBRARIES: \\usetikzlibrary{arrows.meta,backgrounds}
+var/.style={draw,rounded corners=4pt,fill=blue!10,font=\\small\\bfseries,align=center,text width=2.4cm,inner sep=5pt,minimum height=0.8cm}
+pos/.style={-{Stealth[length=6pt]},line width=1.0pt,draw=teal!60}
+neg/.style={-{Stealth[length=6pt]},line width=1.0pt,draw=orange!70}
+plbl/.style={font=\\bfseries\\small,fill=white,inner sep=1pt,circle,minimum size=12pt}
+loop/.style={circle,draw=gray!40,fill=gray!8,font=\\bfseries\\small,inner sep=4pt,minimum size=18pt}
+USE EXACTLY THESE COORDINATES (hexagonal ring, prevents overlap):
+\\node[var] (V1) at (0,3.2)    {<<var>>};  % top
+\\node[var] (V2) at (3.0,1.6)  {<<var>>};  % top-right
+\\node[var] (V3) at (3.0,-1.6) {<<var>>};  % bottom-right
+\\node[var] (V4) at (0,-3.2)   {<<var>>};  % bottom
+\\node[var] (V5) at (-3.0,-1.6){<<var>>};  % bottom-left
+\\node[var] (V6) at (-3.0,1.6) {<<var>>};  % top-left (omit if 5 vars only)
+\\draw[pos] (V1) to[bend left=20] node[plbl]{+} (V2);
+\\draw[neg] (V2) to[bend left=20] node[plbl]{-} (V3);
+\\node[loop] at (1.5,0) {R};  \\node[loop] at (-1.5,0) {B};
+RULES: 5-6 vars, max 8 arcs, polarity on every arc, R/B at loop centers.`,
 
     matrix_2x2: `LIBRARIES: \\usetikzlibrary{positioning,backgrounds}
 Draw 2×2 grid (two axis lines through center). Label quadrants.
