@@ -417,6 +417,8 @@ export default function RPage() {
     const [selectedCharts, setSelectedCharts] = useState<string[]>([]);
     const [files, setFiles] = useState<AttachedFile[]>([]);
     const [uploading, setUploading] = useState(false);
+    const [mobileCategory, setMobileCategory] = useState<string | null>(null);
+    const [galleryCollapsed, setGalleryCollapsed] = useState(false);
 
     // Suggest state
     const [suggesting, setSuggesting] = useState(false);
@@ -790,12 +792,25 @@ export default function RPage() {
             <div className="flex-1 overflow-y-auto min-h-0">
                 <main className="max-w-3xl mx-auto w-full px-5 pt-6 space-y-6 pb-6">
 
-                {/* ── Chart gallery (first) ── */}
+                {/* ── Chart gallery ── */}
                 <section className="pb-4">
+                    {/* Header row */}
                     <div className="flex items-center justify-between mb-3">
-                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em]">
-                            {t("chartTypes")} · {CHARTS.length} {t("available")}
-                        </p>
+                        <button
+                            onClick={() => setGalleryCollapsed(v => !v)}
+                            className="flex items-center gap-2 group"
+                        >
+                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.18em] group-hover:text-gray-400 transition-colors">
+                                {t("chartTypes")} · {CHARTS.length} {t("available")}
+                            </p>
+                            <svg
+                                width="10" height="10" viewBox="0 0 10 10"
+                                className={`text-gray-300 transition-transform duration-200 ${galleryCollapsed ? "-rotate-90" : ""}`}
+                                fill="currentColor"
+                            >
+                                <path d="M5 7L1 3h8L5 7z" />
+                            </svg>
+                        </button>
                         {(selectedCharts.length > 0 || suggestedCharts.length > 0) && (
                             <button
                                 onClick={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
@@ -806,44 +821,80 @@ export default function RPage() {
                         )}
                     </div>
 
-                    {/* AI reasoning banner */}
-                    <AnimatePresence>
-                        {suggestReasoning && suggestedCharts.length > 0 && !loading && (
+                    <AnimatePresence initial={false}>
+                        {!galleryCollapsed && (
                             <motion.div
-                                initial={{ opacity: 0, y: -4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                className="flex items-start gap-2 px-3 py-2 mb-3 bg-[#f5f5f5] rounded-xl border border-[#e8e8e8]"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
                             >
-                                <IconSparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                                <p className="text-[11px] text-gray-500 leading-snug">{suggestReasoning}</p>
+                                {/* AI reasoning banner */}
+                                <AnimatePresence>
+                                    {suggestReasoning && suggestedCharts.length > 0 && !loading && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            className="flex items-start gap-2 px-3 py-2 mb-3 bg-[#f5f5f5] rounded-xl border border-[#e8e8e8]"
+                                        >
+                                            <IconSparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                                            <p className="text-[11px] text-gray-500 leading-snug">{suggestReasoning}</p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Mobile: category chips */}
+                                <div className="flex gap-2 overflow-x-auto pb-2 mb-2 md:hidden" style={{ scrollbarWidth: "none" }}>
+                                    <button
+                                        onClick={() => setMobileCategory(null)}
+                                        className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold transition-colors
+                                            ${mobileCategory === null ? "bg-[#1a1a1a] text-white" : "bg-[#f0f0f0] text-[#555]"}`}
+                                    >
+                                        All
+                                    </button>
+                                    {[...new Set(CHARTS.map(c => c.tag))].map(tag => (
+                                        <button
+                                            key={tag}
+                                            onClick={() => setMobileCategory(tag === mobileCategory ? null : tag)}
+                                            className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold transition-colors
+                                                ${mobileCategory === tag ? "bg-[#1a1a1a] text-white" : "bg-[#f0f0f0] text-[#555]"}`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Chart grid: 3 cols on mobile, more on larger screens */}
+                                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                                    {CHARTS
+                                        .filter(c => !mobileCategory || c.tag === mobileCategory)
+                                        .map(chart => (
+                                            <ChartCard
+                                                key={chart.id}
+                                                chart={chart}
+                                                selected={selectedCharts.includes(chart.id)}
+                                                suggested={suggestedCharts.includes(chart.id) && !selectedCharts.includes(chart.id)}
+                                                onClick={() => {
+                                                    setSelectedCharts(prev =>
+                                                        prev.includes(chart.id)
+                                                            ? prev.filter(c => c !== chart.id)
+                                                            : [...prev, chart.id]
+                                                    );
+                                                    setSuggestedCharts([]);
+                                                    setSuggestReasoning("");
+                                                }}
+                                            />
+                                        ))}
+                                </div>
+
+                                <p className="text-[10px] text-gray-300 mt-3 font-medium hidden md:block">
+                                    {t("hoverHint")}
+                                </p>
                             </motion.div>
                         )}
                     </AnimatePresence>
-
-                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                        {CHARTS.map(chart => (
-                            <ChartCard
-                                key={chart.id}
-                                chart={chart}
-                                selected={selectedCharts.includes(chart.id)}
-                                suggested={suggestedCharts.includes(chart.id) && !selectedCharts.includes(chart.id)}
-                                onClick={() => {
-                                    setSelectedCharts(prev =>
-                                        prev.includes(chart.id)
-                                            ? prev.filter(c => c !== chart.id)
-                                            : [...prev, chart.id]
-                                    );
-                                    setSuggestedCharts([]);
-                                    setSuggestReasoning("");
-                                }}
-                            />
-                        ))}
-                    </div>
-
-                    <p className="text-[10px] text-gray-300 mt-3 font-medium">
-                        {t("hoverHint")}
-                    </p>
                 </section>
 
                 {/* ── Single error banner ── */}
