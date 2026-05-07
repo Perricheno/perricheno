@@ -172,7 +172,8 @@ TECHNICAL RULES:
 - Line widths: 0.7–1.5pt for edges, 1.5pt for primary flow arrows.
 - Every \\node must have a unique ID. Coordinate all \\draw commands to existing node IDs.
 - Test mentally that every referenced node ID is actually defined before using it in \\draw.
-- Do NOT use \\usepackage{fontspec} or \\usepackage{polyglossia} — the document uses T2A/babel encoding.`;
+- Do NOT use \\usepackage{fontspec} or \\usepackage{polyglossia} — the document uses T2A/babel encoding.
+- CYRILLIC / RUSSIAN: The document preamble already has \\usepackage[T2A]{fontenc} and \\usepackage[utf8]{inputenc}. You can write Cyrillic text directly in UTF-8 inside node labels — no extra packages or commands needed. Example: \\node {Теоретическая база};`;
 
     const user = `VISUAL TYPE: ${visual.type}
 SECTION IN DOCUMENT: "${visual.sectionHeading}"

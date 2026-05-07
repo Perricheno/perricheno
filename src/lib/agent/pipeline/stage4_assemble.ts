@@ -190,7 +190,8 @@ function injectTikzFigures(mainTex: string, visuals: GeneratedVisual[]): string 
             const tikzPicture = visual.tikzCode
                 .replace(/\\usetikzlibrary\{[^}]+\}\s*/g, "")
                 .trim();
-            return tikzPicture;
+            // Scale to fit current column/text width (works in both 1- and 2-column layouts)
+            return `\\resizebox{\\linewidth}{!}{%\n${tikzPicture}\n}`;
         },
     );
 }
