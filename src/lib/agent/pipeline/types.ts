@@ -49,7 +49,12 @@ export type VisualType =
     | "framework"         // theoretical/research framework - boxes in logical arrangement
     | "process_schema"    // sequential or parallel research/methodology phases with arrows
     | "relationship"      // entity/factor relationship web - who connects to whom and how
-    | "comparison"        // structured side-by-side comparison of approaches/theories;
+    | "comparison"        // structured side-by-side comparison of approaches/theories
+    | "timeline"          // chronological sequence of events along a horizontal/vertical axis
+    | "flowchart"         // decision flow with diamond decision nodes and branching paths
+    | "network"           // graph with weighted/labeled edges between many nodes (sources, sinks)
+    | "venn"              // overlapping circles showing set intersections and shared concepts
+    | "architecture";     // layered system or model architecture (components, modules, pipelines)
 
 export interface PlannedVisual {
     id: string;              // slug, e.g. "fig_pipeline_arch"

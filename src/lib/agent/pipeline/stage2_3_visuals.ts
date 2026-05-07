@@ -143,6 +143,130 @@ STRUCTURE (manual rows for full control):
   \\node[cellE, below=0pt of H2] (V1B) {<<value>>};
 RULES: 2-3 comparison subjects, 5-8 criteria. Use ✓ ✗ ≈ + or quantitative values.
 All criteria and values MUST come from the description — no "Criterion 1".`,
+
+    timeline: `
+LIBRARIES: \\usetikzlibrary{arrows.meta,positioning,decorations.pathmorphing}
+STRUCTURE:
+  % Horizontal axis line
+  \\draw[line width=1.5pt, -{Stealth[length=8pt]}, gray!60] (0,0) -- (13,0);
+  % Events: alternate above (y=1.6) and below (y=-1.6) the axis
+  \\foreach tick at x-position, draw vertical connector and date label on axis
+  event/.style = {draw, rounded corners=4pt, fill=blue!12, font=\\small,
+                  align=center, text width=2.4cm, inner sep=5pt}
+  date/.style  = {font=\\scriptsize\\bfseries, text=teal!60!blue}
+  tick/.style  = {draw=gray!50, line width=0.8pt}
+  % Above event:
+  \\node[event] (E1) at (1.5, 1.8) {<<event title>>\\\\ {\\tiny <<detail>>}};
+  \\draw[tick] (1.5,0.15) -- (1.5,1.2);
+  \\node[date] at (1.5,-0.35) {<<year/date>>};
+  % Below event (alternating):
+  \\node[event] (E2) at (3.5,-1.8) {<<event title>>\\\\ {\\tiny <<detail>>}};
+  \\draw[tick] (3.5,-0.15) -- (3.5,-1.2);
+  \\node[date] at (3.5,0.35) {<<year/date>>};
+RULES: 4-7 events alternating above/below. All event titles and dates from description.
+Use \\colorbox{teal!30}{} for a highlighted "current" or "key" event.
+Fit within 13cm × 5cm total height.`,
+
+    flowchart: `
+LIBRARIES: \\usetikzlibrary{shapes.geometric,arrows.meta,positioning,backgrounds}
+STYLE (define with \\tikzset):
+  start/.style    = {draw, rounded rectangle, fill=teal!40, text=white, font=\\small\\bfseries,
+                     align=center, text width=2.6cm, inner sep=7pt, rounded rectangle arc length=90}
+  process/.style  = {draw, rectangle, fill=blue!12, font=\\small, align=center,
+                     text width=2.8cm, minimum height=1.0cm, inner sep=6pt}
+  decision/.style = {draw, diamond, fill=orange!22, font=\\small, align=center,
+                     aspect=2.2, inner sep=3pt, text width=2.2cm}
+  io/.style       = {draw, trapezium, fill=gray!12, font=\\small, align=center,
+                     trapezium left angle=75, trapezium right angle=105,
+                     text width=2.4cm, inner sep=5pt}
+  arr/.style      = {-{Stealth[length=6pt]}, line width=1.0pt, draw=gray!60}
+  lbl/.style      = {font=\\scriptsize, fill=white, inner sep=1pt}
+LAYOUT: Top-to-bottom primary flow. Decisions branch left (No) and right (Yes) or continue down.
+  \\node[start] (S) {<<Start / Trigger>>};
+  \\node[process, below=0.8cm of S] (P1) {<<Process step>>};
+  \\node[decision, below=0.8cm of P1] (D1) {<<Decision condition?>>};
+  \\node[process, below=0.8cm of D1] (P2) {<<Yes branch>>};
+  \\node[process, right=1.5cm of D1] (P3) {<<No branch>>};
+  \\draw[arr] (S) -- (P1); \\draw[arr] (P1) -- (D1);
+  \\draw[arr] (D1) -- node[lbl,left]{Yes} (P2);
+  \\draw[arr] (D1) -- node[lbl,above]{No} (P3);
+RULES: 1 start, 1-2 end nodes, 2-4 decision diamonds, 4-8 process boxes.
+Every label from the description — no "Step 1" or "Process A".`,
+
+    network: `
+LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,backgrounds,shapes.geometric}
+STYLE:
+  source/.style  = {circle, draw, fill=teal!40, text=white, font=\\small\\bfseries,
+                    minimum size=1.0cm, align=center, inner sep=2pt}
+  sink/.style    = {circle, draw, fill=blue!35, text=white, font=\\small\\bfseries,
+                    minimum size=1.0cm, align=center, inner sep=2pt}
+  middle/.style  = {circle, draw, fill=gray!20, font=\\small,
+                    minimum size=0.85cm, align=center, inner sep=2pt}
+  edir/.style    = {-{Stealth[length=5pt]}, draw=gray!55, line width=0.8pt}
+  ebid/.style    = {<->, draw=gray!55, line width=0.8pt}
+  elbl/.style    = {font=\\scriptsize, fill=white, inner sep=1pt}
+LAYOUT: Sources cluster on left (x=0), intermediates in center (x=4..6), sinks on right (x=10).
+  \\node[source] (S1) at (0, 2) {<<source>>};
+  \\node[source] (S2) at (0,-2) {<<source>>};
+  \\node[middle] (M1) at (4, 1) {<<node>>};
+  \\node[middle] (M2) at (4,-1) {<<node>>};
+  \\node[sink]   (T1) at (9, 2) {<<sink>>};
+  \\draw[edir] (S1) -- node[elbl,above]{<<weight/label>>} (M1);
+  \\draw[edir] (M1) -- node[elbl,above]{<<weight/label>>} (T1);
+RULES: 2-4 sources, 3-6 intermediate nodes, 2-3 sinks, 8-14 directed edges.
+Edge labels must be actual flow quantities, relationships, or capacities from description.`,
+
+    venn: `
+LIBRARIES: \\usetikzlibrary{positioning,backgrounds}
+STRUCTURE:
+  % Define circles with meaningful overlap — radius 2.5cm, overlap ~1cm
+  \\begin{scope}
+    \\fill[blue!20, opacity=0.6] (0,0) circle (2.5cm);
+    \\fill[teal!25, opacity=0.6] (2.2,0) circle (2.5cm);
+    % Optional third circle:
+    \\fill[orange!20, opacity=0.6] (1.1,-1.9) circle (2.5cm);
+  \\end{scope}
+  \\draw[line width=1.0pt, blue!50]   (0,0) circle (2.5cm);
+  \\draw[line width=1.0pt, teal!60]   (2.2,0) circle (2.5cm);
+  \\draw[line width=1.0pt, orange!60] (1.1,-1.9) circle (2.5cm);
+  % Labels inside each exclusive region
+  \\node[align=center, font=\\small] at (-1.1, 0.5) {<<unique to A>>\\\\ <<item2>>};
+  \\node[align=center, font=\\small] at (3.3, 0.5)  {<<unique to B>>\\\\ <<item2>>};
+  % Intersection label
+  \\node[align=center, font=\\small\\bfseries] at (1.1, 0.3) {<<shared A∩B>>};
+  % Circle title labels outside
+  \\node[font=\\bfseries\\small, blue!70] at (-1.8, 2.8) {<<Set A name>>};
+  \\node[font=\\bfseries\\small, teal!70] at (4.0, 2.8)  {<<Set B name>>};
+RULES: 2-3 circles. ALL region labels must contain real concepts from description.
+Exclusive regions: 2-4 items each. Intersection: 2-3 shared items. No "Category A".`,
+
+    architecture: `
+LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,shapes.geometric}
+STYLE:
+  layer/.style   = {draw=gray!40, rounded corners=8pt, fill=gray!6, inner sep=8pt,
+                    line width=0.8pt, dashed}
+  component/.style = {draw, rounded corners=5pt, fill=blue!18, font=\\small,
+                      align=center, text width=2.5cm, minimum height=0.9cm, inner sep=6pt}
+  highlight/.style = {draw, rounded corners=5pt, fill=teal!35, text=white,
+                      font=\\small\\bfseries, align=center, text width=2.5cm,
+                      minimum height=0.9cm, inner sep=6pt}
+  connector/.style = {draw=gray!30, fill=gray!12, font=\\scriptsize, align=center,
+                      minimum width=1.0cm, minimum height=0.7cm}
+  arr/.style     = {-{Stealth[length=6pt]}, line width=1.0pt, draw=teal!60}
+  data/.style    = {-{Stealth[length=6pt]}, line width=0.7pt, draw=gray!50, dashed}
+LAYOUT: Left-to-right pipeline OR top-to-bottom layers. Use \\begin{pgfonlayer}{background}
+  fit nodes to create visual layer containers with labels.
+  % Example left-to-right:
+  \\node[component] (I) {<<Input\\\\layer>>};
+  \\node[component, right=1.5cm of I] (H1) {<<Hidden\\\\layer 1>>};
+  \\node[highlight, right=1.5cm of H1] (H2) {<<Core\\\\module>>};
+  \\node[component, right=1.5cm of H2] (O) {<<Output\\\\layer>>};
+  \\draw[arr] (I)--(H1); \\draw[arr] (H1)--(H2); \\draw[arr] (H2)--(O);
+  \\begin{pgfonlayer}{background}
+    \\node[layer, fit=(H1)(H2), label=above:{\\scriptsize <<Layer group name>>}] {};
+  \\end{pgfonlayer}
+RULES: 3-6 layers or stages, 2-4 components per layer. Use fit-node containers to group layers.
+All component names from description — no "Layer 1" or "Module A".`,
 };
 
 // ── LLM prompt ────────────────────────────────────────────────────────────────

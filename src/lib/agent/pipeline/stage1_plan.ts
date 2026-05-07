@@ -119,7 +119,7 @@ function buildSystemPrompt(s: PipelineSettings, filenames: string[]): string {
     {
       "id": "fig_slug_no_spaces",
       "sectionHeading": "exact section heading string",
-      "type": "mind_map|concept_map|hierarchy|framework|process_schema|relationship|comparison",
+      "type": "mind_map|concept_map|hierarchy|framework|process_schema|relationship|comparison|timeline|flowchart|network|venn|architecture",
       "description": "exactly what concepts/entities this visual shows and how they relate (2-3 sentences for the renderer)",
       "caption": "Figure caption text in ${lang}",
       "label": "fig:slug_no_spaces"
@@ -148,15 +148,27 @@ Rules:
 - Section headings must be in ${lang}.
 - Style: ${styleNotes}
 ${hasRefs ? `- Reference files available (filenames only, content not yet read): ${filenames.map(f => `"${f}"`).join(", ")}. Match each section to the files whose titles suggest relevance.` : `- No external references. Do not fabricate citations in tasks.`}
-${wantsVisuals ? `- Plan EXACTLY ${visualTarget !== null ? visualTarget : "2–3"} visual(s). Use ONLY structural/conceptual visuals typical for academic papers: mind maps, concept maps, hierarchies, theoretical frameworks, methodology schemas, relationship diagrams, or structured comparisons. Do NOT plan statistical charts, bar graphs, or data plots.
+${wantsVisuals ? `- Plan EXACTLY ${visualTarget !== null ? visualTarget : "2–3"} visual(s). Use ONLY structural/conceptual visuals typical for academic papers. Do NOT plan statistical charts, bar graphs, or data plots (those are handled separately).
 - Spread visuals across different sections - at most 1 visual per section. Assign each to the section where it is most relevant.
-- Pick the type that fits: mind_map (branching topics around a central concept), concept_map (labeled semantic links between concepts), hierarchy (taxonomy/classification tree), framework (theoretical/research model), process_schema (research methodology phases), relationship (multi-entity connection web), comparison (side-by-side structures).
+- Pick the type that best fits the content:
+  mind_map — branching topics radiating from a central concept
+  concept_map — labeled semantic links between concepts
+  hierarchy — taxonomy, classification, or organizational tree
+  framework — theoretical/research model with logical box arrangement
+  process_schema — sequential or parallel methodology/research phases
+  relationship — multi-entity connection web showing who connects to whom
+  comparison — structured side-by-side comparison of approaches or theories
+  timeline — chronological sequence of events or developments along an axis
+  flowchart — decision flow with diamond decision nodes and Yes/No branches
+  network — graph with weighted/labeled edges between source, intermediate, and sink nodes
+  venn — overlapping circles showing set intersections and shared concepts
+  architecture — layered system, model, or pipeline architecture (components, modules)
 - Visual ids must be unique slugs (lowercase letters, digits, underscores only). Label must be "fig:" + that id.` : ``}
 
 Do NOT output markdown fences. Do NOT add commentary. JSON only.`;
 }
 
-const VALID_VISUAL_TYPES = new Set<VisualType>(["mind_map", "concept_map", "hierarchy", "framework", "process_schema", "relationship", "comparison"]);
+const VALID_VISUAL_TYPES = new Set<VisualType>(["mind_map", "concept_map", "hierarchy", "framework", "process_schema", "relationship", "comparison", "timeline", "flowchart", "network", "venn", "architecture"]);
 
 function validatePlan(p: any): Plan | null {
     if (!p || typeof p !== "object") return null;
