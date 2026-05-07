@@ -115,14 +115,15 @@ function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean, hasVisua
         : `CITATIONS: Do NOT include any \\cite / \\textcite / \\parencite commands. No bibliography references in this draft.`;
 
     const visualRules = hasVisuals
-        ? `FIGURES: Embed ONLY the figures listed in the AVAILABLE FIGURES block of the user message. Use exactly this template — do NOT alter filename or label:
+        ? `FIGURES: Embed ONLY the figures listed in the AVAILABLE FIGURES block of the user message. Use exactly this template — copy FILENAME and LABEL character-for-character from the list, do NOT alter them:
 \\begin{figure}[h!]
   \\centering
   \\includegraphics[width=0.85\\textwidth]{figures/FILENAME}
   \\caption{CAPTION}
   \\label{LABEL}
 \\end{figure}
-Place the figure where it is first discussed. Reference it as Figure~\\ref{LABEL}.
+Place the figure where it is first discussed. Reference it in the text as Figure~\\ref{LABEL}.
+CRITICAL — LABEL CONSISTENCY: The string inside \\label{...} and inside \\ref{...} MUST be byte-for-byte identical. Copy the exact label from AVAILABLE FIGURES into both places. A mismatch will produce "Figure ??" in the output.
 CRITICAL: Do NOT invent filenames. Do NOT embed any figure not listed in AVAILABLE FIGURES.`
         : `FIGURES — ABSOLUTE PROHIBITION: There are NO generated figures for this document. Do NOT write \\includegraphics, \\begin{figure}, or any image command under ANY circumstance. Ignore any task that mentions embedding a figure.`;
 

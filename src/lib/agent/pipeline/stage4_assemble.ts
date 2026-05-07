@@ -53,6 +53,7 @@ function buildPreamble(s: PipelineSettings): string {
         "\\usepackage{graphicx}",
         "\\graphicspath{{images/}{figures/}}",
         "\\usepackage{tikz}",
+        "\\usepackage{adjustbox}",
         "\\usepackage{hyperref}",
         "\\usepackage{geometry}",
         "\\usepackage{booktabs}",
@@ -190,8 +191,8 @@ function injectTikzFigures(mainTex: string, visuals: GeneratedVisual[]): string 
             const tikzPicture = visual.tikzCode
                 .replace(/\\usetikzlibrary\{[^}]+\}\s*/g, "")
                 .trim();
-            // Scale to fit current column/text width (works in both 1- and 2-column layouts)
-            return `\\resizebox{\\linewidth}{!}{%\n${tikzPicture}\n}`;
+            // Scale down to fit column/text width only if wider; never upscale small diagrams
+            return `\\begin{adjustbox}{max width=\\linewidth,center}\n${tikzPicture}\n\\end{adjustbox}`;
         },
     );
 }

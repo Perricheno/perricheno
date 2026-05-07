@@ -54,7 +54,25 @@ export type VisualType =
     | "flowchart"         // decision flow with diamond decision nodes and branching paths
     | "network"           // graph with weighted/labeled edges between many nodes (sources, sinks)
     | "venn"              // overlapping circles showing set intersections and shared concepts
-    | "architecture";     // layered system or model architecture (components, modules, pipelines)
+    | "architecture"      // layered system or model architecture (components, modules, pipelines)
+    | "cycle"             // circular process loop: stages connected by curved arrows (PDCA, ADDIE)
+    | "causal_loop"       // causal loop diagram: variables with +/- arcs, feedback loops
+    | "matrix_2x2"        // 2×2 strategic quadrant: positioning, priority, BCG-style maps
+    | "stakeholder_map"   // concentric rings: stakeholders placed by proximity/influence to center
+    | "fishbone"          // Ishikawa cause-effect: spine arrow, diagonal branches, root causes
+    | "state_machine"     // finite state automaton: states as circles, labeled transitions
+    | "sequence_diagram"  // UML-style sequence: vertical lifelines, horizontal message arrows
+    | "er_diagram"        // entity-relationship: rectangles, diamond relations, attribute ellipses
+    | "onion_model"       // concentric filled layers: environmental/contextual nesting
+    | "pipeline_flow"     // processing pipeline with data annotations and optional feedback arcs
+    | "force_field"       // Lewin force field: driving forces left, restraining forces right
+    | "gantt"             // simplified Gantt chart: task bars on a time axis
+    | "value_chain"       // Porter's value chain: primary activities + support activities
+    | "ecosystem_map"     // actor ecosystem: focal entity, surrounding actors, interaction arrows
+    | "bracket_tree"      // hierarchical bracket/syntax tree: nodes linked by angled lines
+    | "wbs"               // work breakdown structure: project → deliverables → work packages
+    | "swot"              // SWOT 2×2 grid: Strengths/Weaknesses/Opportunities/Threats
+    | "systems_map";      // system boundary diagram: internal components + external environment
 
 export interface PlannedVisual {
     id: string;              // slug, e.g. "fig_pipeline_arch"

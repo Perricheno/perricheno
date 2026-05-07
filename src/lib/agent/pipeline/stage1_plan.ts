@@ -119,7 +119,7 @@ function buildSystemPrompt(s: PipelineSettings, filenames: string[]): string {
     {
       "id": "fig_slug_no_spaces",
       "sectionHeading": "exact section heading string",
-      "type": "mind_map|concept_map|hierarchy|framework|process_schema|relationship|comparison|timeline|flowchart|network|venn|architecture",
+      "type": "mind_map|concept_map|hierarchy|framework|process_schema|relationship|comparison|timeline|flowchart|network|venn|architecture|cycle|causal_loop|matrix_2x2|stakeholder_map|fishbone|state_machine|sequence_diagram|er_diagram|onion_model|pipeline_flow|force_field|gantt|value_chain|ecosystem_map|bracket_tree|wbs|swot|systems_map",
       "description": "exactly what concepts/entities this visual shows and how they relate (2-3 sentences for the renderer)",
       "caption": "Figure caption text in ${lang}",
       "label": "fig:slug_no_spaces"
@@ -163,12 +163,30 @@ ${wantsVisuals ? `- Plan EXACTLY ${visualTarget !== null ? visualTarget : "2–3
   network — graph with weighted/labeled edges between source, intermediate, and sink nodes
   venn — overlapping circles showing set intersections and shared concepts
   architecture — layered system, model, or pipeline architecture (components, modules)
+  cycle — circular process loop with stages connected by curved arrows (PDCA, ADDIE, feedback cycles)
+  causal_loop — causal loop diagram: variables with +/− arcs showing reinforcing/balancing feedback (systems thinking)
+  matrix_2x2 — 2×2 strategic quadrant map: items positioned by two axes (BCG, priority, positioning)
+  stakeholder_map — concentric rings: stakeholders placed by proximity/influence to focal entity
+  fishbone — Ishikawa cause-effect: spine pointing to effect, diagonal branches for cause categories
+  state_machine — finite state automaton: states as circles, transitions as labeled directed arrows
+  sequence_diagram — UML-style interaction: vertical lifelines, horizontal message arrows, activation boxes
+  er_diagram — entity-relationship: rectangle entities, diamond relationships, ellipse attributes, cardinality
+  onion_model — concentric filled layers: environmental/contextual nesting from core outward
+  pipeline_flow — processing pipeline with data annotations on flow arrows and optional feedback arc
+  force_field — Lewin force field: driving forces (→) vs restraining forces (←) around equilibrium line
+  gantt — simplified Gantt chart: task bars on a horizontal time axis with milestones
+  value_chain — Porter's value chain: 5 primary activities + 4 support activities + margin
+  ecosystem_map — actor ecosystem: focal entity at center, surrounding actors grouped by sector with interaction arrows
+  bracket_tree — hierarchical bracket/syntax tree: root at top, children via angled lines with category labels
+  wbs — work breakdown structure: project → major deliverables → work packages with WBS codes
+  swot — SWOT 2×2 grid: Strengths/Weaknesses/Opportunities/Threats with bullet items in each quadrant
+  systems_map — system boundary diagram: internal components + external actors + cross-boundary flows
 - Visual ids must be unique slugs (lowercase letters, digits, underscores only). Label must be "fig:" + that id.` : ``}
 
 Do NOT output markdown fences. Do NOT add commentary. JSON only.`;
 }
 
-const VALID_VISUAL_TYPES = new Set<VisualType>(["mind_map", "concept_map", "hierarchy", "framework", "process_schema", "relationship", "comparison", "timeline", "flowchart", "network", "venn", "architecture"]);
+const VALID_VISUAL_TYPES = new Set<VisualType>(["mind_map", "concept_map", "hierarchy", "framework", "process_schema", "relationship", "comparison", "timeline", "flowchart", "network", "venn", "architecture", "cycle", "causal_loop", "matrix_2x2", "stakeholder_map", "fishbone", "state_machine", "sequence_diagram", "er_diagram", "onion_model", "pipeline_flow", "force_field", "gantt", "value_chain", "ecosystem_map", "bracket_tree", "wbs", "swot", "systems_map"]);
 
 function validatePlan(p: any): Plan | null {
     if (!p || typeof p !== "object") return null;
