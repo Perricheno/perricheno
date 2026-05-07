@@ -145,6 +145,28 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 </div>
             </div>
 
+            <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Structural Visuals</label>
+                    <span className="text-sm font-mono font-bold text-[var(--foreground)] tabular-nums">
+                        {settings.visualCount === 0 ? "Off" : settings.visualCount}
+                    </span>
+                </div>
+                <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    step={1}
+                    value={settings.visualCount}
+                    onChange={(e) => updateSetting("visualCount", Number(e.target.value))}
+                    className="w-full h-1.5 bg-[var(--border)] rounded-full appearance-none cursor-pointer accent-[var(--foreground)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[var(--foreground)] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-gray-300 font-mono">
+                    <span>Off</span><span>2</span><span>5</span><span>8</span><span>10</span>
+                </div>
+                <p className="text-[10px] text-gray-300 leading-tight">Mind maps, concept maps, hierarchies, frameworks — embedded as figures in the PDF.</p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                     <div className="space-y-2">

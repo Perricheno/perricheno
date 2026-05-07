@@ -145,6 +145,9 @@ export async function POST(req: Request) {
         taskFileText: body.taskFileText,
         referenceLinks: Array.isArray(body.referenceLinks) ? body.referenceLinks : undefined,
         uploadIds: Array.isArray(body.uploadIds) ? body.uploadIds : undefined,
+        visualCount: typeof body.visualCount === "number"
+            ? Math.max(0, Math.min(10, Math.round(body.visualCount)))
+            : undefined,
     };
 
     if (!settings.prompt) return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });

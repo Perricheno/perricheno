@@ -46,7 +46,9 @@ export interface AgentSettings {
         ocrUsed: boolean;
     }[];
     runtime: 'R' | 'Python';
-    
+    /** Number of structural visuals to generate (0 = off, 2–10). */
+    visualCount: number;
+
     // Literature Search specific settings
     scholarMaxArticles: number;
     scholarYearFrom: string;
@@ -76,6 +78,7 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     customTemplatePreamble: "",
     uploadMeta: [],
     runtime: 'R',
+    visualCount: 3,
     scholarMaxArticles: 10,
     scholarYearFrom: 'Any',
     scholarAuthors: '',

@@ -26,6 +26,8 @@ export interface PipelineSettings {
     templateId?: string;
     /** Full LaTeX preamble extracted from a user-uploaded Overleaf ZIP. Overrides templateId. */
     customTemplatePreamble?: string;
+    /** How many structural visuals to generate. 0 = disabled, 2–10 = user choice. */
+    visualCount?: number;
 }
 
 export interface PlanSection {
@@ -36,7 +38,14 @@ export interface PlanSection {
     visualIds?: string[];     // ids of visuals planned for this section
 }
 
-export type VisualType = "flowchart" | "diagram" | "chart" | "timeline" | "architecture" | "comparison" | "other";
+export type VisualType =
+    | "mind_map"          // radial layout: central concept + thematic branches
+    | "concept_map"       // nodes connected by labeled semantic edges
+    | "hierarchy"         // tree: taxonomy, classification, organizational structure
+    | "framework"         // theoretical/research framework — boxes in logical arrangement
+    | "process_schema"    // sequential or parallel research/methodology phases with arrows
+    | "relationship"      // entity/factor relationship web — who connects to whom and how
+    | "comparison"        // structured side-by-side comparison of approaches/theories;
 
 export interface PlannedVisual {
     id: string;              // slug, e.g. "fig_pipeline_arch"

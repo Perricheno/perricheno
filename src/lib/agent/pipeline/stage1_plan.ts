@@ -111,14 +111,16 @@ function buildSystemPrompt(s: PipelineSettings, filenames: string[]): string {
 
     const hasRefs = s.useReferences && filenames.length > 0;
 
-    const wantsVisuals = VISUAL_CAPABLE_DOCTYPES.has(s.docType);
+    // 0 = disabled; undefined = let planner decide (default 1-3); 2-10 = user choice
+    const visualTarget = typeof s.visualCount === "number" ? s.visualCount : null;
+    const wantsVisuals = VISUAL_CAPABLE_DOCTYPES.has(s.docType) && visualTarget !== 0;
     const visualSchema = wantsVisuals ? `
   "visuals": [
     {
       "id": "fig_slug_no_spaces",
       "sectionHeading": "exact section heading string",
-      "type": "flowchart|diagram|chart|timeline|architecture|comparison|other",
-      "description": "exactly what this visual shows (1-2 sentences for the renderer)",
+      "type": "mind_map|concept_map|hierarchy|framework|process_schema|relationship|comparison",
+      "description": "exactly what concepts/entities this visual shows and how they relate (2-3 sentences for the renderer)",
       "caption": "Figure caption text in ${lang}",
       "label": "fig:slug_no_spaces"
     }
@@ -146,13 +148,15 @@ Rules:
 - Section headings must be in ${lang}.
 - Style: ${styleNotes}
 ${hasRefs ? `- Reference files available (filenames only, content not yet read): ${filenames.map(f => `"${f}"`).join(", ")}. Match each section to the files whose titles suggest relevance.` : `- No external references. Do not fabricate citations in tasks.`}
-${wantsVisuals ? `- Plan 1-3 visuals total. Only add a visual where a diagram genuinely clarifies structure, process, or comparison that prose alone cannot convey. Leave visuals empty for simple assignment/review types.
-- Visual ids must be unique slugs using only lowercase letters, digits, underscores. Label must be "fig:" + that id.` : ``}
+${wantsVisuals ? `- Plan EXACTLY ${visualTarget !== null ? visualTarget : "2–3"} visual(s). Use ONLY structural/conceptual visuals typical for academic papers: mind maps, concept maps, hierarchies, theoretical frameworks, methodology schemas, relationship diagrams, or structured comparisons. Do NOT plan statistical charts, bar graphs, or data plots.
+- Spread visuals across different sections — at most 1 visual per section. Assign each to the section where it is most relevant.
+- Pick the type that fits: mind_map (branching topics around a central concept), concept_map (labeled semantic links between concepts), hierarchy (taxonomy/classification tree), framework (theoretical/research model), process_schema (research methodology phases), relationship (multi-entity connection web), comparison (side-by-side structures).
+- Visual ids must be unique slugs (lowercase letters, digits, underscores only). Label must be "fig:" + that id.` : ``}
 
 Do NOT output markdown fences. Do NOT add commentary. JSON only.`;
 }
 
-const VALID_VISUAL_TYPES = new Set<VisualType>(["flowchart", "diagram", "chart", "timeline", "architecture", "comparison", "other"]);
+const VALID_VISUAL_TYPES = new Set<VisualType>(["mind_map", "concept_map", "hierarchy", "framework", "process_schema", "relationship", "comparison"]);
 
 function validatePlan(p: any): Plan | null {
     if (!p || typeof p !== "object") return null;
@@ -179,7 +183,7 @@ function validatePlan(p: any): Plan | null {
             if (!v || typeof v !== "object") continue;
             const id = typeof v.id === "string" ? v.id.trim().replace(/[^a-z0-9_]/g, "_").slice(0, 50) : "";
             const sectionHeading = typeof v.sectionHeading === "string" ? v.sectionHeading.trim() : "";
-            const type = VALID_VISUAL_TYPES.has(v.type) ? (v.type as VisualType) : "other";
+            const type = VALID_VISUAL_TYPES.has(v.type) ? (v.type as VisualType) : "concept_map";
             const description = typeof v.description === "string" ? v.description.trim() : "";
             const caption = typeof v.caption === "string" ? v.caption.trim() : "";
             const label = typeof v.label === "string" ? v.label.trim() : `fig:${id}`;
