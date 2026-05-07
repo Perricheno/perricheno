@@ -28,6 +28,24 @@ export interface Stage5Result {
 // Returns { ok: true } when the compiler returns a PDF, or { ok: false, log }
 // when it returns text/json with errors. Network failures throw.
 
+// Strip \begin{figure}...\end{figure} blocks whose image file has no matching PNG in the ZIP.
+// This is the last-line-of-defence: regardless of why a PNG didn't make it into the visuals
+// array, the LaTeX will never reference a file that isn't actually in the ZIP.
+function stripOrphanedFigures(tex: string, availableFiles: Set<string>): string {
+    // Match \begin{figure}[...] ... \end{figure} blocks (non-greedy, dotall)
+    return tex.replace(
+        /\\begin\{figure\}[\s\S]*?\\end\{figure\}/g,
+        (block) => {
+            const match = block.match(/\\includegraphics(?:\[.*?\])?\{([^}]+)\}/);
+            if (!match) return block; // no includegraphics — keep as-is
+            // Normalize: strip leading "figures/" so we match just the filename
+            const refPath = match[1].replace(/^figures\//, "");
+            // Keep block only if the file exists in the ZIP
+            return availableFiles.has(refPath) ? block : "";
+        },
+    );
+}
+
 async function compile(
     mainTex: string,
     referencesBib: string | null,
@@ -39,18 +57,30 @@ async function compile(
     }
 
     const zip = new JSZip();
-    zip.file("main.tex", mainTex);
-    if (referencesBib) zip.file("references.bib", referencesBib);
+
+    // Build the set of filenames that will actually be in the ZIP
+    const availableFiles = new Set<string>();
     for (const v of visuals) {
         if (v.pngBase64) {
             zip.file(`figures/${v.filename}`, Buffer.from(v.pngBase64, "base64"));
+            availableFiles.add(v.filename);
         }
     }
     for (const df of dataFigures) {
         if (df.pngBase64) {
             zip.file(`figures/${df.filename}`, Buffer.from(df.pngBase64, "base64"));
+            availableFiles.add(df.filename);
         }
     }
+
+    // Strip any \begin{figure}...\end{figure} blocks whose PNG isn't in the ZIP
+    const safeTex = stripOrphanedFigures(mainTex, availableFiles);
+    if (safeTex !== mainTex) {
+        console.log(`[Stage5] Stripped ${(mainTex.match(/\\begin\{figure\}/g)?.length ?? 0) - (safeTex.match(/\\begin\{figure\}/g)?.length ?? 0)} orphaned figure(s) from LaTeX`);
+    }
+
+    zip.file("main.tex", safeTex);
+    if (referencesBib) zip.file("references.bib", referencesBib);
     const zipBlob = await zip.generateAsync({ type: "blob" });
 
     const form = new FormData();

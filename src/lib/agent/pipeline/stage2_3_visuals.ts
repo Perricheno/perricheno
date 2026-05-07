@@ -300,30 +300,56 @@ export async function runStage2_3(
     const workers = Array.from({ length: Math.min(CONCURRENCY, visuals.length) }, async () => {
         while (queue.length > 0) {
             const visual = queue.shift()!;
-            try {
-                const messages = buildMessages(visual, language);
-                const r = await withRetry(() => chatCompletion(messages, { timeoutMs: 60_000 }), 2, 800);
-                totalTokens += r.totalTokens;
+            let lastError = "";
+            let lastTikz  = "";
+            let succeeded = false;
 
-                const tikz = stripFences(r.text);
-                const tex  = wrapInStandalone(tikz, language);
-                const pdf  = await compileTex(tex);
-                const png  = await pdfToPng(pdf);
-                const pngBase64 = png.toString("base64");
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const messages = buildMessages(visual, language);
 
-                console.log(`[Stage2.3] ✓ ${visual.id}.png  type=${visual.type}  size=${(png.length / 1024).toFixed(0)}KB`);
+                    // On retry: append compiler error so LLM can fix the TikZ
+                    if (attempt > 0 && lastError && lastTikz) {
+                        messages.push({ role: "assistant", content: lastTikz });
+                        messages.push({
+                            role: "user",
+                            content: `The TikZ above failed to compile with this LaTeX error:\n${lastError}\n\nFix the TikZ and return the corrected snippet only.`,
+                        });
+                    }
 
-                results.push({
-                    id: visual.id,
-                    sectionHeading: visual.sectionHeading,
-                    filename: `${visual.id}.png`,
-                    caption: visual.caption,
-                    label: visual.label,
-                    pngBase64,
-                    type: visual.type,
-                });
-            } catch (e: any) {
-                console.error(`[Stage2.3] ✗ ${visual.id}:`, e?.message);
+                    const r = await chatCompletion(messages, { timeoutMs: 60_000 });
+                    totalTokens += r.totalTokens;
+
+                    const tikz = stripFences(r.text);
+                    lastTikz = tikz;
+                    const tex = wrapInStandalone(tikz, language);
+                    const pdf = await compileTex(tex);
+                    const png = await pdfToPng(pdf);
+
+                    if (png.length < 500) throw new Error("pdfToPng returned suspiciously small image");
+
+                    const pngBase64 = png.toString("base64");
+                    console.log(`[Stage2.3] ✓ ${visual.id}.png  attempt=${attempt + 1}  type=${visual.type}  size=${(png.length / 1024).toFixed(0)}KB  b64len=${pngBase64.length}`);
+
+                    results.push({
+                        id: visual.id,
+                        sectionHeading: visual.sectionHeading,
+                        filename: `${visual.id}.png`,
+                        caption: visual.caption,
+                        label: visual.label,
+                        pngBase64,
+                        type: visual.type,
+                    });
+                    succeeded = true;
+                    break;
+                } catch (e: any) {
+                    lastError = String(e?.message ?? e).slice(0, 400);
+                    console.warn(`[Stage2.3] attempt ${attempt + 1}/3 failed for ${visual.id}: ${lastError.slice(0, 120)}`);
+                }
+            }
+
+            if (!succeeded) {
+                console.error(`[Stage2.3] ✗ ${visual.id} failed after 3 attempts: ${lastError}`);
                 results.push({
                     id: visual.id,
                     sectionHeading: visual.sectionHeading,
@@ -333,12 +359,12 @@ export async function runStage2_3(
                     pngBase64: "",
                     type: visual.type,
                     failed: true,
-                    error: String(e?.message || e).slice(0, 200),
+                    error: lastError.slice(0, 200),
                 });
-            } finally {
-                completed++;
-                onProgress?.(completed, visuals.length, visual.id);
             }
+
+            completed++;
+            onProgress?.(completed, visuals.length, visual.id);
         }
     });
 
