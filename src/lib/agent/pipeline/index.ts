@@ -2,13 +2,14 @@
 // Called from /api/agent/generate in a fire-and-forget background task.
 // Streams progress updates into agent_sessions.stage_json so the UI can poll.
 
-import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult, GeneratedVisual } from "./types";
+import type { PipelineSettings, Plan, ExtractedRef, SectionDraft, AssembledDoc, VerificationResult, GeneratedVisual, GeneratedDataFigure } from "./types";
 import type { StageProgress } from "../stages";
 import type { AgentUpload } from "@/lib/db";
 import { runStage1 } from "./stage1_plan";
 import { runStage2 } from "./stage2_extract";
 import { runStage2_3 } from "./stage2_3_visuals";
 import { runStage2_5 } from "./stage2_5_verify";
+import { runStage2_6 } from "./stage2_6_r_figures";
 import { runStage2_7 } from "./stage2_7_enrich_doi";
 import { runStage3 } from "./stage3_draft";
 import { runStage4 } from "./stage4_assemble";
@@ -28,6 +29,7 @@ export interface RunPipelineOutput {
     refs: ExtractedRef[];
     verifications: VerificationResult[];
     generatedVisuals: GeneratedVisual[];
+    dataFigures: GeneratedDataFigure[];
     sections: SectionDraft[];
     assembled: AssembledDoc;
     mainTex: string;
@@ -112,6 +114,35 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         totalTokens += t2_5;
     }
 
+    // ── Stage 2.6: Data Figures (R/Python) ──
+    let dataFigures: GeneratedDataFigure[] = [];
+    const dataUploads = (settings.dataUploadIds ?? []).length > 0
+        ? uploads.filter(u => settings.dataUploadIds!.includes(u.id))
+        : [];
+
+    if (dataUploads.length > 0) {
+        await updateProgress({
+            current_stage: 3,
+            label: `Generating data figures from ${dataUploads.length} file(s)`,
+            completed_stages: [1, 2],
+        });
+        await addLog(`Running ${settings.dataRuntime ?? "R"} analysis on ${dataUploads.length} data file(s)`, "info");
+
+        const { dataFigures: df, tokensUsed: tdf } = await runStage2_6(
+            settings,
+            plan,
+            dataUploads,
+            async (done, total, id) => {
+                await updateProgress({ progress: { done, total }, label: `Compiling data figure ${id ?? ""} (${done}/${total})` });
+            },
+        );
+        dataFigures = df;
+        totalTokens += tdf;
+
+        const okDf = dataFigures.filter(v => !v.failed).length;
+        await addLog(`Data figures ready: ${okDf}/${dataFigures.length}`, okDf > 0 ? "success" : "info");
+    }
+
     // ── Stage 3b: Visual Generation ──
     let generatedVisuals: GeneratedVisual[] = [];
     if (plan.visuals.length > 0) {
@@ -150,7 +181,8 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         uploads,
         verifications,
         generatedVisuals,
-        async (done, total, heading) => {
+        dataFigures,
+        async (done: number, total: number, heading: string) => {
             await updateProgress({ progress: { done, total }, label: `Drafting ${heading} (${done}/${total})` });
         },
     ), 2, 2000);
@@ -163,7 +195,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         completed_stages: [1, 2, 3, 4],
     });
 
-    const assembled = runStage4(settings, plan, enrichedRefs, sections, generatedVisuals);
+    const assembled = runStage4(settings, plan, enrichedRefs, sections, generatedVisuals, dataFigures);
     await addLog("Assembly complete", "success");
 
     // ── Stage 6: Validate & Repair ──
@@ -192,6 +224,7 @@ export async function runPipeline(input: RunPipelineInput): Promise<RunPipelineO
         refs: enrichedRefs,
         verifications,
         generatedVisuals,
+        dataFigures,
         sections,
         assembled,
         mainTex: validated.finalMainTex,

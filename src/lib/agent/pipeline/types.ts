@@ -28,6 +28,10 @@ export interface PipelineSettings {
     customTemplatePreamble?: string;
     /** How many structural visuals to generate. 0 = disabled, 2–10 = user choice. */
     visualCount?: number;
+    /** IDs of CSV/XLSX/JSON data files for R/Python statistical figures. */
+    dataUploadIds?: string[];
+    /** Runtime for data figures. Default "R". */
+    dataRuntime?: "R" | "Python";
 }
 
 export interface PlanSection {
@@ -106,12 +110,27 @@ export interface SectionDraft {
     tokensUsed?: number;
 }
 
+export interface GeneratedDataFigure {
+    id: string;
+    sectionHeading: string;    // which section to embed in
+    filename: string;          // e.g. "fig_regression_salary.png"
+    caption: string;
+    label: string;
+    pngBase64: string;
+    analysisType: string;      // "scatter", "regression", etc.
+    runtime: "R" | "Python";
+    code: string;              // the generated code (for transparency)
+    failed?: boolean;
+    error?: string;
+}
+
 export interface AssembledDoc {
     mainTex: string;
     referencesBib: string | null;
     warnings: string[];
     unresolvedCitations: string[];
     visuals?: GeneratedVisual[];
+    dataFigures?: GeneratedDataFigure[];
 }
 
 

@@ -22,8 +22,12 @@ async function runBackground(
     settings: PipelineSettings,
 ) {
     try {
-        const uploads = settings.uploadIds && settings.uploadIds.length > 0
-            ? await getAgentUploadsByIds(settings.uploadIds, userId)
+        const allUploadIds = [
+            ...(settings.uploadIds ?? []),
+            ...(settings.dataUploadIds ?? []),
+        ];
+        const uploads = allUploadIds.length > 0
+            ? await getAgentUploadsByIds(allUploadIds, userId)
             : [];
 
         // Normalize images_json to arrays (Supabase may hand back jsonb as object or string).
@@ -148,6 +152,8 @@ export async function POST(req: Request) {
         visualCount: typeof body.visualCount === "number"
             ? Math.max(0, Math.min(10, Math.round(body.visualCount)))
             : undefined,
+        dataUploadIds: Array.isArray(body.dataUploadIds) ? body.dataUploadIds : undefined,
+        dataRuntime: body.dataRuntime === "Python" ? "Python" : "R",
     };
 
     if (!settings.prompt) return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });

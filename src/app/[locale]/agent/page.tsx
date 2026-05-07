@@ -465,6 +465,55 @@ export default function AgentPage() {
         }));
     };
 
+    const [uploadingDataFiles, setUploadingDataFiles] = useState<string[]>([]);
+
+    const handleDataFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        e.target.value = '';
+        for (const file of files) {
+            setUploadingDataFiles(prev => [...prev, file.name]);
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                const res = await fetch('/api/agent/attach', { method: 'POST', body: fd });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+                    setError(err?.error || `Upload failed (HTTP ${res.status}).`);
+                    continue;
+                }
+                const meta = await res.json();
+                if (!meta.uploadId) { setError(`Upload failed: No uploadId for ${file.name}`); continue; }
+                setSettings((s: any) => ({
+                    ...s,
+                    dataUploadIds: [...s.dataUploadIds, meta.uploadId],
+                    dataUploadMeta: [...s.dataUploadMeta, {
+                        id: meta.uploadId,
+                        filename: meta.filename || file.name,
+                        rowCount: meta.rowCount,
+                        colCount: meta.colCount,
+                        columns: meta.columns,
+                    }],
+                }));
+            } catch (err: any) {
+                setError(err?.message || 'Upload failed.');
+            } finally {
+                setUploadingDataFiles(prev => prev.filter(f => f !== file.name));
+            }
+        }
+    };
+
+    const removeDataFile = (idx: number) => {
+        const target = settings.dataUploadMeta[idx];
+        if (target?.id) {
+            fetch(`/api/agent/ingest-pdf?id=${encodeURIComponent(target.id)}`, { method: 'DELETE' }).catch(() => {});
+        }
+        setSettings(s => ({
+            ...s,
+            dataUploadIds: s.dataUploadIds.filter((_, i) => i !== idx),
+            dataUploadMeta: s.dataUploadMeta.filter((_, i) => i !== idx),
+        }));
+    };
+
     const handleLinkAdd = () => {
         const url = window.prompt("Enter a URL to provide context to the AI:");
         if (url && url.trim() !== "") {
@@ -776,6 +825,12 @@ export default function AgentPage() {
                                 <IconPaperclip className="w-4 h-4" stroke={2} />
                                 <input type="file" className="hidden" multiple accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.ppt,.png,.jpg,.jpeg,.webp" onChange={handleFileUpload} />
                             </label>
+                            {isAgentMode && agentSubMode !== "chat" && agentSubMode !== "data_analytics" && agentSubMode !== "literature_search" && (
+                                <label className="cursor-pointer p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Upload data file (CSV/XLSX) for statistical figures">
+                                    <IconDatabase className="w-4 h-4" stroke={2} />
+                                    <input type="file" className="hidden" multiple accept=".csv,.xlsx,.xls,.tsv,.json" onChange={handleDataFileUpload} />
+                                </label>
+                            )}
                             {(!isAgentMode && agentSubMode === "chat") ? null : (
                                 <>
                                     <button onClick={handleLinkAdd} className="p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
@@ -823,6 +878,35 @@ export default function AgentPage() {
                                 <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
                                 <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
                                 <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
+                                    <IconX className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Uploading data files indicator */}
+                {uploadingDataFiles.length > 0 && (
+                    <div className="w-full mt-3 flex flex-wrap gap-2">
+                        {uploadingDataFiles.map((filename, idx) => (
+                            <div key={idx} className="flex items-center gap-2 pr-3 pl-3 py-1.5 bg-[#f0f8ff] rounded-[12px] shadow-sm border border-[#bde0ff] max-w-[260px]">
+                                <IconLoader2 className="w-3.5 h-3.5 text-[#3b82f6] animate-spin shrink-0" />
+                                <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{filename}</span>
+                                <span className="text-[10px] text-[#3b82f6] shrink-0">uploading</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Data file chips */}
+                {settings.dataUploadMeta.length > 0 && (
+                    <div className="w-full mt-3 flex flex-wrap gap-2">
+                        {settings.dataUploadMeta.map((u, idx) => (
+                            <div key={u.id || idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-[#f0f8ff] rounded-[12px] shadow-sm border border-[#bde0ff] max-w-[260px]" title={`Data file: ${u.filename}`}>
+                                <IconDatabase className="w-3.5 h-3.5 text-[#3b82f6] shrink-0" />
+                                <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
+                                <span className="text-[10px] font-mono text-[#3b82f6] shrink-0">data</span>
+                                <button onClick={() => removeDataFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
                                     <IconX className="w-3.5 h-3.5" />
                                 </button>
                             </div>

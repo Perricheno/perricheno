@@ -5,7 +5,7 @@
 // bibliography, and stubs any that the bib is missing so pdflatex won't die
 // on the first pass.
 
-import type { AssembledDoc, ExtractedRef, GeneratedVisual, Plan, SectionDraft, PipelineSettings } from "./types";
+import type { AssembledDoc, ExtractedRef, GeneratedDataFigure, GeneratedVisual, Plan, SectionDraft, PipelineSettings } from "./types";
 import {
     normalizeLatexText,
     ensureRussianPreamble,
@@ -196,6 +196,7 @@ export function runStage4(
     refs: ExtractedRef[],
     sections: SectionDraft[],
     generatedVisuals: GeneratedVisual[] = [],
+    dataFigures: GeneratedDataFigure[] = [],
 ): AssembledDoc {
     const warnings: string[] = [];
 
@@ -249,5 +250,6 @@ export function runStage4(
         warnings,
         unresolvedCitations: missing,
         visuals: generatedVisuals.filter(v => !v.failed && v.pngBase64),
+        dataFigures: dataFigures.filter(v => !v.failed && v.pngBase64),
     };
 }

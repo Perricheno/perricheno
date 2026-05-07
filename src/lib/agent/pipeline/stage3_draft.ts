@@ -5,11 +5,8 @@
 // 25 000-word thesis is never bottlenecked by a per-call token cap.
 
 import { chatCompletionLong, type ChatMessage, type ChatContentPart } from "./llm";
-import type { ExtractedRef, GeneratedVisual, Plan, PlanSection, SectionDraft, PipelineSettings, VerificationResult } from "./types";
+import type { ExtractedRef, GeneratedDataFigure, GeneratedVisual, Plan, PlanSection, SectionDraft, PipelineSettings, VerificationResult } from "./types";
 import type { AgentUpload } from "@/lib/db";
-import { BABEL_LANG_MAP } from "../stages";
-import fs from "fs";
-import path from "path";
 import { getLatexKnowledge } from "../knowledge/loader";
 
 const LANG_DISPLAY_NAMES: Record<string, string> = {
@@ -145,16 +142,32 @@ Rules:
 + getLatexKnowledge();
 }
 
-function buildVisualBlock(section: PlanSection, visuals: GeneratedVisual[]): string {
-    const sectionVisuals = visuals.filter(
-        v => !v.failed && v.pngBase64 && v.sectionHeading === section.heading,
-    );
-    if (sectionVisuals.length === 0) return "";
+function buildVisualBlock(
+    section: PlanSection,
+    visuals: GeneratedVisual[],
+    dataFigures: GeneratedDataFigure[],
+): string {
+    const conceptual = visuals.filter(v => !v.failed && v.pngBase64 && v.sectionHeading === section.heading);
+    const data = dataFigures.filter(v => !v.failed && v.pngBase64 && v.sectionHeading === section.heading);
+    if (conceptual.length === 0 && data.length === 0) return "";
 
-    const lines = sectionVisuals.map(v =>
-        `  • filename: figures/${v.filename}\n    caption: ${v.caption}\n    label: ${v.label}\n    type: ${v.type}`,
-    );
-    return `AVAILABLE FIGURES (embed each one in this section):\n${lines.join("\n")}`;
+    const lines: string[] = [];
+
+    if (conceptual.length > 0) {
+        lines.push("CONCEPTUAL FIGURES (mind maps, frameworks, schemas):");
+        conceptual.forEach(v =>
+            lines.push(`  • figures/${v.filename}\n    caption: ${v.caption}\n    label: ${v.label}\n    type: ${v.type}`),
+        );
+    }
+
+    if (data.length > 0) {
+        lines.push("DATA FIGURES (statistical analysis from uploaded data):");
+        data.forEach(v =>
+            lines.push(`  • figures/${v.filename}\n    caption: ${v.caption}\n    label: ${v.label}\n    analysis: ${v.analysisType} (${v.runtime})`),
+        );
+    }
+
+    return `AVAILABLE FIGURES FOR THIS SECTION (embed each one naturally in the text):\n${lines.join("\n")}`;
 }
 
 function buildUserPrompt(
@@ -164,6 +177,7 @@ function buildUserPrompt(
     refBundle: string,
     previousSummary: string,
     visuals: GeneratedVisual[],
+    dataFigures: GeneratedDataFigure[],
 ): string {
     const outline = plan.sections.map((sec, i) => `  ${i + 1}. ${sec.heading} (~${sec.wordTarget} words)`).join("\n");
 
@@ -171,7 +185,7 @@ function buildUserPrompt(
         ? `Most relevant references for this section: ${section.refFocus.join(", ")}`
         : "";
 
-    const visualBlock = buildVisualBlock(section, visuals);
+    const visualBlock = buildVisualBlock(section, visuals, dataFigures);
 
     return [
         `DOCUMENT TITLE: ${plan.title}`,
@@ -237,6 +251,7 @@ export async function runStage3(
     uploads: AgentUpload[],
     verifications: VerificationResult[],
     generatedVisuals: GeneratedVisual[],
+    dataFigures: GeneratedDataFigure[],
     onProgress?: (done: number, total: number, heading: string) => void,
 ): Promise<{ sections: SectionDraft[]; tokensUsed: number; anyTruncated: boolean }> {
     const refBundle = verifications.length > 0
@@ -244,7 +259,8 @@ export async function runStage3(
         : buildRefBundle(refs);
 
     const activeVisuals = generatedVisuals.filter(v => !v.failed && v.pngBase64);
-    const systemPrompt = buildSystemPrompt(settings, !!refBundle, activeVisuals.length > 0);
+    const activeDataFigures = dataFigures.filter(v => !v.failed && v.pngBase64);
+    const systemPrompt = buildSystemPrompt(settings, !!refBundle, activeVisuals.length > 0 || activeDataFigures.length > 0);
 
     const drafts: SectionDraft[] = [];
     let totalTokens = 0;
@@ -255,7 +271,7 @@ export async function runStage3(
 
     for (let i = 0; i < plan.sections.length; i++) {
         const section = plan.sections[i];
-        const userPromptText = buildUserPrompt(settings, plan, section, refBundle, runningTail, activeVisuals);
+        const userPromptText = buildUserPrompt(settings, plan, section, refBundle, runningTail, activeVisuals, activeDataFigures);
         
         // Collect images from relevant references
         const sectionImages = collectSectionImages(section, refs, uploads);

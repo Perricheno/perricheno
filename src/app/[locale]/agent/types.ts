@@ -48,6 +48,12 @@ export interface AgentSettings {
     runtime: 'R' | 'Python';
     /** Number of structural visuals to generate (0 = off, 2–10). */
     visualCount: number;
+    /** IDs of uploaded CSV/XLSX data files for R statistical figures in the document. */
+    dataUploadIds: string[];
+    /** Display metadata for uploaded data files. */
+    dataUploadMeta: { id: string; filename: string; rowCount?: number; colCount?: number; columns?: string[] }[];
+    /** Runtime for embedded data figures. */
+    dataRuntime: 'R' | 'Python';
 
     // Literature Search specific settings
     scholarMaxArticles: number;
@@ -79,6 +85,9 @@ export const DEFAULT_SETTINGS: AgentSettings = {
     uploadMeta: [],
     runtime: 'R',
     visualCount: 3,
+    dataUploadIds: [],
+    dataUploadMeta: [],
+    dataRuntime: 'R',
     scholarMaxArticles: 10,
     scholarYearFrom: 'Any',
     scholarAuthors: '',

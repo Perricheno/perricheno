@@ -66,6 +66,7 @@ func main() {
 	r.HEAD("/health", healthHandler)
 
 	r.POST("/extract", handleExtract)
+	r.POST("/to-png", handleToPng)
 
 	log.Println("[PDF Extractor] Starting on :8080")
 	if err := r.Run(":8080"); err != nil {
@@ -108,6 +109,43 @@ func handleExtract(c *gin.Context) {
 	} else {
 		c.JSON(200, response)
 	}
+}
+
+// handleToPng converts the first page of a PDF to PNG (base64).
+// Accepts raw PDF bytes in request body (Content-Type: application/pdf).
+// Returns { "image": "<base64 PNG>" }.
+func handleToPng(c *gin.Context) {
+	pdfBytes, err := io.ReadAll(io.LimitReader(c.Request.Body, maxFileSize))
+	if err != nil || len(pdfBytes) == 0 {
+		c.JSON(400, gin.H{"error": "empty or unreadable body"})
+		return
+	}
+
+	tempID := uuid.New().String()
+	pdfPath := filepath.Join(tempDir, tempID+".pdf")
+	outBase := filepath.Join(tempDir, tempID)
+	defer os.Remove(pdfPath)
+	defer os.Remove(outBase + ".png")
+
+	if err := os.WriteFile(pdfPath, pdfBytes, 0644); err != nil {
+		c.JSON(500, gin.H{"error": "failed to save pdf"})
+		return
+	}
+
+	// pdftoppm: -r 200 resolution, -png, -singlefile = only first page, no page-number suffix
+	cmd := exec.Command("pdftoppm", "-r", "200", "-png", "-singlefile", pdfPath, outBase)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("pdftoppm: %s", strings.TrimSpace(string(out)))})
+		return
+	}
+
+	pngBytes, err := os.ReadFile(outBase + ".png")
+	if err != nil {
+		c.JSON(500, gin.H{"error": "png file not found after conversion"})
+		return
+	}
+
+	c.JSON(200, gin.H{"image": base64.StdEncoding.EncodeToString(pngBytes)})
 }
 
 func extractPDF(pdfPath, filename string) ExtractResponse {

@@ -7,7 +7,7 @@
 import JSZip from "jszip";
 import { chatCompletion, parseJsonLoose, type ChatMessage } from "./llm";
 import { normalizeLatexText, ensureRussianPreamble, BABEL_LANG_MAP } from "../stages";
-import type { AssembledDoc, GeneratedVisual, PipelineSettings } from "./types";
+import type { AssembledDoc, GeneratedDataFigure, GeneratedVisual, PipelineSettings } from "./types";
 
 const CYRILLIC_LANGS = new Set(["ru", "uk", "kk", "bg", "sr", "mk", "be"]);
 
@@ -28,7 +28,12 @@ export interface Stage5Result {
 // Returns { ok: true } when the compiler returns a PDF, or { ok: false, log }
 // when it returns text/json with errors. Network failures throw.
 
-async function compile(mainTex: string, referencesBib: string | null, visuals: GeneratedVisual[] = []): Promise<{ ok: true } | { ok: false; log: string }> {
+async function compile(
+    mainTex: string,
+    referencesBib: string | null,
+    visuals: GeneratedVisual[] = [],
+    dataFigures: GeneratedDataFigure[] = [],
+): Promise<{ ok: true } | { ok: false; log: string }> {
     if (!COMPILER_URL || !COMPILER_KEY) {
         throw new Error("LATEX_COMPILER_URL / LATEX_COMPILER_KEY not configured");
     }
@@ -39,6 +44,11 @@ async function compile(mainTex: string, referencesBib: string | null, visuals: G
     for (const v of visuals) {
         if (v.pngBase64) {
             zip.file(`figures/${v.filename}`, Buffer.from(v.pngBase64, "base64"));
+        }
+    }
+    for (const df of dataFigures) {
+        if (df.pngBase64) {
+            zip.file(`figures/${df.filename}`, Buffer.from(df.pngBase64, "base64"));
         }
     }
     const zipBlob = await zip.generateAsync({ type: "blob" });
@@ -133,13 +143,14 @@ export async function runStage5(
 ): Promise<Stage5Result> {
     let { mainTex, referencesBib } = assembled;
     const visuals = assembled.visuals ?? [];
+    const dataFigures = assembled.dataFigures ?? [];
     let tokensUsed = 0;
     let lastLog: string | undefined;
 
     // Attempt 0 = initial compile. Then up to MAX_REPAIR_ATTEMPTS repair cycles.
     for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
         try {
-            const r = await compile(mainTex, referencesBib, visuals);
+            const r = await compile(mainTex, referencesBib, visuals, dataFigures);
             if (!r.ok) {
                 lastLog = r.log;
                 onAttempt?.(attempt, "failed");

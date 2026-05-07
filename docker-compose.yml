@@ -40,7 +40,6 @@ services:
         condition: service_started
       pdf-extractor:
         condition: service_started
-
   r-compiler:
     build:
       context: ./r-compiler
