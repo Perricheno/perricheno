@@ -461,7 +461,7 @@
     "poweredBy": "Powered by",
     "hero": {
       "headline1": "Research, write,",
-      "headline2": "analyze, cite, visualize —",
+      "headline2": "analyze, cite, visualize -",
       "headline3": "all in one place.",
       "desc": "Perricheno turns a topic into a compiled LaTeX paper, with real citations, publication-ready figures, and shareable PDFs. Built for students and researchers who want depth, not boilerplate.",
       "launchAgent": "Launch Agent",
@@ -506,7 +506,7 @@
       "annual": "Annual",
       "save20": "Save 20%",
       "monthsFree": "2 months free",
-      "footnote": "All plans include core features. ₸ — Kaspi Pay · $ / ₽ — CryptoCloud (crypto). Purchased tokens never expire.",
+      "footnote": "All plans include core features. ₸ - Kaspi Pay · $ / ₽ - CryptoCloud (crypto). Purchased tokens never expire.",
       "plans": {
         "free": {
           "tagline": "The Sandbox",

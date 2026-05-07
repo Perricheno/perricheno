@@ -14,7 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             where: { id }
         });
 
-        // Fetch user data — mask PII to avoid exposing raw telegram_id
+        // Fetch user data - mask PII to avoid exposing raw telegram_id
         let displayId = 'ANONYMOUS';
         if (result) {
             const userData = await prisma.user.findUnique({ select: { username: true, telegram_id: true }, where: { id: result.user_id } });

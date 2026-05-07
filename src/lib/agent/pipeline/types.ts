@@ -42,9 +42,9 @@ export type VisualType =
     | "mind_map"          // radial layout: central concept + thematic branches
     | "concept_map"       // nodes connected by labeled semantic edges
     | "hierarchy"         // tree: taxonomy, classification, organizational structure
-    | "framework"         // theoretical/research framework — boxes in logical arrangement
+    | "framework"         // theoretical/research framework - boxes in logical arrangement
     | "process_schema"    // sequential or parallel research/methodology phases with arrows
-    | "relationship"      // entity/factor relationship web — who connects to whom and how
+    | "relationship"      // entity/factor relationship web - who connects to whom and how
     | "comparison"        // structured side-by-side comparison of approaches/theories;
 
 export interface PlannedVisual {

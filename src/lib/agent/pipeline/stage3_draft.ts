@@ -125,7 +125,7 @@ function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean, hasVisua
   \\caption{CAPTION}
   \\label{LABEL}
 \\end{figure}
-Place the figure where it is first discussed. Reference it as Figure~\\ref{LABEL}. Do NOT invent figure filenames — only use what is listed.`
+Place the figure where it is first discussed. Reference it as Figure~\\ref{LABEL}. Do NOT invent figure filenames - only use what is listed.`
         : `FIGURES: Do not include any \\includegraphics commands.`;
 
     return `You are writing ONE section of an academic ${s.docType ?? "document"} in ${lang}.

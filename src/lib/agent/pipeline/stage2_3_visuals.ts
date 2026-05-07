@@ -4,7 +4,7 @@
 // frameworks, relationship diagrams, methodology schemas).
 // Puppeteer renders it to PNG and the result is embedded in the LaTeX ZIP.
 //
-// Puppeteer is a peer dependency — if absent, visuals are marked failed and
+// Puppeteer is a peer dependency - if absent, visuals are marked failed and
 // the pipeline continues without them.
 
 import { chatCompletion, type ChatMessage } from "./llm";
@@ -15,7 +15,7 @@ const CONCURRENCY = 2;
 const VIEWPORT_W = 900;
 const VIEWPORT_H = 550;
 
-// Per-type rendering instructions — all SVG-first, academic style.
+// Per-type rendering instructions - all SVG-first, academic style.
 const TYPE_GUIDE: Record<string, string> = {
     mind_map: `
 LAYOUT: Radial/spider layout. One central oval in the middle of the canvas.
@@ -29,7 +29,7 @@ LAYOUT: Free-placement graph. Nodes are rounded rectangles scattered across the 
 Directed edges (arrows) connect related nodes. Each edge has a short label (verb phrase) in a small <text> near the midpoint of the line, slightly above it.
 Use SVG <marker> for arrowheads. Edges can curve slightly using <path d="M... Q... ..."/> for readability.
 Color: nodes in muted blue (#2d6a9f fill, white text), edge labels in dark gray (#333), arrows in #555.
-The layout should visually convey the semantic structure — most connected node near center.`,
+The layout should visually convey the semantic structure - most connected node near center.`,
 
     hierarchy: `
 LAYOUT: Top-down tree. Root node at top center, children below, grandchildren below that.
@@ -38,11 +38,11 @@ Use consistent row height (~90px) and spread children evenly. If more than 5 chi
 Color: root is darkest (#1a3a5c, white text), each level gets progressively lighter. Leaf nodes are light gray (#e8edf2, dark text).`,
 
     framework: `
-LAYOUT: Structured block diagram — the classic "theoretical framework" look from academic papers.
+LAYOUT: Structured block diagram - the classic "theoretical framework" look from academic papers.
 Typically: input/antecedent boxes on the left → mediating/process box(es) in the center → outcome boxes on the right. OR top-to-bottom layers.
 Use large rounded rectangles for each component, arrows between them showing direction of influence.
 Include a short label inside each box AND a brief descriptor below it in smaller text.
-Color: a clean 3-tone scheme — primary (#2d6a9f), secondary (#4a9d8f), accent (#e8a838) — with white text. Background #f7f9fc.`,
+Color: a clean 3-tone scheme - primary (#2d6a9f), secondary (#4a9d8f), accent (#e8a838) - with white text. Background #f7f9fc.`,
 
     process_schema: `
 LAYOUT: Left-to-right or top-to-bottom sequence of phases. Each phase is a rounded rectangle or stadium shape.
@@ -69,18 +69,18 @@ Column headers are dark (#1a3a5c, white text), criterion labels are bold gray on
 function buildMessages(visual: PlannedVisual, language: string): ChatMessage[] {
     const guide = TYPE_GUIDE[visual.type] ?? TYPE_GUIDE.concept_map;
 
-    const system = `You are an academic visualization specialist. You create structural and conceptual diagrams for research papers and diploma theses — mind maps, concept maps, hierarchies, theoretical frameworks, methodology schemas, and relationship diagrams.
+    const system = `You are an academic visualization specialist. You create structural and conceptual diagrams for research papers and diploma theses - mind maps, concept maps, hierarchies, theoretical frameworks, methodology schemas, and relationship diagrams.
 
 Generate ONE self-contained HTML file. The entire visual must be rendered as inline SVG inside the HTML body.
 
 STRICT REQUIREMENTS:
 - Viewport: ${VIEWPORT_W}×${VIEWPORT_H}px. The SVG viewBox must be "0 0 ${VIEWPORT_W} ${VIEWPORT_H}".
 - ALL rendering must be SVG elements inside <svg viewBox="0 0 ${VIEWPORT_W} ${VIEWPORT_H}" width="${VIEWPORT_W}" height="${VIEWPORT_H}">.
-- Background: white or #f7f9fc — set as SVG <rect> fill, not CSS body background.
+- Background: white or #f7f9fc - set as SVG <rect> fill, not CSS body background.
 - Font: use font-family="system-ui, -apple-system, Arial, sans-serif" on SVG text elements.
 - Text language: ${language}. All labels, node text, and edge labels must be in ${language}.
 - ZERO external dependencies. No <script src>, no <link href>, no CDN, no @import.
-- No JavaScript — pure SVG only. The diagram must render statically.
+- No JavaScript - pure SVG only. The diagram must render statically.
 - Academic style: clean, professional, no gradients on shapes (flat colors), no drop shadows, no decorative elements.
 
 Return ONLY the raw HTML. No markdown fences, no explanations.`;
@@ -89,7 +89,7 @@ Return ONLY the raw HTML. No markdown fences, no explanations.`;
 Section this figure belongs to: "${visual.sectionHeading}"
 Figure caption: ${visual.caption}
 
-What to depict — extract the concepts and their relationships from this description:
+What to depict - extract the concepts and their relationships from this description:
 ${visual.description}
 
 Rendering instructions for this type:
@@ -116,7 +116,7 @@ async function renderToPng(html: string): Promise<Buffer> {
     try {
         puppeteer = await import("puppeteer");
     } catch {
-        throw new Error("puppeteer is not installed — run: npm install puppeteer");
+        throw new Error("puppeteer is not installed - run: npm install puppeteer");
     }
 
     const browser = await (puppeteer as any).default.launch({

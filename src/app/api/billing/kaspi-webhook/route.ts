@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 const KASPI_WEBHOOK_SECRET = process.env.KASPI_WEBHOOK_SECRET;
 
-// Same plan map as the main CryptoCloud webhook — keeps both in sync
+// Same plan map as the main CryptoCloud webhook - keeps both in sync
 const PLANS: Record<string, { tier?: string; duration?: string; name: string; chars?: number; visuals?: number; reports?: number }> = {
     'plus_month':   { tier: 'plus',  duration: '1 Month', name: 'Plus (1 Month)'  },
     'plus_year':    { tier: 'plus',  duration: '1 Year',  name: 'Plus (1 Year)'   },
@@ -23,7 +23,7 @@ const PLANS_KZT: Record<string, number> = {
 };
 
 /**
- * Kaspi Pay webhook — called by Kaspi after a payment is confirmed.
+ * Kaspi Pay webhook - called by Kaspi after a payment is confirmed.
  *
  * Expected POST body (JSON):
  *   { txn_id, order_id, status, amount, currency, sign }
@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ result: 0 }); // Kaspi expects 0 = OK
         }
 
-        // Signature verification (skip if secret not configured — misconfiguration guard)
+        // Signature verification (skip if secret not configured - misconfiguration guard)
         if (!KASPI_WEBHOOK_SECRET) {
-            console.error('🚨 KASPI_WEBHOOK_SECRET not set — Kaspi webhook disabled for safety');
+            console.error('🚨 KASPI_WEBHOOK_SECRET not set - Kaspi webhook disabled for safety');
             return NextResponse.json({ result: 1, message: 'Server misconfiguration' }, { status: 500 });
         }
         if (!sign) {

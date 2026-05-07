@@ -52,7 +52,7 @@ export async function POST(req: Request) {
 
         // --- SIGNATURE FIRST (prevents timing oracle on order IDs) ---
         if (!CRYPTOCLOUD_SECRET) {
-            console.error('🚨 CRITICAL: CRYPTOCLOUD_SECRET is not set — billing webhook disabled for safety');
+            console.error('🚨 CRITICAL: CRYPTOCLOUD_SECRET is not set - billing webhook disabled for safety');
             return new NextResponse('Server misconfiguration', { status: 500 });
         }
         if (!receivedSign) {

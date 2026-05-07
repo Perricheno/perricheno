@@ -33,7 +33,7 @@ MINIO_ROOT_PASSWORD=perricheno_minio_pass
 
 ### 3. Fallback-ключ JWT сессии
 > [!WARNING]
-> Если `SESSION_SECRET` не задан — используется предсказуемый фоллбэк в `src/lib/session.ts`.
+> Если `SESSION_SECRET` не задан - используется предсказуемый фоллбэк в `src/lib/session.ts`.
 **Исправление**: Бросать ошибку при старте, если секрет не задан.
 
 ---

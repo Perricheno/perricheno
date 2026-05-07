@@ -80,7 +80,7 @@ if echo "$SERVICES" | grep -q "perricheno-site"; then
     fi
 fi
 
-# ── 4. Build new images (old containers still running — no downtime here) ─────
+# ── 4. Build new images (old containers still running - no downtime here) ─────
 # Docker Compose v2 already builds services in parallel by default.
 # shellcheck disable=SC2086
 docker compose build $SERVICES
@@ -102,7 +102,7 @@ if echo "$SERVICES" | grep -qE "(perricheno-site|postgres)"; then
     echo "🔄  Syncing database schema..."
     # No --accept-data-loss: fail loudly if a migration would destroy data.
     docker exec perricheno-site npx prisma db push 2>&1 || {
-        echo "⚠️   prisma db push failed — check schema for destructive changes."
+        echo "⚠️   prisma db push failed - check schema for destructive changes."
         echo "     If this is a first-time deploy, this may be expected."
     }
 fi

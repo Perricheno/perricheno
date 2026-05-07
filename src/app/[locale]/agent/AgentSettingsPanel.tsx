@@ -164,7 +164,7 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
                 <div className="flex justify-between text-[10px] text-gray-300 font-mono">
                     <span>Off</span><span>2</span><span>5</span><span>8</span><span>10</span>
                 </div>
-                <p className="text-[10px] text-gray-300 leading-tight">Mind maps, concept maps, hierarchies, frameworks — embedded as figures in the PDF.</p>
+                <p className="text-[10px] text-gray-300 leading-tight">Mind maps, concept maps, hierarchies, frameworks - embedded as figures in the PDF.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

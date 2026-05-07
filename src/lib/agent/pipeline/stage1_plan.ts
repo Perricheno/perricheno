@@ -149,7 +149,7 @@ Rules:
 - Style: ${styleNotes}
 ${hasRefs ? `- Reference files available (filenames only, content not yet read): ${filenames.map(f => `"${f}"`).join(", ")}. Match each section to the files whose titles suggest relevance.` : `- No external references. Do not fabricate citations in tasks.`}
 ${wantsVisuals ? `- Plan EXACTLY ${visualTarget !== null ? visualTarget : "2–3"} visual(s). Use ONLY structural/conceptual visuals typical for academic papers: mind maps, concept maps, hierarchies, theoretical frameworks, methodology schemas, relationship diagrams, or structured comparisons. Do NOT plan statistical charts, bar graphs, or data plots.
-- Spread visuals across different sections — at most 1 visual per section. Assign each to the section where it is most relevant.
+- Spread visuals across different sections - at most 1 visual per section. Assign each to the section where it is most relevant.
 - Pick the type that fits: mind_map (branching topics around a central concept), concept_map (labeled semantic links between concepts), hierarchy (taxonomy/classification tree), framework (theoretical/research model), process_schema (research methodology phases), relationship (multi-entity connection web), comparison (side-by-side structures).
 - Visual ids must be unique slugs (lowercase letters, digits, underscores only). Label must be "fig:" + that id.` : ``}
 

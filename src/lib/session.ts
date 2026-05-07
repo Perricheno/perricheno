@@ -4,7 +4,7 @@ import { createSessionRecord, getSessionById, deleteSessionRecord } from './db';
 
 const rawSecret = process.env.SESSION_SECRET;
 if (!rawSecret) {
-    throw new Error("SESSION_SECRET env var is not set — refusing to start with a predictable JWT key");
+    throw new Error("SESSION_SECRET env var is not set - refusing to start with a predictable JWT key");
 }
 const SECRET_KEY = new TextEncoder().encode(rawSecret);
 const SESSION_DURATION = 3650 * 24 * 60 * 60 * 1000; // 10 years (immortal)

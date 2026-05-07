@@ -13,7 +13,7 @@ const WEBHOOK_DOMAIN      = process.env.WEBHOOK_DOMAIN || 'https://perricheno.ru
 // ── USD plan prices ───────────────────────────────────────────────────────────
 export const PLANS: Record<string, { amount: number; name: string; description: string }> = {
     'plus_month':    { amount: 3.99,  name: 'Plus (1 Month)',        description: 'Standard plan for 1 month'           },
-    'plus_year':     { amount: 39.00, name: 'Plus (1 Year)',         description: 'Standard plan for 1 year — save ~$9' },
+    'plus_year':     { amount: 39.00, name: 'Plus (1 Year)',         description: 'Standard plan for 1 year - save ~$9' },
     'pro_month':     { amount: 7.99,  name: 'Pro (1 Month)',         description: 'Researcher plan for 1 month'         },
     'pro_year':      { amount: 79.00, name: 'Pro (1 Year)',          description: 'Researcher plan for 1 year'          },
     'ultra_month':   { amount: 14.99, name: 'Ultra (1 Month)',       description: 'Ultimate plan for 1 month'           },
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
                 }
                 return NextResponse.json({ url: result.url });
             }
-            // Kaspi not configured — fall through to CryptoCloud
+            // Kaspi not configured - fall through to CryptoCloud
             console.warn('[checkout] Kaspi not configured:', result.error);
         }
 
