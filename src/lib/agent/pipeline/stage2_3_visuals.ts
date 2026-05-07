@@ -14,97 +14,189 @@ const LATEX_COMPILER_URL = process.env.LATEX_COMPILER_URL!;
 const LATEX_COMPILER_KEY = process.env.LATEX_COMPILER_KEY!;
 const PDF_EXTRACTOR_URL  = process.env.PDF_EXTRACTOR_URL ?? "http://pdf-extractor:8080";
 
-// ── Per-type TikZ guidance ────────────────────────────────────────────────────
+// ── Per-type TikZ layout blueprints ──────────────────────────────────────────
+// Each blueprint gives exact TikZ style patterns, spacing, and color conventions.
+// The LLM must FILL THEM WITH REAL CONTENT from the description — no placeholders.
 
-const TYPE_GUIDE: Record<string, string> = {
+const TYPE_BLUEPRINT: Record<string, string> = {
     mind_map: `
-Draw a radial mind map using TikZ mindmap library.
-Central concept in the root node. 4–6 main branches as \`child\` nodes radiating outward.
-Each main branch has 2–3 sub-children.
-Use: \\tikzset{every node/.style={font=\\small}}
-Colors: use concept color=blue!40 for root, teal!40, orange!30, purple!30 for branches.
-Example skeleton:
-\\begin{tikzpicture}[mindmap, grow cyclic, every node/.style=concept,
-  concept color=blue!40, level 1/.append style={level distance=4cm, sibling angle=72},
-  level 2/.append style={level distance=2.5cm, sibling angle=45}]
-  \\node{Central Topic} child { node{Branch 1} child{node{Sub}} } ...;
-\\end{tikzpicture}`,
+LIBRARY: \\usetikzlibrary{mindmap,backgrounds}
+STRUCTURE:
+\\begin{tikzpicture}[
+  mindmap, grow cyclic,
+  every node/.style=concept,
+  concept color=teal!50!blue,
+  level 1/.style={level distance=4.2cm, sibling angle=60, concept color=blue!50},
+  level 2/.style={level distance=2.8cm, sibling angle=40, concept color=blue!25, font=\\small},
+  level 3/.style={level distance=2.0cm, sibling angle=35, concept color=blue!12, font=\\scriptsize},
+]
+  \\node [root concept] {<<CENTRAL TOPIC>>}
+    child { node {<<BRANCH 1>>}
+      child { node {<<sub>>} }
+      child { node {<<sub>>} }
+    }
+    child { node {<<BRANCH 2>>} ... }
+    ...;
+\\end{tikzpicture}
+RULES: 4-6 level-1 branches, 2-3 level-2 children each. Use clip to keep within 14x9cm.
+Every node text MUST reflect actual domain concepts from the description — no "Branch 1".`,
 
     concept_map: `
-Draw a concept map using TikZ with nodes and labeled directed edges.
-Nodes: \\node[draw, rounded corners, fill=blue!15, text width=2.5cm, align=center] (id) {Label};
-Arrows: \\draw[->, thick] (a) -- node[above, font=\\tiny]{relation} (b);
-Use \`positioning\` library. Space nodes ~3–4cm apart. 6–10 nodes total.
-Most-connected concept near center. Edge labels describe semantic relationship.`,
+LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,fit}
+STYLE:
+  box/.style = {draw, rounded corners=5pt, fill=blue!12, text width=2.6cm,
+                align=center, font=\\small, inner sep=6pt, line width=0.7pt}
+  arr/.style = {-{Stealth[length=6pt]}, thick, draw=gray!70}
+  lbl/.style = {font=\\scriptsize\\itshape, fill=white, inner sep=2pt}
+STRUCTURE:
+  Place most-connected concept at center. Others around it at 3-4cm spacing.
+  \\node[box] (A) {<<concept>>};
+  \\node[box, right=3.5cm of A] (B) {<<concept>>};
+  \\draw[arr] (A) -- node[lbl,above] {<<verb phrase>>} (B);
+  Use curved edges for long-distance connections: \\draw[arr, bend left=20] ...
+RULES: 7-10 nodes, 8-14 edges. Every edge MUST have a specific relationship label.
+Domain vocabulary from the description is mandatory — no generic "relates to".`,
 
     hierarchy: `
-Draw a top-down tree hierarchy using TikZ \`trees\` library.
-\\begin{tikzpicture}[sibling distance=4cm, level distance=2cm,
-  every node/.style={draw, rounded corners, fill=blue!10, align=center, font=\\small}]
-  \\node{Root} child{node{Child 1} child{node{Leaf}}} child{node{Child 2}};
-\\end{tikzpicture}
-Root node: fill=blue!40, white text. Each level gets lighter fill.`,
+LIBRARIES: \\usetikzlibrary{positioning,arrows.meta}
+STYLE (define once with \\tikzset):
+  root/.style  = {draw, rounded corners=6pt, fill=teal!60!blue, text=white,
+                  font=\\bfseries\\small, align=center, minimum width=3.5cm, inner sep=8pt}
+  lvl1/.style  = {draw, rounded corners=5pt, fill=blue!30, font=\\small,
+                  align=center, minimum width=2.8cm, inner sep=6pt}
+  lvl2/.style  = {draw, rounded corners=4pt, fill=blue!12, font=\\scriptsize,
+                  align=center, minimum width=2.2cm, inner sep=5pt}
+  edge/.style  = {draw, thick, gray!60, -{Stealth[length=5pt]}}
+STRUCTURE: Manual placement with \`positioning\`.
+  \\node[root] (R) {<<root>>};
+  \\node[lvl1, below left=1.2cm and 2cm of R] (A) {<<child>>};
+  \\node[lvl1, below=1.2cm of R] (B) {<<child>>};
+  \\draw[edge] (R) -- (A); \\draw[edge] (R) -- (B);
+RULES: Root + 3-5 level-1 + 2-3 level-2 per branch. Fit within 14x9cm.`,
 
     framework: `
-Draw a theoretical framework as a flow diagram: left boxes → center box → right boxes.
-Use \\node[draw, rounded corners=6pt, fill=blue!20, minimum width=3cm, minimum height=1.2cm, align=center]
-and \\draw[->, thick, >=stealth] arrows between them.
-Use \`shapes\`, \`arrows.meta\`, \`positioning\` libraries.
-Label arrows with short text (\\node[midway, above, font=\\scriptsize]).
-3-column layout: inputs (left), process (center, darker fill), outcomes (right).`,
+LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,fit,backgrounds}
+STYLE:
+  input/.style   = {draw, rounded corners=6pt, fill=orange!20, align=center,
+                    text width=2.8cm, minimum height=1.3cm, font=\\small, inner sep=8pt}
+  process/.style = {draw, rounded corners=6pt, fill=teal!35, text=white, align=center,
+                    text width=3.2cm, minimum height=1.5cm, font=\\small\\bfseries, inner sep=8pt}
+  output/.style  = {draw, rounded corners=6pt, fill=blue!25, align=center,
+                    text width=2.8cm, minimum height=1.3cm, font=\\small, inner sep=8pt}
+  arr/.style     = {-{Stealth[length=7pt]}, line width=1.2pt, draw=gray!60}
+LAYOUT: 3 columns. Input nodes left (stacked), process node center, output nodes right.
+  \\node[process] (P) {<<core process / mediating mechanism>>};
+  \\node[input, left=3cm of P, yshift=1cm]  (I1) {<<input/antecedent 1>>};
+  \\node[input, left=3cm of P, yshift=-1cm] (I2) {<<input/antecedent 2>>};
+  \\node[output, right=3cm of P, yshift=1cm]  (O1) {<<outcome 1>>};
+  \\draw[arr] (I1) -- node[above,font=\\scriptsize]{<<label>>} (P);
+  \\draw[arr] (P)  -- node[above,font=\\scriptsize]{<<label>>} (O1);
+  \\begin{scope}[on background layer]
+    \\node[fill=gray!5, rounded corners=10pt, fit=(I1)(I2), label=above:{\\scriptsize Inputs}] {};
+  \\end{scope}
+RULES: 2-3 inputs, 1-2 processes, 2-3 outputs. All box text from real theory in description.`,
 
     process_schema: `
-Draw a left-to-right process flow. Each step: stadium/rounded rect node.
-\\node[draw, stadium, fill=blue!30, font=\\small, minimum width=2.5cm] (s1) {Step 1};
-\\draw[->, thick] (s1) -- (s2);
-Use \`shapes.misc\` for stadium. Steps connected with thick arrows. 4–6 steps.
-Add step numbers above each node with \\node[above, font=\\tiny]{1}.`,
+LIBRARIES: \\usetikzlibrary{shapes.misc,arrows.meta,positioning,backgrounds}
+STYLE:
+  step/.style = {draw, rounded rectangle, fill=teal!30!blue!20, align=center,
+                 text width=2.4cm, minimum height=1.1cm, font=\\small, inner sep=7pt,
+                 rounded rectangle arc length=90}
+  arr/.style  = {-{Stealth[length=7pt]}, line width=1.5pt, draw=teal!60!blue}
+  num/.style  = {circle, fill=teal!60!blue, text=white, font=\\bfseries\\scriptsize,
+                 inner sep=2pt, minimum size=16pt}
+LAYOUT: Left-to-right, steps at same y. If >5 steps wrap to 2 rows.
+  \\node[step] (S1) {<<Phase/Step name>>};
+  \\node[step, right=1.4cm of S1] (S2) {<<Phase/Step name>>};
+  \\draw[arr] (S1) -- (S2);
+  \\node[num, above left=0pt and 0pt of S1] {1};
+  \\node[num, above left=0pt and 0pt of S2] {2};
+RULES: 4-7 steps. Names must be specific methodology phases from the description — no "Step 1".
+Add a brief 1-line descriptor inside each step box below the name (\\\\{\\tiny descriptor}).`,
 
     relationship: `
-Draw a relationship network. Entities as ellipse nodes connected by labeled lines.
-\\node[ellipse, draw, fill=teal!20, align=center, font=\\small] (a) {Entity A};
-\\draw[<->, thick] (a) -- node[midway, fill=white, font=\\scriptsize]{relates to} (b);
-Use bidirectional arrows for mutual relationships, unidirectional for one-way.
-6–8 entities spread across the canvas. Node size can vary by importance.`,
+LIBRARIES: \\usetikzlibrary{positioning,arrows.meta,backgrounds}
+STYLE (pick 3-4 colors by entity category):
+  catA/.style = {ellipse, draw, fill=blue!20,   align=center, font=\\small, inner sep=5pt}
+  catB/.style = {ellipse, draw, fill=teal!25,   align=center, font=\\small, inner sep=5pt}
+  catC/.style = {ellipse, draw, fill=orange!20, align=center, font=\\small, inner sep=5pt}
+  rel/.style  = {draw=gray!60, font=\\scriptsize, fill=white, inner sep=2pt}
+LAYOUT: Place entities at varied (x,y) coordinates — NOT in a circle, spread naturally.
+  \\node[catA] (A) at (0,0) {<<entity>>};
+  \\node[catB] (B) at (4,2) {<<entity>>};
+  \\draw[<->, thick, gray!50] (A) -- node[rel,sloped]{<<relationship>>} (B);
+  \\draw[->, thick, gray!50]  (B) -- node[rel,sloped]{<<relationship>>} (C);
+RULES: 6-9 entities, 8-12 relationships. Entity size proportional to number of connections.
+Relationship labels must be specific domain verbs from description — no "influences".`,
 
     comparison: `
-Draw a comparison table using TikZ \`matrix\` library.
-\\matrix[matrix of nodes, nodes={draw, minimum width=3cm, minimum height=0.8cm, align=center, font=\\small},
-  column sep=-\\pgflinewidth, row sep=-\\pgflinewidth] {
-  |[fill=blue!40, text=white]| Criterion & |[fill=blue!40, text=white]| Option A & |[fill=blue!40, text=white]| Option B \\\\
-  Row 1 label & value & value \\\\
-};
-2–3 comparison columns. Alternating row fills: white and blue!5.`,
+LIBRARIES: \\usetikzlibrary{matrix,positioning}
+STYLE:
+  header/.style = {draw, fill=teal!55!blue, text=white, font=\\bfseries\\small,
+                   minimum width=3.2cm, minimum height=0.9cm, align=center}
+  crit/.style   = {draw, fill=gray!10, font=\\small\\bfseries, minimum width=3.0cm,
+                   minimum height=0.8cm, align=center, text width=2.8cm}
+  cellE/.style  = {draw, fill=white,     font=\\small, minimum width=3.2cm,
+                   minimum height=0.8cm, align=center, text width=3.0cm}
+  cellO/.style  = {draw, fill=blue!5,    font=\\small, minimum width=3.2cm,
+                   minimum height=0.8cm, align=center, text width=3.0cm}
+STRUCTURE (manual rows for full control):
+  \\node[header] (H0) at (0,0) {Criterion};
+  \\node[header, right=0pt of H0] (H1) {<<Option A>>};
+  \\node[header, right=0pt of H1] (H2) {<<Option B>>};
+  \\node[crit,  below=0pt of H0] (C1) {<<criterion>>};
+  \\node[cellE, below=0pt of H1] (V1A) {<<value>>};
+  \\node[cellE, below=0pt of H2] (V1B) {<<value>>};
+RULES: 2-3 comparison subjects, 5-8 criteria. Use ✓ ✗ ≈ + or quantitative values.
+All criteria and values MUST come from the description — no "Criterion 1".`,
 };
 
 // ── LLM prompt ────────────────────────────────────────────────────────────────
 
 function buildMessages(visual: PlannedVisual, language: string): ChatMessage[] {
-    const guide = TYPE_GUIDE[visual.type] ?? TYPE_GUIDE.concept_map;
+    const blueprint = TYPE_BLUEPRINT[visual.type] ?? TYPE_BLUEPRINT.concept_map;
 
-    const system = `You are an expert academic TikZ programmer. You create publication-quality structural diagrams for research papers and diploma theses.
+    const system = `You are a senior academic TikZ specialist. Your diagrams appear in IEEE, Springer, and Elsevier publications. You produce publication-ready figures that reviewers and readers immediately understand.
 
-Generate ONLY the TikZ picture code — the content that goes inside \\begin{tikzpicture}...\\end{tikzpicture} plus any needed \\usetikzlibrary{} calls before it.
+OUTPUT FORMAT: Return ONLY the TikZ snippet:
+  1. \\usetikzlibrary{...} line(s) — if needed
+  2. \\begin{tikzpicture}[...] ... \\end{tikzpicture}
+Nothing else. No \\documentclass, no \\usepackage, no markdown fences, no comments, no explanation.
 
-RULES:
-- Include \\usetikzlibrary{...} lines at the top if needed (positioning, arrows.meta, mindmap, trees, shapes, shapes.misc, matrix, etc.).
-- Then \\begin{tikzpicture}[...] ... \\end{tikzpicture}.
-- All text labels MUST be in ${language}.
-- Use only standard TikZ libraries (no external packages beyond tikz itself).
-- Fit the diagram within a ~14cm × 9cm bounding box.
-- Academic style: clean, professional, muted colors (blue!20, teal!30, etc.), readable font sizes (\\small, \\scriptsize).
-- No \\documentclass, no \\begin{document}, no \\usepackage — only the TikZ snippet.
-- Output raw LaTeX only. No markdown fences, no explanation.`;
+CONTENT RULES (most important):
+- Every node label, edge label, and box text MUST be extracted from the provided description.
+- ZERO generic placeholders: no "Node 1", "Category A", "Branch 1", "Step 1", "Entity", "Concept".
+- Use the actual domain terminology, theory names, methodology steps, and relationships from the description.
+- The diagram must be self-explanatory to a domain expert reading it cold.
 
-    const user = `Visual type: ${visual.type}
-Section: "${visual.sectionHeading}"
-Caption: ${visual.caption}
+TECHNICAL RULES:
+- Language of all text: ${language}. Translate every label if needed.
+- Bounding box: fit within 14 cm × 9 cm. Use \\clip or manual coordinates to enforce this.
+- Use only standard TikZ libraries listed in the blueprint.
+- Font sizes: \\small for main labels, \\scriptsize for secondary labels. Never smaller.
+- Colors: muted academic palette — teal!30..50, blue!15..40, orange!15..25, gray!10..20. No bright/saturated colors.
+- Line widths: 0.7–1.5pt for edges, 1.5pt for primary flow arrows.
+- Every \\node must have a unique ID. Coordinate all \\draw commands to existing node IDs.
+- Test mentally that every referenced node ID is actually defined before using it in \\draw.`;
 
-Content to depict:
+    const user = `VISUAL TYPE: ${visual.type}
+SECTION IN DOCUMENT: "${visual.sectionHeading}"
+FIGURE CAPTION: ${visual.caption}
+
+CONTENT TO VISUALIZE — extract ALL concepts, relationships, steps, entities from this:
 ${visual.description}
 
-Type-specific TikZ instructions:
-${guide}
+LAYOUT BLUEPRINT FOR THIS TYPE:
+${blueprint}
+
+PROFESSIONAL QUALITY CHECKLIST (verify before outputting):
+[ ] Every node contains real domain content from the description above
+[ ] No placeholder text anywhere ("Node 1", "Branch A", "Step X", etc.)
+[ ] All edge/arrow labels are specific relationship verbs or qualifiers
+[ ] Colors follow the muted academic palette from the blueprint
+[ ] Fits within 14cm × 9cm
+[ ] All node IDs used in \\draw are defined as \\node
+[ ] Language of all text is ${language}
 
 Generate the TikZ snippet now:`;
 

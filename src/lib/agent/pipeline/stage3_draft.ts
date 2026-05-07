@@ -115,15 +115,16 @@ function buildSystemPrompt(s: PipelineSettings, refsAvailable: boolean, hasVisua
         : `CITATIONS: Do NOT include any \\cite / \\textcite / \\parencite commands. No bibliography references in this draft.`;
 
     const visualRules = hasVisuals
-        ? `FIGURES: If AVAILABLE FIGURES are listed for this section, embed each one naturally in the prose using exactly this LaTeX template (do NOT alter the filename or label):
+        ? `FIGURES: Embed ONLY the figures listed in the AVAILABLE FIGURES block of the user message. Use exactly this template — do NOT alter filename or label:
 \\begin{figure}[h!]
   \\centering
   \\includegraphics[width=0.85\\textwidth]{figures/FILENAME}
   \\caption{CAPTION}
   \\label{LABEL}
 \\end{figure}
-Place the figure where it is first discussed. Reference it as Figure~\\ref{LABEL}. Do NOT invent figure filenames - only use what is listed.`
-        : `FIGURES: Do not include any \\includegraphics commands.`;
+Place the figure where it is first discussed. Reference it as Figure~\\ref{LABEL}.
+CRITICAL: Do NOT invent filenames. Do NOT embed any figure not listed in AVAILABLE FIGURES.`
+        : `FIGURES — ABSOLUTE PROHIBITION: There are NO generated figures for this document. Do NOT write \\includegraphics, \\begin{figure}, or any image command under ANY circumstance. Ignore any task that mentions embedding a figure.`;
 
     return `You are writing ONE section of an academic ${s.docType ?? "document"} in ${lang}.
 
@@ -187,6 +188,13 @@ function buildUserPrompt(
 
     const visualBlock = buildVisualBlock(section, visuals, dataFigures);
 
+    // Strip figure-embedding instructions from tasks when no visuals are available for this section.
+    // Stage 1 may add tasks like "embed figure X" but if generation failed those must be ignored.
+    const FIGURE_TASK_RE = /\b(embed|include|insert|add|place|показ|встав|добав|рисун|figure|figur|визуал|схем|diagram|chart|image|png|tikz)\b/i;
+    const safeTasks = visualBlock
+        ? section.tasks
+        : section.tasks.filter(t => !FIGURE_TASK_RE.test(t));
+
     return [
         `DOCUMENT TITLE: ${plan.title}`,
         `DOCUMENT TOPIC: ${s.prompt}`,
@@ -195,12 +203,12 @@ function buildUserPrompt(
         previousSummary ? `\nPREVIOUSLY WRITTEN (tail, for continuity only - do NOT repeat):\n${previousSummary}` : "",
         refBundle ? `\nREFERENCE BUNDLE (only these citation keys are valid):\n${refBundle}` : "",
         focusRefs ? `\n${focusRefs}` : "",
-        visualBlock ? `\n${visualBlock}` : "",
+        visualBlock ? `\n${visualBlock}` : "\nNO FIGURES AVAILABLE — do not write any \\includegraphics or \\begin{figure} commands.",
         "",
         `NOW WRITE THIS SECTION:`,
         `HEADING: ${section.heading}`,
         `TARGET WORDS: ${section.wordTarget}`,
-        section.tasks.length ? `MUST COVER:\n${section.tasks.map(t => `- ${t}`).join("\n")}` : "",
+        safeTasks.length ? `MUST COVER:\n${safeTasks.map(t => `- ${t}`).join("\n")}` : "",
         "",
         `Write the section body now. LaTeX only.`,
     ].filter(Boolean).join("\n");
