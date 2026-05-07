@@ -8,7 +8,7 @@ import { chatCompletion, type ChatMessage } from "./llm";
 import type { PlannedVisual, GeneratedVisual } from "./types";
 import { withRetry } from "../stages";
 
-const CONCURRENCY = 3;
+const CONCURRENCY = 2;
 
 const LATEX_COMPILER_URL = process.env.LATEX_COMPILER_URL!;
 const LATEX_COMPILER_KEY = process.env.LATEX_COMPILER_KEY!;
@@ -248,7 +248,7 @@ async function compileTex(mainTex: string): Promise<Buffer> {
         method: "POST",
         headers: { "x-api-key": LATEX_COMPILER_KEY },
         body: form,
-        signal: AbortSignal.timeout(60_000),
+        signal: AbortSignal.timeout(120_000),
     });
 
     const ct = res.headers.get("content-type") ?? "";
@@ -269,7 +269,7 @@ async function pdfToPng(pdfBuf: Buffer): Promise<Buffer> {
         method: "POST",
         headers: { "Content-Type": "application/pdf" },
         body: new Uint8Array(pdfBuf),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(60_000),
     });
 
     if (!res.ok) {
@@ -317,7 +317,7 @@ export async function runStage2_3(
                         });
                     }
 
-                    const r = await chatCompletion(messages, { timeoutMs: 60_000 });
+                    const r = await chatCompletion(messages, { timeoutMs: 120_000 });
                     totalTokens += r.totalTokens;
 
                     const tikz = stripFences(r.text);
