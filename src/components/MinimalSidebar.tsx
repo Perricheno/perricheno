@@ -10,7 +10,7 @@ import {
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
     IconSparkles, IconCreditCard, IconBraces, IconBook2,
-    IconChartDots2, IconX, IconLanguage,
+    IconChartDots2, IconX, IconLanguage, IconVector,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -43,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
         links: [
             { href: "/canvas", icon: IconLayoutBoard, labelKey: "canvas" },
             { href: "/r", icon: IconChartDots2, labelKey: "rStudio" },
+            { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
             { href: "/agent", icon: IconSparkles, labelKey: "aiAgent" },
             { href: "/citations", icon: IconBook2, labelKey: "citations" },
             { href: "/space", icon: IconBraces, labelKey: "space" },
