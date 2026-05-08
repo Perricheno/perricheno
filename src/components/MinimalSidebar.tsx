@@ -360,26 +360,37 @@ export default function MinimalSidebar() {
 
     const radialLabels = RADIAL_ALL_KEYS.map(item => tLinks(item.labelKey as any));
 
-    const NavItem = ({ l }: { l: NavLink }) => (
-        <Link
-            href={l.href}
-            className="flex flex-col items-center justify-center p-2 relative group w-14 h-14 flex-shrink-0"
-        >
-            <div className={cn(
-                "absolute inset-0 rounded-[18px] transition-all duration-300",
-                isActive(l.href)
-                    ? "bg-gray-100/80 scale-100 opacity-100"
-                    : "bg-transparent scale-90 opacity-0 group-hover:opacity-100 group-hover:bg-gray-50 group-hover:scale-100"
-            )} />
-            <l.icon
-                className={cn("w-6 h-6 z-10 transition-all duration-300 mb-1", isActive(l.href) ? "text-[#1a1a1a]" : "text-gray-400")}
-                stroke={isActive(l.href) ? 2.5 : 1.5}
-            />
-            <span className={cn("z-10 text-[10px] font-medium tracking-wide transition-all", isActive(l.href) ? "text-[#1a1a1a]" : "text-gray-400")}>
-                {tLinks(l.labelKey as any)}
-            </span>
-        </Link>
-    );
+    const NavItem = ({ l }: { l: NavLink }) => {
+        const active = isActive(l.href);
+        const isR = l.href === "/r";
+        return (
+            <Link
+                href={l.href}
+                className="flex flex-col items-center justify-center p-2 relative group w-14 h-14 flex-shrink-0"
+            >
+                <div className={cn(
+                    "absolute inset-0 rounded-[18px] transition-all duration-300",
+                    active
+                        ? "bg-gray-100/80 scale-100 opacity-100"
+                        : "bg-transparent scale-90 opacity-0 group-hover:opacity-100 group-hover:bg-gray-50 group-hover:scale-100"
+                )} />
+                {isR ? (
+                    <span className={cn(
+                        "z-10 w-6 h-6 flex items-center justify-center font-black text-[17px] leading-none mb-1 transition-all duration-300",
+                        active ? "text-[#1a1a1a]" : "text-gray-400"
+                    )}>R</span>
+                ) : (
+                    <l.icon
+                        className={cn("w-6 h-6 z-10 transition-all duration-300 mb-1", active ? "text-[#1a1a1a]" : "text-gray-400")}
+                        stroke={active ? 2.5 : 2}
+                    />
+                )}
+                <span className={cn("z-10 text-[10px] font-medium tracking-wide transition-all", active ? "text-[#1a1a1a]" : "text-gray-400")}>
+                    {isR ? "Студия" : tLinks(l.labelKey as any)}
+                </span>
+            </Link>
+        );
+    };
 
     return (
         <>
