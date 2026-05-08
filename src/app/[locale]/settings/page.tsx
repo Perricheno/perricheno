@@ -6,10 +6,10 @@ import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     IconReceipt, IconPackage, IconTrendingUp, IconClock, IconLogin,
-    IconMail, IconChevronRight, IconDatabase,
+    IconMail, IconChevronRight,
     IconShieldLock, IconTrash, IconPlayerPlay, IconPlayerPause, IconCopy, IconCheck,
     IconUsers, IconSearch, IconX, IconGift, IconCrown, IconUser,
-    IconChartBar, IconLifebuoy, IconChevronDown,
+    IconChartBar, IconLifebuoy,
 } from "@tabler/icons-react";
 
 interface PromoCode {
@@ -166,63 +166,86 @@ export default function SettingsPage() {
 
     // ── Section renderers ───────────────────────────────────────────────────────
 
+    const fmtChars = (n: number) =>
+        n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : `${(n / 1_000).toFixed(0)}K`;
+
     const renderProfile = () => (
-        <div className="space-y-4">
+        <div className="space-y-3">
             {user && fullUser ? (
                 <>
-                    {/* Account hero */}
-                    <div className="bg-white rounded-2xl border border-[#ebebeb] p-5 shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] flex items-center justify-center text-white font-black text-lg uppercase shrink-0">
-                                {(fullUser.username || "U").slice(0, 2)}
+                    {/* Account card */}
+                    <div className="bg-white rounded-2xl border border-[#e8e8e8] px-5 py-4">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-11 h-11 rounded-[14px] bg-[#1a1a1a] flex items-center justify-center text-white font-black text-[13px] uppercase shrink-0 select-none">
+                                {(fullUser.username || fullUser.first_name || "U").slice(0, 2)}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[16px] font-black text-[#1a1a1a] truncate">
-                                    {fullUser.username || fullUser.first_name || "User"}
-                                </p>
-                                <p className="text-[11px] text-gray-400 mt-0.5">
-                                    {fullUser.isAdmin ? t("admin") : t("member")} · {t("since")} {fullUser.created_at ? new Date(fullUser.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "–"}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-[15px] font-bold text-[#1a1a1a] truncate leading-tight">
+                                        {fullUser.username || fullUser.first_name || "User"}
+                                    </p>
+                                    <PlanBadge tier={currentPlanId} />
+                                </div>
+                                <p className="text-[12px] text-gray-400 mt-0.5 leading-tight">
+                                    {fullUser.isAdmin ? t("admin") : t("member")}
+                                    {fullUser.created_at && (
+                                        <> · {t("since")} {new Date(fullUser.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</>
+                                    )}
                                 </p>
                             </div>
-                            <PlanBadge tier={currentPlanId} />
                         </div>
                     </div>
 
-                    {/* Quick stats row */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white rounded-2xl border border-[#ebebeb] p-4 shadow-sm text-center">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t("weekly")}</p>
-                            <p className="text-[18px] font-black text-[#1a1a1a] tabular-nums leading-none">
-                                {(weeklyUsed / 1000).toFixed(0)}K
-                            </p>
-                            <p className="text-[10px] text-gray-300 mt-1">/ {(planLimits.weekly / 1000).toFixed(0)}K</p>
+                    {/* Usage stats — single card, vertical rows */}
+                    <div className="bg-white rounded-2xl border border-[#e8e8e8] overflow-hidden">
+                        {/* Weekly */}
+                        <div className="px-5 pt-4 pb-3.5">
+                            <div className="flex items-baseline justify-between mb-2">
+                                <span className="text-[12px] font-semibold text-[#1a1a1a]">Weekly</span>
+                                <span className="text-[12px] font-mono text-[#1a1a1a] tabular-nums">
+                                    {fmtChars(weeklyUsed)}<span className="text-gray-300"> / {fmtChars(planLimits.weekly)}</span>
+                                </span>
+                            </div>
+                            <div className="h-[3px] w-full bg-[#f0f0f0] rounded-full overflow-hidden">
+                                <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-700" style={{ width: `${weeklyPct}%` }} />
+                            </div>
                         </div>
-                        <div className="bg-white rounded-2xl border border-[#ebebeb] p-4 shadow-sm text-center">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t("monthlyBalance")}</p>
-                            <p className="text-[18px] font-black text-[#1a1a1a] tabular-nums leading-none">
-                                {(monthlyUsed / 1000).toFixed(0)}K
-                            </p>
-                            <p className="text-[10px] text-gray-300 mt-1">/ {(planLimits.monthly / 1000).toFixed(0)}K</p>
+                        <div className="h-px bg-[#f5f5f5] mx-5" />
+                        {/* Monthly */}
+                        <div className="px-5 pt-4 pb-3.5">
+                            <div className="flex items-baseline justify-between mb-2">
+                                <span className="text-[12px] font-semibold text-[#1a1a1a]">Monthly</span>
+                                <span className="text-[12px] font-mono text-[#1a1a1a] tabular-nums">
+                                    {fmtChars(monthlyUsed)}<span className="text-gray-300"> / {fmtChars(planLimits.monthly)}</span>
+                                </span>
+                            </div>
+                            <div className="h-[3px] w-full bg-[#f0f0f0] rounded-full overflow-hidden">
+                                <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-700" style={{ width: `${monthlyPct}%` }} />
+                            </div>
                         </div>
-                        <div className="bg-[#0f0f0f] rounded-2xl border border-[#1f1f1f] p-4 shadow-sm text-center">
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{t("legacyCredits")}</p>
-                            <p className="text-[18px] font-black text-emerald-400 tabular-nums leading-none">
-                                {purchasedChars >= 1000000 ? `${(purchasedChars / 1000000).toFixed(1)}M` : `${(purchasedChars / 1000).toFixed(0)}K`}
-                            </p>
-                            <p className="text-[10px] text-gray-600 mt-1">{t("neverExpires")}</p>
+                        <div className="h-px bg-[#f5f5f5] mx-5" />
+                        {/* Legacy credits */}
+                        <div className="px-5 py-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-[12px] font-semibold text-[#1a1a1a]">Legacy Credits</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">{t("neverExpires")}</p>
+                            </div>
+                            <span className="text-[18px] font-black text-[#1a1a1a] tabular-nums">
+                                {fmtChars(purchasedChars)}
+                            </span>
                         </div>
                     </div>
                 </>
             ) : !user ? (
-                <div className="bg-white rounded-2xl border border-[#ebebeb] p-12 text-center shadow-sm">
-                    <div className="w-14 h-14 rounded-2xl bg-[#f5f5f5] flex items-center justify-center mx-auto mb-4">
-                        <IconLogin className="w-7 h-7 text-gray-300" />
+                <div className="bg-white rounded-2xl border border-[#e8e8e8] p-10 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-[#f5f5f5] flex items-center justify-center mx-auto mb-4">
+                        <IconLogin className="w-6 h-6 text-gray-300" />
                     </div>
-                    <h3 className="text-[16px] font-black text-[#1a1a1a] mb-1.5">{t("signInTitle")}</h3>
-                    <p className="text-[13px] text-gray-400 mb-6 max-w-sm mx-auto">{t("signInDesc")}</p>
+                    <h3 className="text-[15px] font-bold text-[#1a1a1a] mb-1">{t("signInTitle")}</h3>
+                    <p className="text-[12px] text-gray-400 mb-5 max-w-xs mx-auto leading-relaxed">{t("signInDesc")}</p>
                     <button
                         onClick={() => setShowLogin(true)}
-                        className="px-8 py-3 bg-[#1a1a1a] text-white rounded-xl font-bold text-sm hover:bg-black transition-all active:scale-95 shadow-md"
+                        className="px-7 py-2.5 bg-[#1a1a1a] text-white rounded-xl font-bold text-[13px] hover:bg-black transition-all active:scale-95"
                     >
                         {t("signIn")}
                     </button>
@@ -234,39 +257,39 @@ export default function SettingsPage() {
     );
 
     const renderUsage = () => (
-        <div className="space-y-4">
-            <SectionHeader label="Usage Overview" />
+        <div className="space-y-3">
             {user && fullUser ? (
-                <div className="bg-white rounded-2xl border border-[#ebebeb] shadow-sm overflow-hidden">
-                    <UsageRow
-                        icon={<IconClock className="w-4 h-4 text-gray-400" />}
-                        label={t("weeklyUsage")}
-                        used={weeklyUsed}
-                        total={planLimits.weekly}
-                        pct={weeklyPct}
-                        color="bg-emerald-500"
-                    />
-                    <div className="h-px bg-[#f5f5f5] mx-5" />
-                    <UsageRow
-                        icon={<IconPackage className="w-4 h-4 text-gray-400" />}
-                        label={t("monthlyBalance")}
-                        used={monthlyUsed}
-                        total={planLimits.monthly}
-                        pct={monthlyPct}
-                        color="bg-[#1a1a1a]"
-                    />
-                    <div className="h-px bg-[#f5f5f5] mx-5" />
-                    <div className="flex items-center justify-between px-5 py-4">
-                        <div className="flex items-center gap-3">
-                            <IconDatabase className="w-4 h-4 text-gray-400" />
-                            <div>
-                                <p className="text-[12px] font-bold text-[#1a1a1a]">{t("legacyCredits")}</p>
-                                <p className="text-[11px] text-gray-400">{t("neverExpires")}</p>
-                            </div>
+                <div className="bg-white rounded-2xl border border-[#e8e8e8] overflow-hidden">
+                    <div className="px-5 pt-4 pb-3.5">
+                        <div className="flex items-baseline justify-between mb-2">
+                            <span className="text-[12px] font-semibold text-[#1a1a1a]">Weekly</span>
+                            <span className="text-[12px] font-mono text-[#1a1a1a] tabular-nums">
+                                {fmtChars(weeklyUsed)}<span className="text-gray-300"> / {fmtChars(planLimits.weekly)}</span>
+                            </span>
                         </div>
-                        <p className="text-[16px] font-black text-emerald-500 tabular-nums">
-                            {purchasedChars >= 1000000 ? `${(purchasedChars / 1000000).toFixed(1)}M` : `${(purchasedChars / 1000).toFixed(0)}K`}
-                        </p>
+                        <div className="h-[3px] w-full bg-[#f0f0f0] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-700" style={{ width: `${weeklyPct}%` }} />
+                        </div>
+                    </div>
+                    <div className="h-px bg-[#f5f5f5] mx-5" />
+                    <div className="px-5 pt-4 pb-3.5">
+                        <div className="flex items-baseline justify-between mb-2">
+                            <span className="text-[12px] font-semibold text-[#1a1a1a]">Monthly</span>
+                            <span className="text-[12px] font-mono text-[#1a1a1a] tabular-nums">
+                                {fmtChars(monthlyUsed)}<span className="text-gray-300"> / {fmtChars(planLimits.monthly)}</span>
+                            </span>
+                        </div>
+                        <div className="h-[3px] w-full bg-[#f0f0f0] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#1a1a1a] rounded-full transition-all duration-700" style={{ width: `${monthlyPct}%` }} />
+                        </div>
+                    </div>
+                    <div className="h-px bg-[#f5f5f5] mx-5" />
+                    <div className="px-5 py-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-[12px] font-semibold text-[#1a1a1a]">Legacy Credits</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">{t("neverExpires")}</p>
+                        </div>
+                        <span className="text-[18px] font-black text-[#1a1a1a] tabular-nums">{fmtChars(purchasedChars)}</span>
                     </div>
                 </div>
             ) : (
@@ -277,7 +300,6 @@ export default function SettingsPage() {
 
     const renderHistory = () => (
         <div className="space-y-4">
-            <SectionHeader label={t("history")} />
             {user ? (
                 <div className="bg-white rounded-2xl border border-[#ebebeb] shadow-sm overflow-hidden">
                     {timelineItems.length > 0 ? (
@@ -335,7 +357,6 @@ export default function SettingsPage() {
 
     const renderSupport = () => (
         <div className="space-y-4">
-            <SectionHeader label={t("support")} />
             <div className="bg-white rounded-2xl border border-[#ebebeb] shadow-sm overflow-hidden">
                 <a
                     href="mailto:support@perricheno.ru"
@@ -378,7 +399,6 @@ export default function SettingsPage() {
     const renderPromos = () => (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <SectionHeader label={t("promoCodes")} />
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-[#f3f3f3] px-2 py-0.5 rounded">{t("admin")}</span>
             </div>
             <div className="bg-white rounded-2xl border border-[#ebebeb] shadow-sm overflow-hidden">
@@ -426,7 +446,6 @@ export default function SettingsPage() {
     const renderUsers = () => (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <SectionHeader label={t("userManagement")} />
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-[#f3f3f3] px-2 py-0.5 rounded">{t("admin")}</span>
             </div>
             <div className="bg-white rounded-2xl border border-[#ebebeb] shadow-sm overflow-hidden p-4">
@@ -605,55 +624,24 @@ export default function SettingsPage() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionHeader({ label }: { label: string }) {
-    return (
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.18em]">{label}</p>
-    );
-}
 
 function PlanBadge({ tier }: { tier: string }) {
-    const styles: Record<string, string> = {
-        free: "bg-[#f3f3f3] text-gray-500",
-        plus: "bg-emerald-50 text-emerald-700",
-        pro: "bg-[#1a1a1a] text-white",
-        ultra: "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
-    };
     const labels: Record<string, string> = { free: "Free", plus: "Plus", pro: "Pro", ultra: "Ultra" };
+    if (!tier || tier === "free") {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 border border-[#e8e8e8]">
+                Free
+            </span>
+        );
+    }
     return (
-        <span className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wide shrink-0 ${styles[tier] || styles.free}`}>
-            {tier === "ultra" && <IconCrown className="w-3 h-3" />}
-            {labels[tier] || "Free"}
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-[#1a1a1a] uppercase tracking-wide">
+            {tier === "ultra" && <IconCrown className="w-2.5 h-2.5" />}
+            {labels[tier] || tier}
         </span>
     );
 }
 
-function UsageRow({
-    icon, label, used, total, pct, color,
-}: {
-    icon: React.ReactNode;
-    label: string;
-    used: number;
-    total: number;
-    pct: number;
-    color: string;
-}) {
-    return (
-        <div className="flex items-center gap-4 px-5 py-4">
-            <div className="shrink-0">{icon}</div>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[12px] font-bold text-[#1a1a1a]">{label}</p>
-                    <p className="text-[11px] text-gray-400 tabular-nums">
-                        {(used / 1000).toFixed(0)}K <span className="text-gray-300">/ {(total / 1000).toFixed(0)}K</span>
-                    </p>
-                </div>
-                <div className="h-1.5 w-full bg-[#f0f0f0] rounded-full overflow-hidden">
-                    <div className={`h-full ${color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                </div>
-            </div>
-        </div>
-    );
-}
 
 function SignInPrompt({ onSignIn, t }: { onSignIn: () => void; t: (k: string) => string }) {
     return (
