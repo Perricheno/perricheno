@@ -28,12 +28,12 @@ export default function TikzPage() {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const prevUrlRef = useRef<string | null>(null);
 
-    // Auto-grow textarea
+    // Auto-grow textarea (capped at 160px)
     useEffect(() => {
         const ta = textareaRef.current;
         if (!ta) return;
         ta.style.height = "auto";
-        ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+        ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
     }, [prompt]);
 
     // Build / revoke blob URL from base64
@@ -131,12 +131,12 @@ export default function TikzPage() {
                 onSelect={setSelectedType}
             />
 
-            {/* ── Main ── */}
+            {/* ── Main column ── */}
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
                 {/* Top bar */}
                 <div className="border-b border-[#ebebeb] px-4 md:px-6 py-3 flex items-center gap-2 bg-white flex-shrink-0">
-                    {/* Mobile type picker trigger */}
+                    {/* Mobile type picker */}
                     <button
                         onClick={() => setSheetOpen(true)}
                         className="md:hidden flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#ebebeb] bg-[#fafafa] active:scale-[0.97] transition-all"
@@ -160,54 +160,21 @@ export default function TikzPage() {
                         value={language}
                         onChange={e => setLanguage(e.target.value)}
                         className="text-[12px] border border-[#ddd] rounded-lg px-2 py-1.5 bg-white text-[#1a1a1a] focus:outline-none focus:border-[#aaa] flex-shrink-0"
+                        style={{ touchAction: "manipulation" }}
                     >
                         {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                     </select>
                 </div>
 
-                {/* Content — scrollable on mobile */}
+                {/* ── Scrollable result area ── */}
                 <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
-
-                    {/* Prompt */}
-                    <div className="px-4 md:px-6 pt-4 pb-3 flex-shrink-0">
-                        <div className="relative border border-[#ebebeb] rounded-2xl bg-white shadow-sm focus-within:border-[#aaa] transition-colors overflow-hidden">
-                            <textarea
-                                ref={textareaRef}
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !loading && prompt.trim()) {
-                                        e.preventDefault(); handleGenerate();
-                                    }
-                                }}
-                                placeholder={`Describe the ${selectedEntry?.name ?? "diagram"} you want…`}
-                                className="w-full resize-none px-4 pt-4 pb-12 text-[13px] text-[#1a1a1a] placeholder-gray-300 focus:outline-none leading-relaxed min-h-[72px]"
-                                disabled={loading}
-                            />
-                            <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                                {loading && <span className="text-[11px] text-gray-400">{elapsed.toFixed(0)}s</span>}
-                                <button
-                                    onClick={handleGenerate}
-                                    disabled={loading || !prompt.trim()}
-                                    className={`rounded-xl w-9 h-9 flex items-center justify-center transition-all
-                                        ${loading || !prompt.trim()
-                                            ? "bg-[#f0f0f0] text-gray-300 cursor-not-allowed"
-                                            : "bg-[#1a1a1a] text-white hover:bg-[#333] active:scale-95"
-                                        }`}
-                                >
-                                    {loading ? <IconLoader2 size={16} className="animate-spin" /> : <IconArrowUp size={16} />}
-                                </button>
-                            </div>
-                            <div className="absolute bottom-3.5 left-4 text-[10px] text-gray-300 hidden md:block">⌘↵ to generate</div>
-                        </div>
-                    </div>
 
                     {/* Error */}
                     <AnimatePresence>
                         {error && (
                             <motion.div
                                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                                className="mx-4 md:mx-6 mb-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[12px] text-red-700 flex items-start gap-2 flex-shrink-0"
+                                className="mx-4 md:mx-6 mt-4 mb-0 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[12px] text-red-700 flex items-start gap-2 flex-shrink-0"
                             >
                                 <span className="flex-1">{error}</span>
                                 <button onClick={() => setError(null)}><IconX size={13} className="text-red-400 flex-shrink-0" /></button>
@@ -217,7 +184,7 @@ export default function TikzPage() {
 
                     {/* Result */}
                     {hasResult && (
-                        <div className="flex-1 px-4 md:px-6 pb-4 md:pb-6 flex flex-col min-h-0">
+                        <div className="flex-1 px-4 md:px-6 pt-4 pb-4 md:pb-6 flex flex-col min-h-0">
                             <ResultPanel
                                 tikzCode={tikzCode}
                                 pdfUrl={pdfUrl}
@@ -247,10 +214,10 @@ export default function TikzPage() {
                                     </svg>
                                 </div>
                                 <p className="text-[13px] font-semibold text-[#1a1a1a] mb-1 md:hidden">
-                                    Tap the type button above to choose a diagram
+                                    Tap the type button above, then describe it
                                 </p>
                                 <p className="hidden md:block text-[13px] font-semibold text-[#1a1a1a] mb-1">
-                                    Select a type and describe it
+                                    Select a type and describe it below
                                 </p>
                                 <p className="text-[12px] text-gray-400 leading-relaxed">
                                     Compiles to PDF · embeds inline in LaTeX · 30 diagram types
@@ -259,7 +226,7 @@ export default function TikzPage() {
                         </div>
                     )}
 
-                    {/* Loading */}
+                    {/* Loading (no result yet) */}
                     {loading && !hasResult && (
                         <div className="flex-1 flex items-center justify-center py-16">
                             <div className="text-center">
@@ -272,6 +239,52 @@ export default function TikzPage() {
                         </div>
                     )}
                 </div>
+
+                {/* ── Sticky bottom input ── */}
+                <div className="flex-shrink-0 bg-white/95 backdrop-blur-sm border-t border-[#f0f0f0] px-4 md:px-6 pt-3 pb-[76px] md:pb-4">
+                    <div
+                        className="relative rounded-2xl bg-[#f9f9f9] overflow-hidden"
+                        style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.07), 0 2px 12px rgba(0,0,0,0.06)" }}
+                    >
+                        <textarea
+                            ref={textareaRef}
+                            value={prompt}
+                            onChange={e => setPrompt(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !loading && prompt.trim()) {
+                                    e.preventDefault(); handleGenerate();
+                                }
+                            }}
+                            placeholder={`Describe the ${selectedEntry?.name ?? "diagram"} you want…`}
+                            style={{ fontSize: "16px", touchAction: "manipulation" }}
+                            className="w-full resize-none px-4 pt-3.5 pb-12 text-[#1a1a1a] placeholder-gray-300 focus:outline-none leading-relaxed min-h-[52px] bg-transparent"
+                            disabled={loading}
+                        />
+                        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
+                            {loading && (
+                                <span className="text-[11px] text-gray-400 tabular-nums">{elapsed.toFixed(0)}s</span>
+                            )}
+                            <button
+                                onClick={handleGenerate}
+                                disabled={loading || !prompt.trim()}
+                                className={`rounded-xl w-9 h-9 flex items-center justify-center transition-all
+                                    ${loading || !prompt.trim()
+                                        ? "bg-[#ebebeb] text-gray-300 cursor-not-allowed"
+                                        : "bg-[#1a1a1a] text-white hover:bg-[#333] active:scale-95"
+                                    }`}
+                            >
+                                {loading
+                                    ? <IconLoader2 size={16} className="animate-spin" />
+                                    : <IconArrowUp size={16} />
+                                }
+                            </button>
+                        </div>
+                        <div className="absolute bottom-3.5 left-4 text-[10px] text-gray-300 hidden md:block select-none">
+                            ⌘↵ to generate
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

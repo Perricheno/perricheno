@@ -6,13 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     IconArrowUp, IconLoader2, IconCode, IconX,
     IconCopy, IconCheck, IconRefresh, IconDownload,
-    IconPaperclip, IconFile, IconSparkles,
+    IconPaperclip, IconFile, IconSparkles, IconLayoutGrid,
 } from "@tabler/icons-react";
 import { useAdmin } from "@/components/AdminContext";
 import { useRouter } from "@/i18n/navigation";
 import RSidebar from "./RSidebar";
 import ChartGallery from "./ChartGallery";
 import MultiChartCard from "./MultiChartCard";
+import RChartSheet from "./RChartSheet";
 import { CHARTS, type GeneratedChart } from "./charts";
 
 const SERVER_EXTRACT_EXTS = ["pdf", "doc", "docx", "ppt", "pptx"];
@@ -114,6 +115,7 @@ export default function RPage() {
     const [selectedCharts, setSelectedCharts] = useState<string[]>([]);
     const [files, setFiles] = useState<AttachedFile[]>([]);
     const [uploading, setUploading] = useState(false);
+    const [chartSheetOpen, setChartSheetOpen] = useState(false);
 
     // Suggest state
     const [suggesting, setSuggesting] = useState(false);
@@ -469,6 +471,22 @@ export default function RPage() {
                 onNewSession={handleNew}
             />
 
+            {/* ── Mobile chart type sheet ── */}
+            <RChartSheet
+                open={chartSheetOpen}
+                onClose={() => setChartSheetOpen(false)}
+                selectedCharts={selectedCharts}
+                suggestedCharts={suggestedCharts}
+                onSelectChart={(id) => {
+                    setSelectedCharts(prev =>
+                        prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+                    );
+                    setSuggestedCharts([]);
+                    setSuggestReasoning("");
+                }}
+                onClearCharts={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
+            />
+
             {/* ── Page header ── */}
             <div className="max-w-3xl mx-auto w-full px-5 pt-10 pb-2 shrink-0">
                 <div className="flex items-end gap-4">
@@ -487,21 +505,23 @@ export default function RPage() {
             <div className="flex-1 overflow-y-auto min-h-0">
                 <main className="max-w-3xl mx-auto w-full px-5 pt-6 space-y-6 pb-6">
 
-                {/* ── Chart gallery ── */}
-                <ChartGallery
-                    selectedCharts={selectedCharts}
-                    suggestedCharts={suggestedCharts}
-                    suggestReasoning={suggestReasoning}
-                    loading={loading}
-                    onSelectChart={(id) => {
-                        setSelectedCharts(prev =>
-                            prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-                        );
-                        setSuggestedCharts([]);
-                        setSuggestReasoning("");
-                    }}
-                    onClearCharts={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
-                />
+                {/* ── Chart gallery — desktop only; mobile uses RChartSheet ── */}
+                <div className="hidden md:block">
+                    <ChartGallery
+                        selectedCharts={selectedCharts}
+                        suggestedCharts={suggestedCharts}
+                        suggestReasoning={suggestReasoning}
+                        loading={loading}
+                        onSelectChart={(id) => {
+                            setSelectedCharts(prev =>
+                                prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+                            );
+                            setSuggestedCharts([]);
+                            setSuggestReasoning("");
+                        }}
+                        onClearCharts={() => { setSelectedCharts([]); setSuggestedCharts([]); setSuggestReasoning(""); }}
+                    />
+                </div>
 
                 {/* ── Single error banner ── */}
                 <AnimatePresence>
@@ -760,9 +780,12 @@ export default function RPage() {
             </div>
 
             {/* ── Bottom input (sticky) ── */}
-            <div className="shrink-0 bg-[#F9F9F9]/95 backdrop-blur-sm border-t border-[#f0f0f0] pt-3 pb-[76px] md:pb-4">
+            <div className="shrink-0 bg-[#F9F9F9]/95 backdrop-blur-sm pt-3 pb-[76px] md:pb-4">
                 <div className="max-w-3xl mx-auto w-full px-5">
-                    <div className="bg-white rounded-2xl border border-[#e8e8e8] shadow-sm">
+                    <div
+                        className="bg-white rounded-2xl overflow-hidden"
+                        style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.07), 0 4px 20px rgba(0,0,0,0.08)" }}
+                    >
                         {/* Textarea */}
                         <div className="px-4 pt-4 pb-2">
                             <textarea
@@ -776,7 +799,8 @@ export default function RPage() {
                                     }
                                 }}
                                 placeholder={t("placeholder")}
-                                className="w-full text-[14px] leading-relaxed text-[#1a1a1a] bg-transparent outline-none
+                                style={{ fontSize: "16px", touchAction: "manipulation" }}
+                                className="w-full leading-relaxed text-[#1a1a1a] bg-transparent outline-none
                                            placeholder:text-[#bbb] resize-none min-h-[52px]"
                                 autoFocus
                             />
@@ -813,7 +837,7 @@ export default function RPage() {
                         {/* Toolbar */}
                         <div className="flex items-center justify-between px-3 pb-3 pt-1 gap-2">
                             <div className="flex items-center gap-1 flex-wrap">
-                                {/* Attach */}
+                                {/* Attach file */}
                                 <label className="cursor-pointer p-1.5 text-gray-400 hover:text-[#1a1a1a] rounded-lg
                                                   hover:bg-[#f5f5f5] transition-colors" title="Attach CSV / Excel">
                                     <IconPaperclip className="w-4 h-4" stroke={1.8} />
@@ -826,6 +850,16 @@ export default function RPage() {
                                         onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
                                     />
                                 </label>
+
+                                {/* Mobile: open chart type sheet */}
+                                <button
+                                    onClick={() => setChartSheetOpen(true)}
+                                    className="md:hidden p-1.5 text-gray-400 hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors"
+                                    title="Chart type"
+                                    style={{ touchAction: "manipulation" }}
+                                >
+                                    <IconLayoutGrid className="w-4 h-4" stroke={1.8} />
+                                </button>
 
                                 {/* Selected chart chips */}
                                 {selectedCharts.length > 0 ? (
@@ -859,6 +893,7 @@ export default function RPage() {
                                 disabled={!prompt.trim() || loading || suggesting || multiLoading}
                                 className="w-8 h-8 bg-[#1a1a1a] text-white rounded-xl flex items-center justify-center
                                            disabled:opacity-15 transition-all hover:bg-black active:scale-95 shrink-0"
+                                style={{ touchAction: "manipulation" }}
                             >
                                 {(loading || suggesting || multiLoading)
                                     ? <IconLoader2 className="w-4 h-4 animate-spin" />
