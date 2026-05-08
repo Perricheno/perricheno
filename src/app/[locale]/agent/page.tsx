@@ -763,13 +763,13 @@ export default function AgentPage() {
                         <div className="flex items-center gap-1">
                             {/* Mode Dropdown */}
                             <div className="relative" ref={modeRef}>
-                                <button 
+                                <button
                                     onClick={() => setModeOpen(!modeOpen)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#666] hover:bg-[#f5f5f5] transition-colors"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#666] hover:bg-[#f5f5f5] transition-colors max-w-[140px] sm:max-w-none"
                                 >
-                                    <activeMode.icon className="w-4 h-4" stroke={2} />
-                                    <span>{activeMode.label}</span>
-                                    <svg className={`w-3 h-3 ml-0.5 transition-transform ${modeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                    <activeMode.icon className="w-4 h-4 shrink-0" stroke={2} />
+                                    <span className="truncate">{activeMode.label}</span>
+                                    <svg className={`w-3 h-3 ml-0.5 shrink-0 transition-transform ${modeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
 
                                 <AnimatePresence>
@@ -815,7 +815,7 @@ export default function AgentPage() {
                                 <div className="relative rounded-full w-8 h-4 transition-colors duration-300" style={{ backgroundColor: isAgentMode ? "#1a1a1a" : "#e5e5e5" }}>
                                     <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${isAgentMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
                                 </div>
-                                <span className="text-[13px] font-medium text-[#666]">{t("agent")}</span>
+                                <span className="hidden sm:inline text-[13px] font-medium text-[#666]">{t("agent")}</span>
                                 <input type="checkbox" className="hidden" checked={isAgentMode} onChange={(e) => setIsAgentMode(e.target.checked)} />
                             </label>
 
