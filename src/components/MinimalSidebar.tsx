@@ -4,13 +4,13 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import {
-    IconHome, IconTerminal2, IconChartBar,
-    IconRobot, IconFileTypePdf, IconListCheck,
+    IconHome, IconChartBar,
+    IconFileTypePdf,
     IconUser, IconLogin, IconSettings,
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
     IconSparkles, IconCreditCard, IconBraces, IconBook2,
-    IconX, IconLanguage, IconVector, IconChartHistogram,
+    IconX, IconLanguage, IconVector,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -42,7 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
         titleKey: "activity",
         links: [
             { href: "/canvas", icon: IconLayoutBoard, labelKey: "canvas" },
-            { href: "/r", icon: IconChartHistogram, labelKey: "rStudio" },
+            { href: "/r", icon: IconChartBar, labelKey: "rStudio" },
             { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
             { href: "/agent", icon: IconSparkles, labelKey: "aiAgent" },
             { href: "/citations", icon: IconBook2, labelKey: "citations" },
@@ -61,7 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 const MOBILE_NAV_LEFT: NavLink[] = [
     { href: "/agent", icon: IconSparkles, labelKey: "agent" },
-    { href: "/r", icon: IconChartHistogram, labelKey: "r" },
+    { href: "/r", icon: IconChartBar, labelKey: "r" },
 ];
 const MOBILE_NAV_RIGHT: NavLink[] = [
     { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },
@@ -71,7 +71,7 @@ const MOBILE_NAV_RIGHT: NavLink[] = [
 const RADIAL_ALL_KEYS = [
     { href: "/", icon: IconHome, labelKey: "home" },
     { href: "/canvas", icon: IconLayoutBoard, labelKey: "canvas" },
-    { href: "/r", icon: IconChartHistogram, labelKey: "r" },
+    { href: "/r", icon: IconChartBar, labelKey: "r" },
     { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
     { href: "/agent", icon: IconSparkles, labelKey: "agent" },
     { href: "/citations", icon: IconBook2, labelKey: "citations" },
