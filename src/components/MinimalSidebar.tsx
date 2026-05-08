@@ -10,7 +10,7 @@ import {
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand, IconLayoutBoard,
     IconSparkles, IconCreditCard, IconBraces, IconBook2,
-    IconChartDots2, IconX, IconLanguage, IconVector,
+    IconX, IconLanguage, IconVector, IconChartHistogram,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -42,7 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
         titleKey: "activity",
         links: [
             { href: "/canvas", icon: IconLayoutBoard, labelKey: "canvas" },
-            { href: "/r", icon: IconChartDots2, labelKey: "rStudio" },
+            { href: "/r", icon: IconChartHistogram, labelKey: "rStudio" },
             { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
             { href: "/agent", icon: IconSparkles, labelKey: "aiAgent" },
             { href: "/citations", icon: IconBook2, labelKey: "citations" },
@@ -61,7 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 const MOBILE_NAV_LEFT: NavLink[] = [
     { href: "/agent", icon: IconSparkles, labelKey: "agent" },
-    { href: "/r", icon: IconChartDots2, labelKey: "r" },
+    { href: "/r", icon: IconChartHistogram, labelKey: "r" },
 ];
 const MOBILE_NAV_RIGHT: NavLink[] = [
     { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },
@@ -71,7 +71,7 @@ const MOBILE_NAV_RIGHT: NavLink[] = [
 const RADIAL_ALL_KEYS = [
     { href: "/", icon: IconHome, labelKey: "home" },
     { href: "/canvas", icon: IconLayoutBoard, labelKey: "canvas" },
-    { href: "/r", icon: IconChartDots2, labelKey: "r" },
+    { href: "/r", icon: IconChartHistogram, labelKey: "r" },
     { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
     { href: "/agent", icon: IconSparkles, labelKey: "agent" },
     { href: "/citations", icon: IconBook2, labelKey: "citations" },
