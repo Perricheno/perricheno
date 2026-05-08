@@ -58,7 +58,7 @@ export default async function LocaleLayout({
                 <div className="flex h-screen w-full">
                   <MinimalSidebar />
                   <main className="flex-1 flex flex-col p-2 pl-0 md:p-4 md:pl-0 h-full overflow-hidden">
-                    <div className="flex-1 bg-[var(--card)] rounded-[var(--radius)] border border-[var(--border)] shadow-sm overflow-y-auto">
+                    <div className="flex-1 bg-[var(--card)] md:rounded-[var(--radius)] md:border md:border-[var(--border)] md:shadow-sm overflow-y-auto">
                       {children}
                     </div>
                   </main>

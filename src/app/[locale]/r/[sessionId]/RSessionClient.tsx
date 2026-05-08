@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     IconLoader2, IconCode, IconX,
     IconCopy, IconCheck, IconRefresh, IconDownload,
-    IconMaximize,
+    IconMaximize, IconMessageCircle, IconPackage,
 } from "@tabler/icons-react";
 import { useRouter } from "@/i18n/navigation";
 import RSidebar from "../RSidebar";
@@ -386,12 +386,17 @@ export default function RSessionClient({ initialSession }: Props) {
         }
     }, [initialSession.prompt]);
 
-    const loadSession = (id: string) => {
-        router.push(`/r/${id}`);
-    };
+    const loadSession = (id: string) => { router.push(`/r/${id}`); };
+    const handleNewSession = () => { router.push('/r'); };
 
-    const handleNewSession = () => {
-        router.push('/r');
+    const handleDownloadAll = () => {
+        const done = multiResults.filter(c => c.status === "done" && c.image);
+        done.forEach(chart => {
+            const a = document.createElement("a");
+            a.href = `data:image/png;base64,${chart.image}`;
+            a.download = `r-${chart.chartType}.png`;
+            a.click();
+        });
     };
 
     const chartsPlanned = multiResults.map(r => r.chartType);
@@ -424,6 +429,26 @@ export default function RSessionClient({ initialSession }: Props) {
             {/* ── Scrollable content ── */}
             <div className="flex-1 overflow-y-auto min-h-0">
                 <main className="max-w-3xl mx-auto w-full px-5 pt-6 space-y-6 pb-6">
+
+                    {/* ── Original prompt card ── */}
+                    {initialSession.prompt && (
+                        <div className="bg-white border border-[#e8e8e8] rounded-2xl px-4 py-3 flex items-start gap-3 shadow-sm">
+                            <IconMessageCircle className="w-4 h-4 text-gray-300 mt-0.5 shrink-0" stroke={1.5} />
+                            <p className="text-[12px] text-[#555] leading-relaxed flex-1 min-w-0">
+                                {initialSession.prompt}
+                            </p>
+                            {multiResults.filter(c => c.status === "done" && c.image).length > 0 && (
+                                <button
+                                    onClick={handleDownloadAll}
+                                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#f5f5f5] hover:bg-[#ebebeb] text-[10px] font-bold text-gray-500 hover:text-[#1a1a1a] transition-all uppercase tracking-wide"
+                                    title="Download all charts"
+                                >
+                                    <IconPackage className="w-3.5 h-3.5" />
+                                    All
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* ── Multi: stepper + results ── */}
                     <AnimatePresence mode="popLayout">

@@ -62,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
 const MOBILE_NAV_LEFT: NavLink[] = [
     { href: "/agent", icon: IconSparkles, labelKey: "agent" },
     { href: "/r", icon: IconChartDots2, labelKey: "r" },
+    { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
 ];
 const MOBILE_NAV_RIGHT: NavLink[] = [
     { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },
@@ -362,7 +363,7 @@ export default function MinimalSidebar() {
     const NavItem = ({ l }: { l: NavLink }) => (
         <Link
             href={l.href}
-            className="flex flex-col items-center justify-center p-2 relative group w-16 h-14"
+            className="flex flex-col items-center justify-center p-2 relative group w-14 h-14 flex-shrink-0"
         >
             <div className={cn(
                 "absolute inset-0 rounded-[18px] transition-all duration-300",
@@ -489,9 +490,9 @@ export default function MinimalSidebar() {
                 "bg-[var(--card)] border-t border-[var(--border)]"
             )}>
                 <div className="flex items-center justify-between px-2 pt-2 pb-5 relative">
-                    <div className="flex items-center justify-around w-[40%]">
+                    <div className="flex items-center w-[46%] overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                         {MOBILE_NAV_LEFT.map(l => (
-                            <div key={l.href} className="transition-all duration-300 opacity-100 scale-100">
+                            <div key={l.href} className="transition-all duration-300 opacity-100 scale-100 flex-shrink-0">
                                 <NavItem l={l} />
                             </div>
                         ))}
