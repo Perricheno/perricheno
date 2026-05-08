@@ -668,112 +668,224 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
     // ─── DONE ───
     return (
-        <div className="w-full h-full flex flex-col items-center justify-start py-10 font-sans bg-[#FBFBFC] p-6 relative overflow-y-auto">
+        <div className="w-full h-full flex flex-col font-sans bg-[#F8F8F8] relative overflow-y-auto">
             <AgentSidebar sessions={sessions} currentSessionId={currentSessionId} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onShareSession={handleShareSession} onNewSession={handleNewSession} />
 
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-4xl pt-8 md:pt-0">
-                {/* Header Section */}
-                <div className="text-center mb-10 max-w-2xl mx-auto">
-                    {error ? (
-                        <>
-                            <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
-                                <IconX className="w-10 h-10 text-black" stroke={2.5} />
-                            </div>
-                            <h2 className="text-2xl font-black mb-3 text-black">Process Interrupted</h2>
-                            <p className="text-sm text-[#A1A1AA] font-bold uppercase tracking-widest mb-8">{error}</p>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-20 h-20 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-6">
-                                <IconCheck className="w-10 h-10 text-black" stroke={2.5} />
-                            </div>
-                            <h2 className="text-3xl font-black mb-4 break-words text-black tracking-tight">{topic}</h2>
-                            <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] text-[#D4D4D8] mb-8 font-black uppercase tracking-[0.25em]">
-                                <span className="text-black">{docType.replace("_", " ")}</span>
-                                <span>•</span>
-                                <span>{settings.style}</span>
-                                {referencesBib && <><span>•</span><span className="text-black">Refs Attached</span></>}
-                                {mainTex && <><span>•</span><span className="text-emerald-500 font-bold tabular-nums">~{mainTex.length.toLocaleString()} Chars</span></>}
-                            </div>
-                        </>
-                    )}
+            {/* ── Document header ── */}
+            <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                className="bg-white border-b border-[#ebebeb] px-5 md:px-10 pt-8 md:pt-10 pb-6 shrink-0"
+            >
+                <div className="max-w-3xl mx-auto">
+                    {/* Status badges */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        {error ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wide border border-red-100">
+                                <IconX className="w-3 h-3" stroke={2.5} /> Error
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f0fdf4] text-[#16a34a] text-[10px] font-bold uppercase tracking-wide border border-[#bbf7d0]">
+                                <IconCheck className="w-3 h-3" stroke={2.5} /> Complete
+                            </span>
+                        )}
+                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider capitalize">
+                            {docType.replace(/_/g, " ")}
+                        </span>
+                        {settings.style && (
+                            <><span className="text-gray-200">·</span>
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{settings.style}</span></>
+                        )}
+                    </div>
+
+                    {/* Title */}
+                    <h1 className="text-[20px] md:text-[26px] font-black text-[#1a1a1a] tracking-tight leading-tight mb-3 max-w-2xl">
+                        {topic}
+                    </h1>
+
+                    {/* Stats chips */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-5">
+                        {mainTex && (
+                            <span className="text-[11px] font-medium text-gray-500 tabular-nums">
+                                ~{Math.round(mainTex.length / 6).toLocaleString()} words
+                            </span>
+                        )}
+                        {mainTex && (
+                            <><span className="text-gray-300 text-[10px]">·</span>
+                            <span className="text-[11px] font-medium text-gray-500 tabular-nums">{mainTex.length.toLocaleString()} chars</span></>
+                        )}
+                        {referencesBib && (
+                            <><span className="text-gray-300 text-[10px]">·</span>
+                            <span className="text-[11px] font-semibold text-emerald-600">bibliography</span></>
+                        )}
+                        {visuals.length > 0 && (
+                            <><span className="text-gray-300 text-[10px]">·</span>
+                            <span className="text-[11px] font-medium text-gray-500">{visuals.length} {visuals.length === 1 ? "figure" : "figures"}</span></>
+                        )}
+                    </div>
 
                     {/* Actions */}
                     {isAnalyticsSession ? (
-                        <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
-                            <button onClick={handleNewSession} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleNewSession}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-[12px] font-bold hover:bg-[#333] transition-all active:scale-95"
+                            >
                                 <IconPlus className="w-4 h-4" /> New Analysis
                             </button>
                         </div>
                     ) : (
-                        <>
-                            <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
-                                <button onClick={() => setViewerOpen(true)} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-gray-100 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:border-black transition-all shadow-sm active:scale-95">
-                                    <IconEye className="w-4 h-4" /> View LaTeX
-                                </button>
-                                <button onClick={downloadZip} className="flex items-center gap-2 px-8 py-3 bg-white text-black border border-black rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-xl active:scale-95">
-                                    <IconPackage className="w-4 h-4" /> Project ZIP
-                                </button>
-                                <button onClick={compilePdf} disabled={isCompiling} className="flex items-center gap-2 px-10 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-5">
-                                    {isCompiling ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconFileText className="w-4 h-4" />}
-                                    {isCompiling ? "Compiling..." : "Generate PDF"}
-                                </button>
-                            </div>
-                        </>
-                    )}
-
-                    {/* Edit / Fix */}
-                    {!isAnalyticsSession && (
-                        <div className="flex items-center justify-center gap-6">
-                            <button onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isEditing ? 'text-black' : 'text-gray-300 hover:text-black'}`}>
-                                <IconPencil className="w-3.5 h-3.5" stroke={2.5} /> Modify
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                onClick={compilePdf}
+                                disabled={isCompiling}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-[12px] font-bold hover:bg-[#333] transition-all shadow-sm active:scale-95 disabled:opacity-30"
+                            >
+                                {isCompiling ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconFileText className="w-3.5 h-3.5" />}
+                                {isCompiling ? "Compiling…" : "Generate PDF"}
                             </button>
-                            <div className="w-1 h-1 rounded-full bg-gray-100" />
-                            <button onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${isFixingErrors ? 'text-black underline' : 'text-gray-300 hover:text-black'}`}>
-                                <IconBug className="w-3.5 h-3.5" stroke={2.5} /> Fix Errors
+                            <button
+                                onClick={downloadZip}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white text-[#1a1a1a] border border-[#ddd] rounded-xl text-[12px] font-bold hover:border-[#aaa] transition-all active:scale-95"
+                            >
+                                <IconPackage className="w-3.5 h-3.5" /> Download ZIP
+                            </button>
+                            <button
+                                onClick={() => setViewerOpen(true)}
+                                className="flex items-center gap-2 px-3.5 py-2.5 text-gray-500 hover:text-[#1a1a1a] text-[12px] font-bold transition-colors rounded-xl hover:bg-[#f5f5f5]"
+                            >
+                                <IconEye className="w-3.5 h-3.5" /> View LaTeX
+                            </button>
+
+                            <div className="w-px h-5 bg-[#ebebeb] mx-0.5" />
+
+                            <button
+                                onClick={() => { setIsEditing(!isEditing); setIsFixingErrors(false); }}
+                                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${
+                                    isEditing ? "bg-[#1a1a1a] text-white" : "text-gray-500 hover:text-[#1a1a1a] hover:bg-[#f0f0f0]"
+                                }`}
+                            >
+                                <IconPencil className="w-3.5 h-3.5" stroke={2} /> Modify
+                            </button>
+                            <button
+                                onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }}
+                                className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${
+                                    isFixingErrors ? "bg-red-500 text-white" : "text-gray-500 hover:text-[#1a1a1a] hover:bg-[#f0f0f0]"
+                                }`}
+                            >
+                                <IconBug className="w-3.5 h-3.5" stroke={2} /> Fix Errors
                             </button>
                         </div>
                     )}
-
-                    {/* Inputs */}
-                    <AnimatePresence>
-                        {isEditing && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
-                                <div className="relative border border-gray-100 rounded-[24px] bg-white shadow-2xl focus-within:border-black transition-all p-2">
-                                    <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); } }} placeholder="Direct the modification..." className="w-full bg-transparent px-5 py-4 pr-14 outline-none resize-none text-[15px] font-bold text-black placeholder:text-gray-100 min-h-[64px] max-h-32" rows={1} autoFocus />
-                                    <button onClick={handleEdit} disabled={!editPrompt.trim()} className="absolute right-4 bottom-4 p-2.5 rounded-xl bg-black text-white disabled:opacity-5 transition-all active:scale-90"><IconArrowRight className="w-4 h-4" /></button>
-                                </div>
-                            </motion.div>
-                        )}
-                        {isFixingErrors && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg mx-auto mt-8 overflow-hidden">
-                                <div className="border border-gray-100 rounded-[24px] bg-white shadow-2xl overflow-hidden p-2 space-y-2">
-                                    <div className="px-5 py-2 text-[9px] font-black text-black uppercase tracking-[0.3em]">Compiler Log</div>
-                                    <textarea value={errorLogInput} onChange={e => setErrorLogInput(e.target.value)} placeholder="Paste the compiler log here…" className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[12px] font-mono text-black min-h-[100px] max-h-[180px]" rows={4} autoFocus />
-                                    <div className="px-5 py-1 text-[9px] font-black text-black uppercase tracking-[0.3em]">Additional guidance <span className="text-gray-300 normal-case font-medium">(optional)</span></div>
-                                    <textarea value={fixGuidance} onChange={e => setFixGuidance(e.target.value)} placeholder="e.g. Keep the table structure, don't change fonts…" className="w-full bg-[#FAFAFA] p-5 rounded-xl outline-none resize-none text-[13px] text-black min-h-[52px] max-h-[100px]" rows={2} />
-                                    <div className="px-2 pt-1 pb-1 flex justify-end">
-                                        <button onClick={fixErrors} disabled={!errorLogInput.trim()} className="px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all flex items-center gap-2">Identify & Solve <IconBug className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
                 </div>
-
-                {/* Visualizations component */}
-                <AgentVisualizations
-                    topic={topic}
-                    language={settings.language}
-                    visuals={visuals}
-                    setVisuals={setVisuals}
-                    sessionId={currentSessionId}
-                    openEditor={setActiveEditorIndex}
-                    onAddVisualsToReport={handleAddVisualsToReport}
-                    runtime={settings.runtime}
-                    setRuntime={(r) => setSettings(s => ({ ...s, runtime: r }))}
-                />
             </motion.div>
+            {/* end header */}
+
+            {/* ── Modify panel ── */}
+            <AnimatePresence>
+                {isEditing && (
+                    <motion.div
+                        key="edit-panel"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden bg-white border-b border-[#ebebeb] shrink-0"
+                    >
+                        <div className="max-w-3xl mx-auto px-5 md:px-10 py-4">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Describe the modification</p>
+                            <div className="relative border border-[#e0e0e0] rounded-xl bg-[#fafafa] focus-within:border-[#aaa] transition-colors"
+                                style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                                <textarea
+                                    value={editPrompt}
+                                    onChange={e => setEditPrompt(e.target.value)}
+                                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEdit(); } }}
+                                    placeholder="e.g. Add a conclusion section, make the tone more formal…"
+                                    style={{ fontSize: "16px" }}
+                                    className="w-full bg-transparent px-4 pt-3 pb-10 outline-none resize-none text-[#1a1a1a] placeholder-gray-300 min-h-[52px] max-h-36 leading-relaxed"
+                                    autoFocus
+                                />
+                                <button
+                                    onClick={handleEdit}
+                                    disabled={!editPrompt.trim()}
+                                    className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-white text-[11px] font-bold disabled:opacity-20 transition-all active:scale-90"
+                                >
+                                    <IconArrowRight className="w-3.5 h-3.5" /> Apply
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* ── Fix Errors panel ── */}
+                {isFixingErrors && (
+                    <motion.div
+                        key="fix-panel"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden bg-[#fffaf9] border-b border-[#fde8e4] shrink-0"
+                    >
+                        <div className="max-w-3xl mx-auto px-5 md:px-10 py-4 space-y-3">
+                            <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Paste LaTeX compiler log</p>
+                            <textarea
+                                value={errorLogInput}
+                                onChange={e => setErrorLogInput(e.target.value)}
+                                placeholder="Paste the full compiler log output here…"
+                                style={{ fontSize: "14px" }}
+                                className="w-full bg-white border border-[#fbd0c8] rounded-xl px-4 py-3 outline-none resize-none font-mono text-[12px] text-[#1a1a1a] placeholder-red-200 min-h-[80px] max-h-[160px] focus:border-red-300 transition-colors"
+                                autoFocus
+                            />
+                            <textarea
+                                value={fixGuidance}
+                                onChange={e => setFixGuidance(e.target.value)}
+                                placeholder="Optional: guidance for the fix…"
+                                style={{ fontSize: "14px" }}
+                                className="w-full bg-white border border-[#ebebeb] rounded-xl px-4 py-3 outline-none resize-none text-[13px] text-[#1a1a1a] placeholder-gray-300 min-h-[40px] max-h-[100px] focus:border-[#aaa] transition-colors"
+                            />
+                            <button
+                                onClick={fixErrors}
+                                disabled={!errorLogInput.trim()}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl text-[12px] font-bold hover:bg-red-600 transition-all active:scale-95 disabled:opacity-30"
+                            >
+                                <IconBug className="w-3.5 h-3.5" /> Identify & Fix
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Error banner ── */}
+            {error && (
+                <div className="max-w-3xl mx-auto w-full px-5 md:px-10 pt-4 shrink-0">
+                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                        <IconX className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" stroke={2.5} />
+                        <p className="text-[12px] text-red-600 leading-relaxed flex-1">{error}</p>
+                        <button onClick={() => setError(null)} className="text-red-300 hover:text-red-500 shrink-0">
+                            <IconX className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Visualizations ── */}
+            <div className="flex-1 px-5 md:px-10 py-6">
+                <div className="max-w-3xl mx-auto">
+                    <AgentVisualizations
+                        topic={topic}
+                        language={settings.language}
+                        visuals={visuals}
+                        setVisuals={setVisuals}
+                        sessionId={currentSessionId}
+                        openEditor={setActiveEditorIndex}
+                        onAddVisualsToReport={handleAddVisualsToReport}
+                        runtime={settings.runtime}
+                        setRuntime={(r) => setSettings(s => ({ ...s, runtime: r }))}
+                    />
+                </div>
+            </div>
 
             {/* LaTeX Viewer Modal */}
             <AnimatePresence>
