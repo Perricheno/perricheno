@@ -10,7 +10,7 @@ import {
     IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX,
     IconFileCheck, IconBrandTelegram, IconLock, IconLockOpen, IconScissors, IconArrowsShuffle,
     IconRotate, IconLayersIntersect, IconEraser, IconWand, IconMaximize, IconMinimize, IconTxt,
-    IconBrowser, IconFileZip, IconShield, IconSettings, IconChevronDown, IconChevronUp
+    IconBrowser, IconFileZip, IconShield, IconSettings, IconChevronDown, IconChevronUp, IconSearch,
 } from "@tabler/icons-react";
 import { useToast } from "@/components/ToastContext";
 
@@ -167,7 +167,9 @@ const CATEGORIES = ["All", "Convert", "Edit", "Security", "Misc", "Form", "Analy
 // ═══════════════════════════════════════════
 // Per-tool settings config from Stirling API
 // ═══════════════════════════════════════════
-type SettingFieldType = "select" | "text" | "number" | "toggle" | "slider";
+type SettingFieldType = "select" | "text" | "number" | "toggle" | "slider" | "file";
+
+const MULTI_FILE_TOOLS: ToolType[] = ["merge-pdfs", "overlay-pdfs", "img-to-pdf"];
 
 interface SettingField {
     key: string;
@@ -182,6 +184,12 @@ interface SettingField {
 }
 
 const TOOL_SETTINGS: Record<string, SettingField[]> = {
+    "url-to-pdf": [
+        { key: "urlInput", label: "Website URL", type: "text", default: "", placeholder: "https://google.com" },
+    ],
+    "html-to-pdf": [
+        { key: "zoom", label: "Zoom Level", type: "number", default: 1, step: 0.1 },
+    ],
     "img-to-pdf": [
         { key: "fitOption", label: "Fit Option", type: "select", default: "fillPage", options: [
             { value: "fillPage", label: "Fill Page" }, { value: "fitDocumentToImage", label: "Fit to Image" }, { value: "maintainAspectRatio", label: "Maintain Aspect Ratio" }
@@ -198,12 +206,16 @@ const TOOL_SETTINGS: Record<string, SettingField[]> = {
         { key: "singleOrMultiple", label: "Output Mode", type: "select", default: "multiple", options: [
             { value: "single", label: "Single Image" }, { value: "multiple", label: "One per Page" }
         ]},
+        { key: "pageNumbers", label: "Pages", type: "text", default: "all", placeholder: "e.g. 1,3,5-9" },
         { key: "colorType", label: "Color", type: "select", default: "color", options: [
             { value: "color", label: "Color" }, { value: "greyscale", label: "Greyscale" }, { value: "blackwhite", label: "Black & White" }
         ]},
         { key: "dpi", label: "DPI", type: "select", default: "300", options: [
-            { value: "72", label: "72 (Draft)" }, { value: "150", label: "150 (Standard)" }, { value: "300", label: "300 (High)" }, { value: "600", label: "600 (Ultra)" }
+            { value: "72", label: "72" }, { value: "150", label: "150" }, { value: "300", label: "300" }
         ]},
+    ],
+    "pdf-to-csv": [
+        { key: "pageNumbers", label: "Pages", type: "text", default: "all", placeholder: "e.g. 1,3" },
     ],
     "pdf-to-word": [
         { key: "outputFormat", label: "Format", type: "select", default: "docx", options: [
@@ -225,10 +237,105 @@ const TOOL_SETTINGS: Record<string, SettingField[]> = {
             { value: "pdfa", label: "PDF/A" }, { value: "pdfa-1", label: "PDF/A-1" }
         ]},
     ],
+    "merge-pdfs": [
+        { key: "sortType", label: "Sort Type", type: "select", default: "", options: [
+            { value: "", label: "None" }, { value: "fileName", label: "By Filename" }, { value: "date", label: "By Date" }
+        ]},
+        { key: "removeCertSign", label: "Remove Signatures", type: "toggle", default: false },
+    ],
+    "split-pages": [
+        { key: "pageNumbers", label: "Pages", type: "text", default: "all", placeholder: "e.g. 1,3,5-9 or all" },
+    ],
+    "split-pdf-by-sections": [
+        { key: "horizontalDivisions", label: "Horizontal Divs", type: "number", default: 2, min: 1 },
+        { key: "verticalDivisions", label: "Vertical Divs", type: "number", default: 1, min: 1 },
+        { key: "merge", label: "Merge result", type: "toggle", default: false },
+    ],
+    "split-pdf-by-chapters": [
+        { key: "bookmarkLevel", label: "Bookmark Level", type: "number", default: 1, min: 1 },
+        { key: "includeMetadata", label: "Include Metadata", type: "toggle", default: false },
+        { key: "allowDuplicates", label: "Allow Duplicates", type: "toggle", default: false },
+    ],
+    "split-by-size-or-count": [
+        { key: "splitType", label: "Split Type", type: "select", default: "1", options: [
+            { value: "0", label: "By Size" }, { value: "1", label: "By Page Count" }, { value: "2", label: "By Doc Count" }
+        ]},
+        { key: "splitValue", label: "Value (MB or Count)", type: "text", default: "5", placeholder: "e.g. 10MB or 5" },
+    ],
+    "remove-pages": [
+        { key: "pageNumbers", label: "Pages to Remove", type: "text", default: "", placeholder: "e.g. 2,4,6" },
+    ],
+    "rotate-pdf": [
+        { key: "angle", label: "Rotation Angle", type: "select", default: "90", options: [
+            { value: "90", label: "90°" }, { value: "180", label: "180°" }, { value: "270", label: "270°" }
+        ]},
+    ],
+    "organize-pdf": [
+        { key: "customMode", label: "Mode", type: "select", default: "CUSTOM", options: [
+            { value: "CUSTOM", label: "Custom Order" }, { value: "REVERSE_ORDER", label: "Reverse" }, { value: "DUPLEX_SORT", label: "Duplex Sort" }, { value: "BOOKLET_SORT", label: "Booklet" }, { value: "ODD_EVEN_SPLIT", label: "Odd/Even Split" }
+        ]},
+        { key: "pageNumbers", label: "Page Order", type: "text", default: "all", placeholder: "e.g. 3,1,4,2" },
+    ],
+    "scale-pages": [
+        { key: "pageSize", label: "Page Size", type: "select", default: "A4", options: [
+            { value: "A3", label: "A3" }, { value: "A4", label: "A4" }, { value: "A5", label: "A5" }, { value: "LETTER", label: "Letter" }, { value: "LEGAL", label: "Legal" }, { value: "KEEP", label: "Keep Original" }
+        ]},
+        { key: "scaleFactor", label: "Scale Factor", type: "number", default: 1, min: 0.1, max: 5, step: 0.1 },
+    ],
+    "crop-pdf": [
+        { key: "x", label: "X", type: "number", default: 0 },
+        { key: "y", label: "Y", type: "number", default: 0 },
+        { key: "width", label: "Width", type: "number", default: 100 },
+        { key: "height", label: "Height", type: "number", default: 100 },
+    ],
+    "overlay-pdfs": [
+        { key: "overlayMode", label: "Mode", type: "select", default: "SequentialOverlay", options: [
+            { value: "SequentialOverlay", label: "Sequential" }, { value: "InterleavedOverlay", label: "Interleaved" }, { value: "FixedRepeatOverlay", label: "Fixed Repeat" }
+        ]},
+        { key: "overlayPosition", label: "Position", type: "select", default: "0", options: [
+            { value: "0", label: "Foreground" }, { value: "1", label: "Background" }
+        ]},
+    ],
+    "multi-page-layout": [
+        { key: "pagesPerSheet", label: "Pages per Sheet", type: "number", default: 2, min: 1 },
+        { key: "addBorder", label: "Add Border", type: "toggle", default: false },
+    ],
+    "add-password": [
+        { key: "password", label: "User Password", type: "text", default: "", placeholder: "Opens the document" },
+        { key: "ownerPassword", label: "Owner Password", type: "text", default: "", placeholder: "Restricts editing (optional)" },
+        { key: "keyLength", label: "Encryption", type: "select", default: "256", options: [
+            { value: "40", label: "40-bit (weak)" }, { value: "128", label: "128-bit" }, { value: "256", label: "256-bit (recommended)" }
+        ]},
+        { key: "canPrint", label: "Allow Printing", type: "toggle", default: true },
+        { key: "canModify", label: "Allow Modification", type: "toggle", default: true },
+    ],
+    "remove-password": [
+        { key: "password", label: "Current Password", type: "text", default: "", placeholder: "Enter existing password" },
+    ],
+    "sanitize-pdf": [
+        { key: "removeJavaScript", label: "Remove JavaScript", type: "toggle", default: true },
+        { key: "removeEmbeddedFiles", label: "Remove Embedded Files", type: "toggle", default: true },
+        { key: "removeMetadata", label: "Remove Metadata", type: "toggle", default: true },
+        { key: "removeLinks", label: "Remove Links", type: "toggle", default: false },
+        { key: "removeFonts", label: "Remove Fonts", type: "toggle", default: false },
+    ],
+    "add-watermark": [
+        { key: "watermarkType", label: "Type", type: "select", default: "text", options: [{value: "text", label: "Text"}, {value: "image", label: "Image"}]},
+        { key: "watermarkText", label: "Text", type: "text", default: "WATERMARK" },
+        { key: "watermarkImage", label: "Image File", type: "file", default: null },
+        { key: "rotation", label: "Rotation", type: "number", default: 45 },
+        { key: "opacity", label: "Opacity", type: "number", default: 0.5, min: 0, max: 1, step: 0.1 },
+    ],
+    "auto-redact": [
+        { key: "listOfText", label: "Text to Redact", type: "text", default: "", placeholder: "e.g. Email, Password" },
+        { key: "useRegex", label: "Use Regex", type: "toggle", default: false },
+        { key: "redactColor", label: "Color (hex)", type: "text", default: "#000000" },
+    ],
     "compress-pdf": [
         { key: "optimizeLevel", label: "Compression Level", type: "slider", default: 5, min: 1, max: 9, step: 1 },
         { key: "expectedOutputSize", label: "Target Size", type: "text", default: "", placeholder: "e.g. 10MB" },
-        { key: "grayscale", label: "Convert to Grayscale", type: "toggle", default: false },
+        { key: "linearize", label: "Fast Web View", type: "toggle", default: false },
+        { key: "grayscale", label: "Grayscale", type: "toggle", default: false },
     ],
     "ocr-pdf": [
         { key: "ocrType", label: "OCR Mode", type: "select", default: "skip-text", options: [
@@ -240,39 +347,6 @@ const TOOL_SETTINGS: Record<string, SettingField[]> = {
         { key: "languages", label: "Language", type: "select", default: "eng", options: [
             { value: "eng", label: "English" }, { value: "rus", label: "Russian" }, { value: "deu", label: "German" }, { value: "fra", label: "French" }, { value: "spa", label: "Spanish" }, { value: "chi_sim", label: "Chinese (Simplified)" }, { value: "ara", label: "Arabic" }, { value: "jpn", label: "Japanese" }, { value: "kor", label: "Korean" }
         ]},
-    ],
-    "rotate-pdf": [
-        { key: "angle", label: "Rotation Angle", type: "select", default: "90", options: [
-            { value: "90", label: "90°" }, { value: "180", label: "180°" }, { value: "270", label: "270°" }
-        ]},
-    ],
-    "split-pages": [
-        { key: "pageNumbers", label: "Pages", type: "text", default: "all", placeholder: "e.g. 1,3,5-9 or all" },
-    ],
-    "remove-pages": [
-        { key: "pageNumbers", label: "Pages to Remove", type: "text", default: "", placeholder: "e.g. 2,4,6" },
-    ],
-    "organize-pdf": [
-        { key: "customMode", label: "Mode", type: "select", default: "CUSTOM", options: [
-            { value: "CUSTOM", label: "Custom Order" }, { value: "REVERSE_ORDER", label: "Reverse" }, { value: "DUPLEX_SORT", label: "Duplex Sort" }, { value: "BOOKLET_SORT", label: "Booklet" }, { value: "ODD_EVEN_SPLIT", label: "Odd/Even Split" }
-        ]},
-        { key: "pageNumbers", label: "Page Order", type: "text", default: "all", placeholder: "e.g. 3,1,4,2" },
-    ],
-    "add-password": [
-        { key: "password", label: "User Password", type: "text", default: "", placeholder: "Opens the document" },
-        { key: "ownerPassword", label: "Owner Password", type: "text", default: "", placeholder: "Restricts editing (optional)" },
-        { key: "keyLength", label: "Encryption", type: "select", default: "256", options: [
-            { value: "40", label: "40-bit (weak)" }, { value: "128", label: "128-bit" }, { value: "256", label: "256-bit (recommended)" }
-        ]},
-    ],
-    "remove-password": [
-        { key: "password", label: "Current Password", type: "text", default: "", placeholder: "Enter existing password" },
-    ],
-    "sanitize-pdf": [
-        { key: "removeJavaScript", label: "Remove JavaScript", type: "toggle", default: true },
-        { key: "removeEmbeddedFiles", label: "Remove Embedded Files", type: "toggle", default: true },
-        { key: "removeMetadata", label: "Remove Metadata", type: "toggle", default: true },
-        { key: "removeLinks", label: "Remove Links", type: "toggle", default: false },
     ],
     "flatten-pdf": [
         { key: "flattenOnlyForms", label: "Forms Only", type: "toggle", default: true },
@@ -286,11 +360,39 @@ const TOOL_SETTINGS: Record<string, SettingField[]> = {
         { key: "threshold", label: "Threshold", type: "number", default: 10, min: 1, max: 100 },
         { key: "whitePercent", label: "White %", type: "number", default: 99.9, min: 50, max: 100, step: 0.1 },
     ],
-    "scale-pages": [
-        { key: "pageSize", label: "Page Size", type: "select", default: "A4", options: [
-            { value: "A3", label: "A3" }, { value: "A4", label: "A4" }, { value: "A5", label: "A5" }, { value: "LETTER", label: "Letter" }, { value: "LEGAL", label: "Legal" }, { value: "KEEP", label: "Keep Original" }
+    "update-metadata": [
+        { key: "title", label: "Title", type: "text", default: "" },
+        { key: "author", label: "Author", type: "text", default: "" },
+        { key: "subject", label: "Subject", type: "text", default: "" },
+        { key: "keywords", label: "Keywords", type: "text", default: "" },
+        { key: "deleteAll", label: "Delete All First", type: "toggle", default: false },
+    ],
+    "replace-invert-pdf": [
+        { key: "replaceAndInvertOption", label: "Option", type: "select", default: "INVERT", options: [
+            { value: "INVERT", label: "Invert" }, { value: "HIGH_CONTRAST", label: "High Contrast" }, { value: "CUSTOM_COLOR", label: "Custom" }
         ]},
-        { key: "scaleFactor", label: "Scale Factor", type: "number", default: 1, min: 0.1, max: 5, step: 0.1 },
+    ],
+    "extract-image-scans": [
+        { key: "angleThreshold", label: "Angle Threshold", type: "number", default: 10 },
+        { key: "tolerance", label: "Tolerance", type: "number", default: 10 },
+    ],
+    "add-stamp": [
+        { key: "stampType", label: "Type", type: "select", default: "text", options: [{value: "text", label: "Text"}, {value: "image", label: "Image"}]},
+        { key: "stampText", label: "Text", type: "text", default: "STAMP" },
+        { key: "stampImage", label: "Image File", type: "file", default: null },
+        { key: "opacity", label: "Opacity", type: "number", default: 0.5, min: 0, max: 1, step: 0.1 },
+    ],
+    "add-page-numbers": [
+        { key: "fontSize", label: "Font Size", type: "number", default: 12 },
+        { key: "position", label: "Position (1-9)", type: "number", default: 9, min: 1, max: 9 },
+        { key: "startingNumber", label: "Start From", type: "number", default: 1 },
+        { key: "customText", label: "Text Pattern", type: "text", default: "{n} / {total}" },
+    ],
+    "add-image": [
+        { key: "imageFile", label: "Image to Overlay", type: "file", default: null },
+        { key: "x", label: "X Position", type: "number", default: 0 },
+        { key: "y", label: "Y Position", type: "number", default: 0 },
+        { key: "everyPage", label: "On Every Page", type: "toggle", default: true },
     ],
 };
 
@@ -308,7 +410,8 @@ export default function PDFPage() {
     const [downloadUrl, setDownloadUrl] = useState<string>("");
     const [downloadName, setDownloadName] = useState<string>("");
     const [activeCategory, setActiveCategory] = useState("All");
-    
+    const [toolSearch, setToolSearch] = useState("");
+
     // Tool settings (dynamic per-tool)
     const [toolSettings, setToolSettings] = useState<Record<string, any>>({});
     const [showSettings, setShowSettings] = useState(false);
@@ -332,7 +435,12 @@ export default function PDFPage() {
 
     const tool = TOOLS.find(t => t.id === activeTool);
 
-    const filteredTools = activeCategory === "All" ? TOOLS : TOOLS.filter(t => t.category === activeCategory);
+    const filteredTools = TOOLS.filter(tool => {
+        const matchCat = activeCategory === "All" || tool.category === activeCategory;
+        const q = toolSearch.toLowerCase().trim();
+        const matchSearch = !q || tool.title.toLowerCase().includes(q) || tool.desc.toLowerCase().includes(q);
+        return matchCat && matchSearch;
+    });
 
     const handleFiles = (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
@@ -358,9 +466,11 @@ export default function PDFPage() {
     }, [activeTool]);
 
     const convert = async () => {
-        if (files.length === 0 || !activeTool || !tool) return;
+        const isUrlTool = activeTool === "url-to-pdf";
+        if (!isUrlTool && files.length === 0) return;
+        if (!activeTool || !tool) return;
         
-        const total = files.length;
+        const total = isUrlTool ? 1 : files.length;
         setTotalFiles(total);
         setUploadedCount(0);
         setConvertedCount(0);
@@ -375,27 +485,35 @@ export default function PDFPage() {
         }
 
         try {
-            const zip = new JSZip();
+            const isMultiFileTool = MULTI_FILE_TOOLS.includes(activeTool);
             
-            // Build per-file promises with split upload/convert tracking
-            const filePromises = files.map(async (file) => {
+            if (isMultiFileTool) {
+                // ── Special Case: Multi-file tools (Merge, Overlay, etc) ──
                 const formData = new FormData();
-                formData.append("fileInput", file);
-
-                // Append all dynamic tool settings from the settings panel
-                const fields = TOOL_SETTINGS[activeTool] || [];
-                for (const field of fields) {
-                    const val = toolSettings[field.key];
-                    if (val !== undefined && val !== "" && val !== null) {
-                        formData.append(field.key, String(val));
-                    }
+                
+                if (activeTool === "overlay-pdfs") {
+                    formData.append("fileInput", files[0]);
+                    files.slice(1).forEach(f => formData.append("overlayFiles", f));
+                } else {
+                    // Default multi-file behavior (Merge, Img-to-PDF)
+                    files.forEach(f => formData.append("fileInput", f));
                 }
 
-                // Append the original filename for telegram delivery
-                formData.append("originalName", file.name);
+                // Append settings
+                const fields = TOOL_SETTINGS[activeTool] || [];
+                fields.forEach(field => {
+                    const val = toolSettings[field.key];
+                    if (val instanceof File) {
+                        formData.append(field.key, val);
+                    } else if (val !== undefined && val !== "" && val !== null) {
+                        formData.append(field.key, String(val));
+                    }
+                });
 
-                // ── Phase 1: Upload tracked ──
-                setUploadedCount(prev => prev + 1);
+                formData.append("originalName", files[0]?.name || "merged-result");
+
+                setUploadedCount(total);
+                setStatus("processing");
 
                 const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
                     method: "POST",
@@ -404,38 +522,74 @@ export default function PDFPage() {
 
                 if (!res.ok) {
                     const errJson = await res.json().catch(() => ({}));
-                    throw new Error(errJson.details || errJson.error || `Failed to convert ${file.name}`);
+                    throw new Error(errJson.details || errJson.error || "Processing failed");
                 }
 
                 const blob = await res.blob();
-                const newName = getOutputFilename(file.name, tool);
-                
-                // ── Phase 2: Conversion done ──
-                setConvertedCount(prev => prev + 1);
-                
-                return { name: newName, blob };
-            });
+                setConvertedCount(total);
+                setDownloadName(`converted-${activeTool}${tool.outputExt}`);
+                setDownloadUrl(URL.createObjectURL(blob));
+                setStatus("done");
 
-            // Once all are uploaded, switch visual phase
-            // (the status updates reactively based on counters)
-            setStatus("processing");
-            const results = await Promise.all(filePromises);
-
-            setStatus("zipping");
-
-            let finalBlob: Blob;
-            if (results.length === 1) {
-                finalBlob = results[0].blob;
-                setDownloadName(`converted-${results[0].name}`);
             } else {
-                results.forEach(r => zip.file(r.name, r.blob));
-                finalBlob = await zip.generateAsync({ type: "blob" });
-                setDownloadName("converted-files.zip");
-            }
+                // ── Default Case: One-by-one or single-request tool (Rotate, Split, OCR, etc) ──
+                const zip = new JSZip();
+                
+                const processFile = async (file: File | null) => {
+                    const formData = new FormData();
+                    if (file) formData.append("fileInput", file);
+                    
+                    const fields = TOOL_SETTINGS[activeTool] || [];
+                    fields.forEach(field => {
+                        const val = toolSettings[field.key];
+                        if (val instanceof File) {
+                            formData.append(field.key, val);
+                        } else if (val !== undefined && val !== "" && val !== null) {
+                            formData.append(field.key, String(val));
+                        }
+                    });
 
-            const url = URL.createObjectURL(finalBlob);
-            setDownloadUrl(url);
-            setStatus("done");
+                    formData.append("originalName", file?.name || "result");
+                    setUploadedCount(prev => prev + 1);
+
+                    const res = await fetch(`/api/pdf-proxy?type=${activeTool}`, {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (!res.ok) {
+                        const errJson = await res.json().catch(() => ({}));
+                        throw new Error(errJson.details || errJson.error || `Failed to process ${file?.name || 'request'}`);
+                    }
+
+                    const blob = await res.blob();
+                    const newName = file ? getOutputFilename(file.name, tool) : `result${tool.outputExt}`;
+                    setConvertedCount(prev => prev + 1);
+                    return { name: newName, blob };
+                };
+
+                if (isUrlTool) {
+                    const result = await processFile(null);
+                    setDownloadName(result.name);
+                    setDownloadUrl(URL.createObjectURL(result.blob));
+                } else {
+                    const filePromises = files.map(processFile);
+                    setStatus("processing");
+                    const results = await Promise.all(filePromises);
+
+                    setStatus("zipping");
+                    if (results.length === 1) {
+                        setDownloadName(`converted-${results[0].name}`);
+                        setDownloadUrl(URL.createObjectURL(results[0].blob));
+                    } else {
+                        results.forEach(r => zip.file(r.name, r.blob));
+                        const finalBlob = await zip.generateAsync({ type: "blob" });
+                        setDownloadName("converted-files.zip");
+                        setDownloadUrl(URL.createObjectURL(finalBlob));
+                    }
+                }
+                setStatus("done");
+            }
             
         } catch (e: any) {
             console.error(e);
@@ -514,71 +668,158 @@ export default function PDFPage() {
                         </div>
                     </div>
                 );
+            case "file":
+                return (
+                    <div key={field.key} className="flex flex-col gap-2">
+                        <label className="text-sm text-gray-600">{field.label}</label>
+                        <input type="file" onChange={e => update(e.target.files?.[0])}
+                            className="text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-black/5 file:text-gray-700 hover:file:bg-black/10 transition-all" />
+                    </div>
+                );
             default: return null;
         }
     };
 
+    // Step indicator for active tool view
+    const currentStep = !activeTool ? 1 : files.length === 0 ? 2 : status === "done" ? 3 : 2;
+
     return (
-        <div className="w-full h-full font-sans">
-            <div className="max-w-[1200px] mx-auto px-6 py-12 md:py-24">
-                {activeTool && user && <div className="absolute top-6 right-6 z-40 px-4 py-2 bg-[var(--card)] rounded-full shadow-sm border border-[var(--border)] text-sm font-medium flex items-center gap-2">
-                    <IconBrandTelegram className="w-4 h-4 text-blue-500" /> {t("autoDelivery")}
-                </div>}
+        <div className="w-full h-full font-sans overflow-auto pb-20 md:pb-0">
+            <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-6 md:py-16">
+
+                {/* Header */}
+                <div className="mb-6 md:mb-10">
+                    <h1 className="text-[22px] md:text-[40px] font-black tracking-tight mb-1">{t("title")}</h1>
+                    <p className="text-[13px] md:text-[16px] text-gray-400">{t("subtitle")}</p>
+                </div>
+
+                {/* Step indicator */}
+                <div className="flex items-center gap-2 mb-6">
+                    {[
+                        { n: 1, label: "Choose tool" },
+                        { n: 2, label: "Upload files" },
+                        { n: 3, label: "Download" },
+                    ].map((step, i) => (
+                        <div key={step.n} className="flex items-center gap-2">
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
+                                currentStep === step.n
+                                    ? "bg-[#1a1a1a] text-white"
+                                    : currentStep > step.n
+                                        ? "bg-emerald-50 text-emerald-600"
+                                        : "bg-[#f3f3f3] text-gray-400"
+                            }`}>
+                                <span className="text-[10px] font-black tabular-nums">{step.n}</span>
+                                <span className="text-[11px] font-bold hidden sm:inline">{step.label}</span>
+                            </div>
+                            {i < 2 && <div className="w-4 h-px bg-[#e0e0e0]" />}
+                        </div>
+                    ))}
+                    {activeTool && user && (
+                        <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 rounded-lg text-blue-600">
+                            <IconBrandTelegram className="w-3.5 h-3.5" />
+                            <span className="text-[11px] font-bold hidden sm:inline">{t("autoDelivery")}</span>
+                        </div>
+                    )}
+                </div>
 
                 <AnimatePresence mode="wait">
                     {!activeTool ? (
-                        <motion.div key="grid" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
-                            className="flex flex-col">
-                            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
-                                {t("title")}
-                            </h1>
-                            <p className="text-lg text-gray-500 mb-10 max-w-xl">{t("subtitle")}</p>
+                        <motion.div key="grid" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}>
 
-                            {/* Categories */}
-                            <div className="flex flex-wrap gap-2 mb-8 bg-[var(--card)] p-1.5 rounded-[var(--radius)] w-fit border border-[var(--border)] shadow-sm">
-                                {CATEGORIES.map(cat => (
-                                    <button key={cat} onClick={() => setActiveCategory(cat)}
-                                        className={`px-4 py-1.5 rounded-[calc(var(--radius)-4px)] text-sm font-medium transition-all ${
-                                            activeCategory === cat 
-                                            ? "bg-[var(--foreground)] text-[var(--background)] shadow-sm" 
-                                            : "text-gray-500 hover:text-[var(--foreground)] hover:bg-black/5"
-                                        }`}>
-                                        {cat}
-                                    </button>
-                                ))}
+                            {/* Search + categories row */}
+                            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                                {/* Search */}
+                                <div className="relative flex-1">
+                                    <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />
+                                    <input
+                                        type="text"
+                                        value={toolSearch}
+                                        onChange={e => { setToolSearch(e.target.value); setActiveCategory("All"); }}
+                                        placeholder="Search tools…"
+                                        className="w-full pl-9 pr-4 py-2.5 border border-[var(--border)] rounded-xl text-[13px] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--foreground)] focus:border-transparent placeholder-gray-300"
+                                        style={{ fontSize: "16px" }}
+                                    />
+                                    {toolSearch && (
+                                        <button onClick={() => setToolSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                                            <IconX className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredTools.map((t) => (
-                                    <button key={t.id} onClick={() => setActiveTool(t.id)}
-                                        className="group relative bg-[var(--card)] p-6 hover:shadow-md border border-[var(--border)] hover:border-gray-300 rounded-[var(--radius)] transition-all duration-200 text-left h-44 flex flex-col justify-between overflow-hidden">
-                                        
-                                        <div className="flex justify-between items-start z-10">
-                                            <div className="p-2.5 bg-black/5 rounded-lg text-[var(--foreground)] group-hover:scale-110 transition-transform">
-                                                <t.icon className="w-6 h-6 stroke-[1.5]" />
-                                            </div>
-                                            <IconArrowLeft className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 -rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
-                                        </div>
-                                        
-                                        <div className="z-10">
-                                            <h3 className="text-base font-semibold mb-1">{t.title}</h3>
-                                            <p className="text-sm text-gray-500 line-clamp-2">{t.desc}</p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
+                            {/* Category pills */}
+                            {!toolSearch && (
+                                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-5" style={{ scrollbarWidth: "none" }}>
+                                    {CATEGORIES.map(cat => (
+                                        <button key={cat} onClick={() => setActiveCategory(cat)}
+                                            className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all ${
+                                                activeCategory === cat
+                                                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                                                    : "bg-[var(--card)] text-gray-500 border border-[var(--border)] hover:text-[var(--foreground)]"
+                                            }`}>
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Tool grid — cards on desktop, compact rows on mobile */}
+                            {filteredTools.length === 0 ? (
+                                <div className="py-16 text-center text-gray-400 text-[13px]">No tools match "{toolSearch}"</div>
+                            ) : (
+                                <>
+                                    {/* Mobile: compact list */}
+                                    <div className="md:hidden bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
+                                        {filteredTools.map((tool) => (
+                                            <button key={tool.id} onClick={() => setActiveTool(tool.id)}
+                                                className="group w-full flex items-center gap-3 px-4 py-3.5 hover:bg-black/[0.02] active:bg-black/5 transition-colors text-left">
+                                                <div className="w-9 h-9 rounded-xl bg-black/5 flex items-center justify-center shrink-0 group-hover:bg-black/10 transition-colors">
+                                                    <tool.icon className="w-4.5 h-4.5 stroke-[1.5]" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[var(--foreground)] truncate">{tool.title}</p>
+                                                    <p className="text-[11px] text-gray-400 truncate">{tool.desc}</p>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-gray-300 bg-[#f3f3f3] px-1.5 py-0.5 rounded shrink-0">
+                                                    {tool.outputExt}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Desktop: card grid */}
+                                    <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {filteredTools.map((tool) => (
+                                            <button key={tool.id} onClick={() => setActiveTool(tool.id)}
+                                                className="group relative bg-[var(--card)] p-5 hover:shadow-md border border-[var(--border)] hover:border-gray-300 rounded-2xl transition-all duration-200 text-left flex flex-col gap-3">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="p-2.5 bg-black/5 rounded-xl text-[var(--foreground)] group-hover:scale-110 transition-transform">
+                                                        <tool.icon className="w-5 h-5 stroke-[1.5]" />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-gray-300 bg-[#f3f3f3] px-1.5 py-0.5 rounded">{tool.outputExt}</span>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-[14px] font-bold mb-0.5">{tool.title}</h3>
+                                                    <p className="text-[12px] text-gray-400 line-clamp-2">{tool.desc}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </motion.div>
                     ) : (
                         <motion.div key="tool" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                             className="flex flex-col max-w-2xl mx-auto w-full">
 
-                            <div className="w-full flex items-center justify-between mb-6">
-                                <button onClick={() => { setActiveTool(null); reset(); }}
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5 -ml-3">
+                            <div className="w-full flex items-center justify-between mb-5">
+                                <button onClick={() => { setActiveTool(null); reset(); setToolSearch(""); }}
+                                    className="flex items-center gap-2 text-[13px] font-semibold text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-2 rounded-xl hover:bg-black/5 -ml-3">
                                     <IconArrowLeft className="w-4 h-4" /> {t("backToTools")}
                                 </button>
-                                <div className="px-3 py-1 bg-[var(--card)] rounded-full border border-[var(--border)] text-xs font-semibold text-gray-500 shadow-sm">
-                                    {tool?.category} / {tool?.title}
+                                <div className="flex items-center gap-2">
+                                    {tool?.icon && <tool.icon className="w-4 h-4 text-gray-400 stroke-[1.5]" />}
+                                    <span className="text-[12px] font-bold text-gray-500">{tool?.title}</span>
                                 </div>
                             </div>
 
@@ -635,7 +876,7 @@ export default function PDFPage() {
                                     </div>
                                 )}
 
-                                {files.length === 0 ? (
+                                {files.length === 0 && activeTool !== "url-to-pdf" ? (
                                     <div
                                         className="w-full h-full min-h-[300px] border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-[var(--foreground)] hover:bg-black/5 transition-all group p-6"
                                         onClick={() => fileInputRef.current?.click()}
@@ -653,19 +894,21 @@ export default function PDFPage() {
                                     </div>
                                 ) : (
                                     <div className="w-full flex flex-col gap-6 flex-1">
-                                        <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center">
-                                                    <IconFileDescription className="w-5 h-5" stroke={1.5} />
+                                        {activeTool !== "url-to-pdf" && (
+                                            <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center">
+                                                        <IconFileDescription className="w-5 h-5" stroke={1.5} />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-sm leading-tight">{t("selectedFiles")}</h3>
+                                                        <p className="text-xs text-gray-500">{files.length} {t("queued")}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h3 className="font-semibold text-sm leading-tight">{t("selectedFiles")}</h3>
-                                                    <p className="text-xs text-gray-500">{files.length} {t("queued")}</p>
-                                                </div>
+                                                <button onClick={() => fileInputRef.current?.click()} className="text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-black/5 transition-colors">{t("add")}</button>
+                                                <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                             </div>
-                                            <button onClick={() => fileInputRef.current?.click()} className="text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-black/5 transition-colors">{t("add")}</button>
-                                            <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
-                                        </div>
+                                        )}
 
                                         <div className="flex-1 overflow-y-auto space-y-3 pr-2 minimal-scrollbar max-h-[300px]">
                                             {files.map((f, i) => (

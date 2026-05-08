@@ -141,10 +141,10 @@ export async function POST(req: NextRequest) {
         const originalName = formData.get("originalName") as string || "converted-file";
         formData.delete("originalName");
 
-        // Ensure fileInput exists
-        if (!formData.has("fileInput")) {
-            console.error("[Proxy] No fileInput in request");
-            return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+        // Ensure required input exists (either fileInput or urlInput)
+        if (!formData.has("fileInput") && !formData.has("urlInput")) {
+            console.error("[Proxy] No input found (fileInput or urlInput)");
+            return NextResponse.json({ error: "No input provided" }, { status: 400 });
         }
 
         // Forward to external API
@@ -152,7 +152,6 @@ export async function POST(req: NextRequest) {
             method: "POST",
             headers: {
                 "X-API-KEY": API_KEY,
-                // Do NOT set Content-Type, let browser set boundary
             },
             body: formData,
         });

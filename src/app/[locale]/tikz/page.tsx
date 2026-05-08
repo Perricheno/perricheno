@@ -241,47 +241,50 @@ export default function TikzPage() {
                 </div>
 
                 {/* ── Sticky bottom input ── */}
-                <div className="flex-shrink-0 bg-white/95 backdrop-blur-sm border-t border-[#f0f0f0] px-4 md:px-6 pt-3 pb-[76px] md:pb-4">
-                    <div
-                        className="relative rounded-2xl bg-[#f9f9f9] overflow-hidden"
-                        style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.07), 0 2px 12px rgba(0,0,0,0.06)" }}
-                    >
-                        <textarea
-                            ref={textareaRef}
-                            value={prompt}
-                            onChange={e => setPrompt(e.target.value)}
-                            onKeyDown={e => {
-                                if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !loading && prompt.trim()) {
-                                    e.preventDefault(); handleGenerate();
-                                }
-                            }}
-                            placeholder={`Describe the ${selectedEntry?.name ?? "diagram"} you want…`}
-                            style={{ fontSize: "16px", touchAction: "manipulation" }}
-                            className="w-full resize-none px-4 pt-3.5 pb-12 text-[#1a1a1a] placeholder-gray-300 focus:outline-none leading-relaxed min-h-[52px] bg-transparent"
-                            disabled={loading}
-                        />
-                        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
+                <div className="flex-shrink-0 bg-white border-t border-[#f0f0f0] px-3 md:px-6 pt-3 pb-[calc(76px+4px)] md:pb-5">
+                    <div className="flex items-end gap-2">
+                        <div
+                            className="flex-1 relative rounded-2xl bg-[#f5f5f5] overflow-hidden"
+                            style={{ boxShadow: "0 0 0 1.5px rgba(0,0,0,0.06)" }}
+                        >
+                            <textarea
+                                ref={textareaRef}
+                                value={prompt}
+                                onChange={e => setPrompt(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !loading && prompt.trim()) {
+                                        e.preventDefault(); handleGenerate();
+                                    }
+                                }}
+                                placeholder={`Describe the ${selectedEntry?.name ?? "diagram"} you want…`}
+                                style={{ fontSize: "16px", touchAction: "manipulation" }}
+                                className="w-full resize-none px-4 pt-3.5 pb-3.5 text-[#1a1a1a] placeholder-gray-300 focus:outline-none leading-relaxed min-h-[52px] bg-transparent"
+                                disabled={loading}
+                            />
                             {loading && (
-                                <span className="text-[11px] text-gray-400 tabular-nums">{elapsed.toFixed(0)}s</span>
+                                <div className="absolute bottom-2.5 right-3 text-[11px] text-gray-400 tabular-nums pointer-events-none">
+                                    {elapsed.toFixed(0)}s
+                                </div>
                             )}
-                            <button
-                                onClick={handleGenerate}
-                                disabled={loading || !prompt.trim()}
-                                className={`rounded-xl w-9 h-9 flex items-center justify-center transition-all
-                                    ${loading || !prompt.trim()
-                                        ? "bg-[#ebebeb] text-gray-300 cursor-not-allowed"
-                                        : "bg-[#1a1a1a] text-white hover:bg-[#333] active:scale-95"
-                                    }`}
-                            >
-                                {loading
-                                    ? <IconLoader2 size={16} className="animate-spin" />
-                                    : <IconArrowUp size={16} />
-                                }
-                            </button>
+                            <div className="absolute bottom-3 left-4 text-[10px] text-gray-300 hidden md:block select-none pointer-events-none">
+                                ⌘↵ to generate
+                            </div>
                         </div>
-                        <div className="absolute bottom-3.5 left-4 text-[10px] text-gray-300 hidden md:block select-none">
-                            ⌘↵ to generate
-                        </div>
+                        <button
+                            onClick={handleGenerate}
+                            disabled={loading || !prompt.trim()}
+                            style={{ touchAction: "manipulation" }}
+                            className={`flex-shrink-0 rounded-2xl w-11 h-11 flex items-center justify-center transition-all mb-0.5
+                                ${loading || !prompt.trim()
+                                    ? "bg-[#ebebeb] text-gray-300 cursor-not-allowed"
+                                    : "bg-[#1a1a1a] text-white hover:bg-[#333] active:scale-95"
+                                }`}
+                        >
+                            {loading
+                                ? <IconLoader2 size={16} className="animate-spin" />
+                                : <IconArrowUp size={16} />
+                            }
+                        </button>
                     </div>
                 </div>
 
