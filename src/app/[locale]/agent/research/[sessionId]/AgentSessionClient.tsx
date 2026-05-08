@@ -19,7 +19,6 @@ import { useRouter } from "@/i18n/navigation";
 import { DocType, AgentSettings, DEFAULT_SETTINGS, CodeImage, AgentSession } from "../../types";
 import { AgentSettingsPanel } from "../../AgentSettingsPanel";
 import { AgentSidebar } from "../../AgentSidebar";
-import { AgentVisualizations } from "../../AgentVisualizations";
 import { CodeEditorModal } from "../../CodeEditorModal";
 import { AgentBillingModal } from "../../AgentBillingModal";
 
@@ -870,22 +869,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                 </div>
             )}
 
-            {/* ── Visualizations ── */}
-            <div className="flex-1 px-5 md:px-10 py-6">
-                <div className="max-w-3xl mx-auto">
-                    <AgentVisualizations
-                        topic={topic}
-                        language={settings.language}
-                        visuals={visuals}
-                        setVisuals={setVisuals}
-                        sessionId={currentSessionId}
-                        openEditor={setActiveEditorIndex}
-                        onAddVisualsToReport={handleAddVisualsToReport}
-                        runtime={settings.runtime}
-                        setRuntime={(r) => setSettings(s => ({ ...s, runtime: r }))}
-                    />
-                </div>
-            </div>
+            <div className="flex-1" />
 
             {/* LaTeX Viewer Modal */}
             <AnimatePresence>
