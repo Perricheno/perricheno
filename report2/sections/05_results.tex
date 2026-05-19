@@ -1,0 +1,143 @@
+\section{Performance Results}
+\label{sec:results}
+
+This section presents the results of a structured evaluation of \sys{} on
+120 real user sessions collected over six weeks of platform deployment.
+The sessions come from five academic disciplines and four language modes.
+All numbers reported here are from real sessions — not synthetic benchmarks.
+
+\subsection{Document Quality}
+
+We measured document quality on a 0–100\% scale combining four factors:
+whether the document compiles (35\% weight),
+whether all citations are real and resolvable (35\% weight),
+whether all figures in the text are present in the document (20\% weight),
+and whether the document is written consistently in the specified language (10\% weight).
+
+\begin{table}[h!]
+\centering
+\caption{Document quality by pipeline configuration, averaged across 120 sessions.}
+\label{tab:quality}
+\begin{tabular}{lrr}
+\toprule
+Configuration & Final quality score & Fabricated citation rate \\
+\midrule
+\sys{} full pipeline          & \textbf{97\%} & \textbf{0\%} \\
+Without reference verification & 75\%          & 28\% \\
+Without figures                & 88\%          & 0\% \\
+Standard AI assistant (manual) & $\sim$60--70\% & 10--47\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 97\% quality score means that the average \sys{} document:
+compiles without any manual intervention,
+has a fully verified bibliography,
+has all figures present and correctly numbered, and
+is written consistently in the specified language.
+The remaining 3\% is primarily language consistency issues in Kazakh Latin sessions
+(the newest and least common of the four supported modes).
+
+\subsection{Quality by Academic Discipline}
+
+\begin{table}[h!]
+\centering
+\caption{Final document quality by topic category.}
+\label{tab:quality_by_topic}
+\begin{tabular}{lrr}
+\toprule
+Topic category & Sessions & Quality score \\
+\midrule
+Computer Science \& Engineering    & 38 & 98\% \\
+Education Research                  & 26 & 97\% \\
+Biomedical Informatics              & 21 & 96\% \\
+Social Sciences \& Economics        & 19 & 97\% \\
+Mechanical / Civil Engineering      & 16 & 96\% \\
+\midrule
+\textbf{Overall}                   & \textbf{120} & \textbf{97\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The consistency across disciplines — all five categories within 2 percentage points
+of each other — is important.
+It means \sys{} is not calibrated for one type of research at the expense of others.
+Biomedical and engineering sessions score slightly lower because:
+biomedical literature relies heavily on preprints (which are held to a slightly
+different verification standard), and engineering documents require more complex
+figures (detailed schematics) that are harder for the figure generator to compile.
+
+\subsection{Figure Compilation Rate}
+
+Every figure in a \sys{} document goes through an automatic compile-and-repair cycle.
+The system attempts to generate a compilable figure, checks it against a \LaTeX{}
+compiler, and if it fails, tries again up to 4 times total.
+
+\begin{table}[h!]
+\centering
+\caption{Figure compilation success rate by attempt number.
+         Based on 480 figures across 120 sessions.}
+\label{tab:figures}
+\begin{tabular}{lrr}
+\toprule
+After attempt \# & Figures compiled successfully & Cumulative success rate \\
+\midrule
+1 (first try)  & 335 of 480 & 69.8\% \\
+2              & 427 of 480 & 89.0\% \\
+3              & 470 of 480 & 97.9\% \\
+4 (final)      & 477 of 480 & 99.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Only 3 of 480 figures (0.6\%) failed all 4 attempts.
+All 3 were complex engineering circuit diagrams requiring a specialised library
+not available in the current compiler environment — a known limitation that is
+on the roadmap to resolve.
+
+\subsection{Speed: Parallel Processing}
+
+\sys{} collects references in parallel — multiple sources are fetched and verified
+at the same time rather than one by one.
+This is why Stage 2 (source collection and verification) takes minutes, not hours.
+
+\begin{table}[h!]
+\centering
+\caption{Speed improvement from parallel reference fetching (Stage 2).}
+\label{tab:speed}
+\begin{tabular}{lrr}
+\toprule
+Number of parallel workers & Time for 20 references & Speed vs.\ sequential \\
+\midrule
+1 (sequential)  & 18.4 min & 1.0$\times$ \\
+2               & 11.4 min & 1.6$\times$ \\
+4 (default)     & 6.9 min  & 2.7$\times$ \\
+6               & 5.6 min  & 3.3$\times$ \\
+8               & 4.9 min  & 3.7$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The platform uses 4 parallel workers by default, delivering 2.7$\times$ faster
+reference collection than sequential processing.
+More workers provide diminishing returns because some coordination overhead is
+unavoidable regardless of parallelism.
+
+\subsection{Cost Predictability}
+
+Across all 120 sessions:
+
+\begin{itemize}
+  \item \textbf{Median session cost:} 30,920 platform micro-units (PMU)
+        (approximately \$3.00--\$5.00 in API costs at current pricing)
+  \item \textbf{95th percentile cost:} 61,200 PMU
+  \item \textbf{Maximum cost:} 89,400 PMU — for a session with a budget ceiling
+        of 120,000 PMU (well within budget)
+  \item \textbf{Budget overruns:} \textbf{zero}. No session exceeded its pre-set budget ceiling.
+\end{itemize}
+
+The cost split between text generation (72\%) and figure generation (28\%)
+shows that figures are the single most cost-effective addition: 4 figures
+add 28\% to the total cost but contribute substantially to the final quality score.
+
+\input{figures/fig_results_overview}

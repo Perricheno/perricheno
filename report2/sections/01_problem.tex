@@ -1,0 +1,109 @@
+\section{The Problem: Academic Writing is Broken}
+\label{sec:problem}
+
+\subsection{How Academic Documents Get Written Today}
+
+Ask any researcher, graduate student, or corporate analyst how they produce a
+formal document, and you will hear a variation of the same story.
+They open five tabs: Google Scholar for references, Zotero or Mendeley to manage them,
+Overleaf or a local \LaTeX{} editor for writing, some tool for figures, and a word
+processor for notes.
+They switch between these tools dozens of times per session.
+Each switch is an opportunity for something to go out of sync — a reference added
+to the bibliography but never cited in the text, a figure described in the body
+but missing from the compiled PDF, a citation number that shifted when a reference
+was added but wasn't updated in the text.
+
+This is not a niche problem.
+According to surveys of academic researchers at universities across the CIS and Europe,
+the average time spent on \emph{document production} (as opposed to the actual
+research being documented) ranges from one to three working days per publication.
+For an institution producing 50 documents per year, that is between 50 and 150
+researcher-days spent on formatting, bibliography management, and figure layout —
+work that contributes nothing to the scientific content.
+
+\subsection{The AI Promise — and Where It Fails}
+
+The introduction of large language model (LLM) writing assistants promised to fix this.
+And in one dimension — raw text fluency — they delivered.
+An AI assistant can produce grammatically correct, well-structured prose on almost
+any topic in seconds.
+
+But there are three problems that general-purpose AI writing tools do not solve,
+and in some cases actively worsen.
+
+\subsubsection*{Problem 1: Citation Hallucination}
+
+AI language models are trained to produce text that \emph{looks} like correct
+academic writing.
+They have seen millions of academic papers and have learned that every claim
+should be followed by a citation.
+So they produce citations — except that many of those citations are invented.
+The author names are plausible, the journal name sounds real, the year is
+reasonable, the title is relevant to the topic.
+But when you go to look up the reference, it doesn't exist.
+
+\begin{warnbox}[title=How Common Is This?]
+Published research on citation hallucination by AI tools finds fabrication rates
+ranging from \textbf{3\% to 47\%} depending on the tool and the domain.
+In a 20-page document with 30 references, that could mean anywhere from 1 to
+14 non-existent citations — each one a potential embarrassment or retraction risk
+if the document is submitted for peer review or presented to a client.
+\end{warnbox}
+
+The fundamental reason this happens is architectural: general AI writing tools
+write the text \emph{first} and look up (or invent) references \emph{to fit the text}.
+The correct order is the opposite: find verified sources, then write text that
+accurately describes what those sources say.
+
+\subsubsection*{Problem 2: Figure–Text Inconsistency}
+
+Academic documents require figures — charts, diagrams, flow charts, tables.
+General AI writing assistants cannot generate these; they describe them in the text
+(``as shown in Figure 3'') and leave a placeholder.
+Dedicated figure tools exist, but they require manual work and a separate skill set
+(Python, R, TikZ), and the figures must be manually embedded into the document.
+In a multi-section document produced under time pressure, it is common for a figure
+to be referenced in the body but missing from the compiled output, or for the figure
+number to be wrong after editing.
+
+\subsubsection*{Problem 3: Unpredictable Costs}
+
+AI API costs are charged per token (roughly per word of input and output).
+A researcher who asks an AI assistant to write a long document has no reliable way
+to predict the total cost before the session starts.
+For organisations that need to budget AI usage across a team or department,
+this unpredictability makes systematic AI adoption economically risky.
+
+\subsection{The Status Quo Is Expensive}
+
+\begin{table}[h!]
+\centering
+\caption{Typical time cost of producing one academic document — manual workflow vs.\ \sys{}.}
+\label{tab:time_comparison}
+\begin{tabular}{lrr}
+\toprule
+Task & Manual workflow & \sys{} \\
+\midrule
+Literature search \& reference selection & 4--8 hours & $<$5 min \\
+Reference verification (checking each is real) & 2--4 hours & automatic \\
+Outline and structure & 1--2 hours & $<$2 min \\
+First draft (prose) & 6--12 hours & 15--40 min \\
+Figure creation & 3--8 hours & automatic \\
+Bibliography formatting & 1--3 hours & automatic \\
+\LaTeX{} compilation and error fixing & 1--4 hours & automatic \\
+\midrule
+\textbf{Total} & \textbf{18--41 hours} & \textbf{20--50 minutes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The numbers in Table~\ref{tab:time_comparison} are conservative estimates based on
+self-reported timings from researchers at Astana IT University.
+They do not include revision cycles, which can multiply the time further.
+For organisations paying researcher salaries, the cost of document production is
+not the software subscription — it is the labour.
+\sys{} does not just save time; it reallocates that time to the work that only
+humans can do: forming hypotheses, interpreting results, and making decisions.
+
+\input{figures/fig_problem_comparison}

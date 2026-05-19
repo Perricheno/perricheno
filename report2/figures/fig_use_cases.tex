@@ -1,0 +1,41 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  ubox/.style={draw=#1, fill=#2, rounded corners=5pt,
+               minimum width=5.5cm, minimum height=2.4cm,
+               align=center, font=\scriptsize\bfseries, line width=1.4pt,
+               text width=5.2cm, inner sep=8pt},
+  hub/.style={draw=C1, fill=L1, circle, minimum size=2.4cm,
+              align=center, font=\small\bfseries, line width=2pt},
+  arr/.style={-{Stealth[length=6pt,width=4pt]}, line width=1.2pt, draw=DG!40},
+]
+\node[hub] (hub) at (0,0) {\sys{}\\Platform};
+
+\node[ubox={C1}{L1}] (U1) at (0, 3.4)
+  {Universities \& Research Institutes\\[0.3em]
+   {\normalfont\tiny Conference drafts · Grant documents · Student theses}};
+
+\node[ubox={C2}{L2}] (U2) at (5.8, 0)
+  {Corporate R\&D\\[0.3em]
+   {\normalfont\tiny Technology surveys · Patent prior art · Regulatory docs}};
+
+\node[ubox={C3}{L3}] (U3) at (0,-3.4)
+  {Academic Publishers\\[0.3em]
+   {\normalfont\tiny Reference audit · Citation verification · Manuscript checking}};
+
+\node[ubox={C5}{L5}] (U4) at (-5.8, 0)
+  {Individual Researchers\\[0.3em]
+   {\normalfont\tiny Literature reviews · Thesis chapters · Journal submissions}};
+
+\draw[arr] (hub)--(U1);
+\draw[arr] (hub)--(U2);
+\draw[arr] (hub)--(U3);
+\draw[arr] (hub)--(U4);
+\end{tikzpicture}
+\caption{Primary customer categories for the \sys{} platform.
+         Each category uses the same underlying pipeline but for different
+         document types and at different volumes.
+         Universities and corporate R\&D teams are the highest-volume users;
+         individual researchers represent the largest number of accounts.}
+\label{fig:use_cases}
+\end{figure}

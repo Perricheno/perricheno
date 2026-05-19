@@ -1,0 +1,28 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  layer/.style={draw=DG, line width=1.5pt, rounded corners=5pt,
+                minimum width=13cm, minimum height=0.9cm,
+                align=center, font=\small\bfseries, text width=12.5cm},
+  badge/.style={font=\scriptsize\itshape, text=MG, anchor=east}
+]
+\node[layer, fill=LGr!70]  (L1) at (0,0.00){Presentation: React\,19 · Space Editor · Analytics Dashboard · PDF Viewer};
+\node[layer, fill=F1!80]   (L2) at (0,1.10){API \& Auth: Next.js\,16 App Router · JWT Sessions · Billing · Rate Limiting};
+\node[layer, fill=F5!80]   (L3) at (0,2.20){AI Pipeline: Stages 1--5 · OpenAI GPT-5-mini · chatCompletionLong()};
+\node[layer, fill=F2!80]   (L4) at (0,3.30){Real-time: Yjs CRDT · y-websocket · Telegram Bot (Node.js)};
+\node[layer, fill=F3!80]   (L5) at (0,4.40){Compute: pdf-extractor · r-compiler · python-compiler · research-api (Go)};
+\node[layer, fill=F4!80]   (L6) at (0,5.50){Data: PostgreSQL\,16 · Prisma ORM\,7 · MinIO S3-compatible Storage};
+
+\node[badge] at (-6.65,0.00) {UI};
+\node[badge] at (-6.65,1.10) {API};
+\node[badge] at (-6.65,2.20) {AI};
+\node[badge] at (-6.65,3.30) {RT};
+\node[badge] at (-6.65,4.40) {Compute};
+\node[badge] at (-6.65,5.50) {Data};
+\end{tikzpicture}
+\caption{Six-layer platform architecture of \sys{}. Each layer isolates a
+         distinct concern: data persistence, distributed compute, AI pipeline,
+         real-time collaboration, API routing, and presentation. All inter-layer
+         communication is strictly downward.}
+\label{fig:architecture}
+\end{figure}

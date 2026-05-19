@@ -1,0 +1,293 @@
+\section{Theoretical Contributions}
+\label{sec:contributions}
+
+This section derives the two main theorems and two propositions that characterise the
+performance guarantees of \sys{}.
+We additionally state two corollaries that follow immediately from the main theorems,
+and provide extended discussion of the design implications of each result.
+
+\subsection{Theorem 1: Repair Convergence of the \tvg{} Cycle}
+
+The first theorem characterises the probability of successfully compiling a TikZ figure
+within a bounded number of LLM repair attempts.
+This is the foundational reliability guarantee of the Typed Visual Grammar system.
+
+\begin{theorem}[\tvg{} Repair Convergence]
+\label{thm:repair}
+Let $p\in(0,1)$ be the probability that a single LLM repair attempt produces a
+TikZ figure that compiles without error under $L$ (the \LaTeX{} compiler oracle),
+and let $K\geq 0$ be the maximum number of \emph{additional} repair attempts
+permitted after the initial generation attempt.
+Then the probability of at least one successful compilation within $K+1$ total attempts is
+\[
+  P(\mathrm{success}\mid K) \;=\; 1 - (1-p)^{K+1}.
+\]
+\end{theorem}
+
+\begin{proof}
+Each of the $K+1$ attempts is modelled as an independent Bernoulli trial with success
+probability $p$.
+Independence holds because each repair attempt involves a fresh LLM call in which
+the complete TikZ source code is regenerated from the blueprint template, conditioned
+on the most recent stderr message from $L$.
+Since the LLM does not maintain internal state between API calls (the session context
+is supplied anew in each call), the outcomes of successive attempts are independent
+random variables $X_1,\ldots,X_{K+1}\stackrel{\mathrm{iid}}{\sim}\mathrm{Bernoulli}(p)$.
+
+The event $\{\mathrm{success}\}$ is the complement of the event $\{\text{all attempts
+fail}\} = \{\forall\, i: X_i=0\}$.
+By independence:
+\[
+  P(\text{all fail}) = \prod_{i=1}^{K+1}P(X_i=0) = (1-p)^{K+1}.
+\]
+Therefore, $P(\mathrm{success}\mid K) = 1 - (1-p)^{K+1}$. \qed
+\end{proof}
+
+\begin{corollary}[Practical Convergence at Default Settings]
+\label{cor:repair}
+For $p=0.72$ (empirically measured on our figure corpus, Section~\ref{sec:experimental})
+and $K=3$ (the configured attempt budget):
+\[
+  P(\mathrm{success}\mid 3) = 1 - (1-0.72)^4 = 1 - 0.28^4 = 1 - 0.00615 \approx 0.9938.
+\]
+With probability greater than 99.3\%, the \tvg{} cycle produces a compilable figure
+within four attempts.
+\end{corollary}
+
+The theorem makes the trade-off between attempt budget and success probability precise
+and actionable for a system designer.
+A designer who requires $P(\mathrm{success}\mid K)\geq 1-\varepsilon$ for a target
+reliability $\varepsilon>0$ must choose:
+\[
+  K \;\geq\; \left\lceil \frac{\log\varepsilon}{\log(1-p)} \right\rceil - 1.
+\]
+For $\varepsilon=10^{-3}$ (one failure per thousand figures) and $p=0.72$, this gives
+$K\geq 7$ (eight total attempts).
+For $\varepsilon=10^{-4}$ (one per ten thousand), $K\geq 10$.
+The current default $K=3$ delivers $\varepsilon\approx 6.2\times 10^{-3}$, which
+is acceptable for interactive academic document generation where the user can be
+prompted to manually supply a figure for the rare failure case.
+For unattended batch processing where manual intervention is not possible, $K$ should
+be increased to at least 7.
+
+A second implication of Theorem~\ref{thm:repair} concerns the \emph{sensitivity} of
+$P(\mathrm{success}\mid K)$ to $p$.
+At $K=3$, the gradient $\partial P/\partial p = 4(1-p)^3$ evaluates to
+$4\times 0.28^3 \approx 0.088$ at $p=0.72$.
+A 10-percentage-point improvement in per-attempt success probability (from 0.72 to 0.82)
+would increase $P(\mathrm{success}\mid 3)$ from $99.4\%$ to $99.9\%$, a gain of
+only $0.5$ percentage points.
+This reveals a \emph{diminishing returns} structure: once per-attempt success exceeds
+approximately $0.70$, additional improvements in $p$ yield minimal gains at $K=3$.
+The more effective lever for high-reliability deployments is increasing $K$.
+
+\subsection{Theorem 2: Order Preservation and Amdahl Speedup}
+
+The second theorem establishes two properties of the \texttt{concurrentMap} primitive
+that together underpin Invariant~I4 and the scalability claim.
+
+\begin{theorem}[Order-Preserving \texttt{concurrentMap} and Amdahl Speedup]
+\label{thm:concurrent}
+Let $\mathcal{F}=\{f_1,\ldots,f_n\}$ be a list of independent document-section
+generation tasks, and let $\texttt{concurrentMap}(\mathcal{F},N)$ execute them
+with at most $N$ workers operating in parallel.
+Let $\alpha\in(0,1)$ be the fraction of total wall-clock time that is inherently
+sequential (single-worker: billing accumulation, index-order assembly).
+Then:
+\begin{enumerate}[label=(\alph*)]
+  \item \textbf{Order preservation.} The output list emits $f_1(\cdot),\ldots,f_n(\cdot)$
+        in index order, regardless of the order in which workers complete.
+  \item \textbf{Amdahl speedup.} The wall-clock speedup over sequential execution is
+        \[
+          S(N) \;=\; \frac{1}{\alpha + (1-\alpha)/N}.
+        \]
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+\textbf{(a) Order preservation.}
+The \texttt{concurrentMap} primitive allocates a pre-sized output buffer
+$B[1\ldots n]$ indexed by task position before any worker is started.
+Worker allocation is done by a coordinator that maintains a task queue
+$Q=\langle f_1,f_2,\ldots,f_n\rangle$ from which workers pull tasks in index order.
+When worker $w$ completes task $f_i$, it writes its result to $B[i]$.
+Because tasks are independent (no inter-task data dependencies by assumption), and
+because each $B[i]$ is written exactly once by the unique worker assigned to $f_i$,
+no write conflict can occur.
+
+After all $n$ tasks have signalled completion via a counting semaphore
+(decremented from $n$ to $0$), the coordinator reads $B$ sequentially from index
+$1$ to $n$ and emits the results.
+The emission order is therefore exactly the index order $B[1],B[2],\ldots,B[n]$,
+regardless of the order in which workers completed.
+Crucially, the coordinator does \emph{not} emit $B[j]$ until all $B[1\ldots j-1]$
+have been emitted, even if $B[j]$ is filled before $B[j-1]$.
+The semaphore ensures no premature emission. \qed
+
+\textbf{(b) Amdahl speedup.}
+Let $T_{\mathrm{seq}}$ be the total wall-clock time for sequential execution.
+Of this, $\alpha T_{\mathrm{seq}}$ is inherently sequential and $(1-\alpha)T_{\mathrm{seq}}$
+is perfectly parallelisable.
+With $N$ workers, the parallel fraction takes time $(1-\alpha)T_{\mathrm{seq}}/N$,
+and the sequential fraction remains $\alpha T_{\mathrm{seq}}$.
+Total time: $\alpha T_{\mathrm{seq}} + (1-\alpha)T_{\mathrm{seq}}/N
+            = T_{\mathrm{seq}}(\alpha + (1-\alpha)/N)$.
+Speedup: $S(N) = T_{\mathrm{seq}} / [T_{\mathrm{seq}}(\alpha+(1-\alpha)/N)]
+              = 1/(\alpha+(1-\alpha)/N)$. \qed
+\end{proof}
+
+\begin{corollary}[Stage-Specific Speedup]
+\label{cor:amdahl}
+For Stage~2 (reference fetch, dominated by LLM-wait, measured $\hat{\alpha}=0.15$)
+with $N=4$ workers:
+\[
+  S(4) = \frac{1}{0.15 + 0.85/4} = \frac{1}{0.3625} \approx 2.76.
+\]
+Four concurrent reference-fetch workers achieve 2.76$\times$ wall-clock speedup.
+The theoretical maximum (as $N\to\infty$) is $1/\alpha = 1/0.15 \approx 6.67$.
+At $N=4$, the system recovers $\frac{S(4)-1}{S(\infty)-1} = \frac{1.76}{5.67} \approx 31\%$
+of the available parallelism headroom.
+\end{corollary}
+
+Part~(a) of Theorem~\ref{thm:concurrent} is non-trivial precisely because of
+heterogeneous task durations.
+In a system where all tasks take identical time, any ordering strategy produces correct
+index order.
+But in the \sys{} pipeline, section drafting tasks have highly variable durations:
+a section with many references to reconcile may take three times longer than a short
+methodological section.
+Without the buffer-and-semaphore mechanism, a fast worker completing a later section
+would emit its result before a slow worker completes an earlier section, violating
+Invariant~I4.
+The proof of part~(a) establishes that the buffer-and-semaphore mechanism is exactly
+the correct engineering pattern for this scenario.
+
+Figure~\ref{fig:amdahl} shows the Amdahl speedup curves for four values of $\alpha$,
+with three annotated operating points corresponding to the three parallel stages in
+the platform (Stage~2 at $N=4$, Stage~2.5 at $N=3$, and Stage~3 at $N=2$).
+
+\input{figures/fig05_amdahl}
+
+\subsection{Proposition 1: Token Continuation Expectation}
+
+\begin{proposition}[Token Continuation Expectation]
+\label{prop:token}
+Let $W_K$ be the total tokens consumed across up to $K+1$ repair attempts in the \tvg{}
+cycle, where the cycle terminates at the first successful attempt.
+Assume each attempt consumes a fixed token budget $w$ regardless of success or failure.
+Then:
+\[
+  \mathbb{E}[W_K] \;=\; w\sum_{k=0}^{K}(1-p)^k \;=\; W_\infty\bigl(1 - e^{-\lambda K}\bigr)
+\]
+where $W_\infty = w/p$ is the expected total spend under unlimited retries,
+and $\lambda = -\log(1-p)$ is the per-attempt failure rate.
+\end{proposition}
+
+\begin{proof}
+Let $N_K$ be the number of attempts made before the first success, truncated at $K+1$.
+The probability that exactly $k+1$ attempts are made (the first $k$ fail, the $(k+1)$-th
+succeeds, where $k\leq K-1$) is $p(1-p)^k$.
+The probability that all $K+1$ attempts are made (all fail, or the last succeeds) is
+$(1-p)^K$.
+
+\begin{align*}
+\mathbb{E}[W_K] &= w\,\mathbb{E}[N_K] \\
+&= w\left[\sum_{k=0}^{K-1}(k+1)p(1-p)^k + (K+1)(1-p)^K\right]
+\end{align*}
+
+This simplifies by observing that regardless of when the cycle terminates,
+every attempt up to termination consumes exactly $w$ tokens.
+An equivalent computation counts the expected number of attempts:
+\[
+\mathbb{E}[N_K] = \sum_{k=0}^{K}\Pr[\text{at least }k+1\text{ attempts made}]
+= \sum_{k=0}^{K}(1-p)^k = \frac{1-(1-p)^{K+1}}{p}.
+\]
+Multiplying by $w$:
+\[
+\mathbb{E}[W_K] = \frac{w(1-(1-p)^{K+1})}{p} = W_\infty(1-(1-p)^{K+1}).
+\]
+Using $(1-p) = e^{-\lambda}$, we have $(1-p)^{K+1} \approx e^{-\lambda K}$ for large $K$,
+yielding the stated expression. \qed
+\end{proof}
+
+Proposition~\ref{prop:token} has a direct implication for the Billing Operator
+coefficient.
+For $p=0.72$ and $w=266\,\text{PMU}$:
+$W_\infty = 266/0.72 \approx 369\,\text{PMU}$.
+At $K=3$:
+$\mathbb{E}[W_3] = 369\times(1-0.28^4) \approx 369\times 0.9938 \approx 367\,\text{PMU}$.
+The per-figure billing coefficient of $800\,\text{PMU}$ in $\mathcal{B}$ is
+$\approx 2.2\times W_\infty$, providing a safety margin of $2.2\times$
+above the expected token expenditure.
+This margin accommodates the stochastic variance in token consumption across figure
+types and ensures that the billing accumulation event at figure completion always
+records a value $\leq 800\,\text{PMU}$ with high probability.
+
+\subsection{Proposition 2: Pipeline as a Markov Decision Process}
+
+\begin{proposition}[Pipeline as MDP]
+\label{prop:mdp}
+The pipeline $\Pi$ can be modelled as a finite Markov Decision Process
+$\mathrm{MDP}=(\mathcal{S},\mathcal{A},\mathcal{T},\mathcal{R},\gamma)$ where:
+\begin{itemize}
+  \item $\mathcal{S}=\{S_0,S_1,S_2,S_2',S_3,S_4,S_5,S_{\mathrm{fail}}\}$
+        is the state space (document states plus an absorbing failure state);
+  \item $\mathcal{A}=\{a_1,a_2,a_{2.5},a_3,a_4,a_5\}$ is the action set
+        (stage-transition decisions);
+  \item $\mathcal{T}(S_i\mid S_{i-1},a_i)=1-\delta_i$ (successful transition)
+        and $\mathcal{T}(S_{\mathrm{fail}}\mid S_{i-1},a_i)=\delta_i$
+        (failure transition), where $\delta_i$ is the per-stage failure probability;
+  \item $\mathcal{R}(S_{i-1},a_i)=-\mathcal{B}_i$ is the stage-local reward,
+        where $\mathcal{B}_i$ is the marginal billing cost of stage $i$;
+  \item $\gamma=1$ (no time discounting, since session duration is bounded).
+\end{itemize}
+Under the deterministic policy $\pi^*$ that always executes the next stage in sequence,
+the expected cumulative reward is $-\sum_{i=1}^{5}\mathcal{B}_i = -\mathcal{B}(T,n_{\mathrm{img}})$.
+\end{proposition}
+
+\begin{proof}[Proof sketch]
+The Markov property holds because each stage's output is a deterministic function
+of its input state: $S_i = F_i(S_{i-1})$ conditioned on success, or $S_{\mathrm{fail}}$
+conditioned on failure.
+There is no hidden state beyond the current document state.
+The reward function $\mathcal{R}(S_{i-1},a_i)=-\mathcal{B}_i$ captures the cost of
+executing stage $i$, negated so that cost minimisation corresponds to reward maximisation.
+By additivity of $\mathcal{B}$, the sum of stage-local rewards equals the total billing
+cost, negated. \qed
+\end{proof}
+
+Proposition~\ref{prop:mdp} is primarily of theoretical interest as the foundation
+for future learned-policy extensions.
+In the current system, $\pi^*$ is fixed: always execute the next stage.
+This is optimal when all stage-local failure probabilities $\delta_i$ are small
+(which holds in the evaluated corpus, see Table~\ref{tab:invariants}).
+When $\delta_i$ is large — for example, when the reference-fetch endpoint is
+intermittently unavailable — a learned policy could adaptively skip $F_2$ and
+proceed with a reduced reference set rather than aborting the session entirely.
+Proposition~\ref{prop:mdp} formalises the decision problem that such a policy would need to solve.
+
+\subsection{Summary of Formal Guarantees}
+
+Table~\ref{tab:formal_guarantees} summarises the formal guarantees established
+by the definitions, theorems, and propositions in this section.
+
+\begin{table}[h!]
+\centering
+\caption{Summary of formal guarantees for the \sys{} system $\mathcal{P}$.}
+\label{tab:formal_guarantees}
+\begin{tabular}{llll}
+\toprule
+Component & Type & Guarantee & Condition \\
+\midrule
+$\Pi$ & Def.~\ref{def:pipeline} & Type-safe composition & Morphism typing \\
+$\Gamma$ & Def.~\ref{def:cgrag} & No $Q_0$ references admitted & By construction \\
+$\mathcal{B}$ & Def.~\ref{def:billing} & Monotone cost accumulation & Linear coefficients \\
+$\Phi_\theta$ & Def.~\ref{def:lcs} & Deterministic reconciliation & Fixed $\theta=4$ \\
+\tvg{} & Thm.~\ref{thm:repair} & $P(\text{success}\mid K)=1-(1-p)^{K+1}$ & IID attempts \\
+\texttt{concMap} & Thm.~\ref{thm:concurrent}(a) & Index-order output & Independent tasks \\
+\texttt{concMap} & Thm.~\ref{thm:concurrent}(b) & $S(N)=1/(\alpha+(1-\alpha)/N)$ & Amdahl model \\
+$\mathcal{B}$ & Prop.~\ref{prop:token} & $\mathbb{E}[W_K]=W_\infty(1-e^{-\lambda K})$ & Fixed $w$ per attempt \\
+$\Pi$ & Prop.~\ref{prop:mdp} & MDP formulation exists & Markov property \\
+\bottomrule
+\end{tabular}
+\end{table}

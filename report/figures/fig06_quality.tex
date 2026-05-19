@@ -1,0 +1,34 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[PL,
+  xlabel={Pipeline stages completed},
+  ylabel={Expected document quality $Q(s)$},
+  title={Cumulative quality gain per pipeline stage},
+  xmin=0, xmax=5.5, ymin=0, ymax=1.05,
+  xtick={0,1,2,3,4,5},
+  xticklabels={$s_0$,Plan,Extr.+\\Verify,Draft,Assemble,Validate},
+  x tick label style={align=center, font=\tiny},
+  ytick={0,0.2,0.4,0.6,0.8,1.0},
+  legend pos=north west,
+  width=13cm, height=7cm,
+]
+\addplot[name path=FULL, C1, very thick, mark=*, mark options={fill=C1,solid}]
+  coordinates{(0,0.05)(1,0.18)(2,0.45)(3,0.78)(4,0.91)(5,0.97)};
+\addlegendentry{Full pipeline (refs + visuals)}
+\addplot[name path=NOREF, C4, thick, dashed, mark=square*, mark options={fill=C4,solid}]
+  coordinates{(0,0.05)(1,0.15)(2,0.20)(3,0.55)(4,0.68)(5,0.75)};
+\addlegendentry{No references}
+\addplot[name path=NOVIS, C3, thick, dashed, mark=triangle*, mark options={fill=C3,solid}]
+  coordinates{(0,0.05)(1,0.18)(2,0.42)(3,0.70)(4,0.82)(5,0.88)};
+\addlegendentry{No visuals}
+\addplot[F1, opacity=0.40] fill between[of=FULL and NOREF];
+\foreach \s in {1,2,3,4,5}{\addplot[DG!20,thin]coordinates{(\s,0)(\s,1.03)};}
+\end{axis}
+\end{tikzpicture}
+\caption{Cumulative document quality as pipeline stages complete. Shaded area
+         quantifies the quality gain attributable to the reference verification
+         subsystem. The drafting stage ($s_2\to s_3$) contributes the largest
+         single quality increment across all configurations.}
+\label{fig:quality_scurve}
+\end{figure}

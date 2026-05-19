@@ -1,0 +1,35 @@
+Automated academic document generation sits at the intersection of large-language-model
+orchestration, formal software specification, and scholarly publishing norms.
+Existing systems either produce unreferenced prose that fails citation audits, or they
+provide reference management in isolation, without integrating visual content, multilingual
+support, or cost governance into a single coherent product.
+
+We present \sys{}, a formally specified, multi-stage platform that transforms a user-supplied
+research topic into a complete, compilable \LaTeX{} document — with verified references,
+algorithmically generated figures, and precise billing accounting — within a single interactive
+session.
+The platform is defined by the Unified System Model
+$\mathcal{P}=(G,\Gamma,\mathcal{B},M,\Phi_\theta,\mathcal{L}_Q,\mathcal{L}_{25},\Pi)$,
+comprising eight formally specified components that interact through contracts enforced by
+five system invariants.
+
+The central technical contributions are:
+(i)~the \textbf{Pipeline Algebra} $\Pi=F_5\circ F_4\circ F_3\circ F_{2.5}\circ F_2\circ F_1$,
+a category-theoretic composition of document-transformation morphisms;
+(ii)~the \textbf{Confidence-Gated Retrieval-Augmented Generation} (\cgrag{}) gate $\Gamma$,
+a multi-criteria lattice filter that eliminates unverifiable references before drafting begins;
+(iii)~the \textbf{Typed Visual Grammar} (\tvg{}) $G=(T,B,L,Q)$, a compile-validate-repair
+cycle that produces syntactically correct TikZ figures with formal correctness guarantees;
+(iv)~the \textbf{LCS Reconciliation Operator} $\Phi_\theta$, which aligns extracted reference
+text with generated prose at $O(nm)$ cost while preserving authorial style; and
+(v)~a \textbf{Billing Operator} $\mathcal{B}$ that ensures cost monotonicity by construction.
+
+We prove two theorems: repair convergence under the \tvg{} cycle achieves
+$P(\text{success}\mid K)=1-(1-p)^{K+1}$, and the order-preserving
+\texttt{concurrentMap} primitive attains Amdahl speedup $S(N)=1/(\alpha+(1-\alpha)/N)$.
+Evaluation on a corpus of 120 user sessions demonstrates that the full pipeline
+achieves a mean expected document quality of $Q(s_5)=0.97$ versus $0.75$ for a
+reference-free ablation, a relative improvement of 29\%.
+All five system invariants hold across every evaluated session,
+confirming that the formal design constraints translate directly into observable
+runtime guarantees.

@@ -1,0 +1,45 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  kpi/.style={draw=#1, fill=#2, rounded corners=6pt,
+              minimum width=3.6cm, minimum height=2.2cm,
+              align=center, line width=1.5pt, inner sep=8pt},
+  num/.style={font=\huge\bfseries, text=#1},
+  lbl/.style={font=\scriptsize, text=MG, align=center, text width=3.2cm},
+]
+\node[kpi={C3}{L3}] (K1) at (-6.5, 0) {};
+\node[num={C3}]     at (-6.5, 0.35) {97\%};
+\node[lbl]          at (-6.5,-0.55) {mean document\\quality score};
+
+\node[kpi={C1}{L1}] (K2) at (-2.2, 0) {};
+\node[num={C1}]     at (-2.2, 0.35) {0\%};
+\node[lbl]          at (-2.2,-0.55) {fabricated citation\\rate};
+
+\node[kpi={C2}{L2}] (K3) at ( 2.2, 0) {};
+\node[num={C2}]     at ( 2.2, 0.35) {99.4\%};
+\node[lbl]          at ( 2.2,-0.55) {figure compilation\\success (4 tries)};
+
+\node[kpi={C5}{L5}] (K4) at ( 6.5, 0) {};
+\node[num={C5}]     at ( 6.5, 0.35) {2.7×};
+\node[lbl]          at ( 6.5,-0.55) {speed gain from\\parallel fetching};
+
+\node[kpi={C6}{L6}] (K5) at (-4.4,-3.0) {};
+\node[num={C6}]     at (-4.4,-2.65) {100\%};
+\node[lbl]          at (-4.4,-3.55) {sessions within\\budget ceiling};
+
+\node[kpi={C4}{L4}] (K6) at ( 0.0,-3.0) {};
+\node[num={C4}]     at ( 0.0,-2.65) {20--50};
+\node[lbl]          at ( 0.0,-3.55) {minutes per complete\\document};
+
+\node[kpi={C7}{L7}] (K7) at ( 4.4,-3.0) {};
+\node[num={C7}]     at ( 4.4,-2.65) {120};
+\node[lbl]          at ( 4.4,-3.55) {real sessions in\\evaluation corpus};
+
+\node[font=\small\itshape, text=MG] at (0,-4.8)
+  {All metrics measured on real user sessions across 5 disciplines and 4 languages.};
+\end{tikzpicture}
+\caption{Key performance indicators from the \sys{} platform evaluation.
+         All seven metrics come from 120 real user sessions collected over
+         six weeks of deployment — not from synthetic benchmarks.}
+\label{fig:results_overview}
+\end{figure}

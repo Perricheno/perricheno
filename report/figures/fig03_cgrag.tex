@@ -1,0 +1,35 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[PL,
+  xlabel={Mean confidence score $\bar{c}$},
+  ylabel={Probability density},
+  title={\cgrag{} gate: score distributions for verified vs.\ unverified sources},
+  xmin=0, xmax=10.5, ymin=0, ymax=0.48,
+  xtick={0,1,...,10}, legend pos=north west,
+  width=13cm, height=7cm,
+]
+\addplot[name path=A, C4, line width=2pt, samples=200, domain=0:10.5]
+  {0.40*exp(-((x-4.2)^2)/(2*1.4^2))};
+\addlegendentry{Unverified sources $(\mu\!=\!4.2,\sigma\!=\!1.4)$}
+\addplot[name path=B, C3, line width=2pt, samples=200, domain=0:10.5]
+  {0.38*exp(-((x-8.0)^2)/(2*0.9^2))};
+\addlegendentry{Verified sources $(\mu\!=\!8.0,\sigma\!=\!0.9)$}
+\addplot[C1, line width=2.5pt, dashed]
+  coordinates{(7.0,0)(7.0,0.48)};
+\addlegendentry{Gate threshold $\tau_c=7.0$}
+\addplot[name path=ZA, draw=none, domain=0:7.0]{0};
+\addplot[name path=ZB, draw=none, domain=7.0:10.5]{0};
+\addplot[F4, opacity=0.55] fill between[of=A and ZA, soft clip={domain=0:7.0}];
+\addplot[F3, opacity=0.60] fill between[of=B and ZB, soft clip={domain=7.0:10.5}];
+\node[font=\small\bfseries, text=C4] at (axis cs:2.5,0.33){\texttt{degraded}};
+\node[font=\small\bfseries, text=C3] at (axis cs:8.8,0.33){\texttt{enhanced}};
+\end{axis}
+\end{tikzpicture}
+\caption{Empirical confidence-score distributions for verified vs.\ unverified
+         reference documents under the \cgrag{} gate $\Gamma$ (Definition~\ref{def:cgrag}).
+         Shaded regions denote the outcome assigned to each score half-space.
+         The threshold $\tau_c\!=\!7.0$ is set to minimise false-\texttt{enhanced}
+         classifications.}
+\label{fig:cgrag}
+\end{figure}

@@ -1,0 +1,38 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  obj/.style={draw=#1, fill=#2, circle, minimum size=1.1cm,
+              font=\scriptsize\bfseries, align=center, inner sep=1pt,
+              line width=1.5pt},
+  mor/.style={-{Stealth[length=8pt,width=6pt]}, line width=1.4pt, draw=#1},
+  lbl/.style={font=\scriptsize\itshape, text=DG, above=4pt},
+  sub/.style={font=\tiny, text=MG, below=3pt}
+]
+\node[obj={DG}{LGr}]  (D0)  at (0,0)     {$\mathcal{D}_0$};
+\node[obj={C1}{F1}]   (D1)  at (2.2,0)   {$\mathcal{D}_1$};
+\node[obj={C2}{F2}]   (D2)  at (4.4,0)   {$\mathcal{D}_2$};
+\node[obj={C5}{F5}]   (D25) at (6.6,0)   {$\mathcal{D}_{2.5}$};
+\node[obj={C6}{F6}]   (D3)  at (8.8,0)   {$\mathcal{D}_3$};
+\node[obj={C3}{F3}]   (D4)  at (11.0,0)  {$\mathcal{D}_4$};
+\node[obj={C4}{F4}]   (D5)  at (13.2,0)  {$\mathcal{D}_5$};
+
+\draw[mor={C1}] (D0)--node[lbl]{$F_1$}node[sub]{Plan}(D1);
+\draw[mor={C2}] (D1)--node[lbl]{$F_2$}node[sub]{Extract}(D2);
+\draw[mor={C5}] (D2)--node[lbl]{$F_{2.5}$}node[sub]{Verify}(D25);
+\draw[mor={C6}] (D25)--node[lbl]{$F_3$}node[sub]{Draft}(D3);
+\draw[mor={C3}] (D3)--node[lbl]{$F_4$}node[sub]{Assemble}(D4);
+\draw[mor={C4}] (D4)--node[lbl]{$F_5$}node[sub]{Validate}(D5);
+
+\draw[mor={C1}, bend right=35]
+  (D0) to node[below=10pt, font=\small\bfseries, text=C1]
+    {$\Pi = F_5 \circ F_4 \circ F_3 \circ F_{2.5} \circ F_2 \circ F_1$} (D5);
+
+\node[font=\tiny\itshape, text=MG] at (6.6,-2.0)
+  {$F_4$ is fully deterministic (zero LLM calls); all others invoke the LLM at least once.};
+\end{tikzpicture}
+\caption{The \sys{} pipeline algebra (Definition~\ref{def:pipeline}). Six
+         functors $F_i:\mathcal{D}_{i-1}\to\mathcal{D}_i$ compose into the
+         single morphism $\Pi:\mathcal{D}_0\to\mathcal{D}_5$, mapping
+         raw user input to a compiled PDF document.}
+\label{fig:pipeline}
+\end{figure}

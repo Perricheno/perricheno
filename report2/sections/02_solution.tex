@@ -1,0 +1,100 @@
+\section{The Solution: What Perricheno Delivers}
+\label{sec:solution}
+
+\subsection{A Single Session, A Complete Document}
+
+\sys{} is built around one core promise: give us your topic and your requirements,
+and we hand you back a complete, compilable academic document — with verified references,
+embedded figures, and correct formatting — without you having to touch any other tool.
+
+A ``complete document'' in the \sys{} context means:
+
+\begin{itemize}
+  \item A structured academic text with all standard sections (introduction,
+        methodology, results, discussion, conclusion, or whatever structure you specify).
+  \item A verified bibliography containing only sources that exist and are accessible
+        at the time of generation — no invented citations.
+  \item Professional TikZ/pgfplots figures embedded in the document and cross-referenced
+        correctly in the body text.
+  \item Correct \LaTeX{} formatting that compiles to a clean PDF without manual intervention.
+  \item A billing record showing exactly what the session cost, broken down by stage.
+\end{itemize}
+
+\subsection{The Five Guarantees}
+
+\sys{} is built around five properties that hold for \emph{every} session by design,
+not just on average.
+These are not aspirational targets — they are structural guarantees that follow from
+how the system is built.
+
+\begin{keybox}[title=The Five Perricheno Guarantees]
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{No duplicate formatting.}
+        Every generated document has exactly one properly formatted header.
+        No structural duplication, no conflicting style definitions.
+
+  \item \textbf{Zero fabricated citations.}
+        Every reference in the bibliography was fetched from a live academic database
+        at the time of generation.
+        If a source cannot be verified to exist, it is excluded — period.
+
+  \item \textbf{Predictable costs.}
+        The cost of a session increases as you add more content and figures,
+        and never decreases. This means a budget ceiling set before the session
+        is guaranteed to hold.
+
+  \item \textbf{Correct section order.}
+        Even when sections are written in parallel to save time, the final document
+        always presents them in the order you specified in the outline.
+        Section 3 always comes after Section 2.
+
+  \item \textbf{Live sources only.}
+        References are not pulled from a cache or a snapshot of the internet from
+        months ago. Every source is checked to be live and accessible
+        at the moment your session runs.
+\end{enumerate}
+\end{keybox}
+
+\subsection{What the Output Looks Like}
+
+The output of a \sys{} session is a \LaTeX{} source bundle that compiles to a PDF.
+The PDF contains:
+
+\begin{description}[leftmargin=2em, style=nextline]
+  \item[Structured prose.]
+    Section-by-section academic text, written in the language you specify (English,
+    Russian, Kazakh Cyrillic, or Kazakh Latin), at the word count you request.
+    The prose is grounded in the verified sources — the system writes \emph{about}
+    real papers, not about invented ones.
+  \item[A verified bibliography.]
+    Every reference is formatted in the citation style you choose (IEEE, APA, GOST,
+    Chicago) and resolves to a live DOI, URL, or institutional handle.
+  \item[Professional figures.]
+    Charts (bar, line, scatter, histogram), flow diagrams, architecture diagrams,
+    and other visual types — generated programmatically and embedded in the document
+    with correct figure numbers and captions.
+  \item[Clean compilation.]
+    The document compiles without error on a standard \LaTeX{} installation.
+    You do not need to manually fix bibliography errors, undefined cross-references,
+    or figure compilation issues.
+\end{description}
+
+\subsection{Supported Languages}
+
+\sys{} supports four academic language modes, each with its own prompting conventions,
+citation style defaults, and script-enforcement rules:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Language mode & Script & Default citation style \\
+\midrule
+English / international & Latin & IEEE or APA \\
+Russian / Cyrillic academic & Cyrillic & GOST 7.0.5 \\
+Kazakh (Cyrillic) & Cyrillic & GOST or APA \\
+Kazakh (Latin) & Latin (2021 standard) & APA \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\input{figures/fig_guarantees}

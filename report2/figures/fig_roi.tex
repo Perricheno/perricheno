@@ -1,0 +1,46 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  PL,
+  ybar, bar width=28pt,
+  ylabel={Cost per 20-page document (USD)},
+  title={Cost comparison: document production methods},
+  symbolic x coords={
+    {Human service\\(CIS)},
+    {Human service\\(Western)},
+    {Manual AI\\workflow},
+    {\sys{}}
+  },
+  xtick=data,
+  x tick label style={align=center, font=\small, text width=2.8cm},
+  ymin=0, ymax=1300,
+  ytick={0,200,400,600,800,1000,1200},
+  yticklabel={\$\pgfmathprintnumber[fixed, precision=0]{\tick}},
+  width=13cm, height=7cm,
+  nodes near coords,
+  nodes near coords style={font=\scriptsize\bfseries, anchor=south},
+  every node near coord/.append style={
+    /pgf/number format/.cd, fixed, precision=0,
+    /tikz/.cd
+  },
+]
+\addplot[
+  draw=C4, fill=F4, fill opacity=0.9,
+  nodes near coords={\$\pgfmathprintnumber[fixed,precision=0]{\pgfplotspointmeta}},
+] coordinates {
+  ({Human service\\(CIS)},500)
+  ({Human service\\(Western)},1200)
+  ({Manual AI\\workflow},80)
+  ({\sys{}},5)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Total cost per 20-page academic document by production method,
+         including labour time valued at local market rates.
+         ``Manual AI workflow'' includes the researcher time spent prompting,
+         verifying references manually, creating figures, and fixing compilation errors.
+         \sys{} costs reflect the platform session fee only; light revision time
+         (1--2 hours) is excluded for comparability.}
+\label{fig:roi}
+\end{figure}

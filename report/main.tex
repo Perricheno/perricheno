@@ -1,0 +1,58 @@
+% ============================================================
+%  Perricheno: A Formally Specified Multi-Stage Platform for
+%  Automated Academic LaTeX Document Generation
+%
+%  Technical Report — IMRAD Structure
+%  Compile: pdflatex main.tex  →  biber main  →  pdflatex (×2)
+% ============================================================
+\documentclass[12pt, a4paper]{article}
+\input{preamble}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\LARGE\bfseries\color{C1}
+    Perricheno: A Formally Specified Multi-Stage Platform\\[0.4em]
+    for Automated Academic \LaTeX{} Document Generation\par}
+  \vspace{1.5em}
+  {\large Technical Report\par}
+  \vspace{2em}
+  {\large
+    Amangeldy Toiymbetov\\[0.3em]
+    \textit{Astana IT University}\\[0.2em]
+    \texttt{amangeldy.toy123@gmail.com}\par}
+  \vspace{2em}
+  {\large\today\par}
+  \vfill
+  \begin{abstract}
+    \input{sections/00_abstract}
+  \end{abstract}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ── IMRAD Body ───────────────────────────────────────────────────────────
+\input{sections/01_introduction}
+\newpage
+\input{sections/02_related_work}
+\newpage
+\input{sections/03_architecture}
+\newpage
+\input{sections/04_contributions}
+\newpage
+\input{sections/05_experimental}
+\newpage
+\input{sections/06_results}
+\newpage
+\input{sections/07_discussion}
+\newpage
+\input{sections/08_conclusion}
+
+% ── Bibliography ─────────────────────────────────────────────────────────
+\newpage
+\printbibliography[heading=bibintoc, title={References}]
+
+\end{document}

@@ -1,0 +1,581 @@
+\section{System Architecture and Formal Specification}
+\label{sec:architecture}
+
+This section presents the complete formal specification of \sys{}.
+We define ten mathematical objects, state five system invariants, and describe the
+six-layer physical architecture that realises them.
+Throughout, we adopt the convention that \emph{definitions specify the design intent},
+not the implementation mechanism; the latter is deliberately withheld.
+All definitions are presented in the order in which they participate in the pipeline:
+from the outermost pipeline algebra down to the component-level operators it invokes.
+
+\subsection{The Pipeline Algebra}
+
+\begin{definition}[Pipeline Algebra $\Pi$]
+\label{def:pipeline}
+Let $\mathbf{DocState}$ be the category whose objects are well-typed document states
+$S_0,S_1,\ldots,S_5$ and whose morphisms are total, deterministic functions between them.
+The \sys{} pipeline is the composite morphism
+\[
+  \Pi \;=\; F_5 \circ F_4 \circ F_3 \circ F_{2.5} \circ F_2 \circ F_1
+  \;:\; S_0 \;\longrightarrow\; S_5
+\]
+where each $F_i : S_{i-1} \to S_i$ (with $F_{2.5}: S_2 \to S_2'$) is a \emph{pipeline stage}
+satisfying the output-type constraint $\mathrm{cod}(F_i)=\mathrm{dom}(F_{i+1})$.
+\end{definition}
+
+The category-theoretic formulation has a direct practical consequence: if each $F_i$
+is a well-typed function, then their composition $\Pi$ is also well-typed by the
+functorial property of composition, and the output state $S_5$ is reachable from any
+input state $S_0$ without runtime type errors.
+This is not merely an aesthetic choice.
+In systems that pass structured data between pipeline stages via informal contracts
+(JSON schemas, shared databases, or convention-based naming), type mismatches at stage
+boundaries are a leading cause of production failures~\cite{akidau2015dataflow}.
+The category-theoretic formalism eliminates this failure mode by making the output type
+of each stage a first-class constraint that must match the input type of the next stage.
+
+The six stages are characterised by their input/output state types:
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Stage & Morphism & Input & Output \\
+\midrule
+1 & $F_1$ & topic $q\in\mathcal{Q}$ & structured outline $o$ \\
+2 & $F_2$ & outline $o$ & verified reference set $\mathcal{R}^+$ \\
+2.5 & $F_{2.5}$ & $(o, \mathcal{R}^+)$ & reconciled context $\mathcal{C}$ \\
+3 & $F_3$ & $\mathcal{C}$ & prose draft $\mathcal{T}$ \\
+4 & $F_4$ & $(\mathcal{T}, \mathcal{R}^+)$ & assembled document $d_0$ \\
+5 & $F_5$ & $d_0$ & compiled document $d\in\mathcal{D}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Stage $F_{2.5}$ (LCS Reconciliation) is notated with a half-integer index because it
+is a \emph{refinement stage}: it does not change the semantic type of the reference set
+$\mathcal{R}^+$ but transforms the accompanying outline $o$ into a context-enriched
+version $\mathcal{C}$ that is strictly more informative for the drafting stage.
+Its inclusion as a distinct stage rather than as a sub-step of $F_2$ or $F_3$
+reflects the design principle that each transformation with an independently testable
+correctness criterion should be a separately labelled morphism.
+
+Figure~\ref{fig:pipeline} renders this composition as a commutative diagram.
+The diagram makes visible a property that is implicit in the algebraic notation:
+the output of $F_2$ flows into \emph{two} downstream stages ($F_{2.5}$ and $F_4$),
+creating a fork in the information flow.
+In category-theoretic terms, $\mathcal{R}^+$ is a \emph{shared object} used in two
+different morphisms; this is permissible because morphisms in $\mathbf{DocState}$
+are read-only with respect to their inputs.
+
+\input{figures/fig01_pipeline}
+
+\subsection{The CGRAG Gate}
+
+\begin{definition}[\cgrag{} Gate $\Gamma$]
+\label{def:cgrag}
+Let $\mathbf{c}\in[0,10]$ be a continuous confidence score returned by the language model
+when assessing a candidate reference, $s\in\mathbb{N}_0$ its Semantic Scholar citation count,
+and $k\in\mathbb{N}_0$ its keyword-match count with respect to the session topic.
+Define thresholds $\tau_c=7.0$, $\tau_s=100$, $\tau_k=3$.
+The \cgrag{} gate is the function
+\[
+  \Gamma(c,s,k) \;=\; \begin{cases}
+    \texttt{enhanced} & \text{if } c\geq\tau_c \;\wedge\; s\geq\tau_s \;\wedge\; k\geq\tau_k \\
+    \texttt{degraded} & \text{otherwise.}
+  \end{cases}
+\]
+Only references with $\Gamma=\texttt{enhanced}$ are admitted to the context window of $F_3$.
+\end{definition}
+
+The gate $\Gamma$ is a meet-semilattice homomorphism from the Boolean lattice
+$2^{\{c,s,k\}}$ (Figure~\ref{fig:lattice}) to the two-element chain
+$\{\texttt{degraded}\prec\texttt{enhanced}\}$.
+The lattice structure has a direct semantic reading: improving any single criterion
+can only move a reference \emph{upward} in the lattice (from \texttt{degraded} toward
+\texttt{enhanced}), and the top element requires \emph{all} three criteria to be satisfied.
+
+The three criteria are deliberately heterogeneous.
+The confidence score $c$ is \emph{subjective}: it is the language model's self-assessment
+of how well a reference matches the query, and is therefore subject to the same
+hallucination dynamics that the gate is designed to guard against.
+Using $c$ alone would create a circular dependency.
+The citation count $s$ is \emph{objective and historical}: it measures how many
+prior works have cited this reference, which correlates with scholarly authority but
+not with topical relevance.
+The keyword count $k$ is \emph{structural}: it counts how many of the session's
+topic keywords appear in the reference's title, abstract, or MeSH terms, providing
+a topic-gating function independent of the LLM's judgment.
+
+The conjunction of all three ($c\wedge s\wedge k$) is the only logical composition
+that is simultaneously topic-relevant ($k$), subjectively plausible ($c$), and
+objectively authoritative ($s$).
+A reference that is highly cited but off-topic fails on $k$.
+A reference that is on-topic but unpublished fails on $s$.
+A reference that is cited and on-topic but assigned a low confidence score by the LLM
+(e.g., because the abstract is vague) fails on $c$.
+Only a reference that passes all three gates is admitted.
+
+The empirical confidence-score distributions for verified versus unverified sources under
+$\Gamma$ are shown in Figure~\ref{fig:cgrag}.
+The two distributions are well-separated (means $\mu_{\mathrm{verified}}=8.0$,
+$\mu_{\mathrm{unverified}}=4.2$; standard deviations $0.9$ and $1.4$ respectively),
+and the gate threshold $\tau_c=7.0$ sits at the intersection of the two Gaussians,
+minimising the false-\texttt{enhanced} classification rate.
+
+\input{figures/fig03_cgrag}
+\input{figures/fig10_lattice}
+
+\subsection{The LCS Reconciliation Operator}
+
+\begin{definition}[LCS Reconciliation Operator $\Phi_\theta$]
+\label{def:lcs}
+Let $\ell_r$ and $\ell_d$ be finite sequences of tokens drawn from a common alphabet $\Sigma$.
+Let $\mathrm{LCS}(\ell_r,\ell_d)$ denote the standard longest-common-subsequence computed
+by the Wagner--Fischer dynamic-programming algorithm in $O(|\ell_r|\cdot|\ell_d|)$ time.
+Define threshold $\theta=4$.
+The reconciliation operator is
+\[
+  \Phi_\theta(\ell_r,\ell_d) \;=\; \begin{cases}
+    \ell_d & \text{if } |\mathrm{LCS}(\ell_r,\ell_d)|\geq\theta \\
+    \ell_r & \text{otherwise.}
+  \end{cases}
+\]
+$\Phi_\theta$ is applied sentence-by-sentence between extracted reference sentences $\ell_r$
+and corresponding planned outline sentences $\ell_d$ to produce the reconciled context $\mathcal{C}$.
+\end{definition}
+
+The design rationale for using LCS rather than cosine similarity over token embeddings
+is threefold.
+First, LCS is order-sensitive: it penalises rearrangements of key noun phrases,
+which cosine similarity does not because bag-of-words embeddings treat a sentence as
+a multiset of tokens, discarding order information.
+For academic text in which the precise arrangement of technical terms encodes meaning
+(e.g., ``neural network classification'' versus ``classification of neural networks''),
+order sensitivity is a correctness requirement, not merely a preference.
+
+Second, the threshold $\theta=4$ is directly interpretable by a domain expert:
+it corresponds to a minimum of four shared tokens between the reference sentence and
+the outline sentence, which in practice means that a key term or proper noun from
+the source appears verbatim in the planned draft.
+By contrast, a cosine threshold requires calibration against an embedding model and
+has no direct linguistic interpretation.
+
+Third, LCS is deterministic and parameter-free beyond $\theta$, making it auditable.
+Given the same pair $(\ell_r,\ell_d)$, $\Phi_\theta$ always returns the same result.
+This is a prerequisite for Invariant~I4 (Order Preservation), which requires the
+reconciled context $\mathcal{C}$ to be a deterministic function of the outline $o$
+and the reference set $\mathcal{R}^+$.
+
+Figure~\ref{fig:lcs} illustrates the DP table for a representative sentence pair.
+The highlighted diagonal cells trace the longest common subsequence; the dashed line
+marks the $\theta=4$ acceptance threshold.
+
+\input{figures/fig09_lcs}
+
+\subsection{The Billing Operator}
+
+\begin{definition}[Billing Operator $\mathcal{B}$]
+\label{def:billing}
+Let $T\in\mathbb{N}_0$ be the total input+output token count across all LLM calls in a
+session, and $n_{\mathrm{img}}\in\mathbb{N}_0$ the number of TikZ figures generated.
+The billing operator is the affine function
+\[
+  \mathcal{B}(T, n_{\mathrm{img}}) \;=\; 3T + 800\,n_{\mathrm{img}}
+\]
+measured in platform micro-units (PMU).
+The cost is accumulated monotonically at each stage completion event.
+\end{definition}
+
+The linearity of $\mathcal{B}$ in both arguments is an intentional design constraint,
+not a consequence of the underlying API pricing.
+A non-linear billing function (e.g., tiered pricing) would complicate the pre-session
+budget check: a user who enters with budget $\beta$ could not be guaranteed that spending
+$\beta/2$ in the first half of the session leaves $\beta/2$ for the second half.
+The affine structure of $\mathcal{B}$ guarantees this: if the first half of the pipeline
+consumes $\mathcal{B}(T_1, n_1)$, the remaining budget is exactly
+$\beta - \mathcal{B}(T_1, n_1)$.
+
+The coefficient $800\,n_{\mathrm{img}}$ reflects the fixed overhead of invoking the
+\LaTeX{} compiler as a correctness oracle for each figure: compilation, error parsing,
+and up to $K=3$ repair iterations each consume a bounded number of tokens whose
+expectation is approximately $266\,\text{PMU}$ per attempt (see Proposition~\ref{prop:token}).
+Summing over three attempts gives the per-figure expected budget of
+$3\times 266 \approx 800\,\text{PMU}$.
+
+Figure~\ref{fig:billing} shows the iso-cost curves of $\mathcal{B}$ as a function of $T$
+for five image counts, and marks a representative operating point.
+
+\input{figures/fig07_billing}
+
+\subsection{The Reference Quality Poset}
+
+\begin{definition}[Reference Quality Poset $\mathcal{L}_Q$]
+\label{def:quality_poset}
+Define a partial order $\prec$ on the set of reference quality tiers
+$\{Q_0,Q_1,Q_2,Q_3,Q_4,Q_5\}$ by:
+\[
+  Q_0 \prec Q_1 \prec Q_2 \prec Q_3 \prec Q_4 \prec Q_5
+\]
+where the tiers are defined as:
+$Q_0$ = unresolvable or hallucinated (no live endpoint);
+$Q_1$ = live web resource (HTTPS, last-modified header verifiable);
+$Q_2$ = book or thesis (ISBN or institutional handle resolvable);
+$Q_3$ = preprint with citation count $\geq\tau_s$;
+$Q_4$ = conference proceedings indexed in DBLP or ACM DL;
+$Q_5$ = peer-reviewed journal article with verified DOI.
+The tuple $(\{Q_0,\ldots,Q_5\},\prec)$ is a totally ordered set (chain), hence a lattice.
+\end{definition}
+
+The poset $\mathcal{L}_Q$ serves two purposes in the system.
+First, it provides a vocabulary for the \cgrag{} gate: a reference receives the
+\texttt{enhanced} classification only if its tier is at least $Q_2$, which corresponds
+to a verifiable academic source.
+Second, it provides a partial order for the quality sub-metric $R(s)$: the quality
+of the reference set $\mathcal{R}^+$ is the weighted mean of tier values, normalised
+to $[0,1]$, providing a scalar quality signal that is monotone in the quality of
+individual references.
+
+The choice to define $\mathcal{L}_Q$ as a total order (chain) rather than a more
+complex partial order reflects a deliberate simplicity trade-off.
+One could argue that a preprint with 1,000 citations ($Q_3$) should be ranked above
+a conference paper with 5 citations ($Q_4$), and that a partial order would capture this.
+However, a total order enables the quality metric $R(s)$ to be computed as a simple mean
+without requiring weighted aggregation of incomparable elements, and is therefore more
+auditable and explainable to end users.
+
+Figure~\ref{fig:hasse} shows the Hasse diagram of $\mathcal{L}_Q$ with the \cgrag{}
+gate boundary overlaid.
+
+\input{figures/fig08_hasse}
+
+\subsection{The Multi-Criteria Lattice}
+
+\begin{definition}[Multi-Criteria Lattice for \cgrag{}]
+\label{def:lattice}
+The three binary admission predicates
+$p_c = [c\geq\tau_c]$, $p_s = [s\geq\tau_s]$, $p_k = [k\geq\tau_k]$
+generate the Boolean lattice $2^{\{c,s,k\}}$ ordered by subset inclusion.
+The meet operation $\wedge$ corresponds to logical conjunction of predicates,
+and the join $\vee$ to logical disjunction.
+The gate $\Gamma$ is the unique meet-semilattice homomorphism
+$\Gamma: 2^{\{c,s,k\}} \to \{\texttt{degraded},\texttt{enhanced}\}$
+that maps only the top element $\{c,s,k\}$ to \texttt{enhanced}.
+\end{definition}
+
+Definition~\ref{def:lattice} extends Definition~\ref{def:cgrag} by making the
+algebraic structure of $\Gamma$ explicit.
+The Boolean lattice $2^{\{c,s,k\}}$ has eight elements (the eight subsets of
+$\{c,s,k\}$), arranged in four levels (Figure~\ref{fig:lattice}).
+The homomorphism $\Gamma$ collapses all seven non-top elements to \texttt{degraded}
+and maps the top element $\{c,s,k\}$ to \texttt{enhanced}.
+
+The meet-semilattice structure is significant because it rules out the possibility of
+\emph{compensatory} admission: a reference with a very high confidence score ($c\gg\tau_c$)
+cannot be admitted despite failing the citation-count criterion ($s<\tau_s$).
+In compensatory scoring systems (such as weighted sums), a very high score on one criterion
+can outweigh a low score on another.
+The lattice formulation explicitly rejects this: the gate is a conjunction, not a sum.
+
+\subsection{Mutual Information for Context Relevance}
+
+\begin{definition}[Mutual Information for Context--Section Relevance]
+\label{def:mutual_info}
+Let $X$ be the random variable representing the topic distribution of a retrieved
+reference and $Y$ the random variable representing the target section distribution.
+Both are modelled as categorical distributions over a shared topic vocabulary
+$\mathcal{V}$ of size $|\mathcal{V}|=512$ topics extracted by LDA.
+The context--section relevance score is
+\[
+  I(X;Y) \;=\; \sum_{x,y} P(X=x,Y=y)\log\frac{P(X=x,Y=y)}{P(X=x)P(Y=y)}.
+\]
+A reference is retained in the context window of $F_3$ for section $s_j$ only if
+$I(X;Y)\geq I_{\min}$ for a session-configured threshold $I_{\min}$.
+\end{definition}
+
+This definition formalises the intuition that a reference about quantum computing
+should not appear in the context window of a section about database indexing, even if
+both achieve \texttt{enhanced} classification under $\Gamma$.
+The mutual information criterion is complementary to $\Gamma$: $\Gamma$ filters on
+scholarly authority, and $I(X;Y)\geq I_{\min}$ filters on topical relevance.
+
+The use of LDA topics as the shared vocabulary $\mathcal{V}$ is motivated by the
+need for a topic representation that is independent of the LLM generating the draft.
+Using the LLM's own latent representations to assess relevance would risk circular
+reasoning: a reference that the LLM has internally associated with the section topic
+would be selected, reinforcing whatever biases the LLM already has about that topic.
+LDA topics, estimated from the reference corpus independently of the LLM, provide
+an external relevance signal.
+
+\subsection{The Typed Visual Grammar}
+
+\begin{definition}[Typed Visual Grammar \tvg{}]
+\label{def:tvg}
+A Typed Visual Grammar is a 4-tuple $G=(T,B,L,Q)$ where:
+$T=\{t_1,\ldots,t_{30}\}$ is a finite set of figure types
+(e.g., \texttt{flow\_diagram}, \texttt{state\_machine}, \texttt{bar\_chart},
+\texttt{scatter\_plot}, \texttt{heatmap}, \texttt{hierarchy}, \texttt{timeline});
+$B: T\to\Sigma^*$ is a blueprint function mapping each type to a \LaTeX{}/TikZ
+structural template;
+$L$ is a \LaTeX{} compiler invoked as a first-class correctness oracle;
+$Q: \Sigma^*\times\Sigma^*\to\{\mathrm{accept},\mathrm{repair}(e)\}$
+is the quality judgment that maps (tikzCode, stderr) to either acceptance or a
+structured repair directive $e$.
+The \tvg{} cycle is: generate $\to$ compile via $L$ $\to$ $Q$ classifies
+$\to$ if repair, feed $e$ back to generation; repeat for at most $K=3$ attempts.
+\end{definition}
+
+The type set $T$ with $|T|=30$ is designed to cover all major figure categories
+that appear in academic publications across computer science, social science,
+biomedical informatics, and engineering.
+The 30 types include: 7 flow/process types (linear flow, forked flow, cyclic flow,
+swim-lane, pipeline, state machine, event sequence); 6 quantitative types
+(bar chart, line chart, scatter plot, histogram, heatmap, box plot);
+5 structural types (tree, hierarchy, mind map, matrix, table);
+4 architectural types (layer diagram, network graph, component diagram, deployment map);
+4 relational types (Venn diagram, lattice, Hasse diagram, bipartite graph);
+and 4 temporal types (timeline, Gantt chart, calendar, phase diagram).
+
+The blueprint function $B: T\to\Sigma^*$ is the intellectual-property core of the
+\tvg{} system.
+Each blueprint is a TikZ/pgfplots template with named placeholder variables
+(figure title, axis labels, data series, node labels) that the LLM fills in from
+the section context.
+The blueprint constrains the \emph{structure} of the generated code while leaving
+the \emph{content} to be determined by the LLM.
+This separation of structure and content is what makes the compile-repair cycle
+tractable: structural errors (missing \texttt{\textbackslash end\{tikzpicture\}},
+undefined TikZ styles) are rare because the blueprint enforces the overall structure,
+and the remaining errors are content errors (incorrect numeric values, invalid colour
+names) that the LLM can fix from the stderr message.
+
+The key design decision is the use of $L$ (the \LaTeX{} compiler) as an oracle
+rather than as a post-hoc validator.
+By invoking the compiler \emph{during} the generation loop, the system obtains two
+pieces of information with each compilation attempt: a binary correctness signal
+(exit code 0/non-zero) and a structured error signal (stderr) that is directly
+interpretable by the LLM in the next repair iteration.
+This is in contrast to approaches that validate figures only at document-assembly
+time (Stage~$F_4$), where a compilation error is unrecoverable because the assembler
+has already embedded the figure \texttt{\textbackslash input} directive in the body.
+The compile-validate-repair cycle is illustrated in Figure~\ref{fig:tikz_repair}.
+
+\input{figures/fig04_tikz_repair}
+
+\subsection{The Language Partition}
+
+\begin{definition}[Language Partition $\mathcal{L}_{25}$]
+\label{def:language}
+Define four mutually exclusive language classes:
+$L_{\mathrm{kk}}$ = Kazakh (Cyrillic script, ISO 639-1 \texttt{kk}, as used in
+Kazakh academic publishing prior to the Latin transition);
+$L_{\mathrm{cyr}}$ = generic Cyrillic academic languages (Russian, Belarusian, Uzbek,
+and other CIS languages using the Cyrillic alphabet);
+$L_{\mathrm{lat}}$ = Kazakh (Latin script, as standardised by the 2021 Kazakh Latin
+alphabet adopted by the Kazakhstani government);
+$L_{\mathrm{en}}$ = English and other Latin-script academic languages (German, French,
+Spanish) used in international venues.
+The partition is:
+\[
+  \mathcal{L}_{25} \;=\; L_{\mathrm{kk}} \sqcup L_{\mathrm{cyr}} \sqcup L_{\mathrm{lat}} \sqcup L_{\mathrm{en}}
+\]
+where $\sqcup$ denotes disjoint union.
+Every session $\sigma$ is assigned to exactly one class $\ell(\sigma)\in\mathcal{L}_{25}$
+by a deterministic language-detection step at the start of $F_1$.
+\end{definition}
+
+The partition is exhaustive: since $\mathcal{L}_{25}$ covers all scripts present
+in Kazakh academic publishing (the primary deployment context), no session can fail
+to be assigned a language class.
+Exhaustiveness is enforced structurally: the language-detection step returns a sum type
+with four variants corresponding to the four classes, and the subsequent prompting
+logic pattern-matches exhaustively on all four variants with no default or fallthrough case.
+
+The name $\mathcal{L}_{25}$ reflects the platform's original specification year
+(2025) and is not related to a cardinality of 25 languages.
+The subscript disambiguates this object from other uses of the letter $L$ in the
+formal model (lattice, LCS).
+
+An important design constraint of $\mathcal{L}_{25}$ is the strict separation of
+$L_{\mathrm{kk}}$ (Kazakh Cyrillic) from $L_{\mathrm{cyr}}$ (generic Cyrillic).
+In many multilingual NLP systems, Kazakh Cyrillic and Russian Cyrillic are conflated
+because they share the same Unicode code points.
+\sys{} separates them because the prompting conventions, citation styles (GOST vs.
+APA), and keyboard encoding rules differ between the two, and a system that treats
+them identically produces suboptimal output for Kazakh-language sessions.
+
+\subsection{The Unified System Model}
+
+\begin{definition}[Unified System Model $\mathcal{P}$]
+\label{def:unified}
+The \sys{} platform is the 8-tuple
+\[
+  \mathcal{P} \;=\; (G,\,\Gamma,\,\mathcal{B},\,M,\,\Phi_\theta,\,\mathcal{L}_Q,\,\mathcal{L}_{25},\,\Pi)
+\]
+where $G$ is the Typed Visual Grammar (Def.~\ref{def:tvg}),
+$\Gamma$ is the \cgrag{} gate (Def.~\ref{def:cgrag}),
+$\mathcal{B}$ is the Billing Operator (Def.~\ref{def:billing}),
+$M$ is the session metadata record containing (user ID, topic string, budget ceiling
+$\beta$, session timestamp $t_0$),
+$\Phi_\theta$ is the LCS Reconciliation Operator (Def.~\ref{def:lcs}),
+$\mathcal{L}_Q$ is the Reference Quality Poset (Def.~\ref{def:quality_poset}),
+$\mathcal{L}_{25}$ is the Language Partition (Def.~\ref{def:language}), and
+$\Pi$ is the Pipeline Algebra (Def.~\ref{def:pipeline}).
+\end{definition}
+
+The choice to bundle $M$ (session metadata) into $\mathcal{P}$ as an explicit component
+reflects the observation that session metadata is not merely administrative but participates
+in formal reasoning.
+The session timestamp $t_0$ is used in Invariant~I5 (Real-Data Guarantee) to determine
+which cached reference entries are stale.
+The budget ceiling $\beta$ is used in $\mathcal{B}$ for pre-session feasibility checks.
+By including $M$ in $\mathcal{P}$, we make these dependencies explicit and subject to
+formal reasoning.
+
+Figure~\ref{fig:unified} shows the structural decomposition of $\mathcal{P}$ with its
+eight components and their inter-component contracts.
+The figure highlights the central role of $\Pi$: all other components are either
+invoked by a specific stage of $\Pi$ or constrain the behaviour of those stages via
+the invariant envelope.
+
+\input{figures/fig11_unified}
+
+\subsection{Physical Architecture}
+
+The physical realisation of $\mathcal{P}$ follows a six-layer separation of concerns,
+illustrated in Figure~\ref{fig:architecture}.
+Each layer encapsulates a distinct concern and communicates with adjacent layers only
+through formally typed interfaces.
+The six layers, from lowest to highest, are:
+
+\paragraph{Data Layer.}
+PostgreSQL\,16 is the authoritative store for session records, billing events,
+reference quality scores ($\mathcal{L}_Q$ tier assignments), and compiled document artefacts.
+All writes to the billing table are append-only to preserve Invariant~I3 (Billing Monotonicity):
+once a billing event is recorded, it cannot be modified or deleted.
+MinIO provides S3-compatible object storage for compiled PDFs and intermediate
+\LaTeX{} source bundles, enabling persistent access to prior session outputs.
+
+\paragraph{Compute Layer.}
+A stateless Go-based \texttt{research-api} microservice implements all six pipeline
+stages ($F_1$--$F_5$, including $F_{2.5}$).
+The Go runtime's goroutine model is the physical substrate for the
+\texttt{concurrentMap} primitive proven in Theorem~\ref{thm:concurrent}.
+The \LaTeX{} compiler oracle (used by $F_5$ and the \tvg{} repair cycle) is invoked
+as a sandboxed subprocess with resource limits to prevent runaway compilation from
+blocking the pipeline.
+Python and R sub-processes are available for statistical computation (used by the
+quality metric $Q$) and are invoked via the same subprocess interface.
+
+\paragraph{Real-Time Layer.}
+Yjs CRDT over \texttt{y-websocket} provides conflict-free concurrent editing of
+document outlines during the $F_1$ planning stage, allowing multiple collaborators
+to work on the same outline without coordination overhead.
+A Telegram Bot integration delivers session completion and billing notifications,
+enabling asynchronous workflow (a user can submit a session and receive the compiled
+PDF URL without keeping a browser tab open).
+
+\paragraph{AI Layer.}
+All LLM calls are routed through a \texttt{chatCompletionLong} abstraction that
+transparently handles token-window chunking, retry on API rate limits, and billing
+accumulation.
+The abstraction exposes a single function signature regardless of whether the
+underlying call requires one API round-trip (short context) or multiple sequential
+round-trips with context carry-over (long context that exceeds the model's context
+window).
+This transparency is necessary for $\mathcal{B}$ to accumulate costs correctly:
+the billing accumulation logic is inside \texttt{chatCompletionLong} and therefore
+cannot be bypassed by code that calls the LLM API directly.
+
+\paragraph{API and Auth Layer.}
+Next.js\,16 App Router provides JWT-authenticated REST endpoints for session
+submission, status polling (\texttt{stage\_json} endpoint), and billing queries.
+Rate limiting at this layer prevents any single user from consuming more than their
+pre-approved budget share, independently of the per-session budget ceiling $\beta$
+stored in $M$.
+A real-time billing dashboard exposes $\mathcal{B}(T,n_{\mathrm{img}})$ values
+computed from the current session state, allowing users to monitor cost accumulation
+during long-running sessions.
+
+\paragraph{Presentation Layer.}
+A React\,19 single-page application provides three primary interfaces:
+the Space Editor (collaborative outline authoring, backed by the Yjs layer),
+the Analytics Dashboard (session cost visualisation, using the billing data from
+the Data layer), and the PDF Viewer (compiled document preview, backed by MinIO
+artefact retrieval).
+The Presentation Layer has no direct access to the Data or Compute layers;
+all communication is mediated by the API layer, ensuring that the six-layer
+downward-communication constraint is preserved.
+
+\input{figures/fig02_architecture}
+
+\subsection{System Invariants}
+
+The five system invariants (I1--I5) shown in Figure~\ref{fig:invariants} are properties
+that hold for every session $\sigma\in\mathcal{P}$ by construction.
+We state each invariant formally and then sketch the proof of its constructive validity.
+
+\input{figures/fig12_invariants}
+
+\begin{invariant}[Preamble Uniqueness]
+\label{inv:preamble}
+$\forall\,d\in\mathcal{D}: |\{\text{preamble blocks in }d\}|=1$.
+\end{invariant}
+
+\noindent\textit{Proof sketch.}
+Stage $F_4$ (Assembler) inserts exactly one preamble block — the one imported from
+the session preamble template — at the beginning of the assembled document $d_0$.
+No other stage inserts preamble material.
+Since stage execution is sequential and $F_4$ is the only stage that writes the
+document header, the invariant holds. \hfill$\square$
+
+\begin{invariant}[Citation Safety]
+\label{inv:citation}
+$\forall\,r\in\mathrm{refs}(d): \mathcal{Q}(r)\geq Q_1$.
+\end{invariant}
+
+\noindent\textit{Proof sketch.}
+Stage $F_2$ produces $\mathcal{R}^+$ by filtering all candidates through $\Gamma$.
+References with $\Gamma=\texttt{degraded}$ — which includes all $Q_0$ references — are
+excluded from $\mathcal{R}^+$.
+Stage $F_4$ assembles the bibliography from $\mathcal{R}^+$ exclusively.
+Therefore, no $Q_0$ reference can appear in $\mathrm{refs}(d)$. \hfill$\square$
+
+\begin{invariant}[Billing Monotonicity]
+\label{inv:billing}
+$T_1\leq T_2\wedge n_1\leq n_2\Rightarrow\mathcal{B}(T_1,n_1)\leq\mathcal{B}(T_2,n_2)$.
+\end{invariant}
+
+\noindent\textit{Proof sketch.}
+$\mathcal{B}(T,n)=3T+800n$ is linear with non-negative coefficients $3$ and $800$.
+Linear functions with non-negative coefficients are isotone (order-preserving) in
+each argument.
+Therefore, $T_1\leq T_2$ implies $3T_1\leq 3T_2$, and $n_1\leq n_2$ implies
+$800n_1\leq 800n_2$; summing gives the result. \hfill$\square$
+
+\begin{invariant}[Order Preservation]
+\label{inv:order}
+$\forall\,i<j: \mathrm{section}_i$ appears before $\mathrm{section}_j$ in the
+compiled document output of $F_5$.
+\end{invariant}
+
+\noindent\textit{Proof sketch.}
+Follows from Theorem~\ref{thm:concurrent}(a): the \texttt{concurrentMap} primitive
+preserves the index order of its output regardless of worker completion order.
+Stage $F_4$ (Assembler) reads the \texttt{concurrentMap} output in index order and
+concatenates the sections in that order. \hfill$\square$
+
+\begin{invariant}[Real-Data Guarantee]
+\label{inv:realdata}
+$\forall\,r\in\mathrm{refs}(d)$: $r$ was fetched from a live HTTP endpoint at
+generation time $t_0$ of session $\sigma$; no reference is retrieved from a
+stale cache older than $t_0$.
+\end{invariant}
+
+\noindent\textit{Proof sketch.}
+The \cgrag{} retrieval protocol issues an HTTP request with
+\texttt{If-Modified-Since:}~$t_0$ for every candidate reference.
+A cached response with \texttt{Last-Modified} earlier than $t_0$ is rejected and
+a fresh fetch is issued.
+Therefore, all admitted references have been live-verified at or after $t_0$.
+This proof is conditional on network liveness at $t_0$. \hfill$\square$

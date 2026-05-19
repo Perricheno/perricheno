@@ -1,0 +1,46 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  nd/.style={draw=#1, fill=#2, circle, minimum size=1.15cm,
+             align=center, font=\tiny\bfseries, line width=1.4pt},
+  ed/.style={draw=DG!50, line width=1.2pt},
+  lbl/.style={font=\tiny, text=MG, align=center, text width=2.0cm}
+]
+% Boolean lattice 2^3 for criteria (c>=τ_c, s>=τ_s, k>=τ_k)
+% Vertices: 000, 001, 010, 100, 011, 101, 110, 111
+\node[nd={MG}{LGr}]  (v000) at (0,0)   {$\varnothing$};
+\node[nd={C4}{L4}]   (v001) at (-3,1.8){$k$};
+\node[nd={C4}{L4}]   (v010) at (0,1.8) {$s$};
+\node[nd={C4}{L4}]   (v100) at (3,1.8) {$c$};
+\node[nd={C2}{L2}]   (v011) at (-2,3.6){$k\wedge s$};
+\node[nd={C2}{L2}]   (v101) at (0,3.6) {$k\wedge c$};
+\node[nd={C2}{L2}]   (v110) at (2,3.6) {$s\wedge c$};
+\node[nd={C1}{L1}]   (v111) at (0,5.4) {$k\wedge s\wedge c$};
+
+\draw[ed] (v000)--(v001); \draw[ed] (v000)--(v010); \draw[ed] (v000)--(v100);
+\draw[ed] (v001)--(v011); \draw[ed] (v001)--(v101);
+\draw[ed] (v010)--(v011); \draw[ed] (v010)--(v110);
+\draw[ed] (v100)--(v101); \draw[ed] (v100)--(v110);
+\draw[ed] (v011)--(v111); \draw[ed] (v101)--(v111); \draw[ed] (v110)--(v111);
+
+% Annotation: top = enhanced, bottom = degraded
+\node[font=\small\bfseries, text=C1] at (3.4, 5.4){\texttt{enhanced}};
+\node[font=\small\bfseries, text=MG] at (3.4, 0.0){\texttt{degraded}};
+\draw[C1, dashed, line width=1.0pt] (-3.8,4.6)--(3.8,4.6);
+
+% Criterion labels
+\node[lbl] at (-4.6,1.8){$k\!\geq\!\tau_k\!=\!3$\\keyword hits};
+\node[lbl] at ( 0.0,1.2){$s\!\geq\!\tau_s\!=\!100$\\citations};
+\node[lbl] at ( 4.6,1.8){$c\!\geq\!\tau_c\!=\!7.0$\\confidence};
+\end{tikzpicture}
+\caption{Boolean lattice $2^{\{c,s,k\}}$ underlying the \cgrag{} gate
+         $\Gamma$ (Definition~\ref{def:cgrag}).
+         Each vertex represents a subset of satisfied admission
+         criteria: confidence score $c\!\geq\!\tau_c$,
+         citation count $s\!\geq\!\tau_s$, and keyword matches
+         $k\!\geq\!\tau_k$. The gate returns \texttt{enhanced}
+         only at the top element $\{c,s,k\}$; all other vertices
+         produce \texttt{degraded}, establishing $\Gamma$ as a
+         meet-semilattice homomorphism.}
+\label{fig:lattice}
+\end{figure}

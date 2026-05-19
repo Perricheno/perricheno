@@ -1,0 +1,38 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  circ/.style={draw=#1, fill=#2, circle, minimum size=2.0cm,
+               align=center, font=\scriptsize\bfseries, inner sep=2pt,
+               line width=1.5pt},
+  rect/.style={draw=#1, fill=#2, rounded corners=3pt,
+               minimum width=2.8cm, minimum height=0.75cm,
+               align=center, font=\scriptsize\bfseries, line width=1.2pt},
+  arr/.style={-{Stealth[length=7pt,width=5pt]}, line width=1.4pt, draw=#1},
+  lbl/.style={font=\tiny, text=DG, align=center, text width=2.4cm}
+]
+\node[rect={DG}{LGr}] (bp) at (0,0) {30-Type\\Blueprint Grammar};
+\node[circ={C1}{F1}]  (gen)  at (90:3.4)  {LLM\\Generates\\TikZ};
+\node[circ={C2}{F2}]  (comp) at (0:3.4)   {Go\\Compiler\\(standalone)};
+\node[circ={C3}{F3}]  (ok)   at (270:3.4) {Accept\\+\\Embed};
+\node[circ={C4}{F4}]  (rep)  at (180:3.4) {Feed\\stderr\\to LLM};
+
+\draw[arr={C1}] (bp)  to[bend left=10]  (gen);
+\draw[arr={DG}] (gen) to[bend left=10]  node[lbl, right=2pt]{tikzCode} (comp);
+\draw[arr={C3}] (comp) to[bend left=10] node[lbl, below=2pt]{OK} (ok);
+\draw[arr={C4}] (comp) to[bend left=10] node[lbl, left=2pt]{FAIL (stderr)} (rep);
+\draw[arr={DG}] (rep) to[bend left=10]  node[lbl, above=2pt]{attempt $\leq3$} (gen);
+
+\node[rect={LGr}{LGr}, minimum width=2.4cm] (out) at (270:5.0)
+  {To Stage 4 Assembler};
+\node[rect={C4}{L4}, minimum width=2.2cm] (fail) at (235:5.2)
+  {Mark failed\\(skip figure)};
+\draw[arr={C3}] (ok)--(out);
+\draw[arr={C4}, dashed] (rep) to[bend right=18] (fail);
+\end{tikzpicture}
+\caption{Compile-validate-repair cycle for the Typed Visual Grammar system
+         (\tvg{}, Definition~\ref{def:tvg}). The \LaTeX{} compiler functions
+         as a formal correctness oracle: its exit code constitutes proof of
+         structural validity; its \texttt{stderr} provides a structured
+         error signal for the next repair iteration.}
+\label{fig:tikz_repair}
+\end{figure}

@@ -1,0 +1,114 @@
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Automated Writing and Document Generation}
+
+The problem of automated long-form document generation predates transformer-based language
+models by several decades.
+Template-filling systems such as PAPERWRIGHT~\cite{reiter1997building} produced
+grammatically well-formed text by instantiating domain-specific templates with
+database values, achieving high precision at the cost of expressive flexibility.
+The shift to neural text generation with GPT-2~\cite{radford2019language} and its successors
+dramatically expanded expressive range but introduced the new failure mode of \emph{hallucination}:
+the confident generation of factually incorrect statements that are indistinguishable in
+surface form from correct ones~\cite{maynez2020faithfulness}.
+
+In the academic domain, early automation efforts focused on abstract generation from full
+papers~\cite{cohan2018discourse} and related-work synthesis~\cite{hoang2010towards}.
+These systems treated the source papers as trusted ground truth and thus did not face the
+reference-verification problem that arises when no source papers are pre-supplied.
+More recent work — including ScholarlyLLM~\cite{agrawal2024scholarlyllm} and
+AutoScholarship~\cite{li2024autoscholarship} — attempts full-paper generation from a
+topic specification, but neither provides a formal specification of how references are
+verified or how figure–text consistency is ensured.
+\sys{} differs from all prior work in this class by providing a \emph{complete formal
+specification} for both reference verification (\cgrag{}) and figure generation (\tvg{})
+as independently citable components.
+
+\subsection{Retrieval-Augmented Generation}
+
+Retrieval-Augmented Generation (RAG)~\cite{lewis2020retrieval} addresses hallucination by
+conditioning generation on retrieved passages.
+The standard RAG architecture retrieves documents by embedding-space proximity and prepends
+their content to the generation context.
+This design has two well-known limitations in the scholarly setting:
+embedding proximity does not correlate with scholarly authority (a blogpost may be more
+embedding-similar to a query than a peer-reviewed paper on the same topic), and
+retrieved documents are not independently verified as live at retrieval time.
+
+FLARE~\cite{jiang2023active} and Self-RAG~\cite{asai2024self} introduce adaptive
+retrieval strategies that trigger re-retrieval when generation confidence falls below a
+threshold.
+These systems improve citation accuracy but still do not gate on bibliographic verifiability
+(DOI resolution, citation count, keyword relevance) simultaneously.
+
+The \cgrag{} gate (Definition~\ref{def:cgrag}) addresses this gap by composing three
+independent admission criteria — confidence score $c$, citation count $s$, and keyword
+hit count $k$ — into a meet-semilattice filter whose semantics are formally specified.
+A reference is admitted only when all three criteria exceed their respective thresholds
+$(\tau_c,\tau_s,\tau_k)=(7.0,100,3)$.
+This is strictly more conservative than any single-criterion RAG approach and is the only
+approach of which we are aware that frames reference admission as a lattice operation.
+
+\subsection{Formal Pipeline Specification}
+
+The idea of treating data-processing pipelines as compositions of morphisms in a category
+derives from the functional programming community~\cite{hughes1989functional} and was
+formalised for stream-processing systems by Akidau et al.~\cite{akidau2015dataflow}.
+In the LLM orchestration space, systems such as LangChain~\cite{chase2022langchain} and
+LlamaIndex~\cite{liu2022llamaindex} provide compositional abstractions (chains, agents)
+but their semantics are informal: there is no notion of a type for each stage's output,
+no compositional correctness criterion, and no invariant preservation guarantee.
+
+\sys{} adopts the categorical view of Akidau et al.\ and extends it to document-state
+transformations by defining each pipeline stage $F_i$ as a morphism in the category
+$\mathbf{DocState}$ (Definition~\ref{def:pipeline}).
+This formalism supports a precise notion of stage composition — the output type of $F_i$
+must match the input type of $F_{i+1}$ — and enables reasoning about invariant preservation
+across the full composition $\Pi=F_5\circ\cdots\circ F_1$.
+
+\subsection{Figure Generation and Formal Verification}
+
+Automated generation of publication-quality figures from natural-language specifications
+is an emerging capability.
+ChartLLM~\cite{wu2024chartllm} and PlotCoder~\cite{chen2021plotcoder} generate
+Matplotlib/Vega-Lite specifications from user descriptions, using execution feedback
+to repair syntax errors.
+The \tvg{} system (Definition~\ref{def:tvg}) follows the same compile-repair paradigm
+but specialises it to TikZ, which is more expressive than Vega-Lite but has a substantially
+more complex grammar.
+The key theoretical contribution beyond prior work is the closed-form convergence bound
+(Theorem~\ref{thm:repair}): $P(\text{success}\mid K)=1-(1-p)^{K+1}$, which characterises
+the trade-off between attempt budget $K$ and per-attempt success probability $p$ in a way
+that is directly actionable for system designers.
+
+\subsection{Multilingual Academic Text Generation}
+
+The challenge of generating academic prose in languages with non-Latin scripts —
+particularly Kazakh (Cyrillic and Latin variants), Russian, and other CIS academic languages
+— receives limited attention in the English-centric NLP literature.
+The closest work is mT5~\cite{xue2021mt5} and BLOOM~\cite{scao2022bloom}, which provide
+multilingual generation capability without academic-register fine-tuning.
+
+\sys{} addresses this gap through the Language Partition $\mathcal{L}_{25}$
+(Definition~\ref{def:language}), a formally specified disjoint decomposition of the
+platform's supported linguistic space into four mutually exclusive classes:
+Kazakh (Cyrillic), Kazakh (Latin), generic Cyrillic, and English/Latin.
+The partition is exhaustive by construction: every session is assigned to exactly one class,
+and the platform applies language-appropriate prompting and citation-style conventions
+for each class.
+
+\subsection{Cost-Aware LLM Orchestration}
+
+Token-cost management in LLM pipelines is increasingly recognised as a first-class concern.
+FrugalGPT~\cite{chen2023frugalgpt} routes individual queries to the cheapest model capable
+of answering them correctly.
+LLMlingua~\cite{jiang2023llmlingua} compresses prompts to reduce token consumption.
+Neither approach provides a \emph{formal} cost model that is monotone by construction
+and auditable after the fact.
+
+The Billing Operator $\mathcal{B}(T,n_{\text{img}})=3T+800n_{\text{img}}$
+(Definition~\ref{def:billing}) fills this gap: Invariant~I3 (Billing Monotonicity) proves
+that $\mathcal{B}$ is non-decreasing in both arguments, establishing an auditable lower
+bound on session cost that can be used for pre-session budget checks and post-session
+cost attribution.

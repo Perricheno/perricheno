@@ -1,0 +1,49 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  PL,
+  xbar, bar width=14pt,
+  xlabel={Hours spent per 20-page document},
+  title={Time Cost: Manual Workflow vs.\ \sys{}},
+  symbolic y coords={
+    {\LaTeX{} errors},
+    {Bibliography},
+    {Figures},
+    {First draft},
+    {Outline},
+    {References}
+  },
+  ytick=data,
+  yticklabel style={font=\small, align=right, text width=2.5cm},
+  xmin=0, xmax=14,
+  width=13cm, height=7cm,
+  legend style={at={(0.98,0.05)}, anchor=south east},
+]
+\addplot[C4, fill=F4, fill opacity=0.85] coordinates {
+  (3,{\LaTeX{} errors})
+  (2,{Bibliography})
+  (6,{Figures})
+  (9,{First draft})
+  (1.5,{Outline})
+  (6,{References})
+};
+\addlegendentry{Manual workflow}
+
+\addplot[C3, fill=F3, fill opacity=0.85] coordinates {
+  (0.1,{\LaTeX{} errors})
+  (0.05,{Bibliography})
+  (0.2,{Figures})
+  (0.5,{First draft})
+  (0.05,{Outline})
+  (0.2,{References})
+};
+\addlegendentry{\sys{} (automated)}
+\end{axis}
+\end{tikzpicture}
+\caption{Time spent on each task in a typical 20-page academic document.
+         Manual workflow (orange) vs.\ \sys{} automated pipeline (green).
+         The platform reduces every task to near-zero manual effort,
+         freeing researchers to focus on content rather than production.}
+\label{fig:problem_comparison}
+\end{figure}

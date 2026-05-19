@@ -1,0 +1,109 @@
+\section{How It Works: The Five-Stage Pipeline}
+\label{sec:how_it_works}
+
+\sys{} processes every document request through five stages, each with a specific job.
+Understanding the stages is not required to use the platform, but it is helpful
+for understanding why \sys{} produces better results than a single prompt to a
+general AI assistant.
+
+\input{figures/fig_pipeline_simple}
+
+\subsection{Stage 1 — Plan (under 2 minutes)}
+
+When you submit a topic, \sys{} first builds a structured plan for the document.
+This includes:
+
+\begin{itemize}
+  \item A section-by-section outline with target word counts.
+  \item A list of the key concepts and terms that should appear in the document.
+  \item A figure quota — how many figures the document should contain and what type
+        each should be (chart, diagram, table, etc.).
+  \item The language mode for the session.
+\end{itemize}
+
+The plan is visible to you on the platform before the next stage begins.
+You can edit it — add sections, change word counts, specify particular topics to cover.
+The platform does not proceed to Stage 2 until the plan is confirmed.
+
+\subsection{Stage 2 — Find and Verify Sources (5–15 minutes)}
+
+This is the stage that separates \sys{} from every general AI writing assistant.
+
+Instead of generating references from memory (which is how hallucination happens),
+\sys{} sends queries to live academic databases — Semantic Scholar, CrossRef,
+and institutional repositories — and retrieves \emph{real} papers, books, and
+proceedings that match your topic.
+
+For every candidate source, it applies a three-part verification check:
+
+\begin{enumerate}
+  \item \textbf{Confidence check.} How confident is the system that this source
+        is relevant to your specific topic? (Scored 0–10; threshold: 7.0)
+  \item \textbf{Authority check.} Has this source been cited by other academics?
+        (Threshold: at least 100 citations for peer-reviewed sources)
+  \item \textbf{Relevance check.} Does this source actually contain the key terms
+        from your topic? (Threshold: at least 3 keyword matches)
+\end{enumerate}
+
+A source must pass \emph{all three} checks to be used in your document.
+A source that passes two but fails one is discarded.
+This is a strict filter — and it is intentional.
+The goal is not to find as many references as possible; it is to find references
+that are genuinely relevant, genuinely authoritative, and genuinely real.
+
+\begin{keybox}[title=Why Three Checks Instead of One?]
+Any single check on its own has gaps. A source could be highly cited but
+off-topic. It could be very relevant to your keywords but written by an unknown
+author with zero citations. It could score high on the AI's internal confidence
+rating but turn out to be a retracted paper. The triple check closes all three gaps.
+\end{keybox}
+
+\sys{} runs these checks for multiple candidate sources at the same time
+(up to 4 in parallel), which is why Stage 2 takes minutes rather than hours.
+
+\subsection{Stage 2.5 — Align Sources with Outline}
+
+Once the verified sources are collected, the platform aligns them with the document outline.
+Each section of the outline is matched to the sources most relevant to it.
+A section about methodology gets matched to methodology-focused papers;
+a section about results gets matched to results-oriented sources.
+
+This alignment is what ensures that when the system writes Section 4, it is using
+the sources for Section 4 — not mixing up sources from Section 2.
+
+\subsection{Stage 3 — Write the Draft (15–40 minutes)}
+
+With a verified, section-specific source set in hand, \sys{} generates the prose.
+The system writes each section grounded in the sources assigned to it.
+When it makes a claim, it cites one of the verified sources.
+It cannot cite a source that wasn't verified in Stage 2 — the architecture makes
+that impossible.
+
+Multiple sections can be written at the same time to reduce total session time,
+but the final document always presents them in the correct order.
+
+At the same time, the platform generates the figures specified in the plan.
+Each figure is produced as a programmatic drawing (using the TikZ system, the
+standard for academic \LaTeX{} publishing), compiled immediately to check that
+it produces a valid image, and automatically repaired if it doesn't.
+This compile-and-repair loop runs up to 4 times per figure.
+In our testing, this achieves a 99\%+ success rate — meaning fewer than 1 in 100
+figures fails to compile even after repair attempts.
+
+\subsection{Stage 4 — Assemble}
+
+The system combines the prose sections, the verified bibliography, and the
+compiled figures into a single \LaTeX{} document.
+It inserts the correct figure references, formats the bibliography in your chosen
+citation style, and adds the document header, table of contents, and any
+front matter you specified.
+
+\subsection{Stage 5 — Validate}
+
+The fully assembled document is compiled end-to-end.
+If any errors remain (a figure that the compiler rejected, a cross-reference that
+didn't resolve), the system fixes them automatically.
+The result is a document that compiles cleanly on the first try when you
+download the source bundle.
+
+\input{figures/fig_quality_gain}

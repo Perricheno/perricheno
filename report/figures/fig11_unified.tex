@@ -1,0 +1,52 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  comp/.style={draw=#1, fill=#2, rounded corners=4pt,
+               minimum width=3.2cm, minimum height=0.85cm,
+               align=center, font=\scriptsize\bfseries, line width=1.4pt},
+  hub/.style={draw=C1, fill=L1, rounded corners=6pt,
+              minimum width=3.8cm, minimum height=1.1cm,
+              align=center, font=\small\bfseries, line width=2pt},
+  arr/.style={-{Stealth[length=6pt,width=4pt]}, line width=1.2pt, draw=#1},
+]
+% Central hub — Unified System Model P
+\node[hub] (P) at (0,0) {$\mathcal{P}$\\Unified Model};
+
+% Eight components arranged around hub
+\node[comp={C2}{L2}] (G)   at (0,    2.6) {$G$: Typed Visual\\Grammar (\tvg{})};
+\node[comp={C3}{L3}] (gam) at (3.0,  1.6) {$\Gamma$: \cgrag{}\\Gate};
+\node[comp={C4}{L4}] (B)   at (3.8,  0.0) {$\mathcal{B}$: Billing\\Operator};
+\node[comp={C5}{L5}] (M)   at (3.0, -1.6) {$M$: Language\\Partition $\mathcal{L}_{25}$};
+\node[comp={C6}{L6}] (phi) at (0,   -2.6) {$\Phi_\theta$: LCS\\Reconciliation};
+\node[comp={C7}{L7}] (LQ)  at (-3.0,-1.6) {$\mathcal{L}_Q$: Quality\\Poset};
+\node[comp={C8}{L4}] (L25) at (-3.8, 0.0) {$\mathcal{L}_{25}$: Kazakh\\+ Cyrillic + Lat};
+\node[comp={C1}{L1}] (Pi)  at (-3.0, 1.6) {$\Pi$: Pipeline\\Algebra};
+
+% Arrows from hub outward (bidirectional for most)
+\draw[arr={C2}] (P)--(G);
+\draw[arr={C3}] (P)--(gam);
+\draw[arr={C4}] (P)--(B);
+\draw[arr={C5}] (P)--(M);
+\draw[arr={C6}] (P)--(phi);
+\draw[arr={C7}] (P)--(LQ);
+\draw[arr={C8}] (P)--(L25);
+\draw[arr={C1}] (P)--(Pi);
+
+% Invariants label
+\node[font=\tiny\itshape, text=MG, text width=3cm, align=center]
+  at (0,-3.8){Governed by Invariants I1--I5};
+\draw[DG!40, dashed, rounded corners=8pt, line width=1pt]
+  (-5.2,-3.2) rectangle (5.2,3.5);
+\node[font=\tiny\bfseries, text=MG] at (4.5,3.2){$\mathcal{P}$};
+\end{tikzpicture}
+\caption{Structural decomposition of the Unified System Model
+         $\mathcal{P}=(G,\Gamma,\mathcal{B},M,\Phi_\theta,\mathcal{L}_Q,\mathcal{L}_{25},\Pi)$
+         (Definition~\ref{def:unified}).
+         The eight formal components are joined at the central
+         coordination point $\mathcal{P}$; each edge represents
+         a formal dependency or data-flow contract.
+         The outer boundary denotes the invariant envelope
+         (Invariants~I1--I5) that constrains all inter-component
+         interactions at runtime.}
+\label{fig:unified}
+\end{figure}

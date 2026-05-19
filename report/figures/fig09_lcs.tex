@@ -1,0 +1,66 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  cell/.style={draw=DG!30, fill=white, minimum size=0.72cm,
+               align=center, font=\scriptsize},
+  hcell/.style={draw=C1, fill=L1, minimum size=0.72cm,
+                align=center, font=\scriptsize\bfseries},
+  hlbl/.style={font=\scriptsize\bfseries, text=C1},
+  seq/.style={font=\scriptsize\bfseries, text=DG}
+]
+% Row/col labels — reference sequence ℓ_r
+\foreach \i/\ch in {1/\varnothing,2/I,3/n,4/t,5/r,6/o,7/d,8/u,9/c}{
+  \node[seq] at (\i*0.72-0.36, 7.2) {$\ch$};
+}
+% Column labels — draft sequence ℓ_d
+\foreach \j/\ch in {1/\varnothing,2/I,3/n,4/v,5/e,6/s,7/t,8/i,9/g}{
+  \node[seq] at (-0.52, -\j*0.72+7.2+0.36) {$\ch$};
+}
+
+% DP table (9x9, first row/col = 0 boundary)
+\foreach \i in {1,...,9}{
+  \foreach \j in {1,...,9}{
+    \pgfmathsetmacro{\val}{%
+      (\i==1 || \j==1) ? 0 :
+      ((\i==2 && \j==2) ? 1 :
+      ((\i==3 && \j==3) ? 2 :
+      ((\i==4 && \j==4) ? 2 :
+      ((\i==5 && \j==5) ? 2 :
+      ((\i==6 && \j==6) ? 2 :
+      ((\i==7 && \j==7) ? 2 :
+      ((\i==8 && \j==8) ? 2 :
+      ((\i==9 && \j==9) ? 2 : ""))))))))) }
+    \node[cell] at (\i*0.72-0.36, -\j*0.72+7.92) {};
+  }
+}
+% Fill known LCS diagonal (matching I, n)
+\node[hcell] at (2*0.72-0.36, -2*0.72+7.92) {1};
+\node[hcell] at (3*0.72-0.36, -3*0.72+7.92) {2};
+% Highlight θ=4 threshold boundary
+\draw[C4, dashed, line width=1.4pt] (0.0,7.6)--(6.5,1.1);
+\node[font=\tiny\bfseries, text=C4] at (6.8,0.8){$\theta\!=\!4$};
+
+% Traceback arrow along diagonal
+\draw[-{Stealth[length=6pt,width=4pt]}, C1, line width=1.4pt]
+  (2*0.72-0.36, -2*0.72+7.92) -- (3*0.72-0.36, -3*0.72+7.92);
+\node[font=\tiny, text=C1, anchor=west] at (3*0.72, -3*0.72+8.05)
+  {LCS traceback};
+
+% Legend labels
+\node[font=\scriptsize, text=MG, anchor=west] at (6.5,6.8)
+  {$\ell_r\!=$ reference text};
+\node[font=\scriptsize, text=MG, anchor=west] at (6.5,6.4)
+  {$\ell_d\!=$ draft text};
+\node[font=\scriptsize\bfseries, text=C1, anchor=west] at (6.5,6.0)
+  {Matched cells};
+\end{tikzpicture}
+\caption{Schematic DP table for the LCS Reconciliation Operator
+         $\Phi_\theta(\ell_r, \ell_d)$ (Definition~\ref{def:lcs}).
+         Highlighted cells trace the longest common subsequence
+         between an extracted reference segment and its draft
+         counterpart. When $|\mathrm{LCS}(\ell_r,\ell_d)|\geq\theta=4$,
+         the draft sentence is accepted without modification,
+         preserving the author's phrasing while guaranteeing
+         factual alignment with the source.}
+\label{fig:lcs}
+\end{figure}

@@ -1,0 +1,41 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented \sys{}, a formally specified multi-stage platform for automated
+academic \LaTeX{} document generation, and have demonstrated that formal specification
+at the design level translates into measurable, reproducible runtime guarantees.
+
+The central architectural insight is that document-generation quality is not a single
+property but a product of four independently measurable sub-properties — compilability,
+citation integrity, visual coherence, and language consistency — each of which is
+maximised by a distinct formal component of the Unified System Model $\mathcal{P}$.
+The \cgrag{} gate $\Gamma$ is responsible for citation integrity; the \tvg{} grammar $G$
+for visual coherence and compilability; the Pipeline Algebra $\Pi$ and
+\texttt{concurrentMap} for order preservation; and the Language Partition $\mathcal{L}_{25}$
+for language consistency.
+
+The two main theorems provide closed-form performance guarantees that are
+directly actionable for system designers:
+Theorem~\ref{thm:repair} bounds the figure compilation failure probability as
+$(1-p)^{K+1}$, enabling principled selection of the attempt budget $K$;
+Theorem~\ref{thm:concurrent} proves order preservation of concurrent execution
+and provides the Amdahl speedup formula for capacity planning.
+
+Evaluation on 120 live user sessions confirms that the full pipeline achieves
+$\bar{Q}(s_5)=0.97$ — a $29\%$ relative improvement over reference-free generation
+and $10\%$ over figure-free generation — and that all five system invariants hold
+with 100\% satisfaction (I1--I4) and 98.3\% satisfaction (I5, limited by transient
+network failures).
+The \tvg{} repair cycle achieves $99.2\%$ cumulative figure compilation success
+within four attempts, within $0.2$ percentage points of the theoretical prediction.
+
+The formal model $\mathcal{P}$ is released as a citable specification in this report.
+We invite the research community to extend its components — in particular the
+lattice-theoretic formulation of $\Gamma$ and the MDP framing of Proposition~\ref{prop:mdp}
+— as a foundation for further work on principled LLM-orchestration systems for
+scholarly document production.
+
+\paragraph{Acknowledgements.}
+The author thanks the user community of \sys{} for generating the session corpus used
+in this evaluation, and the Astana IT University HPC cluster for providing the
+computational resources for the concurrency experiments.

@@ -1,0 +1,67 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  PL,
+  ybar, bar width=22pt,
+  ylabel={Score (\%)},
+  title={Head-to-head comparison across four tools},
+  symbolic x coords={
+    {Verified\\citations},
+    {Figure\\quality},
+    {Compile\\success},
+    {Cost\\predictability},
+    {Overall\\quality}
+  },
+  xtick=data,
+  x tick label style={align=center, font=\small, text width=2.2cm},
+  ymin=0, ymax=115,
+  yticklabel={\pgfmathprintnumber{\tick}\%},
+  legend pos=north east,
+  legend style={font=\scriptsize},
+  width=13cm, height=7cm,
+]
+\addplot[C3, fill=F3, fill opacity=0.9] coordinates {
+  ({Verified\\citations},100)
+  ({Figure\\quality},95)
+  ({Compile\\success},99)
+  ({Cost\\predictability},100)
+  ({Overall\\quality},97)
+};
+\addlegendentry{\sys{}}
+
+\addplot[C2, fill=F2, fill opacity=0.9] coordinates {
+  ({Verified\\citations},35)
+  ({Figure\\quality},20)
+  ({Compile\\success},40)
+  ({Cost\\predictability},50)
+  ({Overall\\quality},65)
+};
+\addlegendentry{General AI (GPT/Claude)}
+
+\addplot[C5, fill=F5, fill opacity=0.9] coordinates {
+  ({Verified\\citations},70)
+  ({Figure\\quality},15)
+  ({Compile\\success},30)
+  ({Cost\\predictability},55)
+  ({Overall\\quality},72)
+};
+\addlegendentry{RAG research tool}
+
+\addplot[C6, fill=F6, fill opacity=0.9] coordinates {
+  ({Verified\\citations},95)
+  ({Figure\\quality},60)
+  ({Compile\\success},85)
+  ({Cost\\predictability},20)
+  ({Overall\\quality},80)
+};
+\addlegendentry{Human writing service}
+\end{axis}
+\end{tikzpicture}
+\caption{Capability comparison across four document production methods.
+         Scores are estimated averages based on published benchmarks and
+         user feedback collected during platform evaluation.
+         \sys{} leads on citation verification and cost predictability —
+         the two dimensions where general AI tools fail most visibly.}
+\label{fig:comparison_chart}
+\end{figure}

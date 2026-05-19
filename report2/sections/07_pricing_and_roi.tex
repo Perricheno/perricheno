@@ -1,0 +1,118 @@
+\section{Pricing and Return on Investment}
+\label{sec:pricing}
+
+\subsection{How Pricing Works}
+
+\sys{} uses a transparent usage-based pricing model.
+Every session costs exactly what the resources consumed cost — no subscriptions
+with unused capacity, no surprise overruns.
+
+The cost of a session is determined by two factors:
+
+\begin{enumerate}
+  \item \textbf{Text generated.} Longer documents with more sections cost more
+        than shorter ones.
+        The cost per thousand words of generated text is approximately \$0.30--0.50
+        at current API rates.
+  \item \textbf{Figures generated.} Each figure requires compilation and potentially
+        multiple repair attempts.
+        The cost per figure is approximately \$0.08--0.12.
+\end{enumerate}
+
+A typical 20-page academic document with 30 references and 4 figures costs
+between \$2.50 and \$6.00 in total session cost.
+
+\begin{table}[h!]
+\centering
+\caption{Typical session costs by document type.}
+\label{tab:pricing}
+\begin{tabular}{lrrr}
+\toprule
+Document type & Length & Figures & Estimated cost \\
+\midrule
+Short report / abstract     & 3--5 pages  & 0--1 & \$0.50--1.50 \\
+Conference paper draft       & 8--12 pages & 2--4 & \$1.50--4.00 \\
+Journal article draft        & 15--25 pages & 4--8 & \$3.00--8.00 \\
+Literature review chapter    & 10--20 pages & 2--5 & \$2.00--6.00 \\
+Full thesis chapter          & 20--40 pages & 5--12 & \$5.00--15.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Institutional Pricing}
+
+For universities and organisations purchasing access for multiple users,
+\sys{} offers pre-loaded credit packages with volume discounts.
+An organisation that pre-loads \$500 in credits receives access for the equivalent
+of 80--200 full document sessions, depending on document length and figure count.
+
+Institutional accounts additionally receive:
+\begin{itemize}
+  \item A shared billing dashboard visible to department administrators.
+  \item Per-user budget caps (so individual researchers cannot accidentally
+        exceed their allocated quota).
+  \item Session history and audit logs for compliance purposes.
+  \item Priority processing (sessions run on dedicated capacity, not shared queues).
+\end{itemize}
+
+\subsection{Return on Investment}
+
+The ROI calculation for \sys{} is straightforward.
+The cost of a human researcher's time doing equivalent work is the baseline.
+
+\begin{table}[h!]
+\centering
+\caption{ROI calculation: \sys{} vs.\ researcher time for a 20-page document.}
+\label{tab:roi}
+\begin{tabular}{lrr}
+\toprule
+Cost component & Manual workflow & \sys{} \\
+\midrule
+Researcher time (hours)              & 20--40 hrs & 1--2 hrs (revision) \\
+Researcher time cost (\$50/hr avg.)  & \$1,000--2,000 & \$50--100 \\
+Platform session cost                & \$0 & \$3--6 \\
+External writing service (if used)   & \$200--800 & \$0 \\
+\midrule
+\textbf{Total cost per document}     & \textbf{\$1,000--2,800} & \textbf{\$53--106} \\
+\midrule
+\textbf{Cost reduction}              & — & \textbf{90--96\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The table above values researcher time at \$50/hr — a conservative figure for a
+postdoctoral researcher or junior R\&D employee in the CIS region.
+For senior researchers or those in Western institutions, the figure is 2--5$\times$ higher,
+making the ROI proportionally larger.
+
+\begin{statbox}[title=Break-Even Analysis for a University Department]
+Assumptions: 20 active researchers, each producing 4 documents per year,
+saving 15 hours per document at \$50/hr researcher cost.\\[0.4em]
+\textbf{Annual time saved:} 20 × 4 × 15 = 1,200 researcher-hours\\
+\textbf{Annual cost saved:} 1,200 × \$50 = \$60,000\\
+\textbf{Annual platform cost:} 80 sessions × \$5 avg = \$400\\[0.4em]
+\textbf{Return on platform investment: 150$\times$}
+\end{statbox}
+
+\subsection{What \sys{} Does Not Replace}
+
+It is important to be specific about what \sys{} does and does not do, so that
+purchasing expectations are calibrated correctly.
+
+\sys{} \textbf{does} produce:
+a verified-reference first draft, compilable figures, correctly formatted bibliography,
+and a clean PDF.
+
+\sys{} \textbf{does not} replace:
+the researcher's own experimental results and analysis,
+the researcher's interpretation and scientific judgment,
+the peer review process,
+or the final revision and submission workflow.
+
+The appropriate framing is: \sys{} handles the parts of academic writing that are
+formulaic, time-consuming, and error-prone.
+The researcher handles the parts that require expertise, originality, and judgment.
+Together, they produce a document that is both faster to create and more reliable
+than either could produce alone.
+
+\input{figures/fig_roi}

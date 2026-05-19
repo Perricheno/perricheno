@@ -1,0 +1,57 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  inv/.style={draw=#1, fill=#2, rounded corners=5pt,
+              minimum width=13.5cm, minimum height=0.95cm,
+              align=left, font=\scriptsize, line width=1.5pt,
+              text width=13.0cm, inner sep=6pt},
+  idlbl/.style={font=\scriptsize\bfseries, text=#1}
+]
+\node[inv={C1}{L1}] (I1) at (0, 4.8)
+  {\textbf{I1 — Preamble Uniqueness.}
+   $\forall d\in\mathcal{D}:\,|\{\text{preamble blocks in }d\}|=1$.
+   Every generated document contains exactly one \LaTeX{} preamble;
+   duplicate package declarations are structurally impossible.};
+
+\node[inv={C2}{L2}] (I2) at (0, 3.3)
+  {\textbf{I2 — Citation Safety.}
+   $\forall r\in\text{refs}(d):\,\mathcal{Q}(r)\geq Q_1$.
+   No reference with $Q_0$ (unresolvable) status survives into the
+   assembled document; the \cgrag{} gate removes all sub-threshold entries.};
+
+\node[inv={C3}{L3}] (I3) at (0, 1.8)
+  {\textbf{I3 — Billing Monotonicity.}
+   $\mathcal{B}(T_1,n_1)\leq\mathcal{B}(T_2,n_2)$ whenever $T_1\!\leq\!T_2$
+   and $n_1\!\leq\!n_2$.
+   Cost is strictly non-decreasing in both token usage and image count;
+   refunds are architecturally impossible.};
+
+\node[inv={C4}{L4}] (I4) at (0, 0.3)
+  {\textbf{I4 — Order Preservation.}
+   $\forall i<j:\,\text{section}_i$ appears before $\text{section}_j$
+   in the compiled document. The \texttt{concurrentMap} primitive
+   (Theorem~\ref{thm:concurrent}) guarantees index-stable emission
+   despite parallel execution.};
+
+\node[inv={C5}{L5}] (I5) at (0,-1.2)
+  {\textbf{I5 — Real-Data Guarantee.}
+   $\forall r\in\text{refs}(d):\,r$ was fetched from a live HTTP
+   endpoint at generation time.
+   No reference is fabricated or retrieved from a stale cache older
+   than the session timestamp $t_0$.};
+
+% Brace labelling
+\draw[decorate, decoration={brace, amplitude=8pt, raise=2pt},
+      C1, line width=1.2pt]
+  (7.1,5.35) -- (7.1,-1.75)
+  node[midway, right=10pt, font=\scriptsize\bfseries, text=C1]
+    {$\mathcal{P}$ invariants};
+\end{tikzpicture}
+\caption{The five system invariants (I1--I5) of the \sys{} Unified Model $\mathcal{P}$.
+         Each invariant is a universally quantified property
+         that holds across all platform sessions by construction —
+         not as a runtime check but as a consequence of the
+         formal design decisions encoded in Definitions~\ref{def:pipeline}
+         through~\ref{def:unified}.}
+\label{fig:invariants}
+\end{figure}

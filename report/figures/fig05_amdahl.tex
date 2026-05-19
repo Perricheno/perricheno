@@ -1,0 +1,45 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[PL,
+  xlabel={Concurrent workers $N$},
+  ylabel={Speedup $S(N)$},
+  title={Amdahl's Law applied to \texttt{concurrentMap} parallel stages},
+  xmin=1, xmax=16.5, ymin=1, ymax=9.5,
+  xtick={1,2,4,6,8,10,12,14,16},
+  legend pos=north west,
+  width=13cm, height=7cm,
+]
+\addplot[C4, samples=60, domain=1:16]{1/(0.50+0.50/x)};
+\addlegendentry{$\alpha=0.50$ (I/O bound)}
+\addplot[C2, samples=60, domain=1:16]{1/(0.30+0.70/x)};
+\addlegendentry{$\alpha=0.30$}
+\addplot[C3, samples=60, domain=1:16]{1/(0.15+0.85/x)};
+\addlegendentry{$\alpha=0.15$ (Stage\,2, LLM-wait)}
+\addplot[C1, samples=60, domain=1:16]{1/(0.05+0.95/x)};
+\addlegendentry{$\alpha=0.05$ (ideal)}
+% Fill between ideal and sequential bounds
+\addplot[name path=ID, draw=none, samples=60, domain=1:16]{1/(0.05+0.95/x)};
+\addplot[name path=SQ, draw=none, samples=60, domain=1:16]{1/(0.50+0.50/x)};
+\addplot[C6, opacity=0.18] fill between[of=ID and SQ];
+% Operating points
+\addplot[C3, mark=*, only marks, mark size=5pt] coordinates{(4,{1/(0.15+0.85/4)})};
+\node[font=\tiny\bfseries, text=C3, anchor=west]
+  at (axis cs:4.3,{1/(0.15+0.85/4)}){Stage\,2 $N\!=\!4$};
+\addplot[C5, mark=square*, only marks, mark size=4.5pt]
+  coordinates{(3,{1/(0.30+0.70/3)})};
+\node[font=\tiny\bfseries, text=C5, anchor=west]
+  at (axis cs:3.3,{1/(0.30+0.70/3)}){Stage\,2.5 $N\!=\!3$};
+\addplot[C2, mark=triangle*, only marks, mark size=4.5pt]
+  coordinates{(2,{1/(0.50+0.50/2)})};
+\node[font=\tiny\bfseries, text=C2, anchor=east]
+  at (axis cs:1.7,{1/(0.50+0.50/2)}){Stage\,2.3 $N\!=\!2$};
+\end{axis}
+\end{tikzpicture}
+\caption{Amdahl's Law speedup curves for the order-preserving
+         \texttt{concurrentMap} primitive (Theorem~\ref{thm:concurrent}).
+         Shaded region spans achievable speedup between $\alpha\!=\!0.05$
+         and $\alpha\!=\!0.50$. The three annotated operating points correspond
+         to the configured concurrency bounds of each parallel pipeline stage.}
+\label{fig:amdahl}
+\end{figure}

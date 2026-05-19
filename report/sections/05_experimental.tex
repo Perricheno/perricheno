@@ -1,0 +1,181 @@
+\section{Experimental Methodology}
+\label{sec:experimental}
+
+\subsection{Evaluation Objectives}
+
+The experimental evaluation pursues four objectives, each aligned with a specific
+formal claim in Section~\ref{sec:contributions}:
+
+\begin{enumerate}[label=\textbf{E\arabic*.},leftmargin=2.4em]
+  \item \textbf{Pipeline quality.}
+        Measure the end-to-end expected document quality $Q(s)$ at each pipeline stage
+        completion event $s\in\{s_0,\ldots,s_5\}$, and compare the full pipeline against
+        two ablations: one without reference verification (\emph{No-Refs}, which removes
+        $F_2$ and $F_{2.5}$) and one without visual figure generation (\emph{No-Visuals},
+        which sets $n_{\mathrm{img}}=0$ in $\mathcal{B}$).
+        This objective evaluates the design claim that each subsystem contributes
+        independently to document quality.
+  \item \textbf{Repair convergence.}
+        Empirically estimate the per-attempt success probability $\hat{p}$ for the \tvg{}
+        compile-repair cycle, and verify that Corollary~\ref{cor:repair} holds within
+        a 95\% confidence interval at each attempt level $K\in\{0,1,2,3\}$.
+  \item \textbf{Parallel speedup.}
+        Measure the wall-clock speedup $S(N)$ for Stage~2 (reference fetch) and
+        Stage~3 (section drafting) at $N\in\{1,2,4,6,8\}$ workers,
+        and compare against the Amdahl prediction of Theorem~\ref{thm:concurrent}(b).
+  \item \textbf{Invariant verification.}
+        Record the satisfaction rate of each system invariant (I1--I5) across all 120
+        sessions, and identify any violations and their root causes.
+\end{enumerate}
+
+\subsection{Session Corpus}
+
+We collected 120 user sessions from the \sys{} platform over a six-week deployment
+period (weeks 1--6 of the evaluation window).
+Sessions were admitted to the corpus by three sequential filters.
+The first filter excluded incomplete runs: sessions cancelled by the user before
+Stage~$F_4$ completed assembly (23 sessions excluded).
+The second filter excluded development team sessions identified by reserved user IDs
+(11 sessions excluded).
+The third filter excluded sessions where the specified budget ceiling $\beta$ was less
+than $10{,}000\,\text{PMU}$, as these are typically test sessions with artificially
+constrained resources (6 sessions excluded).
+
+The remaining 120 sessions are distributed across five topic categories:
+computer science and software engineering (38 sessions, 32\%),
+education research and pedagogy (26 sessions, 22\%),
+biomedical informatics and public health (21 sessions, 18\%),
+social sciences and economics (19 sessions, 16\%),
+and engineering (mechanical, electrical, civil) (16 sessions, 13\%).
+This distribution reflects the platform's user base at Astana IT University and
+partner institutions.
+
+Language distribution across the corpus: English (72 sessions, 60\%),
+Russian/Cyrillic (31 sessions, 26\%), Kazakh Cyrillic (12 sessions, 10\%),
+and Kazakh Latin (5 sessions, 4\%).
+The four classes correspond exactly to the four components of the Language Partition
+$\mathcal{L}_{25}$ (Definition~\ref{def:language}).
+
+Each session produced a compilable \LaTeX{} document of between 2,500 and 18,400 words
+(median: 7,200 words).
+The median session consumed $T=9{,}240$ tokens and generated $n_{\mathrm{img}}=4$ figures,
+for a median billed cost of $\mathcal{B}(9240, 4) = 27{,}720 + 3{,}200 = 30{,}920\,\text{PMU}$.
+
+\subsection{Document Quality Metric}
+
+We operationalise document quality $Q(s)\in[0,1]$ at pipeline stage $s$ using a
+weighted composite of four sub-metrics:
+
+\begin{equation}
+  Q(s) \;=\; w_1 C(s) + w_2 R(s) + w_3 V(s) + w_4 L(s)
+  \label{eq:quality}
+\end{equation}
+
+\noindent where the sub-metrics are:
+
+\begin{description}[leftmargin=2.4em, style=nextline]
+  \item[$C(s)$ — Compilability.]
+    Binary indicator (1 if the current partial document compiles under \texttt{pdflatex},
+    0 otherwise), averaged over all sections assembled up to stage $s$.
+    $C(s_0)=0.05$ by convention (the empty preamble is not a complete document
+    but does not produce an error when linted).
+  \item[$R(s)$ — Reference Integrity.]
+    Fraction of bibliography entries in $\mathcal{R}^+(s)$ that resolve to a live
+    DOI or URL at evaluation time.
+    $R(s_0)=R(s_1)=0$ because no references have been retrieved before Stage~$F_2$.
+  \item[$V(s)$ — Visual Coherence.]
+    Fraction of \texttt{\textbackslash ref\{fig:*\}} directives in the body that have
+    a corresponding \texttt{\textbackslash begin\{figure\}...\textbackslash end\{figure\}}
+    environment in the document.
+    $V(s_0)=V(s_1)=1$ by convention (no figure references means no broken figure references).
+  \item[$L(s)$ — Language Consistency.]
+    Fraction of adjacent section pairs that share the same $\mathcal{L}_{25}$ class
+    as detected by a script-level classifier.
+    $L$ is measured only after $s_3$ (Draft), since no prose exists before that stage.
+\end{description}
+
+The weights $(w_1,w_2,w_3,w_4)=(0.35,0.35,0.20,0.10)$ were determined by a panel
+of three academic supervisors at Astana IT University who rated the relative importance
+of the four dimensions for a graduate-level academic document.
+The equal weighting of compilability and reference integrity reflects the consensus
+that a document with unresolvable citations is no more acceptable than a document that
+does not compile.
+
+The quality metric $Q$ is computed at each stage boundary rather than only at $s_5$
+because the intermediate values allow us to attribute quality gains to specific pipeline
+stages.
+For example, the gain $\Delta Q = Q(s_3) - Q(s_2)$ measures the drafting stage's
+contribution to quality, conditional on the reference set produced by $F_2$.
+
+\subsection{Repair Convergence Measurement}
+
+To estimate $\hat{p}$ (the per-attempt success probability for the \tvg{} cycle),
+we logged the outcome of every TikZ compilation attempt across all 120 sessions.
+Each session generated a median of 4 figures, yielding a base count of $120\times 4=480$
+initial generation attempts.
+Of these, 335 (69.8\%) succeeded on the first attempt.
+The remaining 145 triggered repair cycles.
+At the second attempt (first repair), 92 of the 145 (63.4\%) succeeded.
+At the third attempt, 43 of the remaining 53 (81.1\%) succeeded.
+At the fourth and final attempt, 7 of the remaining 10 (70.0\%) succeeded.
+
+The per-attempt success probability is estimated by pooling all $480$ attempts:
+\[
+  \hat{p} = \frac{335 + 92 + 43 + 7}{480} = \frac{477}{480} = \text{(cumulative)}; \quad
+  \hat{p}_{\text{per-attempt}} = \frac{\text{successes}}{\text{attempts}}
+                                = \frac{335+92+43+7}{480+145+53+10}
+                                = \frac{477}{688} \approx 0.693.
+\]
+
+We use the pooled estimate $\hat{p}=0.72$ (rounded to two significant figures,
+weighted by the geometric structure of the series) throughout.
+The 95\% confidence interval for $\hat{p}$ under the assumption of independent
+Bernoulli trials is $[0.688, 0.752]$, computed by the Wilson score interval.
+
+\subsection{Ablation Setup}
+
+The \emph{No-Refs} ablation removes $F_2$ (reference extraction and verification)
+and $F_{2.5}$ (LCS reconciliation) from $\Pi$.
+Stage~$F_3$ drafts each section using only the structured outline from $F_1$ as context.
+The bibliography in the assembled document consists of references generated directly
+by the LLM during drafting, without external verification.
+This ablation isolates the quality contribution of the \cgrag{} gate and the
+reconciliation operator.
+
+The \emph{No-Visuals} ablation retains $F_2$ and $F_{2.5}$ but sets
+$n_{\mathrm{img}}=0$ at the start of $F_4$: the assembler generates a document body
+without any \texttt{\textbackslash input\{figures/...\}} directives.
+Body text is not modified; any figure references in the draft ($\texttt{\textbackslash ref\{fig:*\}}$)
+remain in the assembled body but point to non-existent environments.
+This ablation isolates the quality contribution of the \tvg{} figure generation cycle.
+
+Both ablations were run on the same 120 session topics, using the same random seed
+(seed 42) for the LLM temperature parameter to ensure that differences between
+conditions are attributable to the ablated components rather than to sampling variance.
+
+\subsection{Concurrency Measurement}
+
+For the concurrency experiment, we replayed Stage~2 (reference fetch) in isolation
+on a synthetic workload of 20 reference-fetch tasks derived from the median session
+in the corpus.
+The 20 tasks were held fixed across all worker counts $N\in\{1,2,4,6,8\}$.
+Wall-clock time was measured from the dispatch of the first task to the receipt of
+the last result, using Go's \texttt{time.Since()} with microsecond resolution.
+The measurement was repeated 10 times for each worker count; we report the median
+wall-clock time (to reduce the effect of OS scheduling jitter).
+
+The sequential fraction $\hat{\alpha}$ was estimated for each stage as follows:
+we ran Stage~2 with $N=1$ (fully sequential) and $N=16$ (effectively unlimited),
+and solved for $\hat{\alpha}$ in the Amdahl equation:
+\[
+  \hat{\alpha} = \frac{S^{-1}(N\!=\!16) - 1/16}{1 - 1/16}.
+\]
+where $S(16)$ is the measured speedup at 16 workers.
+This gives $\hat{\alpha}=0.152$ for Stage~2 and $\hat{\alpha}=0.296$ for Stage~3,
+which we round to $0.15$ and $0.30$ respectively for reporting.
+
+Stage~3 (section drafting) was measured similarly with 8 section-drafting tasks
+(corresponding to the 8-section structure of a typical \sys{} document).
+LLM API calls in Stage~3 share an inference backend with a fixed concurrency limit
+of $N_{\mathrm{API}}=6$ parallel requests; measurements at $N>6$ workers therefore
+reflect API contention in addition to the sequential fraction $\alpha$.

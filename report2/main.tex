@@ -1,0 +1,68 @@
+% ============================================================
+%  Perricheno: Automated Academic Document Generation
+%  Product Overview — For Decision Makers
+%  Compile: pdflatex main.tex  →  biber main  →  pdflatex (×2)
+% ============================================================
+\documentclass[12pt, a4paper]{article}
+\input{preamble}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+  {\LARGE\bfseries\color{C1}
+    Perricheno\\[0.4em]
+    Automated Academic Document Generation\par}
+  \vspace{1.0em}
+  {\large\color{MG} From topic to publication-ready PDF — in one session\par}
+  \vspace{2em}
+  \begin{tcolorbox}[colback=L1, colframe=C1, arc=6pt, boxrule=1.6pt,
+                    width=10cm, halign=center]
+    \centering
+    {\large\bfseries\color{C1} Product Overview Report}\\[0.4em]
+    {\normalsize For investors, buyers, and decision makers}
+  \end{tcolorbox}
+  \vspace{2em}
+  {\large
+    Amangeldy Toiymbetov\\[0.3em]
+    \textit{Astana IT University}\\[0.2em]
+    \texttt{amangeldy.toy123@gmail.com}\par}
+  \vspace{1.5em}
+  {\large\today\par}
+  \vfill
+  {\small\color{MG}
+    This document describes the \sys{} platform — what it does, how it works,
+    what problems it solves, and what results it delivers.
+    No prior background in AI or computer science is required to read it.\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ── Executive Summary ────────────────────────────────────────────────────
+\input{sections/00_executive_summary}
+\newpage
+
+% ── IMRAD Body ───────────────────────────────────────────────────────────
+\input{sections/01_problem}
+\newpage
+\input{sections/02_solution}
+\newpage
+\input{sections/03_how_it_works}
+\newpage
+\input{sections/04_what_makes_it_different}
+\newpage
+\input{sections/05_results}
+\newpage
+\input{sections/06_use_cases}
+\newpage
+\input{sections/07_pricing_and_roi}
+\newpage
+\input{sections/08_conclusion}
+
+% ── Bibliography ─────────────────────────────────────────────────────────
+\newpage
+\printbibliography[heading=bibintoc, title={References}]
+
+\end{document}

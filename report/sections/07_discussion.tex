@@ -1,0 +1,263 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Interpretation of Quality Results}
+
+The 29\% relative quality improvement of the full pipeline over the No-Refs ablation
+demonstrates that reference verification — not prose fluency or visual richness — is
+the dominant quality driver in automated academic document generation.
+This finding has a principled explanation in the structure of the quality metric $Q$
+(Equation~\ref{eq:quality}): the reference integrity sub-metric $R(s)$ (weight $w_2=0.35$)
+is exactly the dimension that the \cgrag{} gate is designed to maximise, and the
+gate's effect propagates downstream because $F_3$ (drafting) uses the verified reference
+set $\mathcal{R}^+$ as its primary context source.
+
+The propagation mechanism is straightforward: when the drafting stage receives a
+high-quality, verified context window, it generates prose that cites the verified
+references explicitly and consistently.
+Sentence-level citation patterns learned from the training corpus of the LLM cause
+it to insert \texttt{\textbackslash cite\{...\}} commands that reference entries
+in $\mathcal{R}^+$.
+Because $\mathcal{R}^+$ contains only \texttt{enhanced} references, the resulting
+citations are all resolvable at validation time, achieving near-ceiling $R(s_5)$ scores.
+
+In the No-Refs ablation, the opposite dynamic operates.
+Without $F_2$, the drafting stage has no verified reference context.
+The LLM generates plausible-sounding citations by pattern-matching to scholarly
+citation formats it has seen during training, but many of these fabricated citations
+do not correspond to real publications.
+The result is high surface-level fluency (the prose reads naturally) combined with
+low $R(s)$ (most citations fail the live-resolve check).
+This is precisely the hallucination failure mode identified in the literature~\cite{alkaissi2023hallucinated},
+and the \cgrag{} gate is the mechanism that blocks it.
+
+The 10\% improvement of the full pipeline over the No-Visuals ablation is smaller
+but consistent and attributable to a different mechanism.
+When figures are absent, body text that contains \texttt{\textbackslash ref\{fig:*\}}
+directives produces unresolved references at compile time.
+These unresolved references cause a visible ``??'' in the compiled PDF at the
+reference location, penalising the visual coherence sub-metric $V(s)$.
+The \tvg{} cycle prevents this: by generating compilable figures with matching
+\texttt{\textbackslash label\{fig:*\}} entries before assembly, it ensures that
+all figure references in the body resolve to actual figure environments.
+
+\subsection{Why the Formal Model Matters}
+
+One might ask whether the formal specification of \sys{} is merely descriptive —
+a post-hoc rationalisation of engineering decisions already made — or whether it
+is prescriptive in the sense of enabling design decisions that could not have been
+made without the formal framework.
+
+We argue that the formal model is prescriptive in at least three respects.
+
+First, the \textbf{pipeline algebra} $\Pi$ (Definition~\ref{def:pipeline}) prescribes
+the type system for inter-stage data.
+Without a formal type for each stage's output, the practical engineering question
+of ``what does Stage~$F_3$ receive as input?'' is answered informally (e.g., by a
+shared README or a verbal convention among developers).
+Informal answers are fragile: they break when developers change the format of a stage's
+output without updating the informal documentation.
+The formal type constraint $\mathrm{cod}(F_i)=\mathrm{dom}(F_{i+1})$ makes this
+break detectable at the specification level before any code is written.
+
+Second, the \textbf{\cgrag{} gate} (Definition~\ref{def:cgrag}) prescribes the exact
+conjunction of admission criteria.
+An engineering team without a formal model might implement reference filtering as a
+single threshold on confidence score, or as a weighted sum of criteria.
+The lattice formulation reveals that a weighted sum is inadequate because it permits
+compensatory admission (a very confident reference with zero citations is admitted),
+which violates the design intent.
+The meet-semilattice structure forces the designer to choose a conjunction, which
+is the only algebraically correct implementation of ``all criteria must be satisfied.''
+
+Third, the \textbf{billing operator} (Definition~\ref{def:billing}) prescribes the
+linearity constraint.
+An engineering team implementing billing without a formal model might use a piecewise
+billing function (e.g., a lower rate for the first 5,000 tokens, a higher rate above
+that threshold).
+Invariant~I3 (Billing Monotonicity) immediately reveals that a piecewise function with
+a rate change at 5,000 tokens is non-monotone around that threshold: spending exactly
+5,000 tokens and then 1 more would result in a higher cost than if the boundary
+were crossed differently.
+The formal constraint forces the designer to choose a globally monotone function.
+
+\subsection{Scope and Limitations of the Formal Model}
+
+The Unified System Model $\mathcal{P}$ deliberately abstracts over several aspects
+of the physical system.
+We discuss each abstraction and its implications.
+
+\paragraph{LLM non-determinism.}
+The pipeline algebra $\Pi$ treats each stage $F_i$ as a deterministic morphism in
+$\mathbf{DocState}$.
+In practice, LLM calls are stochastic: the same prompt can produce different outputs
+on different calls due to temperature-based sampling.
+The formal model is valid in the sense that $\Pi$ specifies the \emph{intended}
+transformation; the stochastic LLM is treated as a black-box realisation of that
+transformation.
+This is the same abstraction used in randomised algorithm analysis, where a
+randomised algorithm is modelled as a deterministic algorithm applied to a random
+tape.
+Proposition~\ref{prop:mdp} provides the probabilistic extension that makes the
+stochasticity explicit at the MDP level.
+
+\paragraph{Network liveness.}
+Invariant~I5 (Real-Data Guarantee) is conditional on network availability.
+The formal statement $\forall\,r\in\mathrm{refs}(d)$: $r$ is live at $t_0$
+is logically equivalent to: (network is live at $t_0$) $\Rightarrow$ ($r$ was fetched
+at $t_0$).
+The two I5 violations in the corpus (Section~\ref{sec:results}) are consistent with
+the antecedent being false (the CDN cache violated the freshness protocol, so the
+network was not ``live'' in the required sense).
+
+A production-grade formalisation would introduce an explicit liveness predicate
+$\lambda(t_0)\in\{\top,\bot\}$ and restate I5 as:
+$\lambda(t_0)\Rightarrow\forall\,r\in\mathrm{refs}(d): r$ was fetched at $t_0$.
+This makes the conditional nature of the invariant explicit and admits formal
+verification against a TLA+ model of the network protocol.
+
+\paragraph{LLM API evolution.}
+The billing coefficients $(3, 800)$ in $\mathcal{B}$ are calibrated to the
+\texttt{gpt-5-mini} API version deployed during the evaluation period.
+A provider price change would require updating the coefficients without affecting
+the formal structure of $\mathcal{B}$ (which requires only that the function is
+affine with non-negative coefficients).
+The formal model is therefore stable under price changes, which is a desirable
+property: the specification does not need to be rewritten when the API changes.
+
+\paragraph{Semantic correctness.}
+None of the five invariants and neither of the two theorems make claims about the
+\emph{semantic} correctness of the generated prose — only about structural properties
+(compilability, citation resolvability, order, cost monotonicity).
+Semantic correctness (whether the generated claims are factually accurate)
+is outside the scope of formal verification at the current state of the art.
+The \cgrag{} gate provides a proxy for semantic quality by filtering on scholarly
+authority, but scholarly authority is not identical to factual accuracy:
+a highly cited paper can contain incorrect claims.
+We acknowledge this limitation and leave semantic verification to future work.
+
+\subsection{The \cgrag{} Gate: Threshold Sensitivity}
+
+The three thresholds $(\tau_c,\tau_s,\tau_k)=(7.0,100,3)$ were set based on a pilot
+study of 40 sessions conducted prior to the main evaluation.
+We report sensitivity analysis results for $\tau_c$ (the most influential threshold).
+
+A grid search over $\tau_c\in\{5.0, 6.0, 7.0, 8.0, 9.0\}$ with
+$(\tau_s,\tau_k)=(100,3)$ fixed yields the following quality scores:
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+$\tau_c$ & \% references admitted & $\bar{Q}(s_5)$ & $\bar{R}(s_5)$ \\
+\midrule
+5.0 & 74\% & 0.93 & 0.88 \\
+6.0 & 61\% & 0.96 & 0.93 \\
+\textbf{7.0} & \textbf{48\%} & \textbf{0.97} & \textbf{0.96} \\
+8.0 & 32\% & 0.94 & 0.97 \\
+9.0 & 18\% & 0.88 & 0.98 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The quality curve is unimodal with a maximum at $\tau_c=7.0$.
+Lowering $\tau_c$ to $5.0$ admits $74\%$ of candidate references, increasing
+context richness but introducing low-confidence references that reduce $R(s_5)$
+from $0.96$ to $0.88$.
+Raising $\tau_c$ to $9.0$ admits only $18\%$ of references — a context-impoverishment
+effect that forces the drafting stage to work with insufficient source material,
+reducing $\bar{Q}(s_5)$ to $0.88$ despite near-perfect reference integrity ($\bar{R}=0.98$).
+The sensitivity analysis confirms that the current threshold $\tau_c=7.0$ is at the
+optimum of the quality-integrity trade-off curve.
+
+\subsection{Comparison with Embedding-Based Reference Selection}
+
+To assess the design choice of using $\Gamma$ (multi-criteria lattice) rather than
+embedding-cosine retrieval as in standard RAG, we ran a post-hoc comparison on the
+same 120 sessions.
+We replaced $F_2$ with a standard dense retrieval step using cosine similarity to
+retrieve the top-10 references from a pre-indexed corpus of 2 million Semantic Scholar
+abstracts, without citation count or keyword filtering.
+The result was $\bar{Q}(s_5)=0.84$ — a 13-percentage-point reduction compared to the
+full pipeline and a 9-percentage-point reduction compared to the No-Refs ablation.
+
+The primary source of degradation was citation integrity: $\bar{R}(s_5)$ dropped
+from $0.96$ (full pipeline) to $0.72$ (embedding-based).
+Manual inspection of 20 randomly selected sessions from the embedding-based condition
+revealed that approximately 35\% of admitted references were informal web pages
+(Wikipedia articles, blog posts, documentation pages) that achieved high embedding
+similarity to the academic query but did not satisfy the scholarly authority criteria
+of the \cgrag{} gate.
+This validates the design of $\Gamma$ as a hard admission gate rather than a soft
+ranking criterion: embedding similarity is a necessary but not sufficient condition
+for scholarly reference quality.
+
+\subsection{Language Partition and Multilingual Quality}
+
+Sessions assigned to $L_{\mathrm{lat}}$ (Kazakh Latin, $n=5$) achieved the lowest
+$\bar{Q}(s_5)=0.91$ and $\bar{L}=0.82$ in the corpus.
+Manual analysis of the 5 sessions reveals two distinct failure modes.
+
+The first failure mode is \emph{script inconsistency}: the LLM generates body text
+that switches between Kazakh Latin and Russian Cyrillic for technical terms.
+This is attributable to the relative scarcity of Kazakh Latin text in the LLM's
+training corpus: the 2021 Kazakh Latin alphabet was only recently standardised,
+and pre-2021 training data contains essentially no Kazakh Latin text.
+The language detection step correctly identifies $L_{\mathrm{lat}}$ at the start of
+$F_1$, but the prompting directive (``respond in Kazakh Latin script'') is not
+always followed for technical terminology.
+
+The second failure mode is \emph{transliteration inconsistency}: when the LLM does
+use Kazakh Latin, it sometimes applies the pre-2021 transliteration convention
+(using apostrophes for palatalisation, e.g., \textit{j'}\ for the soft j sound)
+instead of the 2021 standard (using special letters like \textit{\'j}).
+This inconsistency does not affect compilability but does affect the $L(s)$ sub-metric.
+
+Both failure modes can be addressed by a post-processing step that applies a
+deterministic script-normalisation function to the draft output before assembly.
+This is a planned improvement for a future version of the platform.
+
+\subsection{Future Directions}
+
+The formal model $\mathcal{P}$ opens four concrete directions for future work.
+
+\begin{enumerate}[label=\textbf{F\arabic*.},leftmargin=2.4em]
+  \item \textbf{Learned repair policy.}
+    Proposition~\ref{prop:mdp} frames the repair cycle as an MDP.
+    Training a learned policy that conditions on the semantic structure of the
+    compiler error message (e.g., ``undefined colour name'' versus ``missing
+    \texttt{\textbackslash end}'' versus ``undefined control sequence'') could
+    provide a repair directive that is more targeted than the full stderr message,
+    increasing $\hat{p}$ from $0.72$ to a higher value.
+    A simple version of this policy could be a lookup table mapping error class
+    to repair template, avoiding the need for a reinforcement-learning setup.
+
+  \item \textbf{Adaptive $\tau$ selection.}
+    The \cgrag{} thresholds $(\tau_c,\tau_s,\tau_k)$ are currently fixed across
+    all sessions.
+    A Bayesian update rule that starts with the current thresholds as a prior
+    and updates them based on the observed reference quality distribution of prior
+    sessions in the same topic category could improve per-domain performance.
+    For example, biomedical sessions consistently admit preprint-level references
+    at $Q_3$ that perform well in practice; a domain-specific lower $\tau_s$
+    for this category would increase context richness without degrading $R(s_5)$.
+
+  \item \textbf{Formal verification of I5.}
+    A TLA+ specification of the retrieval protocol — including the explicit liveness
+    predicate $\lambda(t_0)$ and the \texttt{If-Modified-Since} header check —
+    could provide machine-verified proof of Invariant~I5 under an explicit network
+    liveness assumption.
+    This would replace the informal proof sketch in Section~\ref{sec:architecture}
+    with a formally verified certificate, suitable for inclusion in a system safety
+    argument.
+
+  \item \textbf{Cross-lingual LCS reconciliation.}
+    The current $\Phi_\theta$ operates on token sequences from the same language.
+    Extending it to cross-lingual operation (aligning a Kazakh reference sentence
+    with an English draft sentence) requires a cross-lingual token alignment that
+    preserves the order-sensitivity property of LCS.
+    One approach is to project both sequences into a shared multilingual token
+    space using a multilingual encoder, then apply LCS in the projected space.
+    The threshold $\theta$ would need to be recalibrated for the projected space,
+    since projected token matches may have different semantic weight than surface-form
+    token matches.
+\end{enumerate}

@@ -1,0 +1,125 @@
+% ── Encoding & fonts ─────────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Mathematics (light) ───────────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+
+% ── Graphics & TikZ ──────────────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{
+  arrows.meta, positioning, shapes.geometric, shapes.multipart,
+  fit, backgrounds, calc, matrix, patterns, pgfplots.fillbetween
+}
+
+% ── Layout ───────────────────────────────────────────────────────────────
+\usepackage{geometry}
+\geometry{a4paper, left=3cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\usepackage{setspace}
+\setstretch{1.3}
+\usepackage{parskip}
+\setlength{\parskip}{0.7em}
+
+% ── Typography ────────────────────────────────────────────────────────────
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=C1,
+  citecolor=C3,
+  urlcolor=C1
+}
+
+% ── Bibliography ─────────────────────────────────────────────────────────
+\usepackage[style=ieee, backend=biber, sorting=none]{biblatex}
+\addbibresource{references.bib}
+
+% ── Header / Footer ───────────────────────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{Perricheno — Product Overview}}
+\fancyhead[R]{\small\textsc{Confidential}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% ── Section titles ────────────────────────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries\color{C1}}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{DG}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\itshape\color{DG}}{\thesubsubsection}{1em}{}
+
+% ── Color palette ─────────────────────────────────────────────────────────
+\definecolor{C1}{RGB}{31,119,180}
+\definecolor{C2}{RGB}{255,127,14}
+\definecolor{C3}{RGB}{44,160,44}
+\definecolor{C4}{RGB}{214,39,40}
+\definecolor{C5}{RGB}{148,103,189}
+\definecolor{C6}{RGB}{23,190,207}
+\definecolor{C7}{RGB}{188,189,34}
+\definecolor{C8}{RGB}{227,119,194}
+\definecolor{F1}{RGB}{162,208,245}
+\definecolor{F2}{RGB}{255,192,120}
+\definecolor{F3}{RGB}{158,222,158}
+\definecolor{F4}{RGB}{245,158,158}
+\definecolor{F5}{RGB}{207,185,232}
+\definecolor{F6}{RGB}{148,228,238}
+\definecolor{F7}{RGB}{232,233,148}
+\definecolor{L1}{RGB}{220,237,255}
+\definecolor{L2}{RGB}{255,228,198}
+\definecolor{L3}{RGB}{212,244,212}
+\definecolor{L4}{RGB}{255,215,215}
+\definecolor{L5}{RGB}{235,226,250}
+\definecolor{L6}{RGB}{210,246,250}
+\definecolor{L7}{RGB}{250,250,210}
+\definecolor{LGr}{RGB}{238,238,238}
+\definecolor{DG}{RGB}{35,35,35}
+\definecolor{MG}{RGB}{115,115,115}
+
+% ── pgfplots style ───────────────────────────────────────────────────────
+\pgfplotsset{
+  PL/.style={
+    width=13cm, height=6.5cm,
+    axis lines=left, tick align=outside,
+    ticklabel style={font=\footnotesize, color=DG},
+    label style={font=\small, color=DG},
+    title style={font=\small\bfseries, color=DG},
+    legend style={font=\scriptsize, draw=DG!40, rounded corners=3pt,
+                  fill=white, inner sep=4pt},
+    grid=major, grid style={draw=DG!12, thin, dashed},
+    line width=1.6pt, mark size=3.5pt,
+  }
+}
+
+% ── Highlight boxes ───────────────────────────────────────────────────────
+\newtcolorbox{keybox}[1][]{
+  colback=L1, colframe=C1, arc=4pt,
+  boxrule=1.4pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{C1}, #1
+}
+\newtcolorbox{statbox}[1][]{
+  colback=L3, colframe=C3, arc=4pt,
+  boxrule=1.4pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{C3}, #1
+}
+\newtcolorbox{warnbox}[1][]{
+  colback=L4, colframe=C4, arc=4pt,
+  boxrule=1.4pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{C4}, #1
+}
+
+% ── Convenience macros ────────────────────────────────────────────────────
+\newcommand{\sys}{\textsc{Perricheno}}
+\newcommand{\yes}{\textcolor{C3}{\textbf{✓}}}
+\newcommand{\no}{\textcolor{C4}{\textbf{✗}}}

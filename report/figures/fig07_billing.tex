@@ -1,0 +1,44 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[PL,
+  xlabel={Token count $T$ (thousands)},
+  ylabel={Billed cost $\mathcal{B}(T, n_{\mathrm{img}})$ (micro-units)},
+  title={Billing operator iso-curves for $n_{\mathrm{img}} \in \{0,1,2,4,8\}$},
+  xmin=0, xmax=42, ymin=0, ymax=16000,
+  xtick={0,5,10,15,20,25,30,35,40},
+  ytick={0,2000,4000,6000,8000,10000,12000,14000,16000},
+  legend pos=north west,
+  width=13cm, height=7cm,
+]
+% B(T, n) = 3*T + 800*n  (T in thousands => multiply x by 1000)
+\addplot[C1, very thick] coordinates{
+  (0,0)(5,15000)(10,30000)(15,45000)(20,60000)(25,75000)(30,90000)(35,105000)(40,120000)};
+% Scale: for readability show T in thousands but compute in hundreds
+% B(T,0)=3T, B(T,1)=3T+800, etc. — keep raw T, annotate lines
+\addplot[C1, very thick, domain=0:40]{3*x*1000};
+\addlegendentry{$n_{\mathrm{img}}=0$}
+\addplot[C2, thick, domain=0:40]{3*x*1000 + 800};
+\addlegendentry{$n_{\mathrm{img}}=1$}
+\addplot[C3, thick, domain=0:40]{3*x*1000 + 1600};
+\addlegendentry{$n_{\mathrm{img}}=2$}
+\addplot[C4, thick, domain=0:40]{3*x*1000 + 3200};
+\addlegendentry{$n_{\mathrm{img}}=4$}
+\addplot[C5, thick, domain=0:40]{3*x*1000 + 6400};
+\addlegendentry{$n_{\mathrm{img}}=8$}
+% Highlight typical operating point: T~12k tokens, n_img=3
+\addplot[C4, mark=*, only marks, mark size=5pt] coordinates{(12,{3*12000+2400})};
+\node[font=\tiny\bfseries, text=C4, anchor=west]
+  at (axis cs:12.4,{3*12000+2400}){Typical\\session};
+% Budget ceiling line
+\addplot[DG, dashed, thin, domain=0:40]{10000};
+\node[font=\tiny, text=DG, anchor=west] at (axis cs:30,10400){Budget cap};
+\end{axis}
+\end{tikzpicture}
+\caption{Iso-cost curves of the Billing Operator $\mathcal{B}(T, n_{\mathrm{img}})=3T+800\,n_{\mathrm{img}}$
+         (Definition~\ref{def:billing}) for five image-count values.
+         The image penalty term dominates at high $n_{\mathrm{img}}$,
+         establishing that visual richness is the primary cost driver.
+         The annotated operating point represents a typical platform session.}
+\label{fig:billing}
+\end{figure}

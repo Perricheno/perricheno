@@ -1,0 +1,165 @@
+\section{Introduction}
+\label{sec:introduction}
+
+\subsection{Motivation}
+
+The production of a well-structured academic document is a multi-day, multi-tool endeavour.
+A researcher must simultaneously manage a bibliographic database, write and revise prose that
+cites that database consistently, produce figures that meet venue formatting constraints,
+reconcile her drafted sentences with the source material she has read, and budget the
+incremental cost of every LLM query she issues.
+These activities are traditionally performed by separate, loosely coupled tools:
+a reference manager (Zotero, Mendeley), a writing environment (\LaTeX{}, Overleaf),
+a figure-generation package (Matplotlib, TikZ), and no formal cost accounting.
+
+The consequence of this fragmentation is well-documented.
+Citation hallucination — the generation of bibliographic entries that do not correspond to
+real publications — afflicts between 3\% and 47\% of LLM-generated academic texts,
+depending on domain and model family~\cite{alkaissi2023hallucinated}.
+Figure--text inconsistency, in which a diagram is described in the body but absent from the
+compiled PDF, is a structural defect that peer review catches only after significant
+reviewer effort~\cite{stelmakh2021novice}.
+Token cost unpredictability makes systematic LLM use economically risky for individual
+researchers without institutional API budgets~\cite{chen2023frugalgpt}.
+
+The fragmentation problem is not merely a usability concern but a correctness concern.
+When a researcher uses a separate reference manager and a separate writing tool, the
+consistency between the bibliography database and the in-text citations depends on a
+manual synchronisation step that is error-prone.
+A reference can be cited in the text without having been added to the database
+(producing a LaTeX ``undefined citation'' warning that may be overlooked), or
+a reference can be added to the database without being cited (producing a spurious
+entry in the bibliography).
+Automated document generation systems that use separate LLM calls for reference
+selection and for prose drafting face the same consistency problem at a larger scale:
+a reference selected in one call may not be cited in another call because the two calls
+share no common state.
+
+\sys{} addresses all three failure modes simultaneously, within a single session, through
+a formally specified system design that makes the relevant guarantees provable rather than
+empirical.
+The key insight is that the three failure modes correspond to three formal properties —
+citation integrity, visual coherence, and cost monotonicity — that can be enforced by
+three independent formal components whose designs are mutually compatible.
+
+\subsection{Problem Statement}
+
+Let $\mathcal{D}$ denote the space of well-formed \LaTeX{} documents — documents that
+compile without error under a standard \LaTeX{} toolchain including \texttt{pdflatex}
+and \texttt{biber}.
+Given a research topic $q\in\mathcal{Q}$ and a session budget $\beta\in\mathbb{R}_{>0}$,
+the document-generation problem is to compute a function
+\[
+  f:\mathcal{Q}\times\mathbb{R}_{>0}\;\longrightarrow\;\mathcal{D}
+\]
+such that the output $d=f(q,\beta)$ satisfies four simultaneous requirements:
+
+\begin{enumerate}[label=\textbf{R\arabic*.},leftmargin=2.4em]
+  \item \textbf{Compilability.} $d$ compiles without error under a standard \LaTeX{} toolchain.
+  \item \textbf{Citation integrity.} Every bibliographic entry in $d$ is resolvable to a live
+        scholarly source at the time of generation.
+  \item \textbf{Visual coherence.} Every figure referenced in the body of $d$ is present in $d$
+        and compiles independently.
+  \item \textbf{Budget adherence.} The total token and image cost of producing $d$ does not
+        exceed $\beta$.
+\end{enumerate}
+
+These requirements are not in general jointly achievable by a greedy single-pass LLM
+query, because satisfying R2 requires external retrieval and verification that adds latency,
+satisfying R3 requires a compilation oracle that must be invoked after generation, and
+satisfying R4 requires a cost model that must be computed incrementally as generation proceeds.
+A principled solution therefore requires a \emph{staged architecture} in which each stage
+enforces one or more of the requirements and the inter-stage contracts are formally specified.
+
+A further constraint, motivated by the academic publication context, is that the
+generated document should be of sufficient quality that it can serve as a first draft
+suitable for human revision, rather than requiring complete rewriting.
+This quality constraint is not captured by R1--R4 alone; we formalise it through the
+quality metric $Q(s)$ introduced in Section~\ref{sec:experimental}.
+
+\subsection{Approach Overview}
+
+\sys{} operationalises the function $f$ as a pipeline algebra $\Pi$ (Definition~\ref{def:pipeline})
+whose stages are ordered morphisms in the category of document-state transformations.
+The pipeline proceeds as follows:
+
+\begin{description}[leftmargin=2.4em, style=nextline]
+  \item[$F_1$ — Plan.]
+    Given topic $q$, $F_1$ produces a structured outline $o$ that partitions the document
+    into sections, assigns a target word count and figure quota to each section, and
+    selects a primary language from the Language Partition $\mathcal{L}_{25}$
+    (Definition~\ref{def:language}).
+    The outline is stored as a typed record that subsequent stages can query.
+  \item[$F_2$ — Extract and Verify.]
+    $F_2$ retrieves candidate references from live scholarly endpoints (Semantic Scholar,
+    CrossRef, and institutional repositories), scores each candidate against the
+    \cgrag{} gate $\Gamma$ (Definition~\ref{def:cgrag}), and admits only those that
+    receive the \texttt{enhanced} classification.
+    Candidates assigned \texttt{degraded} are discarded before any draft text references them,
+    preventing citation hallucination at the source.
+  \item[$F_{2.5}$ — Reconcile.]
+    The LCS Reconciliation Operator $\Phi_\theta$ (Definition~\ref{def:lcs}) aligns the
+    extracted reference texts with the planned section outlines, ensuring that the
+    drafting stage begins with a semantically coherent context window in which reference
+    sentences and planned prose sentences share key vocabulary.
+  \item[$F_3$ — Draft.]
+    Given the verified reference set and the reconciled outline, $F_3$ generates section
+    prose via a sequence of \texttt{chatCompletionLong} calls.
+    Each call is bounded by the remaining token budget maintained by the Billing Operator
+    $\mathcal{B}$ (Definition~\ref{def:billing}), ensuring that budget adherence (R4)
+    is maintained throughout the drafting process.
+  \item[$F_4$ — Assemble.]
+    $F_4$ wraps each section in the appropriate \LaTeX{} structural commands, inserts figure
+    \texttt{\textbackslash input} directives, and composes the document body.
+    The order-preservation guarantee of \texttt{concurrentMap} (Theorem~\ref{thm:concurrent})
+    ensures that the assembled section order matches the planned outline regardless of
+    how many sections were drafted in parallel.
+  \item[$F_5$ — Validate.]
+    $F_5$ invokes the \LaTeX{} compiler as a formal correctness oracle.
+    A non-zero exit code triggers the Typed Visual Grammar repair cycle
+    (\tvg{}, Definition~\ref{def:tvg}) for any figure that failed to compile.
+    The repair convergence theorem (Theorem~\ref{thm:repair}) bounds the failure
+    probability, establishing compilability (R1) as a probabilistic guarantee.
+\end{description}
+
+Figure~\ref{fig:pipeline} illustrates the category-theoretic composition of these stages.
+
+\subsection{Claims of Novelty}
+
+The following contributions are, to our knowledge, novel:
+
+\begin{itemize}
+  \item A \textbf{formal pipeline algebra} for document generation that admits
+        category-theoretic reasoning about composition and invariant preservation.
+        Prior work on LLM pipelines (LangChain~\cite{chase2022langchain},
+        LlamaIndex~\cite{liu2022llamaindex}) provides compositional abstractions
+        without formal type systems or invariant preservation guarantees.
+  \item The \textbf{\cgrag{} gate}, a multi-criteria lattice filter for reference
+        verification that simultaneously gates on confidence score, citation count,
+        and keyword relevance.
+        Prior RAG systems gate on at most one criterion at a time.
+  \item The \textbf{\tvg{} compile-repair cycle} with a closed-form convergence bound
+        that depends only on per-attempt success probability and attempt count.
+        Prior figure-generation systems (PlotCoder~\cite{chen2021plotcoder}) use
+        compile feedback but provide no convergence guarantees.
+  \item The \textbf{LCS Reconciliation Operator} as a principled mechanism for
+        style-preserving source alignment, in contrast to embedding-similarity approaches
+        that discard word-order information.
+  \item A \textbf{unified formal model} $\mathcal{P}$ that places all components under
+        a common specification, enabling joint reasoning about correctness, cost,
+        and ordering — the first such unified model in the academic document
+        generation literature, to our knowledge.
+\end{itemize}
+
+\subsection{Report Structure}
+
+Section~\ref{sec:related} surveys related work across automated writing assistance,
+retrieval-augmented generation, and formal pipeline specification.
+Section~\ref{sec:architecture} presents the full formal specification of \sys{},
+including all ten Definitions and the five system invariants.
+Section~\ref{sec:contributions} derives the two main theorems and two propositions.
+Section~\ref{sec:experimental} describes the evaluation methodology.
+Section~\ref{sec:results} presents quantitative results across four evaluation objectives.
+Section~\ref{sec:discussion} discusses the interpretation of results, the scope
+and limitations of the formal model, and four future research directions.
+Section~\ref{sec:conclusion} concludes.

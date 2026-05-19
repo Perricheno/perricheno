@@ -1,0 +1,53 @@
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}[
+  stage/.style={draw=#1, fill=#2, rounded corners=6pt,
+                minimum width=2.2cm, minimum height=1.6cm,
+                align=center, font=\scriptsize\bfseries, line width=1.5pt,
+                text width=2.0cm, inner sep=5pt},
+  arr/.style={-{Stealth[length=8pt,width=6pt]}, line width=1.8pt, draw=DG!50},
+  timelbl/.style={font=\tiny, text=MG, below=4pt, align=center},
+]
+\node[stage={C1}{L1}] (S1) at (0, 0)    {Stage 1\\\textbf{Plan}};
+\node[stage={C2}{L2}] (S2) at (3.0, 0)  {Stage 2\\\textbf{Find \&\\Verify}};
+\node[stage={C5}{L5}] (S25) at (6.0, 0) {Stage 2.5\\\textbf{Align}};
+\node[stage={C3}{L3}] (S3) at (9.0, 0)  {Stage 3\\\textbf{Write}};
+\node[stage={C6}{L6}] (S4) at (12.0,0)  {Stage 4\\\textbf{Assemble}};
+
+\draw[arr] (S1)--(S2);
+\draw[arr] (S2)--(S25);
+\draw[arr] (S25)--(S3);
+\draw[arr] (S3)--(S4);
+
+\node[timelbl] at (0,-1.05)    {$<2$ min};
+\node[timelbl] at (3.0,-1.05)  {5--15 min};
+\node[timelbl] at (6.0,-1.05)  {1--2 min};
+\node[timelbl] at (9.0,-1.05)  {15--40 min};
+\node[timelbl] at (12.0,-1.05) {$<3$ min};
+
+% Output arrow
+\draw[arr, C4] (S4)--(13.8,0);
+\node[draw=C4, fill=L4, rounded corners=4pt, minimum width=1.8cm,
+      minimum height=1.4cm, align=center, font=\scriptsize\bfseries,
+      line width=1.5pt, text width=1.6cm] at (14.9,0)
+  {\textbf{PDF}\\Document};
+
+% Total time annotation
+\draw[decorate, decoration={brace, amplitude=7pt, raise=14pt},
+      C1, line width=1.2pt] (-1.1,-0.8) -- (13.0,-0.8)
+  node[midway, below=22pt, font=\small\bfseries, text=C1]
+    {Total: \textbf{20--60 minutes} from topic to final PDF};
+
+% Key benefit badges
+\node[draw=C3, fill=L3, rounded corners=3pt, font=\tiny\bfseries,
+      text=C3, inner sep=3pt] at (3.0, 1.4) {No hallucinated refs};
+\node[draw=C6, fill=L6, rounded corners=3pt, font=\tiny\bfseries,
+      text=C6, inner sep=3pt] at (9.0, 1.4) {Figures auto-compiled};
+\end{tikzpicture}
+\caption{The five-stage \sys{} pipeline from topic to compiled PDF.
+         Each stage has a defined job and a defined time budget.
+         The reference verification step (Stage~2) is what eliminates citation hallucination;
+         the figure compilation step (inside Stage~3) is what ensures every figure in the
+         text is present and correct in the PDF.}
+\label{fig:pipeline_simple}
+\end{figure}
