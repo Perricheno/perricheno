@@ -526,23 +526,15 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
 | 401 | `'Auth required'` | 84 | Нет сессии. |
-| 400 | `'Plan not available for KZT payment'` | 94 | Выбранный план недоступен для оплаты в KZT (через Kaspi). |
 | 400 | `'Invalid package selected'` | 123 | Пакет не найден в списке доступных. |
 | 502 | `{error:'Gateway error', fallback_url: POS_FALLBACK}` | 159 | Платёжный шлюз (CryptoCloud) вернул ошибку; клиенту дополнительно отдаётся резервная ссылка на POS-терминал. |
 | 500 | `{error: data.message \|\| 'Failed to generate invoice', fallback_url: POS_FALLBACK}` | 183 | Не удалось создать инвойс в шлюзе. |
 | 500 | `{error: message, fallback_url: POS_FALLBACK}` | 188 | Catch-all. |
 
-### `billing/kaspi-webhook` — `src/app/api/billing/kaspi-webhook/route.ts`
-**Особый контракт**: это вебхук, который дергает Kaspi, а не фронтенд, поэтому формат ответа — `{ result: 0 | 1, message?: string }` (0 = обработано успешно, 1 = ошибка), а не `{ error }`. HTTP-статус при этом тоже выставляется, но именно поле `result` — это то, что проверяет Kaspi.
-| Статус | `result` | `message` | Строка | Значение |
-|---|---|---|---|---|
-| 200 | 0 | — | 42, 68, 99, 157 | Успешная обработка (в т.ч. идемпотентный повтор уже обработанного платежа на строке 99). |
-| 500 | 1 | `'Server misconfiguration'` | 48 | Не настроен секрет для проверки подписи. |
-| 403 | 1 | `'Missing signature'` | 51 | Нет подписи в запросе. |
-| 403 | 1 | `'Invalid signature'` | 59 | Подпись не совпала. |
-| 400 | 1 | `'Invalid order ID'` | 63 | Некорректный `order_id`. |
-| 400 | 1 | `'Bad package data'` | 79 | Пакет из `order_id` не распознан. |
-| 500 | 1 | `'Internal error'` | 160 | Catch-all. |
+Ранее здесь была ветка `currency === 'kzt'` (Kaspi Pay) с отдельной ошибкой `'Plan not available for KZT payment'` — убрана 2026-09-03 вместе со всей Kaspi-интеграцией (подтверждено владельцем: заброшена, не планируется). Теперь все валюты идут через один и тот же путь CryptoCloud выше.
+
+### ~~`billing/kaspi-webhook`~~ — удалён 2026-09-03
+Файл `src/app/api/billing/kaspi-webhook/route.ts` полностью удалён (Kaspi Pay заброшена, подтверждено владельцем). Раньше этот вебхук отвечал в специфичном для Kaspi формате `{ result: 0 | 1, message?: string }` — упоминается здесь только для истории, роут больше не существует и возвращает 404.
 
 ### `billing/receipt/[id]` — `src/app/api/billing/receipt/[id]/route.ts`
 **Особенность**: ответы — это `new NextResponse("текст"/"html", { status })`, а не JSON (`{ error }`), т.к. эндпоинт отдаёт либо PDF, либо HTML-страницу.
@@ -567,7 +559,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 | 500 | `err.message` | 48 | Catch-all. |
 
 ### `billing/webhook` — `src/app/api/billing/webhook/route.ts` (вебхук CryptoCloud)
-**Особый контракт**, как и у Kaspi-вебхука: ответы — plain text (`new NextResponse('текст', { status })`), не JSON.
+**Особый контракт**: ответы — plain text (`new NextResponse('текст', { status })`), не JSON.
 | Статус | Тело | Строка | Значение |
 |---|---|---|---|
 | 200 | `'OK'` | 50 | Платёж не в финальном статусе (`status !== 'success' \|\| 'paid'`) — подтверждение получения без обработки. |
@@ -864,7 +856,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 
 | Статус | Типовое значение |
 |---|---|
-| 200 | Успех; также используется для "мягких" ошибок бизнес-логики (`ok:false` при неудачной компиляции в `space/[id]/compile`, `success:false` при таймауте/падении скрипта в `r-compiler`/`python-compiler`, `{text:"", error:"..."}` в `internal/bot/extract-text`, `{result:0}` в Kaspi-вебхуке, `'OK'` в CryptoCloud-вебхуке). |
+| 200 | Успех; также используется для "мягких" ошибок бизнес-логики (`ok:false` при неудачной компиляции в `space/[id]/compile`, `success:false` при таймауте/падении скрипта в `r-compiler`/`python-compiler`, `{text:"", error:"..."}` в `internal/bot/extract-text`, `'OK'` в CryptoCloud-вебхуке). |
 | 201 | Создание сущности (`agent/sessions` POST, `space` POST, `space/[id]/duplicate`, `space/[id]/invite`, `space/[id]/versions` POST, `space/[id]/files` POST, `space/[id]/files/upload`). |
 | 202 | Асинхронная генерация ещё не завершена (`billing/receipt/[id]` — чек генерируется). |
 | 400 | Некорректный запрос: невалидный JSON, отсутствуют обязательные поля, невалидный путь/URL/тип конвертации. Самый частый код после 401. |

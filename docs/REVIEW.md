@@ -80,7 +80,7 @@ const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env
 ### 9. Прочие некритичные, но конкретные проблемы из Этапа 2
 (входили в «требует уточнения у владельца» в соответствующих документах — переношу сюда как находки код-ревью)
 - `auth/login/route.ts` — при ошибке 500 в ответ клиенту уходит `e.stack` (полный стектрейс) — раскрытие внутренней структуры кода.
-- `KASPI_MERCHANT_ID`/`KASPI_API_KEY`/`KASPI_WEBHOOK_SECRET` упомянуты в теле деплой-скрипта (`.github/workflows/deploy.yml:80-82`), но не объявлены в `env:`/`envs:` этого шага (см. `config_and_env.md`) — вероятно, никогда не доезжают до `.env` сервера через CI, то есть Kaspi-приём платежей может быть тихо неработоспособен.
+- ~~`KASPI_MERCHANT_ID`/`KASPI_API_KEY`/`KASPI_WEBHOOK_SECRET` не доезжали через CI~~ — **[ИСПРАВЛЕНО, 2026-09-03]**: не почина́лось, а удалено — владелец подтвердил, что Kaspi Pay заброшена и не планируется; весь код и переменные убраны (`refactor(billing): remove abandoned Kaspi Pay integration code`).
 - Несогласованные коды ответа (401 vs 403) для невалидного `x-bot-secret` в разных `internal/bot/*` роутах (см. `error_codes.md`).
 - `LATEX_COMPILER_URL` фолбэк указывает на хост `http://latex-compiler:8000`, которого нет ни в `docker-compose.yml`, ни где-либо ещё в инфраструктуре этого репозитория.
 - `WS_SERVER_INTERNAL_URL` объявлена в `docker-compose.yml`, но не читается ни в одном файле `src/` — мёртвая переменная (или интеграция, которую забыли перенести).

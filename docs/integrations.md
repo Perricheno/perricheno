@@ -18,8 +18,7 @@
 - Основной сайт (Next.js) бьёт напрямую в Telegram Bot API HTTP-эндпоинт, минуя бот-контейнер, в нескольких местах:
   - `src/lib/db.ts:337,477,503,524` — `sendMessage`, `editMessageText`, `deleteMessage` (уведомления пользователю).
   - `src/app/api/billing/webhook/route.ts:201` — уведомление об оплате CryptoCloud.
-  - `src/app/api/billing/kaspi-webhook/route.ts:129` — уведомление об оплате Kaspi.
-  - `src/app/api/billing/checkout/route.ts:103,130,167` — уведомления о созданном счёте.
+  - `src/app/api/billing/checkout/route.ts` — уведомления о созданном счёте.
   - `src/app/api/telegram/send/route.ts:29` — `sendDocument` (отправка файла из PDF-инструментов сайта).
 
 Аутентификация: `TELEGRAM_BOT_TOKEN` подставляется в URL (`.../bot<TOKEN>/...`). Токен читается из `process.env.TELEGRAM_BOT_TOKEN` почти везде, но в `get_bot_name.js:3` — отдельный служебный скрипт для получения username бота — **токен захардкожен литералом прямо в файле**, не читается из env. Файл не используется приложением в рантайме (это разовый dev-скрипт), но токен в git-истории уже скомпрометирован.
@@ -63,16 +62,16 @@ body: { shop_id: CRYPTOCLOUD_SHOP_ID, amount, order_id: "UID_<userId>_PACK_<pack
 
 ---
 
-## 3. Kaspi Pay (платежи, KZT)
+## 3. Kaspi Pay — ЗАБРОШЕНО, код удалён (2026-09-03)
 
-Два режима создания платежа в `src/app/api/billing/checkout/route.ts:38-79`:
-1. «Полный API» — если заданы `KASPI_MERCHANT_ID` и `KASPI_API_KEY`: `POST {KASPI_API_BASE_URL}/payments/order/create` (по умолчанию `https://kaspi.kz/online/api`) с `Authorization: Bearer <KASPI_API_KEY>`.
-2. Фолбэк — если задан только `KASPI_MERCHANT_ID`: собирается прямая ссылка `https://pay.kaspi.kz/pay/<MERCHANT_ID>?amount=...&order=...` без похода в API.
-3. Если не задано ничего — Kaspi считается «не настроен», код падает обратно в ветку CryptoCloud (строка 118).
+Подтверждено владельцем: интеграция Kaspi Pay заброшена, платежи через неё не принимаются и не планируются. `deploy.yml` никогда не доставлял `KASPI_MERCHANT_ID`/`KASPI_API_KEY`/`KASPI_WEBHOOK_SECRET` на сервер (см. `docs/REVIEW.md` #11 и историю этого документа) — на практике эта ветка всегда падала обратно в CryptoCloud.
 
-Приём результата — вебхук `POST /api/billing/kaspi-webhook` (`src/app/api/billing/kaspi-webhook/route.ts`), ожидаемый JSON `{ txn_id, order_id, status, amount, currency, sign }`. Подпись: `HMAC-SHA256(KASPI_WEBHOOK_SECRET, txn_id+order_id+status+amount)`. Как и у CryptoCloud — отсутствие `KASPI_WEBHOOK_SECRET` полностью отключает приём (500), идемпотентность через ту же таблицу `processedPayment`. Ответ всегда `{ result: 0 | 1, ... }` — это специфичный протокол Kaspi (0 = ОК), а не стандартный REST-код.
+Что было и что убрано:
+- `src/app/api/billing/kaspi-webhook/route.ts` — отдельный вебхук-хендлер, **удалён целиком** (был полностью изолирован, ничего кроме общих утилит `addPurchasedTokens`/`isPaymentProcessed` не переиспользовал).
+- `src/app/api/billing/checkout/route.ts` — Kaspi-специфичная часть (`createKaspiPayment()`, `PLANS_KZT`, ветка `currency === 'kzt'`, чтение `KASPI_*`) **удалена**; сейчас все валюты идут через CryptoCloud без изменения наблюдаемого поведения (Kaspi и раньше никогда фактически не проводил платёж).
+- `.github/workflows/deploy.yml` — убраны 3 строки `update_env "KASPI_*"`, ссылавшиеся на этот код.
 
-Комментарий в deploy.yml прямо называет Kaspi «optional — set in GitHub secrets when ready» — то есть на момент проверки это, судя по всему, ещё не боевая интеграция, а подготовленный, но опционально включаемый путь.
+**Не удалено**: `src/app/[locale]/billings/page.tsx` и `PricingCard.tsx` всё ещё показывают валюту `kzt`/«via Kaspi» в переключателе (и `kzt` — значение по умолчанию) — это фронтенд/UX-решение, требует отдельного решения владельца, не тронуто в рамках этой правки.
 
 ---
 
@@ -238,7 +237,7 @@ https://n8n.perricheno.ru/webhook/519031b9-...
 |---|---|---|---|---|---|
 | 1 | Telegram Bot API | REST + Webhook | Bot Token в URL / `X-Telegram-Bot-Api-Secret-Token` | Нет | `telegram-bot/src/bot.ts`, `src/lib/db.ts`, `src/app/api/webhook/telegram/route.ts` |
 | 2 | CryptoCloud | REST + Webhook | `Token <API_KEY>` / MD5-подпись | Нет | `src/app/api/billing/checkout,webhook/route.ts` |
-| 3 | Kaspi Pay | REST + Webhook | `Bearer <API_KEY>` / HMAC-SHA256 | Нет | `src/app/api/billing/checkout,kaspi-webhook/route.ts` |
+| 3 | ~~Kaspi Pay~~ | — | — | — | **Заброшено, код удалён 2026-09-03** (см. раздел 3) |
 | 4 | OpenAI | REST | `Bearer <OPENAI_API_KEY>` | Только в `r/generate` (4 попытки) | `src/lib/agent/pipeline/llm.ts` + 15 роутов напрямую |
 | 5 | MinIO/S3 | SDK (S3 API) | Access/Secret Key | Нет | `src/lib/storage.ts` |
 | 6 | CrossRef / arXiv / OpenAlex | REST | Без ключа (только `mailto=`/User-Agent) | Только arXiv в `research-api` (1 повтор на 503) | `src/app/api/citations/search`, `research-api/main.go` |
@@ -246,14 +245,15 @@ https://n8n.perricheno.ru/webhook/519031b9-...
 | 7 | ip-api.com | REST | Без ключа | Нет | `src/lib/session.ts` |
 | 8 | R/Python/Research/PDF-extractor (внутренние) | Внутренний REST | Нет (закрыты сетью Docker) | Нет | `src/app/api/agent/{r,python}-compile`, `scholar/search`, `internal/bot/extract-text` |
 | 9 | LaTeX-компилятор (внешний) | REST | `x-api-key` | Нет | 8 файлов, см. раздел 9 |
-| 10 | PaddleOCR-VL / Stirling PDF | REST | Bearer / `X-API-KEY` (оба **захардкожены**) | Нет (но есть цепочка фолбэков) | `pdf-extractor/main.go`, `src/app/api/internal/bot/extract-text/route.ts` |
+| 10 | PaddleOCR-VL / Stirling PDF | REST | Bearer / `X-API-KEY` (читаются из `PADDLEOCR_API_TOKEN`/`STIRLING_PDF_API_KEY`, централизовано в Фазе 1 REVIEW.md #3) | Нет (но есть цепочка фолбэков) | `pdf-extractor/main.go`, `src/lib/config.ts` |
 | 11 | n8n webhook | REST (через свой прокси) | Нет (URL сам по себе — секрет) | Нет | `src/app/api/webhook-proxy/route.ts` |
 | 12 | Cloudflare | Только сетевой слой | — | — | `docker-compose.yml` (сеть), эвристики в error-хендлинге |
 | 13 | open.er-api.com | REST | Без ключа | Нет | `billing/webhook`, `dashboard/actions.ts`, `billings/page.tsx` |
 
 ## Требует уточнения у владельца
 
-1. Что такое `latex-compiler` инфраструктурно (раздел 9) — сервис не описан в `docker-compose.yml` этого репозитория, но используется в 8 местах кода.
-2. Используется ли реально дублирующий вебхук `src/app/[locale]/callback/route.ts` (раздел 2) — и если да, почему в нём отключена проверка подписи.
-3. Назначение `WS_SERVER_INTERNAL_URL` (docker-compose.yml) — переменная объявлена, но не найдено ни одного `process.env.WS_SERVER_INTERNAL_URL` в коде.
-4. Актуальность списка моделей `claude-3.5-sonnet`/`gemini-2.0-flash` в `src/app/actions.ts:23` — похоже на неиспользуемый черновик мультимодельного чата поверх n8n.
+1. Что такое `latex-compiler` инфраструктурно (раздел 9) — сервис не описан в `docker-compose.yml` этого репозитория, но используется в 8 местах кода. (Открыто — Фаза 2.)
+2. ~~Дублирующий вебхук `src/app/[locale]/callback/route.ts`~~ — **закрыто**: подтверждено владельцем, что вебхук боевой и «сырой» (не мёртвый код); в Фазе 1 (REVIEW.md #1) добавлена проверка подписи и идемпотентность по образцу `/api/billing/webhook`.
+3. Назначение `WS_SERVER_INTERNAL_URL` (docker-compose.yml) — переменная объявлена, но не найдено ни одного `process.env.WS_SERVER_INTERNAL_URL` в коде. (Открыто — Фаза 2.)
+4. Актуальность списка моделей `claude-3.5-sonnet`/`gemini-2.0-flash` в `src/app/actions.ts:23` — похоже на неиспользуемый черновик мультимодельного чата поверх n8n. (Не в фокусе текущих фаз — не трогать без отдельного запроса.)
+5. ~~Kaspi Pay~~ — **закрыто**: подтверждено владельцем, интеграция заброшена, код удалён (см. раздел 3).

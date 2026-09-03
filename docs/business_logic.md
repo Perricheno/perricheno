@@ -14,7 +14,7 @@ Perricheno — SaaS для автоматической генерации на�
 - **Совместный LaTeX-редактор "Space"** (`src/lib/space-db.ts`) с версионированием, ролями и шарингом.
 - **R-сессии** (`src/lib/r-db.ts`) — отдельная лёгкая история генераций графиков.
 - **Менеджер цитат** (`src/lib/citations-db.ts`) — личная библиотека BibTeX-записей с коллекциями.
-- **Биллинг**: подписки (Plus/Pro/Ultra) и разовые пакеты символов/визуалов/отчётов, оплата через CryptoCloud (крипта) и Kaspi Pay (KZT), плюс промокоды и реферальная программа.
+- **Биллинг**: подписки (Plus/Pro/Ultra) и разовые пакеты символов/визуалов/отчётов, оплата через CryptoCloud (крипта), плюс промокоды и реферальная программа. (Kaspi Pay была подготовлена, но заброшена и удалена 2026-09-03, см. §4.1.)
 - **Вход только через Telegram** — either Telegram Login Widget (HMAC-проверка), либо deep-link `/start <token>` из бота.
 
 Пользователь — авторизуется Telegram-аккаунтом (`User.telegram_id` — единственный уникальный идентификатор личности в системе).
@@ -202,24 +202,26 @@ await checkAndDeductUsage(userId, 'chars', charEquivalent);
 
 ### 4.1 Провайдеры
 
-- **CryptoCloud** (крипта, USD) — основной провайдер. Ключи: `CRYPTOCLOUD_API_KEY`, `CRYPTOCLOUD_SHOP_ID`, `CRYPTOCLOUD_SECRET` (последний — только для проверки подписи вебхука).
-- **Kaspi Pay** (KZT, для казахстанских карт) — опциональный провайдер, включается флагом `currency === 'kzt'` при чекауте. Ключи: `KASPI_MERCHANT_ID`, `KASPI_API_KEY`, `KASPI_API_BASE_URL`, `KASPI_WEBHOOK_SECRET`.
-- Если ни один провайдер не настроен — фолбэк на статичную POS-ссылку CryptoCloud терминала (`POS_FALLBACK = 'https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH'`, хардкод в `checkout/route.ts:10`), пользователю рекомендуют оплатить руками через терминал и написать в поддержку/дождаться промокода.
+- **CryptoCloud** (крипта, USD) — единственный активный провайдер. Ключи: `CRYPTOCLOUD_API_KEY`, `CRYPTOCLOUD_SHOP_ID`, `CRYPTOCLOUD_SECRET` (последний — только для проверки подписи вебхука).
+- ~~**Kaspi Pay** (KZT)~~ — интеграция была подготовлена (флаг `currency === 'kzt'` при чекауте, отдельный вебхук, каталог цен в KZT), но никогда не была подключена в CI (см. `docs/config_and_env.md`) и **удалена целиком 2026-09-03**, подтверждено владельцем: заброшена, платежи через неё не принимаются и не планируются. Весь код (`kaspi-webhook/route.ts`, `createKaspiPayment()`, `PLANS_KZT` в `checkout/route.ts`) удалён; так как Kaspi и раньше не был сконфигурирован в проде, наблюдаемое поведение чекаута не изменилось — все валюты идут через CryptoCloud.
+- Если CryptoCloud не настроен — фолбэк на статичную POS-ссылку терминала (`POS_FALLBACK = 'https://pay.cryptocloud.plus/pos/gTEj6wIpQ46vKqaH'`, хардкод в `checkout/route.ts`), пользователю рекомендуют оплатить руками через терминал и написать в поддержку/дождаться промокода.
+
+**Не удалено, отдельный вопрос владельцу**: `src/app/[locale]/billings/page.tsx` и `PricingCard.tsx` всё ещё показывают переключатель валют с `kzt`/«via Kaspi» (и `kzt` — значение по умолчанию), хотя оплата в KZT через Kaspi фактически никогда не проводилась. Это фронтенд/UX-код, не тронут в рамках удаления бэкенда.
 
 ### 4.2 Каталог планов и пакетов
 
-Цены в USD (`src/app/api/billing/checkout/route.ts:14-23`, PLANS) и параллельно в KZT (`PLANS_KZT:26-35`, фиксированные, не пересчитываются по курсу):
+Цены в USD (`src/app/api/billing/checkout/route.ts`, PLANS):
 
-| id | USD | KZT | Тип |
-|---|---|---|---|
-| plus_month | $3.99 | 1 990 ₸ | подписка |
-| plus_year | $39.00 | 19 900 ₸ | подписка |
-| pro_month | $7.99 | 3 990 ₸ | подписка |
-| pro_year | $79.00 | 39 900 ₸ | подписка |
-| ultra_month | $14.99 | 6 990 ₸ | подписка |
-| ultra_year | $149.00 | 69 900 ₸ | подписка |
-| data_scientist | $25.00 | 12 990 ₸ | пакет: 2M chars + 50 visuals (веб) |
-| researcher | $60.00 | 29 990 ₸ | пакет: 5M chars + 150 visuals (веб) |
+| id | USD | Тип |
+|---|---|---|
+| plus_month | $3.99 | подписка |
+| plus_year | $39.00 | подписка |
+| pro_month | $7.99 | подписка |
+| pro_year | $79.00 | подписка |
+| ultra_month | $14.99 | подписка |
+| ultra_year | $149.00 | подписка |
+| data_scientist | $25.00 | пакет: 2M chars + 50 visuals (веб) |
+| researcher | $60.00 | пакет: 5M chars + 150 visuals (веб) |
 
 Внутри бота (`src/app/api/internal/bot/billing/route.ts:19-26`, отдельный каталог `PACKAGES`, **другие цены и состав**, чем в веб-виджете для тех же id `data_scientist`/`researcher` — $5/$12 против $25/$60 в `checkout/route.ts`; расхождение каталогов бот/веб, см. §10):
 
@@ -243,7 +245,7 @@ await checkAndDeductUsage(userId, 'chars', charEquivalent);
 Гарантия: `order_id` — **primary key**, поэтому `tx.processedPayment.create({ data: { order_id } })` физически не может выполниться дважды для одного и того же `order_id` — вторая попытка получает ошибку Prisma `P2002` (unique constraint violation). Это единственная защита от повторной обработки одного и того же платежа:
 
 ```js
-// webhook/route.ts:98-119, kaspi-webhook/route.ts:85-102 — идентичный паттерн
+// webhook/route.ts:98-119 (тот же паттерн — в [locale]/callback/route.ts, Фаза 1)
 await prisma.$transaction(async (tx) => {
     await tx.processedPayment.create({ data: { order_id: orderId } });   // атомарный "замок"
     if (plan.tier) await upgradeSubscriptionPlan(userId, packId, tx);
@@ -261,18 +263,12 @@ await prisma.$transaction(async (tx) => {
 hashString   = `${status}${orderId}${amount_crypto||''}${currency_crypto||''}${CRYPTOCLOUD_SECRET}`
 expectedSign = MD5(hashString)
 ```
-Сравнение — простое `!==` (не constant-time сравнение — потенциальная тайминг-атака, теоретическая, т.к. MD5 всё равно легко подделать при компрометации секрета). Если `CRYPTOCLOUD_SECRET` не задан в env — вебхук **полностью отключается** (500, "billing webhook disabled for safety") — явная защита от "тихого" приёма неподписанных вебхуков. Если подпись отсутствует или не совпадает → 403.
-
-**Kaspi** (`src/app/api/billing/kaspi-webhook/route.ts:53-60`):
-```
-expectedSign = HMAC-SHA256(KASPI_WEBHOOK_SECRET, `${txn_id}${order_id}${status}${amount}`)
-```
-Аналогичная защита: без `KASPI_WEBHOOK_SECRET` — 500 "disabled for safety"; без `sign` — 403; несовпадение — 403.
+Сравнение — простое `!==` (не constant-time сравнение — потенциальная тайминг-атака, теоретическая, т.к. MD5 всё равно легко подделать при компрометации секрета). Если `CRYPTOCLOUD_SECRET` не задан в env — вебхук **полностью отключается** (500, "billing webhook disabled for safety") — явная защита от "тихого" приёма неподписанных вебхуков. Если подпись отсутствует или не совпадает → 403. Тот же паттерн (с Фазы 1) используется в `[locale]/callback/route.ts` — втором вебхуке CryptoCloud, который раньше не проверял подпись.
 
 ### 4.5 Обработка успеха/неуспеха
 
-- Оба вебхука реагируют только на `status === 'success' | 'paid'` (CryptoCloud) или `'SUCCESS' | 'PAID'` (Kaspi, к тому же case-sensitive, отличается регистром от документированного). Любой другой статус → ранний `200 OK` без побочных эффектов (провайдер не должен ретраить).
-- `order_id` парсится строкой: `UID_{userId}_PACK_{packId}_TS_{timestamp}` (CryptoCloud) / `KASPI_UID_{userId}_PACK_{packId}_TS_{timestamp}` (Kaspi) — извлечение через `indexOf("PACK_")`/`indexOf("_TS_")`, а не структурированный формат (JSON/подписанный токен). Если `packId` не найден в каталоге `PLANS` — 400 "Bad package data", платёж НЕ считается обработанным (`ProcessedPayment` ещё не создан на этом этапе — создаётся только внутри транзакции ПОСЛЕ валидации `plan`), т.е. деньги провайдер получил, но начисление не произошло и повторный (исправленный) вебхук всё ещё может быть обработан. Требует уточнения у владельца — что происходит, если провайдер один раз прислал вебхук с плохим `order_id`.
+- Вебхук реагирует только на `status === 'success' | 'paid'`. Любой другой статус → ранний `200 OK` без побочных эффектов (провайдер не должен ретраить).
+- `order_id` парсится строкой: `UID_{userId}_PACK_{packId}_TS_{timestamp}` — извлечение через `indexOf("PACK_")`/`indexOf("_TS_")`, а не структурированный формат (JSON/подписанный токен). Если `packId` не найден в каталоге `PLANS` — 400 "Bad package data", платёж НЕ считается обработанным (`ProcessedPayment` ещё не создан на этом этапе — создаётся только внутри транзакции ПОСЛЕ валидации `plan`), т.е. деньги провайдер получил, но начисление не произошло и повторный (исправленный) вебхук всё ещё может быть обработан. Требует уточнения у владельца — что происходит, если провайдер один раз прислал вебхук с плохим `order_id`.
 - Успех: `upgradeSubscriptionPlan` (для подписок, тариф + сброс `monthly_chars_used=0`) либо `addPurchasedTokens` по каждому не-нулевому полю пакета (`chars`/`visuals`/`reports`), генерация чека (`generateAndStoreReceipt`, см. §4.6) и Telegram-уведомление со ссылкой на PDF-чек — оба фоново (`.catch(console.error)`, не блокируют ответ 200 провайдеру).
 
 ### 4.6 Чек (Receipt)
@@ -548,7 +544,7 @@ create → status='generating' (createRSession, r-db.ts:38-46)
 
 Формат: **[защищён]** — в коде есть конкретная проверка/констрейнт, гарантирующая инвариант. **[НЕ защищён]** — инвариант желаем/подразумевается продуктом, но код его не гарантирует (находка для code review).
 
-1. **[защищён]** Один и тот же платёж (`order_id`) не может быть начислен дважды — `ProcessedPayment.order_id` является `@id` (primary key) в Postgres, вторая вставка внутри той же `$transaction` падает с `P2002`, транзакция откатывается целиком (webhook/route.ts:98-119; kaspi-webhook/route.ts:85-102).
+1. **[защищён]** Один и тот же платёж (`order_id`) не может быть начислен дважды — `ProcessedPayment.order_id` является `@id` (primary key) в Postgres, вторая вставка внутри той же `$transaction` падает с `P2002`, транзакция откатывается целиком (`webhook/route.ts`, `[locale]/callback/route.ts` — оба используют этот паттерн).
 2. **[защищён]** Один и тот же промокод не может быть активирован дважды одним пользователем — `PromoUsage.@@unique([promo_id, user_id])`, вставка бросает `P2002`, явно перехватывается и превращается в 403 (`internal/bot/billing/route.ts:216-235`).
 3. **[защищён]** Активации промокода не может быть больше `max_uses` — инкремент `uses` выполняется условным `updateMany({ where: { uses: { lt: max_uses } } })`; если `count===0` (кто-то успел исчерпать лимит параллельно) — весь `$transaction` откатывается через `throw`, включая уже вставленный `PromoUsage` (`internal/bot/billing/route.ts:220-228`).
 4. **[защищён]** Символьная квота не может быть списана сверх остатка — `checkAndDeductUsage('chars', amount)` явно сравнивает `totalAvailable < amount` **до** любой записи в БД и возвращает `success:false` без побочных эффектов (db.ts:187).
@@ -588,7 +584,7 @@ create → status='generating' (createRSession, r-db.ts:38-46)
 - `src/lib/agent/pipeline/index.ts`, `llm.ts`, `stage1_plan.ts`, `stage2_extract.ts`, `stage2_3_visuals.ts`, `stage2_5_verify.ts`, `stage2_6_r_figures.ts`, `stage2_7_enrich_doi.ts`, `stage3_draft.ts`, `stage4_assemble.ts`, `stage5_validate.ts`, `types.ts`
 - `src/lib/agent/stages.ts`
 - `src/lib/analytics/pipeline/index.ts`, `stage1_verify_data.ts`, `stage2_plan_charts.ts`, `stage3_generate.ts`, `types.ts`
-- `src/app/api/billing/checkout/route.ts`, `webhook/route.ts`, `kaspi-webhook/route.ts`, `receipt/[id]/route.ts`, `receipt/[id]/verify/route.ts`
+- `src/app/api/billing/checkout/route.ts`, `webhook/route.ts`, `receipt/[id]/route.ts`, `receipt/[id]/verify/route.ts`
 - `src/lib/receiptGenerator.ts`
 - `src/lib/space-db.ts`, `src/lib/r-db.ts`, `src/lib/citations-db.ts`
 - `src/lib/telegram-auth.ts`, `src/lib/session.ts`

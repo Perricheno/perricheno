@@ -75,8 +75,8 @@ if (secret !== WEBHOOK_SECRET) return NextResponse.json({ error: "Unauthorized" 
 - `GET /api/billing/receipt/[id]` и `GET /api/billing/receipt/[id]/verify` — публичные страницы чека/протокола
   верификации, отдают частично маскированные PII (`username`/`telegram_id` в замаскированном виде) любому, кто
   знает/угадает `id` чека.
-- `POST /api/billing/webhook` и `POST /api/billing/kaspi-webhook` — авторизация не сессионная, а через проверку
-  HMAC-подписи провайдера платежей (`CRYPTOCLOUD_SECRET` / `KASPI_WEBHOOK_SECRET`), см. соответствующие разделы.
+- `POST /api/billing/webhook` — авторизация не сессионная, а через проверку HMAC/MD5-подписи CryptoCloud
+  (`CRYPTOCLOUD_SECRET`), см. соответствующий раздел.
 - `GET /api/health` — публичный health-check.
 - `POST /api/pdf-proxy` — конвертация файлов через внешний Stirling PDF API идёт **без проверки сессии**;
   `verifySession()` вызывается только опционально внутри, чтобы решить, слать ли результат в Telegram.
@@ -875,35 +875,28 @@ large (max 5 MB)' }`; успех — `201 { ok: true, path }`.
 ### `POST /api/billing/checkout`
 Файл: `src/app/api/billing/checkout/route.ts`
 
-Создаёт платёжную ссылку — Kaspi Pay (KZT) или CryptoCloud (USD), с фоллбэком на статичный POS-терминал.
+Создаёт платёжную ссылку через CryptoCloud (USD), с фоллбэком на статичный POS-терминал.
 Шлёт пользователю Telegram-уведомление со ссылкой на оплату (если есть `TELEGRAM_BOT_TOKEN` и известен
 `telegram_id`).
 
+> ⚠️ До 2026-09-03 этот роут также поддерживал Kaspi Pay (KZT) через `currency: 'kzt'`. Интеграция была
+> заброшена (подтверждено владельцем, никогда не была подключена в CI) и код удалён — см.
+> [`docs/integrations.md`](integrations.md), раздел 3. Поле `currency` в запросе больше ни на что не влияет.
+
 - **Auth**: требуется (`401 { error: 'Auth required' }`).
-- **Request**: `{ planId|packId (id пакета из PLANS/PLANS_KZT), currency?: 'usd'|'kzt' = 'usd' }`.
+- **Request**: `{ planId|packId (id пакета из PLANS) }`.
 - **Response**:
-  - `currency='kzt'`: `400 { error: 'Plan not available for KZT payment' }`; успех — `200 { url }`; при
-    отсутствии Kaspi-конфига падает обратно на CryptoCloud-ветку ниже.
   - `400 { error: 'Invalid package selected' }`.
   - Нет ключей CryptoCloud → `200 { fallback_url: POS_FALLBACK }` (статичная ссылка на терминал).
   - `502 { error: 'Gateway error', fallback_url }` — CryptoCloud вернул невалидный JSON.
   - `500 { error: <message>, fallback_url }` — CryptoCloud вернул ошибку/не дал ссылку.
   - Успех: `200 { url: <ссылка на оплату> }`.
 
-### `POST /api/billing/kaspi-webhook`
-Файл: `src/app/api/billing/kaspi-webhook/route.ts`
-
-Вебхук Kaspi Pay о подтверждении платежа. **Auth**: не сессионная — HMAC-SHA256 подпись
-(`sign = HMAC_SHA256(KASPI_WEBHOOK_SECRET, txn_id+order_id+status+amount)`); также идемпотентность через
-`ProcessedPayment` (уникальный `order_id`).
-
-- **Request** (JSON): `{ txn_id, order_id, status, amount, currency, sign }`. `order_id` формата
-  `KASPI_UID_{userId}_PACK_{packId}_TS_{timestamp}`.
-- **Response**: `{ result: 0 }` (Kaspi трактует как OK) если `status` не `SUCCESS`/`PAID`, или платёж уже
-  обработан; `500 { result: 1, message: 'Server misconfiguration' }` если `KASPI_WEBHOOK_SECRET` не задан;
-  `403 { result: 1, message: 'Missing signature' }` / `'Invalid signature' }`; `400 { result: 1, message:
-  'Invalid order ID' }` / `'Bad package data' }`; успех — `{ result: 0 }` (ресурсы начислены атомарно в
-  транзакции, сгенерирован чек, отправлено Telegram-уведомление).
+### ~~`POST /api/billing/kaspi-webhook`~~ — удалён 2026-09-03
+Файл `src/app/api/billing/kaspi-webhook/route.ts` больше не существует (Kaspi Pay заброшена, подтверждено
+владельцем). Запрос на этот путь теперь возвращает `404`. Сохранено здесь только для истории: раньше принимал
+`{ txn_id, order_id, status, amount, currency, sign }` с HMAC-SHA256-подписью и отвечал в специфичном для
+Kaspi формате `{ result: 0 | 1 }`.
 
 ### `GET /api/billing/receipt/[id]`
 Файл: `src/app/api/billing/receipt/[id]/route.ts`
@@ -1314,8 +1307,8 @@ OpenAI (`gpt-4.1-nano-2025-04-14`), сразу сохраняет как `Task`.
 | `/api/auth/logout` | POST | Нет (no-op без сессии) | Выйти |
 | `/api/auth/me` | GET | Session | Профиль + лимиты плана |
 | `/api/auth/poll` | GET | Нет (по одноразовому token) | Опрос статуса Telegram-логина |
-| `/api/billing/checkout` | POST | Session | Создать ссылку оплаты (Kaspi/CryptoCloud) |
-| `/api/billing/kaspi-webhook` | POST | HMAC-подпись Kaspi | Вебхук подтверждения оплаты Kaspi |
+| `/api/billing/checkout` | POST | Session | Создать ссылку оплаты (CryptoCloud) |
+| ~~`/api/billing/kaspi-webhook`~~ | — | — | Удалён 2026-09-03, теперь 404 (Kaspi Pay заброшена) |
 | `/api/billing/receipt/[id]` | GET | Нет | Скачать PDF-чек |
 | `/api/billing/receipt/[id]/verify` | GET | Нет | HTML-страница верификации чека |
 | `/api/billing/stats` | GET | Session | Транзакции и чеки пользователя |
