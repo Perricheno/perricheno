@@ -85,10 +85,6 @@ jobs:
             update_env "SESSION_SECRET" "$SESSION_SECRET"
             update_env "STIRLING_PDF_API_KEY" "$STIRLING_PDF_API_KEY"
             update_env "PADDLEOCR_API_TOKEN" "$PADDLEOCR_API_TOKEN"
-            # Kaspi Pay (optional - set in GitHub secrets when ready)
-            update_env "KASPI_MERCHANT_ID" "$KASPI_MERCHANT_ID"
-            update_env "KASPI_API_KEY" "$KASPI_API_KEY"
-            update_env "KASPI_WEBHOOK_SECRET" "$KASPI_WEBHOOK_SECRET"
             # Postgres - docker-compose.yml reads these directly for variable substitution
             update_env "POSTGRES_USER" "$POSTGRES_USER"
             update_env "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
