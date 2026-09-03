@@ -19,7 +19,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 | Статус | Сообщение | Где | Что означает |
 |---|---|---|---|
 | 401 | `"Auth required"` / `"Authentication required."` / `"Unauthorized"` | начало почти каждого хендлера, после `verifySession()` из `src/lib/session.ts` | Нет валидной cookie-сессии `perricheno_session` (JWT подписан `SESSION_SECRET`) или сессии нет в БД. Три разные строки используются как синонимы одного и того же случая — единообразия нет. |
-| 403 | `"Unauthorized"` | все `src/app/api/internal/bot/**/route.ts` | Заголовок `x-bot-secret` не совпадает с `process.env.WEBHOOK_SECRET` — это межсервисная защита эндпоинтов, вызываемых только из `telegram-bot`. Обратите внимание: семантически это 401 (неверные креды), но код возвращает 403 — так сделано во всех internal/bot роутах, кроме `internal/bot/tasks/route.ts`, где та же проверка возвращает 401 (см. раздел 11 и "требует уточнения"). |
+| 401 | `"Unauthorized"` | все `src/app/api/internal/bot/**/route.ts` | Заголовок `x-bot-secret` не совпадает с `process.env.WEBHOOK_SECRET` — это межсервисная защита эндпоинтов, вызываемых только из `telegram-bot`. **[ИСПРАВЛЕНО, Фаза 2, 2026-09-03]**: раньше 10 из 13 роутов возвращали здесь 403 (неверная семантика — 403 значит "есть креды, но нет прав", а тут креды неверны), теперь все 13 единообразно возвращают 401. |
 | 403 | `"Forbidden"` / `"Only owner can ..."` | `src/app/api/space/**` | Сессия валидна, но роль пользователя в space (`viewer`/`editor`/`owner`) не даёт прав на операцию. |
 | 404 | `"Not found"` | `src/app/api/space/**`, `src/app/api/citations/**` | Либо сущность не существует, либо (в space) роль пользователя для неё не найдена — эти два случая часто неразличимы в ответе. |
 | 402 | `{ error: "LIMIT_REACHED", details: "..." }` | `agent/generate`, `agent/visualize`, `agent/data-analytics`, `agent/analytics/generate`, `agent/scholar/sessions`, `r/generate`, `tikz/generate`, `internal/bot/compile`, `internal/bot/visual/generate` | Исчерпан лимит тарифа (символы/визуалы/отчёты) — используется как псевдокод, который фронтенд/бот, вероятно, матчит по строке `"LIMIT_REACHED"`, а не по статусу. |
@@ -605,12 +605,12 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 
 ## 11. Internal / Bot — `/api/internal/bot/*`
 
-Все эндпоинты этого раздела защищены сравнением заголовка `x-bot-secret` с `process.env.WEBHOOK_SECRET` и вызываются только из контейнера `telegram-bot`. **Кроме `internal/bot/tasks`, все возвращают 403** при несовпадении секрета; `internal/bot/tasks` — единственный, возвращающий 401 в этом же случае (см. "требует уточнения").
+Все эндпоинты этого раздела защищены сравнением заголовка `x-bot-secret` с `process.env.WEBHOOK_SECRET` и вызываются только из контейнера `telegram-bot`. Все 13 роутов единообразно возвращают **401** при несовпадении секрета (**[ИСПРАВЛЕНО, Фаза 2, 2026-09-03]** — раньше 10 из них возвращали 403).
 
 ### `internal/bot/billing` — `src/app/api/internal/bot/billing/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 32 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 32 | Неверный `x-bot-secret`. |
 | 400 | `"Missing telegram_id"` | 40 | Не передан `telegram_id`. |
 | 404 | `"User not found"` | 51, 108, 160, 202, 278 | Пользователь Telegram не найден в БД (в разных действиях: баланс, покупка, промокод, чек). |
 | 400 | `"Invalid package"` | 113 | Пакет не найден в каталоге. |
@@ -626,7 +626,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/compile` — `src/app/api/internal/bot/compile/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 11 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 11 | Неверный `x-bot-secret`. |
 | 400 | `"Code and Telegram ID are required"` | 18 | Не переданы обязательные поля. |
 | 404 | `"User not found"` | 27 | Пользователь не найден. |
 | 402 | `` `Insufficient balance. Need ${charCount} symbols, but you have ${Math.floor(deduction.remaining)}.` `` | 34-36 | Квота символов исчерпана — сообщение динамически подставляет остаток. |
@@ -635,14 +635,14 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/extract-text` — `src/app/api/internal/bot/extract-text/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 11 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 11 | Неверный `x-bot-secret`. |
 | 200 (не ошибка HTTP, но с `error`) | `{ text: "", error: "Unsupported file type" }` | 96 | **Нестандартно**: тип файла не поддерживается, но статус всё равно `200` (не 400/415, как в аналогичных проверках других роутов). |
 | 500 | `{error: err.message, text: "", images: []}` | 111 | Catch-all. |
 
 ### `internal/bot/referral` — `src/app/api/internal/bot/referral/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 401 | `"Unauthorized"` | 9 | Неверный `x-bot-secret` (единственный `referral`-роут с 401 вместо 403 — см. `referral/apply` ниже, там тоже 401). |
+| 401 | `"Unauthorized"` | 9 | Неверный `x-bot-secret`. |
 | 404 | `"User not found"` | 17 | Пользователь не найден. |
 | 500 | `err.message` | 27 | Catch-all. |
 
@@ -658,7 +658,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/history` — `src/app/api/internal/bot/history/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 9, 62 | Неверный `x-bot-secret` (GET/DELETE). |
+| 401 | `"Unauthorized"` | 9, 62 | Неверный `x-bot-secret` (GET/DELETE). |
 | 400 | `"Missing telegram_id"` | 30 | Не передан `telegram_id`. |
 | 404 | `"User not found"` | 33 | Пользователь не найден. |
 | 500 | `err.message` | 55, 77 | Catch-all. |
@@ -667,7 +667,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/history/files` — `src/app/api/internal/bot/history/files/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 47 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 47 | Неверный `x-bot-secret`. |
 | 404 | `"Session not found"` | 55 | Сессия не найдена. |
 | 404 | `"Нет содержимого для генерации PDF."` | 116 | Нет текста/визуалов для сборки PDF-отчёта. |
 | 500 | `"Не удалось скомпилировать PDF. Используйте ZIP."` | 202 | Компиляция LaTeX→PDF провалилась, предлагается fallback на ZIP. |
@@ -678,7 +678,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/session` — `src/app/api/internal/bot/session/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 9, 35 | Неверный `x-bot-secret` (GET/POST). |
+| 401 | `"Unauthorized"` | 9, 35 | Неверный `x-bot-secret` (GET/POST). |
 | 400 | `"Missing userId"` | 25 | Не передан `userId` в query. |
 | 400 | `"Missing data"` | 54 | Не передано тело для сохранения сессии. |
 | 500 | `err.message` | 60 | Catch-all. |
@@ -686,14 +686,14 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/tasks` — `src/app/api/internal/bot/tasks/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 401 | `"Unauthorized"` | 10 | Неверный `x-bot-secret` — **единственный internal/bot-роут с 401** вместо 403 (см. "требует уточнения"). |
+| 401 | `"Unauthorized"` | 10 | Неверный `x-bot-secret`. |
 | 404 | `"User not found"` | 18 | Пользователь не найден. |
 | 500 | `err.message` | 48 | Catch-all. |
 
 ### `internal/bot/user-info` — `src/app/api/internal/bot/user-info/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 10 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 10 | Неверный `x-bot-secret`. |
 | 400 | `"Missing telegram_id"` | 17 | Не передан `telegram_id`. |
 | 404 | `"User not found"` | 23 | Пользователь не найден. |
 | 500 | `err.message` | 29 | Catch-all. |
@@ -701,7 +701,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/verify` — `src/app/api/internal/bot/verify/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 12 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 12 | Неверный `x-bot-secret`. |
 | 400 | `"Missing token or user data"` | 19-22 | Не переданы `token`/`user.id`. |
 | 404 | `"Token not found or expired"` | 29-32 | Токен deep-link не найден. |
 | 409 | `"Token already used"` | 36-39 | Токен уже был использован (`status === "completed"`) — единственное место в проекте с кодом 409. |
@@ -710,7 +710,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/visual/compile` — `src/app/api/internal/bot/visual/compile/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 29 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 29 | Неверный `x-bot-secret`. |
 | 400 | `"No code provided"` | 36 | Пустой код. |
 | 502 | `` `Compiler Error: ${err}` `` | 52 | Внутренний компилятор (R/Python) вернул ошибку. |
 | 500 | `err.message` | 58 | Catch-all. |
@@ -718,7 +718,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ### `internal/bot/visual/generate` — `src/app/api/internal/bot/visual/generate/route.ts`
 | Статус | Сообщение | Строка | Значение |
 |---|---|---|---|
-| 403 | `"Unauthorized"` | 195 | Неверный `x-bot-secret`. |
+| 401 | `"Unauthorized"` | 195 | Неверный `x-bot-secret`. |
 | 500 | `"OpenAI API Key not configured"` | 199 | Ключ не задан. |
 | 400 | `"No context provided"` | 219 | Нет ни текста, ни изображений для анализа. |
 | 422 | `"⚠️ В документе недостаточно данных для анализа. Пожалуйста, убедитесь, что в файле есть количественные показатели или прикрепите детальное описание."` | 229-231 | Защита от галлюцинаций: текста < 400 символов и нет изображений. |
@@ -860,9 +860,9 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 | 201 | Создание сущности (`agent/sessions` POST, `space` POST, `space/[id]/duplicate`, `space/[id]/invite`, `space/[id]/versions` POST, `space/[id]/files` POST, `space/[id]/files/upload`). |
 | 202 | Асинхронная генерация ещё не завершена (`billing/receipt/[id]` — чек генерируется). |
 | 400 | Некорректный запрос: невалидный JSON, отсутствуют обязательные поля, невалидный путь/URL/тип конвертации. Самый частый код после 401. |
-| 401 | Нет валидной пользовательской сессии (`verifySession()`), либо (нестандартно) неверный `x-bot-secret` в паре internal/bot-роутов, либо провалена подпись Telegram Login Widget. |
+| 401 | Нет валидной пользовательской сессии (`verifySession()`), либо неверный/отсутствующий `x-bot-secret` во всех internal/bot-роутах, либо провалена подпись Telegram Login Widget. |
 | 402 | Исчерпана тарифная квота (символы/визуалы/отчёты) — часто с псевдокодом `"LIMIT_REACHED"` в `error`. |
-| 403 | Неверный межсервисный секрет (`x-bot-secret`) в большинстве internal/bot-роутов; недостаточно прав на ресурс (роль в space, не-админ); провалена подпись вебхука. |
+| 403 | Недостаточно прав на ресурс (роль в space, не-админ); повторное использование промокода; забаненный аккаунт; провалена подпись вебхука. |
 | 404 | Сущность не найдена (сессия, space, версия, файл, пользователь, промокод, чек, транзакция, приглашение); в `space/*` также используется, когда не определена роль пользователя. |
 | 409 | Только один случай — повторное использование auth-токена (`internal/bot/verify`). |
 | 410 | Промокод деактивирован/исчерпан (`internal/bot/billing`). |
@@ -879,7 +879,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 ## Требует уточнения у владельца
 
 1. **`src/app/api/tasks/route.ts:7`** — JWT для `/api/tasks/*` подписывается захардкоженным литералом `"super-secret-key-change-this-in-env-938210"` через собственную функцию `verifyAuth()`, а не общим `verifySession()`/`SESSION_SECRET` из `src/lib/session.ts`. Непонятно, баг это (роут случайно не признаёт основную сессию пользователя) или осознанное решение с отдельным механизмом.
-2. **Несогласованность 401 vs 403 для `x-bot-secret`**: почти все `internal/bot/*` роуты возвращают 403 при неверном секрете, но `internal/bot/referral/route.ts:9`, `internal/bot/referral/apply/route.ts:10` и `internal/bot/tasks/route.ts:10` возвращают 401 в той же ситуации. Неясно, это случайная непоследовательность или у 401-роутов иная семантика.
+2. ~~Несогласованность 401 vs 403 для `x-bot-secret`~~ — **[ИСПРАВЛЕНО, Фаза 2, 2026-09-03]**: все 13 `internal/bot/*` роутов теперь единообразно возвращают 401 при неверном/отсутствующем секрете.
 3. **`src/app/api/auth/login/route.ts:39-43`** — в ответ клиенту при 500 уходят `details: e.toString()` и `stack: e.stack` (полный стектрейс). Нужно подтвердить, что это осознанный debug-режим, а не забытый код для продакшена.
 4. **`src/app/api/internal/bot/extract-text/route.ts:96`** — неподдерживаемый тип файла возвращается со статусом 200 (`{text:"", error:"Unsupported file type"}`), тогда как аналогичные проверки в других роутах (`agent/attach`, `agent/ingest-pdf`) используют 415. Уточнить, намеренно ли здесь другая семантика (чтобы бот не считал это фатальной ошибкой HTTP).
 5. **`src/app/api/r/upload/route.ts:15`** — сообщение `"Extract service not configured."` появляется при отсутствии `WEBHOOK_SECRET`, что вводит в заблуждение (звучит как проблема самого сервиса извлечения, а не отсутствующего секрета для его вызова). Не баг, но неточная формулировка — стоит уточнить у автора, не является ли это переиспользованием не по назначению общего `WEBHOOK_SECRET`.
