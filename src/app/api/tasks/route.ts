@@ -1,34 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import * as jwt from 'jose';
-import { getTasksByUserId, createTask, updateTaskStatus, deleteTask, getUserById } from '@/lib/db';
+import { verifySession } from '@/lib/session';
+import { getTasksByUserId, createTask, updateTaskStatus, deleteTask } from '@/lib/db';
 import { prisma } from '@/lib/prisma';
 
-const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env-938210");
-
-async function verifyAuth(req: NextRequest) {
-    const sessionToken = req.cookies.get('perricheno_session')?.value;
-    if (!sessionToken) return null;
-
-    try {
-        const { payload } = await jwt.jwtVerify(sessionToken, JWT_SECRET);
-        return await getUserById(Number(payload.userId));
-    } catch {
-        return null;
-    }
-}
-
 export async function GET(req: NextRequest) {
-    const user = await verifyAuth(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const tasks = await getTasksByUserId(user.id);
+    const tasks = await getTasksByUserId(userId);
     return NextResponse.json(tasks);
 }
 
 export async function POST(req: NextRequest) {
-    const user = await verifyAuth(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
         const body = await req.json();
@@ -38,7 +23,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Text and remindAt are required' }, { status: 400 });
         }
 
-        const task = await createTask(user.id, text, remindAt);
+        const task = await createTask(userId, text, remindAt);
         return NextResponse.json(task);
     } catch (e) {
         return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
@@ -46,8 +31,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const user = await verifyAuth(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
         const body = await req.json();
@@ -75,8 +60,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const user = await verifyAuth(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = await verifySession();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
         const { searchParams } = new URL(req.url);
