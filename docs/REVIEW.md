@@ -83,7 +83,7 @@ const JWT_SECRET = new TextEncoder().encode("super-secret-key-change-this-in-env
 - ~~`KASPI_MERCHANT_ID`/`KASPI_API_KEY`/`KASPI_WEBHOOK_SECRET` не доезжали через CI~~ — **[ИСПРАВЛЕНО, 2026-09-03]**: не почина́лось, а удалено — владелец подтвердил, что Kaspi Pay заброшена и не планируется; весь код и переменные убраны (`refactor(billing): remove abandoned Kaspi Pay integration code`).
 - Несогласованные коды ответа (401 vs 403) для невалидного `x-bot-secret` в разных `internal/bot/*` роутах (см. `error_codes.md`).
 - `LATEX_COMPILER_URL` фолбэк указывает на хост `http://latex-compiler:8000`, которого нет ни в `docker-compose.yml`, ни где-либо ещё в инфраструктуре этого репозитория.
-- `WS_SERVER_INTERNAL_URL` объявлена в `docker-compose.yml`, но не читается ни в одном файле `src/` — мёртвая переменная (или интеграция, которую забыли перенести).
+- ~~`WS_SERVER_INTERNAL_URL` объявлена, но не читается~~ — **[ИСПРАВЛЕНО, Фаза 2, 2026-09-03]**: подтверждено grep'ом по `src/`, `telegram-bot/`, `ws-server/`, что переменная действительно нигде не читается; удалена из `docker-compose.yml`.
 - `NEXT_PUBLIC_WS_URL`/`NEXT_PUBLIC_APP_URL` — публичные переменные Next.js, которые встраиваются в клиентский бандл на этапе **сборки**, но не передаются в `Dockerfile` как `--build-arg`/`ENV` на стадии `builder`. Это значит, что собранный프 клиентский бандл, вероятно, всегда содержит дефолтные значения из кода, а не то, что задано в `.env` на сервере.
 
 ### 10. Технический долг в модели данных
