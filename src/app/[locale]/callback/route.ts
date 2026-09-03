@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addPurchasedTokens } from '@/lib/db';
+import { addPurchasedTokens, isPaymentProcessed } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
-const CRYPTOCLOUD_API_KEY = process.env.CRYPTOCLOUD_API_KEY;
-const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET; 
+const CRYPTOCLOUD_SECRET = process.env.CRYPTOCLOUD_SECRET;
 
 const PACKAGES: Record<string, { chars: number; reports: number }> = {
     'starter_chars': { chars: 100000, reports: 0 },
@@ -37,18 +37,27 @@ export async function POST(req: Request) {
             return new NextResponse('OK', { status: 200 });
         }
 
+        // --- SIGNATURE FIRST (prevents timing oracle on order IDs) ---
         // CryptoCloud v2 Signature Verification: MD5(status_invoice + order_id + amount_crypto + currency_crypto + secret)
-        if (CRYPTOCLOUD_SECRET && receivedSign) {
-            const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
-            const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
-            
-            if (expectedSign !== receivedSign) {
-                console.error(`🚨 SECURITY WARNING: Webhook signature mismatch at /callback! Expected ${expectedSign}, got ${receivedSign}.`);
-                // Uncomment in prod if needed: return new NextResponse('Invalid signature', { status: 403 });
-            }
-        } else if (CRYPTOCLOUD_SECRET && !receivedSign) {
-            console.error(`🚨 SECURITY WARNING: Callback received without signature but secret is configured!`);
+        if (!CRYPTOCLOUD_SECRET) {
+            console.error('🚨 CRITICAL: CRYPTOCLOUD_SECRET is not set - /callback webhook disabled for safety');
+            return new NextResponse('Server misconfiguration', { status: 500 });
+        }
+        if (!receivedSign) {
+            console.error(`🚨 SECURITY: /callback webhook received without signature`);
             return new NextResponse('Missing signature', { status: 403 });
+        }
+        const hashString = `${parsedData.status_invoice || parsedData.status}${orderId}${parsedData.amount_crypto || ''}${parsedData.currency_crypto || ''}${CRYPTOCLOUD_SECRET}`;
+        const expectedSign = crypto.createHash('md5').update(hashString).digest('hex');
+        if (expectedSign !== receivedSign) {
+            console.error(`🚨 SECURITY: /callback webhook signature mismatch`);
+            return new NextResponse('Invalid signature', { status: 403 });
+        }
+
+        // --- IDEMPOTENCY CHECK (after signature) ---
+        if (orderId && await isPaymentProcessed(orderId)) {
+            console.log(`ℹ️ /callback: Skipping already processed order ${orderId}`);
+            return new NextResponse('Already processed', { status: 200 });
         }
 
         if (!orderId || !orderId.startsWith("UID_")) {
@@ -57,8 +66,14 @@ export async function POST(req: Request) {
 
         const parts = orderId.split('_');
         const userIdStr = parts[1];
-        const packId = parts[3];
-        
+        // Package IDs themselves may contain underscores (e.g. "starter_chars",
+        // "data_scientist"), so a naive split('_')[3] truncates them at the
+        // first inner underscore. Extract the substring between "PACK_" and
+        // "_TS_" instead, matching /api/billing/webhook's parsing.
+        const packStartIndex = orderId.indexOf("PACK_") + 5;
+        const tsIndex = orderId.indexOf("_TS_");
+        const packId = orderId.substring(packStartIndex, tsIndex);
+
         const userId = parseInt(userIdStr, 10);
         const pack = PACKAGES[packId];
 
@@ -66,10 +81,24 @@ export async function POST(req: Request) {
             return new NextResponse('Bad package data', { status: 400 });
         }
 
-        console.log(`✅ Webhook: Received payment from UID ${userId} for pack ${packId}`);
+        console.log(`✅ /callback: Received payment from UID ${userId} for pack ${packId}`);
 
-        if (pack.chars > 0) addPurchasedTokens(userId, 'chars', pack.chars);
-        if (pack.reports > 0) addPurchasedTokens(userId, 'reports', pack.reports);
+        try {
+            await prisma.$transaction(async (tx) => {
+                // Mark as processed to prevent double-crediting (ATOMICALLY).
+                // If it already exists, this throws P2002.
+                await tx.processedPayment.create({ data: { order_id: orderId } });
+
+                if (pack.chars > 0) await addPurchasedTokens(userId, 'chars', pack.chars, tx);
+                if (pack.reports > 0) await addPurchasedTokens(userId, 'reports', pack.reports, tx);
+            });
+        } catch (txErr: any) {
+            if (txErr.code === 'P2002') {
+                console.log(`ℹ️ /callback: Skipping already processed order ${orderId} (caught by unique constraint)`);
+                return new NextResponse('Already processed', { status: 200 });
+            }
+            throw txErr;
+        }
 
         return new NextResponse('OK', { status: 200 });
     } catch (err: any) {
