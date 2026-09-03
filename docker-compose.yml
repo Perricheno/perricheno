@@ -97,6 +97,8 @@ services:
       dockerfile: Dockerfile
     container_name: pdf-extractor
     restart: always
+    env_file:
+      - .env
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/health" ]
       interval: 30s

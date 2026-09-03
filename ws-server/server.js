@@ -5,7 +5,10 @@ const jwt = require('jsonwebtoken');
 const { setupWSConnection, setPersistence, docs } = require('y-websocket/bin/utils');
 const Y = require('yjs');
 
-const JWT_SECRET = process.env.WS_JWT_SECRET || 'fallback-secret-key-at-least-thirty-two-chars-long';
+if (!process.env.WS_JWT_SECRET) {
+    throw new Error('WS_JWT_SECRET env var is not set - refusing to start with a predictable JWT key');
+}
+const JWT_SECRET = process.env.WS_JWT_SECRET;
 const PORT = parseInt(process.env.WS_PORT || '1234', 10);
 
 // In-memory persistence - docs survive reconnects within the same process.

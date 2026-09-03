@@ -1,6 +1,12 @@
 const https = require('https');
 
-https.get('https://api.telegram.org/bot8270333686:AAEaQLlEmewJeVQ2FSZXDHrOFx_0eN4JQfI/getMe', (resp) => {
+const token = process.env.TELEGRAM_BOT_TOKEN;
+if (!token) {
+    console.error('Set TELEGRAM_BOT_TOKEN in the environment before running this script.');
+    process.exit(1);
+}
+
+https.get(`https://api.telegram.org/bot${token}/getMe`, (resp) => {
     let data = '';
     resp.on('data', (chunk) => { data += chunk; });
     resp.on('end', () => {

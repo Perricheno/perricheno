@@ -42,11 +42,13 @@ jobs:
           WS_JWT_SECRET: ${{ secrets.WS_JWT_SECRET }}
           NEXT_PUBLIC_WS_URL: ${{ secrets.NEXT_PUBLIC_WS_URL }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          STIRLING_PDF_API_KEY: ${{ secrets.STIRLING_PDF_API_KEY }}
+          PADDLEOCR_API_TOKEN: ${{ secrets.PADDLEOCR_API_TOKEN }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,WS_JWT_SECRET,NEXT_PUBLIC_WS_URL,SESSION_SECRET
+          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,WS_JWT_SECRET,NEXT_PUBLIC_WS_URL,SESSION_SECRET,STIRLING_PDF_API_KEY,PADDLEOCR_API_TOKEN
           script: |
             cd ${{ secrets.SERVER_PATH }}
 
@@ -76,6 +78,8 @@ jobs:
             update_env "WS_JWT_SECRET" "$WS_JWT_SECRET"
             update_env "NEXT_PUBLIC_WS_URL" "$NEXT_PUBLIC_WS_URL"
             update_env "SESSION_SECRET" "$SESSION_SECRET"
+            update_env "STIRLING_PDF_API_KEY" "$STIRLING_PDF_API_KEY"
+            update_env "PADDLEOCR_API_TOKEN" "$PADDLEOCR_API_TOKEN"
             # Kaspi Pay (optional - set in GitHub secrets when ready)
             update_env "KASPI_MERCHANT_ID" "$KASPI_MERCHANT_ID"
             update_env "KASPI_API_KEY" "$KASPI_API_KEY"

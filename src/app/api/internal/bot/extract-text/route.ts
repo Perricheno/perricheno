@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { STIRLING_PDF_API_KEY } from "@/lib/config";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const PDF_EXTRACTOR_URL = process.env.PDF_EXTRACTOR_URL || "http://pdf-extractor:8080";
 const PDF_API_BASE = "https://pdf.perricheno.ru/api/v1";
-const PDF_API_KEY = "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
 
 export async function POST(req: NextRequest) {
     const secret = req.headers.get("x-bot-secret");
@@ -24,23 +24,27 @@ export async function POST(req: NextRequest) {
 
         // 0. Support Office formats by converting them to PDF first via Stirling
         if (['xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt'].includes(ext || '')) {
-            try {
-                console.log(`[ExtractText] Converting ${ext} to PDF via Stirling...`);
-                const convFormData = new FormData();
-                convFormData.append("fileInput", new Blob([buffer]), fileName);
-                const convRes = await fetch(`${PDF_API_BASE}/convert/file/pdf`, {
-                    method: "POST",
-                    headers: { "X-API-KEY": PDF_API_KEY },
-                    body: convFormData,
-                    signal: AbortSignal.timeout(45000),
-                });
-                if (convRes.ok) {
-                    currentBuffer = Buffer.from(await convRes.arrayBuffer());
-                    currentExt = 'pdf';
-                    console.log(`[ExtractText] Successfully converted ${ext} to PDF.`);
+            if (!STIRLING_PDF_API_KEY) {
+                console.error("[ExtractText] STIRLING_PDF_API_KEY is not set - skipping Office-to-PDF conversion");
+            } else {
+                try {
+                    console.log(`[ExtractText] Converting ${ext} to PDF via Stirling...`);
+                    const convFormData = new FormData();
+                    convFormData.append("fileInput", new Blob([buffer]), fileName);
+                    const convRes = await fetch(`${PDF_API_BASE}/convert/file/pdf`, {
+                        method: "POST",
+                        headers: { "X-API-KEY": STIRLING_PDF_API_KEY },
+                        body: convFormData,
+                        signal: AbortSignal.timeout(45000),
+                    });
+                    if (convRes.ok) {
+                        currentBuffer = Buffer.from(await convRes.arrayBuffer());
+                        currentExt = 'pdf';
+                        console.log(`[ExtractText] Successfully converted ${ext} to PDF.`);
+                    }
+                } catch (e) {
+                    console.error(`[ExtractText] Conversion of ${ext} failed:`, e);
                 }
-            } catch (e) {
-                console.error(`[ExtractText] Conversion of ${ext} failed:`, e);
             }
         }
 

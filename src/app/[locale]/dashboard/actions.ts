@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getUserById } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import { verifySession } from "@/lib/session";
+import { STIRLING_PDF_API_KEY } from "@/lib/config";
 import crypto from "crypto";
 
 export async function generateSecurePromoCode() {
@@ -165,12 +166,16 @@ export async function checkServiceHealth(serviceId: string) {
                 break;
             }
             case 'stirling': {
+                if (!STIRLING_PDF_API_KEY) {
+                    status = 'error';
+                    log.push("ERROR: STIRLING_PDF_API_KEY is not set");
+                    break;
+                }
                 const url = "https://pdf.perricheno.ru/api/v1/info/is-alive";
-                const apiKey = "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
                 log.push(`Checking Stirling PDF at ${url}...`);
-                const res = await fetch(url, { 
-                    headers: { "X-API-KEY": apiKey },
-                    signal: AbortSignal.timeout(5000) 
+                const res = await fetch(url, {
+                    headers: { "X-API-KEY": STIRLING_PDF_API_KEY },
+                    signal: AbortSignal.timeout(5000)
                 });
                 if (res.ok) {
                     log.push("SUCCESS: Stirling PDF API is alive and authenticated.");

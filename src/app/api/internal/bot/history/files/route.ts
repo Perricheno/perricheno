@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAgentSession, getUserById } from "@/lib/db";
+import { STIRLING_PDF_API_KEY } from "@/lib/config";
 import JSZip from "jszip";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || "https://pdf.perricheno.ru/api/v1";
-const PDF_API_KEY = process.env.PDF_API_KEY || "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
 
 /**
  * Determine if a session is a "visual" (bot-generated Python/R code)
@@ -176,28 +176,32 @@ export async function POST(req: NextRequest) {
             }
             
             // Fallback: markdown-to-pdf (for visual sessions or when LaTeX compiler is unavailable)
-            try {
-                const mdFormData = new FormData();
-                const mdBlob = new Blob([content], { type: "text/markdown" });
-                mdFormData.append("fileInput", mdBlob, "document.md");
+            if (!STIRLING_PDF_API_KEY) {
+                console.error("[HistoryFiles] STIRLING_PDF_API_KEY is not set - cannot use markdown-to-pdf fallback");
+            } else {
+                try {
+                    const mdFormData = new FormData();
+                    const mdBlob = new Blob([content], { type: "text/markdown" });
+                    mdFormData.append("fileInput", mdBlob, "document.md");
 
-                const mdRes = await fetch(`${PDF_SERVICE_URL}/convert/markdown/pdf`, {
-                    method: "POST",
-                    headers: { "X-API-KEY": PDF_API_KEY },
-                    body: mdFormData
-                });
-
-                if (mdRes.ok) {
-                    const pdfBuffer = await mdRes.arrayBuffer();
-                    return new NextResponse(pdfBuffer as any, {
-                        headers: {
-                            "Content-Type": "application/pdf",
-                            "Content-Disposition": `attachment; filename="report_${sessionId.slice(0, 8)}.pdf"`,
-                        },
+                    const mdRes = await fetch(`${PDF_SERVICE_URL}/convert/markdown/pdf`, {
+                        method: "POST",
+                        headers: { "X-API-KEY": STIRLING_PDF_API_KEY },
+                        body: mdFormData
                     });
+
+                    if (mdRes.ok) {
+                        const pdfBuffer = await mdRes.arrayBuffer();
+                        return new NextResponse(pdfBuffer as any, {
+                            headers: {
+                                "Content-Type": "application/pdf",
+                                "Content-Disposition": `attachment; filename="report_${sessionId.slice(0, 8)}.pdf"`,
+                            },
+                        });
+                    }
+                } catch (err) {
+                    console.error("PDF markdown fallback error:", err);
                 }
-            } catch (err) {
-                console.error("PDF markdown fallback error:", err);
             }
             return NextResponse.json({ error: "Не удалось скомпилировать PDF. Используйте ZIP." }, { status: 500 });
         }

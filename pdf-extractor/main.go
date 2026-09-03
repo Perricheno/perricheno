@@ -47,11 +47,21 @@ const (
 	// Layout Parsing sync API (fallback)
 	syncAPIURL = "https://a8gec0nct6gb48gc.aistudio-app.com/layout-parsing"
 
-	apiToken = "5e94e2479a04df782a2e7ab489412c9b99bb9885"
-
 	pollInterval = 5 * time.Second
 	pollTimeout  = 10 * time.Minute
 )
+
+// apiToken authenticates against the PaddleOCR-VL APIs above. Read from the
+// environment rather than hardcoded - see docs/REVIEW.md, finding #3.
+var apiToken = mustEnv("PADDLEOCR_API_TOKEN")
+
+func mustEnv(name string) string {
+	v := os.Getenv(name)
+	if v == "" {
+		log.Fatalf("%s env var is not set - refusing to start", name)
+	}
+	return v
+}
 
 func main() {
 	os.MkdirAll(tempDir, 0755)

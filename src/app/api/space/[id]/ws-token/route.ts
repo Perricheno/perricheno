@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { verifySession } from '@/lib/session';
 import { getUserRoleInSpace } from '@/lib/space-db';
+import { WS_JWT_SECRET } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +16,11 @@ export async function GET(_req: Request, { params }: Ctx) {
     const role = await getUserRoleInSpace(id, userId);
     if (!role) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const secret = new TextEncoder().encode(
-        process.env.WS_JWT_SECRET || 'fallback-secret-key-at-least-thirty-two-chars-long'
-    );
+    if (!WS_JWT_SECRET) {
+        console.error('[ws-token] WS_JWT_SECRET is not set - refusing to issue a predictable token');
+        return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+    }
+    const secret = new TextEncoder().encode(WS_JWT_SECRET);
 
     const token = await new SignJWT({ spaceId: id, userId, role })
         .setProtectedHeader({ alg: 'HS256' })

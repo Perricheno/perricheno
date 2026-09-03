@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { STIRLING_PDF_API_KEY } from "@/lib/config";
 
 const API_BASE = "https://pdf.perricheno.ru/api/v1";
-const API_KEY = "0a69f4b4-0210-47c0-a2a9-946e3e894c4c";
 
 const ENDPOINTS: Record<string, string> = {
     // Convert
@@ -125,6 +125,11 @@ const ENDPOINTS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
     try {
+        if (!STIRLING_PDF_API_KEY) {
+            console.error("[Proxy] STIRLING_PDF_API_KEY is not set");
+            return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+        }
+
         const type = req.nextUrl.searchParams.get("type");
         const targetUrl = type ? ENDPOINTS[type] : ENDPOINTS["file-to-pdf"];
 
@@ -151,7 +156,7 @@ export async function POST(req: NextRequest) {
         const response = await fetch(targetUrl, {
             method: "POST",
             headers: {
-                "X-API-KEY": API_KEY,
+                "X-API-KEY": STIRLING_PDF_API_KEY,
             },
             body: formData,
         });
