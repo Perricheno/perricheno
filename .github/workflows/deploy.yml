@@ -44,11 +44,16 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           STIRLING_PDF_API_KEY: ${{ secrets.STIRLING_PDF_API_KEY }}
           PADDLEOCR_API_TOKEN: ${{ secrets.PADDLEOCR_API_TOKEN }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,WS_JWT_SECRET,NEXT_PUBLIC_WS_URL,SESSION_SECRET,STIRLING_PDF_API_KEY,PADDLEOCR_API_TOKEN
+          envs: OPENAI_API_KEY,LATEX_COMPILER_URL,LATEX_COMPILER_KEY,CRYPTOCLOUD_API_KEY,CRYPTOCLOUD_SHOP_ID,CRYPTOCLOUD_SECRET,TELEGRAM_BOT_TOKEN,WEBHOOK_DOMAIN,WEBHOOK_SECRET,WS_JWT_SECRET,NEXT_PUBLIC_WS_URL,SESSION_SECRET,STIRLING_PDF_API_KEY,PADDLEOCR_API_TOKEN,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD
           script: |
             cd ${{ secrets.SERVER_PATH }}
 
@@ -84,11 +89,20 @@ jobs:
             update_env "KASPI_MERCHANT_ID" "$KASPI_MERCHANT_ID"
             update_env "KASPI_API_KEY" "$KASPI_API_KEY"
             update_env "KASPI_WEBHOOK_SECRET" "$KASPI_WEBHOOK_SECRET"
-            # MinIO runs in Docker - values are fixed for this deployment
+            # Postgres - docker-compose.yml reads these directly for variable substitution
+            update_env "POSTGRES_USER" "$POSTGRES_USER"
+            update_env "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
+            update_env "POSTGRES_DB" "$POSTGRES_DB"
+            # MinIO - endpoint/port/bucket are fixed for this deployment topology,
+            # but the credentials come from secrets (docker-compose.yml substitutes
+            # MINIO_ROOT_USER/MINIO_ROOT_PASSWORD for the container itself; the app
+            # reads the same values back via MINIO_ACCESS_KEY/MINIO_SECRET_KEY).
             update_env "MINIO_ENDPOINT" "minio"
             update_env "MINIO_PORT" "9000"
-            update_env "MINIO_ACCESS_KEY" "perricheno_admin"
-            update_env "MINIO_SECRET_KEY" "perricheno_minio_pass"
+            update_env "MINIO_ROOT_USER" "$MINIO_ROOT_USER"
+            update_env "MINIO_ROOT_PASSWORD" "$MINIO_ROOT_PASSWORD"
+            update_env "MINIO_ACCESS_KEY" "$MINIO_ROOT_USER"
+            update_env "MINIO_SECRET_KEY" "$MINIO_ROOT_PASSWORD"
             update_env "MINIO_BUCKET_NAME" "perricheno-bucket"
             update_env "SITE_INTERNAL_URL" "http://perricheno-site:3000"
             update_env "BOT_CONTAINER_URL" "http://telegram-bot:3001"
