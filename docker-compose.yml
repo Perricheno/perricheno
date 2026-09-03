@@ -176,9 +176,11 @@ services:
     environment:
       - MINIO_ROOT_USER=perricheno_admin
       - MINIO_ROOT_PASSWORD=perricheno_minio_pass
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    # NO ports exposed - internal only via Docker network (see docs/REVIEW.md #6).
+    # The app only ever reaches MinIO over the internal "minio" hostname; nothing
+    # in src/ surfaces a public MinIO URL to a client. If the admin console is
+    # needed from outside, use an SSH tunnel (`ssh -L 9001:localhost:9001 ...`)
+    # or a separately-authenticated Cloudflare Tunnel route - not a bare port.
     volumes:
       - minio-data:/data
     command: server /data --console-address ":9001"
