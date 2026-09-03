@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { getTasksByUserId, createTask, updateTaskStatus, deleteTask } from '@/lib/db';
+import { getTasksByUserId, createTask } from '@/lib/db';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
@@ -43,14 +43,20 @@ export async function PUT(req: NextRequest) {
         }
 
         // Update text and remindAt if provided
-        if (text || remindAt) {
-            const updates: Record<string, any> = {};
-            if (text) updates.task_text = text;
-            if (remindAt) updates.remind_at = remindAt;
-            if (status) updates.status = status;
-            await prisma.task.update({ where: { id: taskId }, data: updates });
-        } else if (status) {
-            await updateTaskStatus(taskId, status);
+        const updates: Record<string, any> = {};
+        if (text) updates.task_text = text;
+        if (remindAt) updates.remind_at = remindAt;
+        if (status) updates.status = status;
+
+        // Scoped to the caller's own tasks (user_id filter) - a task ID alone
+        // isn't proof of ownership. updateMany matches 0 rows instead of
+        // updating someone else's task if the ID doesn't belong to this user.
+        const result = await prisma.task.updateMany({
+            where: { id: taskId, user_id: userId },
+            data: updates,
+        });
+        if (result.count === 0) {
+            return NextResponse.json({ error: 'Task not found' }, { status: 404 });
         }
 
         return NextResponse.json({ success: true });
@@ -71,7 +77,12 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'id parameter is required' }, { status: 400 });
         }
 
-        await deleteTask(Number(taskId));
+        const result = await prisma.task.deleteMany({
+            where: { id: Number(taskId), user_id: userId },
+        });
+        if (result.count === 0) {
+            return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+        }
         return NextResponse.json({ success: true });
     } catch (e) {
         return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });

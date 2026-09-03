@@ -58,6 +58,7 @@ export async function POST(req: Request) {
 
         const session = await prisma.agentSession.findUnique({ where: { id: sessionId } });
         if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+        if (session.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
         const rawPrompt: string = (session.stream_text || "").trim();
         if (!rawPrompt) return NextResponse.json({ error: "Empty query" }, { status: 400 });
