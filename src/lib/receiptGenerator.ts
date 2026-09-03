@@ -107,8 +107,12 @@ export async function generateAndStoreReceipt(data: ReceiptData): Promise<boolea
         const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
         // 5. Send to compiler
-        const COMPILER_URL = process.env.LATEX_COMPILER_URL || 'http://latex-compiler:8000';
-        const COMPILER_KEY = process.env.LATEX_COMPILER_KEY || '';
+        const COMPILER_URL = process.env.LATEX_COMPILER_URL;
+        const COMPILER_KEY = process.env.LATEX_COMPILER_KEY;
+        if (!COMPILER_URL || !COMPILER_KEY) {
+            console.error(`Receipt ${data.id}: LATEX_COMPILER_URL/LATEX_COMPILER_KEY not configured - skipping PDF compilation`);
+            return false;
+        }
 
         const formData = new FormData();
         formData.append("file", new Blob([new Uint8Array(zipBuffer)], { type: "application/zip" }), "project.zip");

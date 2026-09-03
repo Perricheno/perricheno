@@ -105,7 +105,12 @@ export async function checkServiceHealth(serviceId: string) {
                 break;
             }
             case 'latex': {
-                const url = process.env.LATEX_COMPILER_URL || 'http://latex-compiler:8000';
+                const url = process.env.LATEX_COMPILER_URL;
+                if (!url) {
+                    status = 'error';
+                    log.push("ERROR: LATEX_COMPILER_URL is not set");
+                    break;
+                }
                 log.push(`Checking LaTeX Compiler at ${url}/health...`);
                 const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
                 if (res.ok) {
