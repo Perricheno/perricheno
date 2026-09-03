@@ -29,7 +29,7 @@ const PACKAGES: Record<string, {
 export async function POST(req: NextRequest) {
     const secret = req.headers.get("x-bot-secret");
     if (secret !== WEBHOOK_SECRET) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {

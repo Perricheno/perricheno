@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     // Verify this is from our bot container
     const secret = req.headers.get("x-bot-secret");
     if (secret !== WEBHOOK_SECRET) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
