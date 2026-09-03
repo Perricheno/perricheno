@@ -34,12 +34,10 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true, user });
     } catch (e: any) {
+        // Full error (including stack) goes to server logs only - never to the client.
         console.error("Login Route Error Full:", e);
-        // Return more details for debugging
-        return NextResponse.json({ 
+        return NextResponse.json({
             error: e.message || "Internal Server Error",
-            details: e.toString(),
-            stack: e.stack 
         }, { status: 500 });
     }
 }
