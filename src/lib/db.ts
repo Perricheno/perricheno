@@ -312,50 +312,53 @@ export async function cleanupStuckSessions(): Promise<void> {
     });
 }
 
-// Ensure the task scheduler only runs once locally via Next.js global state
-if (typeof window === 'undefined') {
-    const POLLING_INTERVAL = 60000; 
-    
-    if (!(globalThis as any).taskSchedulerActive) {
-        (globalThis as any).taskSchedulerActive = true;
-        
-        setInterval(async () => {
-            try {
-                const now = new Date().toISOString();
-                await cleanupStuckSessions();
+// Starts the reminder/cleanup polling loop. Must be called explicitly once at
+// server startup (see src/lib/server-init.ts) - NOT run as a side effect of
+// importing this module, which used to register a new setInterval on every
+// module evaluation (observably duplicated across Next.js's build-time
+// worker processes; see docs/REVIEW.md #15).
+export function startTaskScheduler(): void {
+    if ((globalThis as any).taskSchedulerActive) return;
+    (globalThis as any).taskSchedulerActive = true;
 
-                const pending = await getPendingTasksToRemind(now);
-                const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const POLLING_INTERVAL = 60000;
 
-                if (!botToken || pending.length === 0) return;
+    setInterval(async () => {
+        try {
+            const now = new Date().toISOString();
+            await cleanupStuckSessions();
 
-                for (const task of pending) {
-                    const user = await getUserById(task.user_id);
-                    if (!user || !user.telegram_id) continue;
+            const pending = await getPendingTasksToRemind(now);
+            const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
-                    const text = `🔔 *Reminder!*\n\n${task.task_text}`;
-                    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            chat_id: user.telegram_id,
-                            text: text,
-                            parse_mode: 'Markdown'
-                        })
-                    });
+            if (!botToken || pending.length === 0) return;
 
-                    if (res.ok) {
-                        await updateTaskStatus(task.id, 'done');
-                    } else {
-                        console.error('Failed to send reminder:', await res.text());
-                    }
+            for (const task of pending) {
+                const user = await getUserById(task.user_id);
+                if (!user || !user.telegram_id) continue;
+
+                const text = `🔔 *Reminder!*\n\n${task.task_text}`;
+                const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: user.telegram_id,
+                        text: text,
+                        parse_mode: 'Markdown'
+                    })
+                });
+
+                if (res.ok) {
+                    await updateTaskStatus(task.id, 'done');
+                } else {
+                    console.error('Failed to send reminder:', await res.text());
                 }
-            } catch (err) {
-                console.error('Error in task scheduler interval:', err);
             }
-        }, POLLING_INTERVAL);
-        console.log('Task background scheduler started.');
-    }
+        } catch (err) {
+            console.error('Error in task scheduler interval:', err);
+        }
+    }, POLLING_INTERVAL);
+    console.log('Task background scheduler started.');
 }
 
 // --- Agent Sessions ---
