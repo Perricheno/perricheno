@@ -36,7 +36,7 @@
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.4.0",
     "uuid": "^13.0.0",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "y-codemirror.next": "^0.3.5",
     "y-websocket": "^1.5.4",
     "yjs": "^13.6.20"
