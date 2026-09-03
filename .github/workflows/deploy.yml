@@ -19,10 +19,40 @@ jobs:
       - run: npx prisma generate
       - run: npx tsc --noEmit
 
-  # ── SSH deploy (only runs when typecheck passes) ───────────────────────────
+  # ── Money/session/auth test suite - real Postgres, no mocks ────────────────
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma db push
+      - run: npm run test
+
+  # ── SSH deploy (only runs when typecheck AND the test suite pass) ──────────
   deploy:
     name: Deploy via SSH
-    needs: typecheck
+    needs: [typecheck, test]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
