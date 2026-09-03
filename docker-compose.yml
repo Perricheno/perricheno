@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Inlined into the client bundle at build time - see Dockerfile.
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
     image: perricheno-site:latest
     container_name: perricheno-site
     restart: always

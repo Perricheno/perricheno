@@ -14,6 +14,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* vars are inlined into the client bundle at build time, not
+# read from the runtime environment - must be passed as a build ARG (see
+# docker-compose.yml's build.args and docs/REVIEW.md #14).
+ARG NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+
 ENV NEXT_TELEMETRY_DISABLED=1
 # Skip TypeScript type checking in Docker build (CI already checks it)
 ENV NEXT_SKIP_TYPE_CHECK=true
