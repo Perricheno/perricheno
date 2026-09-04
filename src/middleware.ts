@@ -18,8 +18,15 @@ export default function middleware(request: NextRequest) {
         if (location && !isInternal) {
             try {
                 const locUrl = new URL(location);
-                if (locUrl.port) {
+                // Traefik terminates plain HTTP between Cloudflare and the app
+                // (Cloudflare does the real TLS termination), so Next.js sees
+                // an http:// request and builds redirects with that scheme -
+                // browsers then flag/block them as mixed content on an https
+                // page. Every external request is https in practice here.
+                const needsFix = locUrl.port || locUrl.protocol !== "https:";
+                if (needsFix) {
                     locUrl.port = "";
+                    locUrl.protocol = "https:";
                     const headers = new Headers(response.headers);
                     headers.set("Location", locUrl.toString());
                     return new NextResponse(null, { status: response.status, headers });
