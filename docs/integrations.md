@@ -166,14 +166,16 @@ body: { shop_id: CRYPTOCLOUD_SHOP_ID, amount, order_id: "UID_<userId>_PACK_<pack
 
 ---
 
-## 9. LaTeX-компилятор (внешний, вне docker-compose этого репозитория)
+## 9. LaTeX-компилятор — [ИЗМЕНЕНО, Фаза 6a-latex, 2026-09-04] теперь свой сервис (`latex-compiler/`)
 
-`LATEX_COMPILER_URL` / `LATEX_COMPILER_KEY` — заданы как секреты в `.github/workflows/deploy.yml:34-35,68-69` и используются в **8 разных местах** кода:
+**Раньше** этот раздел документировал `LATEX_COMPILER_URL`/`LATEX_COMPILER_KEY` как указывающие на внешнюю, нигде в репозитории не описанную инфраструктуру (владелец подтвердил: сам писал этот компилятор — Go + Docker + полный TeX Live — но его код не хранился ни в одном репозитории и терялся при каждой пересборке). Теперь это собственный сервис **`latex-compiler/`** в этом репозитории (Go + Gin, образ `texlive/texlive:latest` — полная схема TeX Live, все движки + `biber` + весь пакетный набор), запущенный в `docker-compose.yml` под именем `latex-compiler`, порт 8080. Подробности реализации — [`../latex-compiler/README.md`](../latex-compiler/README.md).
+
+Используется в **8 разных местах** кода — контракт **не менялся**, новый сервис воспроизводит его по фактическому использованию:
 `src/lib/receiptGenerator.ts:110-118`, `src/lib/agent/pipeline/stage2_3_visuals.ts:12-13,901,910`, `src/lib/agent/pipeline/stage5_validate.ts:14-15,55`, `src/app/[locale]/dashboard/actions.ts:107`, `src/app/api/agent/compile-pdf/route.ts:8-12`, `src/app/api/tikz/generate/route.ts:11-12,319,330`, `src/app/api/space/[id]/compile/route.ts:9-10`, `src/app/api/internal/bot/history/files/route.ts:122-123`.
 
-Протокол везде одинаковый: `POST <LATEX_COMPILER_URL>` с ZIP-архивом проекта в `multipart/form-data` (`file=project.zip`), заголовок `x-api-key: <LATEX_COMPILER_KEY>`, опционально `X-Compiler`/`X-Main-File` для выбора движка/входного файла (`space/[id]/compile/route.ts:53-59`). Таймауты варьируются (60с в receiptGenerator, 110с в space-компиляторе).
+Протокол везде одинаковый: `POST <LATEX_COMPILER_URL>` с ZIP-архивом проекта в `multipart/form-data` (`file=project.zip`), заголовок `x-api-key: <LATEX_COMPILER_KEY>`, опционально `X-Compiler`/`X-Main-File` для выбора движка/входного файла (`space/[id]/compile/route.ts:53-59`). Таймауты варьируются (60с в receiptGenerator, 110с в space-компиляторе); сам сервис укладывается в собственный лимит 100с на пайплайн `latex → biber → latex → latex`.
 
-**В `docker-compose.yml` этого репозитория сервиса `latex-compiler` не существует** (default fallback в коде — `http://latex-compiler:8000`, но такой контейнер нигде не описан). Значит, в проде `LATEX_COMPILER_URL` обязан указывать на отдельную инфраструктуру вне этого репозитория (иначе фолбэк-адрес не резолвится). Требует уточнения у владельца, что это за сервис и где живёт.
+`LATEX_COMPILER_URL` теперь фиксированное значение `http://latex-compiler:8080` в `docker-compose.yml` (не секрет, убрано из `deploy.yml`); `LATEX_COMPILER_KEY` остаётся секретом (значение сгенерировано заново — старое, для внешнего компилятора, больше не действует).
 
 Поведение при недоступности/незаданности переменных — тоже противоречиво:
 - `space/[id]/compile/route.ts:32-34` → `503 {"error": "Compiler not configured"}`.
@@ -244,7 +246,7 @@ https://n8n.perricheno.ru/webhook/519031b9-...
 | 6a | MyMemory Translation | REST | Без ключа | Нет | `src/app/api/agent/scholar/search/route.ts` |
 | 7 | ip-api.com | REST | Без ключа | Нет | `src/lib/session.ts` |
 | 8 | R/Python/Research/PDF-extractor (внутренние) | Внутренний REST | Нет (закрыты сетью Docker) | Нет | `src/app/api/agent/{r,python}-compile`, `scholar/search`, `internal/bot/extract-text` |
-| 9 | LaTeX-компилятор (внешний) | REST | `x-api-key` | Нет | 8 файлов, см. раздел 9 |
+| 9 | LaTeX-компилятор (`latex-compiler`, **[Фаза 6a-latex] теперь внутренний**) | Внутренний REST | `x-api-key` | Нет | 8 файлов, см. раздел 9 |
 | 10 | PaddleOCR-VL / Stirling PDF | REST | Bearer / `X-API-KEY` (читаются из `PADDLEOCR_API_TOKEN`/`STIRLING_PDF_API_KEY`, централизовано в Фазе 1 REVIEW.md #3) | Нет (но есть цепочка фолбэков) | `pdf-extractor/main.go`, `src/lib/config.ts` |
 | 11 | n8n webhook | REST (через свой прокси) | Нет (URL сам по себе — секрет) | Нет | `src/app/api/webhook-proxy/route.ts` |
 | 12 | Cloudflare | Только сетевой слой | — | — | `docker-compose.yml` (сеть), эвристики в error-хендлинге |
