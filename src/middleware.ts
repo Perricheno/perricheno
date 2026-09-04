@@ -7,35 +7,45 @@ const intlMiddleware = createMiddleware(routing);
 export default function middleware(request: NextRequest) {
     const response = intlMiddleware(request);
 
-    // Strip :PORT from redirect Location only for external (public) requests.
-    // Internal requests (localhost, health checks) must keep the port so wget
-    // follows the redirect to the correct port instead of defaulting to :80.
-    if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("Location");
-        const requestHost = request.headers.get("host") ?? "";
-        const isInternal = requestHost.startsWith("localhost") || requestHost.startsWith("127.");
+    // Traefik terminates plain HTTP between Cloudflare and the app (Cloudflare
+    // does the real TLS termination), so Next.js/next-intl see an http://
+    // request and build both redirect Locations and the hreflang alternate
+    // Link header with that scheme - browsers flag/block the redirect as
+    // mixed content, and the Link header advertises the wrong scheme for SEO.
+    // Internal requests (localhost, health checks) must keep the port/scheme
+    // as-is so wget still follows redirects to the correct internal port.
+    const requestHost = request.headers.get("host") ?? "";
+    const isInternal = requestHost.startsWith("localhost") || requestHost.startsWith("127.");
+    if (isInternal) return response;
 
-        if (location && !isInternal) {
+    const headers = new Headers(response.headers);
+    let changed = false;
+
+    if (response.status >= 300 && response.status < 400) {
+        const location = headers.get("Location");
+        if (location) {
             try {
                 const locUrl = new URL(location);
-                // Traefik terminates plain HTTP between Cloudflare and the app
-                // (Cloudflare does the real TLS termination), so Next.js sees
-                // an http:// request and builds redirects with that scheme -
-                // browsers then flag/block them as mixed content on an https
-                // page. Every external request is https in practice here.
-                const needsFix = locUrl.port || locUrl.protocol !== "https:";
-                if (needsFix) {
+                if (locUrl.port || locUrl.protocol !== "https:") {
                     locUrl.port = "";
                     locUrl.protocol = "https:";
-                    const headers = new Headers(response.headers);
                     headers.set("Location", locUrl.toString());
-                    return new NextResponse(null, { status: response.status, headers });
+                    changed = true;
                 }
             } catch {}
         }
     }
 
-    return response;
+    // next-intl adds a `Link: <http://host/path>; rel="alternate"; hreflang="x"`
+    // entry per locale on every response - all same-origin, safe to blanket-fix.
+    const link = headers.get("Link");
+    if (link && link.includes(`http://${requestHost}`)) {
+        headers.set("Link", link.replaceAll(`http://${requestHost}`, `https://${requestHost}`));
+        changed = true;
+    }
+
+    if (!changed) return response;
+    return new NextResponse(response.body, { status: response.status, headers });
 }
 
 export const config = {
