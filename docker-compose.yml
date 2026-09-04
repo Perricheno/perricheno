@@ -3,6 +3,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # REQUIRED: without an explicit target, `docker build`/`docker compose
+      # build` defaults to the LAST stage in the Dockerfile. Phase 6a added
+      # `worker-builder`/`worker-prod-deps`/`worker` stages after `runner` -
+      # omitting this caused perricheno-site's own image to silently build
+      # from the `worker` stage instead (confirmed live: its CMD was
+      # `node worker.js`, not `node server.js` - it never served HTTP at
+      # all, just ran a second redundant queue consumer under the site's name).
+      target: runner
       args:
         # Inlined into the client bundle at build time - see Dockerfile.
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
@@ -20,7 +28,7 @@ services:
       - PYTHON_COMPILER_URL=http://python-compiler:8000
       - RESEARCH_API_URL=http://research-api:8080
       - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
     volumes:
       - db-data:/app/db
       - analytics-data:/tmp/analytics-data
@@ -75,7 +83,7 @@ services:
       - PYTHON_COMPILER_URL=http://python-compiler:8000
       - RESEARCH_API_URL=http://research-api:8080
       - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
     env_file:
       - .env
     # NO ports exposed - doesn't serve user HTTP traffic, only consumes the
@@ -109,13 +117,18 @@ services:
     # --appendonly yes so queued-but-unprocessed jobs survive a Redis restart,
     # not just a web/worker container restart - matches the whole point of
     # Phase 6a (see docs/REVIEW.md).
-    command: redis-server --appendonly yes
+    # --requirepass is required, not just defense-in-depth: Redis 7's default
+    # protected-mode rejects every non-loopback connection when no password
+    # is set (confirmed live - `perricheno-worker`'s ioredis connection over
+    # the docker network got NOAUTH errors even though `docker exec redis
+    # redis-cli ping` succeeded fine from inside the container over loopback).
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-data:/data
     # NO ports exposed - internal only via Docker network, same as
     # r-compiler/python-compiler/research-api.
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "--no-auth-warning", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
