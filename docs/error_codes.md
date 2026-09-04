@@ -340,6 +340,7 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 |---|---|---|---|
 | 401 | `'Unauthorized'` | 11, 21, 38 | Нет сессии (GET/PATCH/DELETE). |
 | 404 | `'Not found'` | 15, 32, 42 | Цитата не найдена/не принадлежит юзеру. |
+| 409 | `'cite_key already in use'` | PATCH | **[Добавлено, Фаза 5]**: переименование `cite_key` в PATCH на значение, уже занятое другим `Citation` этого же пользователя — раньше молча создавало дубликат (не было DB-констрейнта), теперь `@@unique([user_id, cite_key])` отклоняет это на уровне БД (`P2002`), и роут возвращает 409 вместо ошибочного 404. |
 
 ### `citations/collections` — `src/app/api/citations/collections/route.ts`
 | Статус | Сообщение | Строка | Значение |

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
-import { getCitation, updateCitation, deleteCitation } from '@/lib/citations-db';
+import { getCitation, updateCitation, deleteCitation, CiteKeyConflictError } from '@/lib/citations-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +28,16 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const clean: Record<string, unknown> = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
 
-    const updated = await updateCitation(userId, id, clean);
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json({ citation: updated });
+    try {
+        const updated = await updateCitation(userId, id, clean);
+        if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ citation: updated });
+    } catch (e) {
+        if (e instanceof CiteKeyConflictError) {
+            return NextResponse.json({ error: 'cite_key already in use' }, { status: 409 });
+        }
+        throw e;
+    }
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {

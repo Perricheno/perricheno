@@ -27,7 +27,7 @@
 | `plan_tier` | String?, default `"free"` | Тариф пользователя (`free`/`plus`/`pro`/`ultra`), единственное поле — читается `checkAndDeductUsage`/`PDF_STAGING_CAPS`. Ранее сосуществовало с `account_tier`, удалённым в Фазе 4 как неиспользуемый дубль, вызывавший расхождение между отображаемым и реально применяемым тарифом (см. `docs/REVIEW.md`, пункт 10, и `docs/business_logic.md`, §2.10) |
 | `is_banned`, `is_deleted` | Boolean | Модерация/soft-delete |
 | `is_admin` | Boolean | Доступ к `/api/admin/*` |
-| `referred_by` | Int? | ID пригласившего пользователя — **не объявлено как `@relation` к User**, то есть на уровне БД это не настоящий внешний ключ, просто числовое поле (см. `docs/REVIEW.md`) |
+| `referred_by` | Int? | ID пригласившего пользователя. **[ИСПРАВЛЕНО, Фаза 5]**: теперь настоящий self-relation (`referrer` / обратная сторона `referred_users`, `onDelete: SetNull`, плюс `@@index([referred_by])`) — раньше это было обычное `Int?` без `@relation`, БД не проверяла существование `user_id` |
 
 **Связи (1 → N от User):** `Task`, `AgentSession`, `Transaction`, `UsageLog`, `SystemNotification`, `LatexError`, `ChatSession`, `VisualAsset`, `Receipt`, `PromoUsage`, `Session`, `AgentUpload`, `Space` (как `SpaceOwner`), `SpaceCollaborator`, `SpaceVersion`, `Citation`, `CitationCollection`, `RSession`. Все — `onDelete: Cascade`, то есть **удаление пользователя каскадно стирает вообще все его данные** без возможности восстановления (важно для GDPR/`api/auth/delete`, см. `docs/business_logic.md`).
 
@@ -106,14 +106,14 @@ Key-value хранилище конфигурации приложения в Б
 Права доступа: `role` (default `"editor"`, свободная строка), `invited_at`/`accepted_at` (nullable — приглашение может быть не принято). `@@unique([space_id, user_id])` — пользователь не может быть добавлен дважды.
 
 ### SpaceInvite
-Инвайт-ссылка по email: `token` (unique, используется в URL), `expires_at`. **Нет `@@unique([space_id, email])`** — теоретически можно наприглашать один email много раз (создаст несколько активных токенов) — см. `docs/REVIEW.md`.
+Инвайт-ссылка: `token` (unique, используется в URL), `expires_at`. Схема также несёт поле `email` (nullable), но **[уточнено, Фаза 5]** — проверено по факту: `createSpaceInvite()` (`src/lib/space-db.ts`) никогда его не заполняет, реальная фича — это ссылка "у кого есть токен", не email-приглашение. Поэтому `@@unique([space_id, email])`, предложенный в прошлом аудите, не добавлен — он ничего не исправил бы (`email` всегда `NULL`, а несколько `NULL` не считаются дубликатом в уникальном индексе Postgres). Реальное наблюдение — токены не инвалидируются при повторном приглашении и копятся до истечения (7 дней), но сам `token` уже `@unique`, так что дублей токенов нет. См. `docs/REVIEW.md`.
 
 ---
 
 ## Citations (менеджер библиографии)
 
 ### Citation
-Одна библиографическая запись: идентификаторы `doi`/`arxiv_id`/`isbn` (все опциональны, не проверяется что хотя бы один задан на уровне схемы), `authors`/`tags` — нативные Postgres-массивы строк (`String[]`), `bibtex` (готовый BibTeX-текст) + `cite_key` (ключ вида `@article{KEY,...}`). Никакого `@@unique` на `(user_id, cite_key)` в Prisma-схеме нет (такой constraint был только в удалённой в Фазе 4 «мёртвой» SQL-версии) — то есть в текущей рабочей схеме два cite_key у одного пользователя технически могут совпасть.
+Одна библиографическая запись: идентификаторы `doi`/`arxiv_id`/`isbn` (все опциональны, не проверяется что хотя бы один задан на уровне схемы), `authors`/`tags` — нативные Postgres-массивы строк (`String[]`), `bibtex` (готовый BibTeX-текст) + `cite_key` (ключ вида `@article{KEY,...}`). **[ИСПРАВЛЕНО, Фаза 5]**: добавлен `@@unique([user_id, cite_key])` (такой constraint раньше был только в удалённой в Фазе 4 «мёртвой» SQL-версии, в реальной Prisma-схеме отсутствовал). `src/lib/citations-db.ts`'s `createCitation()` теперь повторяет подбор ключа при коллизии (`P2002`, до 3 попыток) вместо падения; `updateCitation()`/`PATCH /api/citations/[id]` при переименовании в уже занятый ключ возвращают 409 вместо тихого дублирования.
 
 ### CitationCollection / CitationCollectionItem
 Папки для группировки цитат, классическая M2M через явную join-таблицу `CitationCollectionItem` с `@@unique([collection_id, citation_id])` (нельзя добавить одну цитату в одну коллекцию дважды).
@@ -158,7 +158,7 @@ User ──1:N── RSession
 Явные `@@index`/`@@unique`, объявленные в `schema.prisma` (кроме implicit PK):
 
 - `User.telegram_id` — unique
-- `Transaction.user_id`, `UsageLog` (нет, не индексирован — см. ниже), `Receipt.user_id`, `Session.user_id`, `AgentSession.user_id`, `ChatSession.user_id`, `ChatMessage.session_id`, `AgentUpload.user_id`, `RSession.user_id` — обычные индексы по FK для быстрой выборки "всё для этого пользователя/сессии"
-- `PromoUsage(promo_id, user_id)` — unique
+- `Transaction.user_id`, `UsageLog.user_id`, `Task.user_id`, `SystemNotification.user_id`, `LatexError.user_id`, `VisualAsset.user_id`, `Citation.user_id`, `CitationCollection.user_id`, `Receipt.user_id`, `Session.user_id`, `AgentSession.user_id`, `ChatSession.user_id`, `ChatMessage.session_id`, `AgentUpload.user_id`, `RSession.user_id`, `User.referred_by` — обычные индексы по FK для быстрой выборки "всё для этого пользователя/сессии"
+- `PromoUsage(promo_id, user_id)`, `Citation(user_id, cite_key)` — unique
 - `AgentSession.share_id`, `Space.share_id`, `SpaceInvite.token`, `SpaceFile(space_id, path)`, `SpaceCollaborator(space_id, user_id)` — unique
-- **Не индексированы** (потенциально стоит проверить нагрузку): `UsageLog.user_id`, `Task.user_id`, `SystemNotification.user_id`, `LatexError.user_id`, `VisualAsset.user_id`/`session_id`, `Citation.user_id`, `CitationCollection.user_id` — Prisma создаёт индекс на FK только если он явно объявлен через `@@index`; здесь для части моделей с FK на `User` индекса нет. Это заготовка для `docs/REVIEW.md`, не додумываю причину — возможно, объём данных пока мал и не требуется.
+- ~~**Не индексированы**: `UsageLog.user_id`, `Task.user_id`, `SystemNotification.user_id`, `LatexError.user_id`, `VisualAsset.user_id`, `Citation.user_id`, `CitationCollection.user_id`~~ — **[ИСПРАВЛЕНО, Фаза 5, 2026-09-04]**: `@@index([user_id])` добавлен на все 7 моделей плюс `@@index([referred_by])` на `User`, проверено на реальном Postgres (`pg_indexes`).

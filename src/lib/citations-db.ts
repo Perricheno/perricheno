@@ -85,16 +85,30 @@ export async function getCitation(userId: number, id: string): Promise<Citation 
 }
 
 export async function createCitation(userId: number, c: NewCitation): Promise<Citation> {
-    const citeKey = await ensureUniqueCiteKey(userId, c.cite_key);
-    const citation = await prisma.citation.create({
-        data: {
-            ...c,
-            user_id: userId,
-            cite_key: citeKey
+    // ensureUniqueCiteKey() only checks-then-picks a key in application code, so
+    // two concurrent creates with the same base key can still both pass that
+    // check and race to insert. The @@unique([user_id, cite_key]) DB constraint
+    // (added in Phase 5, docs/REVIEW.md) is what actually prevents the
+    // duplicate - retry with a fresh candidate key on the rare P2002 collision.
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const citeKey = await ensureUniqueCiteKey(userId, c.cite_key);
+        try {
+            const citation = await prisma.citation.create({
+                data: {
+                    ...c,
+                    user_id: userId,
+                    cite_key: citeKey
+                }
+            });
+            return citation as Citation;
+        } catch (e: any) {
+            if (e.code !== 'P2002' || attempt === 2) throw e;
         }
-    });
-    return citation as Citation;
+    }
+    throw new Error('Failed to allocate a unique cite_key after 3 attempts');
 }
+
+export class CiteKeyConflictError extends Error {}
 
 export async function updateCitation(
     userId: number, id: string, patch: Partial<NewCitation>
@@ -106,7 +120,12 @@ export async function updateCitation(
         });
         if (citation.count === 0) return null;
         return getCitation(userId, id);
-    } catch {
+    } catch (e: any) {
+        // Renaming cite_key to one already used by another of this user's
+        // citations now hits the @@unique([user_id, cite_key]) DB constraint
+        // (Phase 5, docs/REVIEW.md) instead of silently creating a duplicate -
+        // surface that distinctly instead of reporting a misleading "not found".
+        if (e.code === 'P2002') throw new CiteKeyConflictError('cite_key already in use');
         return null;
     }
 }

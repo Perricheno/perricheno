@@ -635,7 +635,7 @@ CRUD над `ChatSession`/`ChatMessage` (отдельная от `agent/chat` м
 - **GET**: `404 { error: 'Not found' }` или `200 { citation }`.
 - **PATCH Request**: JSON, разрешённые к обновлению поля — белый список: `title, authors, year, venue, abstract,
   url, bibtex, cite_key, tags, notes, starred, doi, arxiv_id, isbn` (прочие поля тела молча игнорируются).
-  **Response**: `404 { error: 'Not found' }` или `200 { citation }`.
+  **Response**: `404 { error: 'Not found' }` / `409 { error: 'cite_key already in use' }` (**[Фаза 5]** — переименование в `cite_key`, уже занятый другой цитатой этого пользователя, теперь отклоняется DB-констрейнтом `@@unique([user_id, cite_key])` вместо тихого дублирования) / `200 { citation }`.
 - **DELETE**: `404 { error: 'Not found' }` или `200 { ok: true }`.
 
 ### `GET /api/citations/collections`

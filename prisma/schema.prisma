@@ -51,6 +51,10 @@ model User {
   citations             Citation[]
   citation_collections  CitationCollection[]
   r_sessions            RSession[]
+  referrer              User?                  @relation("UserReferrals", fields: [referred_by], references: [id], onDelete: SetNull)
+  referred_users        User[]                  @relation("UserReferrals")
+
+  @@index([referred_by])
 }
 
 model Task {
@@ -61,6 +65,8 @@ model Task {
   status     String   @default("pending")
   created_at DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model Transaction {
@@ -81,6 +87,8 @@ model UsageLog {
   tokens     Int
   created_at DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model PromoCode {
@@ -119,6 +127,8 @@ model SystemNotification {
   is_read    Boolean  @default(false)
   created_at DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model LatexError {
@@ -128,6 +138,8 @@ model LatexError {
   session_id String?
   created_at DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model AuthRequest {
@@ -234,6 +246,8 @@ model VisualAsset {
   created_at  DateTime     @default(now())
   user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   session     ChatSession? @relation(fields: [session_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
 }
 
 model AgentUpload {
@@ -352,6 +366,9 @@ model Citation {
   updated_at  DateTime  @default(now()) @updatedAt
   user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   collections CitationCollectionItem[]
+
+  @@unique([user_id, cite_key])
+  @@index([user_id])
 }
 
 model CitationCollection {
@@ -363,6 +380,8 @@ model CitationCollection {
   created_at  DateTime  @default(now())
   user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   items       CitationCollectionItem[]
+
+  @@index([user_id])
 }
 
 // ── R Studio Sessions ─────────────────────────────────────────────────────
