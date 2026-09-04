@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
-import { getAgentSession, getAgentSessionsByUser } from "@/lib/db";
-import AgentSessionClient from "./AgentSessionClient";
+import { getAgentSession } from "@/lib/db";
 
 export const dynamic = 'force-dynamic';
 
