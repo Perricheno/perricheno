@@ -41,7 +41,7 @@ if [ "$FULL_REBUILD" = "no" ] && [ -n "$CHANGED_FILES" ]; then
 fi
 
 # ── 2. Map changed paths → compose services ───────────────────────────────────
-ALL_SERVICES="perricheno-site research-api r-compiler python-compiler telegram-bot pdf-extractor minio minio-init"
+ALL_SERVICES="perricheno-site worker research-api r-compiler python-compiler telegram-bot pdf-extractor minio minio-init redis"
 
 if [ "$FULL_REBUILD" = "yes" ] || echo "$CHANGED_FILES" | grep -qE '^(docker-compose\.yml|\.env|deploy\.sh)$'; then
     SERVICES="$ALL_SERVICES"
@@ -50,8 +50,11 @@ else
     SERVICES=""
     matches() { echo "$CHANGED_FILES" | grep -qE "$1"; }
 
+    # worker shares the same src/ tree and Dockerfile as perricheno-site
+    # (see Dockerfile's `worker` stage) - rebuild both together so they never
+    # drift on the shared job-processor code in src/lib/jobs, src/lib/queue.ts.
     if matches '^(src/|public/|messages/|package(-lock)?\.json$|next\.config|tsconfig\.json|tailwind\.config|postcss\.config|middleware\.ts$|Dockerfile$|\.dockerignore$)'; then
-        SERVICES="$SERVICES perricheno-site"
+        SERVICES="$SERVICES perricheno-site worker"
     fi
     matches '^research-api/'    && SERVICES="$SERVICES research-api"
     matches '^r-compiler/'      && SERVICES="$SERVICES r-compiler"

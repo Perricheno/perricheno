@@ -6,7 +6,7 @@
 
 Репозиторий не содержит файла `.env` или `.env.example` — секреты живут только на сервере (переданы через GitHub Actions secrets, см. раздел 9) и в `docker-compose.yml`/Dockerfile для несекретных или служебных значений.
 
-Ниже — сгруппировано по сервисам (сервисы соответствуют `docker-compose.yml`): **perricheno-site**, **telegram-bot**, **ws-server**, **r-compiler**, **python-compiler**, **research-api**, **pdf-extractor**. В конце — раздел про сами файлы деплоя (`docker-compose.yml`, `.github/workflows/deploy.yml`, `deploy.sh`, `next.config.ts`) и сводка находок, требующих уточнения у владельца.
+Ниже — сгруппировано по сервисам (сервисы соответствуют `docker-compose.yml`): **perricheno-site**, **telegram-bot**, **ws-server**, **r-compiler**, **python-compiler**, **research-api**, **pdf-extractor**, а с Фазы 6a (2026-09-04) — **worker** (тот же код, что и `perricheno-site`, но отдельный процесс для фоновой генерации, см. §1.9) и **redis** (без переменных). В конце — раздел про сами файлы деплоя (`docker-compose.yml`, `.github/workflows/deploy.yml`, `deploy.sh`, `next.config.ts`) и сводка находок, требующих уточнения у владельца.
 
 ---
 
@@ -93,6 +93,16 @@
 | `PORT` | `Dockerfile:59` (`ENV PORT=3000`) | Порт, который слушает standalone-сервер Next.js (`server.js` из `.next/standalone`). | Читается самим Next.js рантаймом (framework-level), не кастомным кодом проекта. |
 | `HOSTNAME` | `Dockerfile:60` (`ENV HOSTNAME="0.0.0.0"`) | Хост, на который биндится standalone-сервер. | Framework-level, как и `PORT`. |
 `WS_SERVER_INTERNAL_URL` **удалена 2026-09-03** — была объявлена в `docker-compose.yml`, но нигде не читалась (клиент подключается к `ws-server` напрямую через `NEXT_PUBLIC_WS_URL`, минуя сервер); подтверждено повторным grep по `src/`, `telegram-bot/`, `ws-server/` перед удалением.
+
+### 1.9 Фоновая очередь задач (Redis/BullMQ) и `worker` — [ДОБАВЛЕНО, Фаза 6a, 2026-09-04]
+
+Раньше вся AI-генерация (`agent/generate`, `agent/analytics/generate`, `r/generate` multi-режим, `internal/bot/visual/generate`) запускалась как необработанный (`fire-and-forget`) промис прямо в процессе `perricheno-site` — рестарт/редеплой веб-контейнера убивал незавершённую генерацию без возможности восстановления. Реальные функции-обработчики (`src/lib/jobs/*.ts`) не изменились по сути, только транспорт: раньше — прямой вызов, теперь — задача в очереди BullMQ, которую слушает отдельный контейнер `worker` (`src/worker/index.ts`, свой Dockerfile-стейдж, см. `docker-compose.yml`). Рестарт/редеплой `perricheno-site` больше не теряет генерацию.
+
+| Переменная | Где используется | Назначение | Обязательность |
+|---|---|---|---|
+| `REDIS_URL` | `src/lib/queue.ts:16-19` — читается и продюсером (`perricheno-site`, вызывает `getQueue().add(...)` из `route.ts`), и консьюмером (`worker`, вызывает `getRedisConnection()` в `src/worker/index.ts`) | Строка подключения к Redis (очередь BullMQ). | **REQUIRED, но лениво** — `getRedisConnection()`/`getQueue()` бросают `throw` только при первом реальном обращении к очереди (не при старте процесса), поэтому обычные HTTP-роуты, не трогающие генерацию, продолжат работать даже без неё; но `worker` не запустится вообще без переменной, так как создаёт подключение сразу при старте. В `docker-compose.yml` захардкожено `redis://redis:6379` (сервис `redis`, без пароля, только по внутренней docker-сети — см. раздел 9). |
+| `WORKER_CONCURRENCY` | `src/worker/index.ts` | Сколько задач `worker` обрабатывает параллельно. | Необязательна, по умолчанию `3` (см. `Number(process.env.WORKER_CONCURRENCY) \|\| 3`). |
+| `WORKER_HEALTH_PORT` | `src/worker/index.ts` | Порт внутреннего `/health`-эндпоинта для `HEALTHCHECK` контейнера `worker` (сам `worker` не обслуживает пользовательский HTTP-трафик). | Необязательна, по умолчанию `8090`. |
 
 ---
 
@@ -181,8 +191,8 @@
 - **`.github/workflows/deploy.yml`** прокидывает секреты GitHub Actions (`secrets.*`) в SSH-сессию на сервере и дописывает/обновляет ими файл `.env` через bash-функцию `update_env`. В `env:`/`envs:` блоке шага явно перечислены и форвардятся: `OPENAI_API_KEY`, `LATEX_COMPILER_URL`, `LATEX_COMPILER_KEY`, `CRYPTOCLOUD_API_KEY`, `CRYPTOCLOUD_SHOP_ID`, `CRYPTOCLOUD_SECRET`, `TELEGRAM_BOT_TOKEN`, `WEBHOOK_DOMAIN`, `WEBHOOK_SECRET`, `WS_JWT_SECRET`, `NEXT_PUBLIC_WS_URL`, `SESSION_SECRET`, а с Фазы 1 (2026-09-03) также `STIRLING_PDF_API_KEY`, `PADDLEOCR_API_TOKEN`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`.
 - ~~KASPI_* не были объявлены в `envs:`~~ — **неактуально**: вся Kaspi Pay интеграция и её `update_env`-вызовы удалены 2026-09-03 (заброшена, подтверждено владельцем), см. `docs/integrations.md`, раздел 3.
 - `SITE_INTERNAL_URL`/`BOT_CONTAINER_URL` записываются в `.env` как захардкоженные в самом workflow-файле литералы (это статические внутренние URL, не секреты — нормально). `MINIO_*` теперь тоже приходят из секретов (см. выше), а не литералами.
-- **`docker-compose.yml`** — каждый сервис либо получает переменные через `env_file: .env` (`perricheno-site`, `ws-server`, `telegram-bot`, а с Фазы 1 — `pdf-extractor`), либо через явный список в `environment:`. У `r-compiler`, `python-compiler`, `research-api` вообще нет `env_file`/`environment` секции с переменными (кроме служебных для healthcheck). `postgres` и `minio` с Фазы 1 получают креды через `${VAR:?required}` подстановку из `.env`, а не захардкоженными литералами (см. п.1 ниже — исправлено).
-- **`deploy.sh`** не работает с переменными окружения приложений — он работает с git SHA-состоянием (`.last-deployed-sha`) и решает, какие `docker compose build/up` сервисы пересобирать по изменённым путям.
+- **`docker-compose.yml`** — каждый сервис либо получает переменные через `env_file: .env` (`perricheno-site`, `ws-server`, `telegram-bot`, а с Фазы 1 — `pdf-extractor`, с Фазы 6a — `worker`), либо через явный список в `environment:`. У `r-compiler`, `python-compiler`, `research-api` вообще нет `env_file`/`environment` секции с переменными (кроме служебных для healthcheck). `postgres` и `minio` с Фазы 1 получают креды через `${VAR:?required}` подстановку из `.env`, а не захардкоженными литералами (см. п.1 ниже — исправлено). **[ДОБАВЛЕНО, Фаза 6a]**: новый сервис `redis` (без переменных — без пароля, только по внутренней сети) и новый сервис `worker` (та же `DATABASE_URL`/компиляторные URL, что у `perricheno-site`, плюс `REDIS_URL`) — см. раздел 1.9.
+- **`deploy.sh`** не работает с переменными окружения приложений — он работает с git SHA-состоянием (`.last-deployed-sha`) и решает, какие `docker compose build/up` сервисы пересобирать по изменённым путям. **[ОБНОВЛЕНО, Фаза 6a]**: `worker` добавлен в `ALL_SERVICES` и пересобирается вместе с `perricheno-site` при изменениях в `src/` (общий Dockerfile/код), так как воркер использует те же `src/lib/jobs/*`/`src/lib/queue.ts`; `redis` добавлен в `ALL_SERVICES` для полного редеплоя топологии (сборки не требует — только `image:`).
 
 ---
 

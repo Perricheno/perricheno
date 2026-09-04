@@ -208,7 +208,7 @@ Telegram-уведомление о новом входе.
 ### `POST /api/agent/analytics/generate`
 Файл: `src/app/api/agent/analytics/generate/route.ts`
 
-Запускает фоновый (fire-and-forget) пайплайн аналитики данных (`runAnalyticsPipeline`): парсит загруженные файлы,
+Ставит в очередь BullMQ (`job.name: 'analytics-generate'`, **[Фаза 6a]**: раньше был fire-and-forget промис прямо в этом процессе, теперь задачу исполняет отдельный `worker`) пайплайн аналитики данных (`runAnalyticsPipeline`, `src/lib/jobs/analyticsGenerate.ts`): парсит загруженные файлы,
 генерирует графики через R/Python-компиляторы, пишет прогресс в `agent_sessions.stage_json`.
 
 - **Auth**: требуется. Плюс проверка квоты `checkAndDeductUsage(userId, 'visuals', 0)` до старта.
@@ -519,8 +519,9 @@ AI подбирает ровно 3 (максимум 4 после `slice`) ти�
 Файл: `src/app/api/r/generate/route.ts`
 
 Три режима в одном эндпоинте: `suggest` (подбор типов графиков), `multi` (фоновая генерация нескольких графиков,
-план зависит от тарифа пользователя, с автоповтором при ошибке компиляции), одиночная синхронная генерация
-(по умолчанию, без `action`).
+план зависит от тарифа пользователя, с автоповтором при ошибке компиляции — **[Фаза 6a]** исполняется задачей
+BullMQ `r-multi-generate` в отдельном процессе `worker`, `src/lib/jobs/rMultiGenerate.ts`, а не промисом в этом
+процессе), одиночная синхронная генерация (по умолчанию, без `action`).
 
 - **Auth**: требуется + предпроверка `checkAndDeductUsage(userId, "visuals", 0)` →
   `402 { error: "LIMIT_REACHED", details: "Visual limit reached." }`. Также `500 { error: "OpenAI API key not
@@ -1144,7 +1145,8 @@ Office-форматы (`xlsx/xls/docx/doc/pptx/ppt`) сначала конвер
 - **Response**: `400 { error: "No context provided" }`; `422 { error: "⚠️ В документе недостаточно данных для
   анализа..." }` (текст < 400 символов и нет изображений — защита от галлюцинаций); `403 { error: "Ваш аккаунт
   заморожен администрацией." }` (`user.is_banned`); `402 { error: "Insufficient balance..." }`; успех —
-  `200 { success: true, sessionId, cached?: true }` — фактическая генерация асинхронна, статус/результат
+  `200 { success: true, sessionId, cached?: true }` — фактическая генерация асинхронна (**[Фаза 6a]** задача
+  BullMQ `bot-visual-generate`, исполняется в `worker`, `src/lib/jobs/botVisualGenerate.ts`), статус/результат
   доступны через `internal/bot/history` (`sessionId`) или push-колбэки в бот.
 
 ---

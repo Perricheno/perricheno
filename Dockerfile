@@ -69,3 +69,47 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
 CMD ["node", "server.js"]
+
+# ── Worker (Phase 6a) ──────────────────────────────────────────────────────
+# Standalone BullMQ consumer that runs the AI generation jobs previously
+# fired-and-forgotten inline in the web process - see src/worker/index.ts.
+# Bundled separately with esbuild (resolves the @/* alias itself via
+# tsconfig.json's "paths"; --packages=external leaves real npm packages as
+# plain require() calls resolved from node_modules copied in below) because
+# there's no other runtime path-alias resolution for plain Node in this repo.
+
+FROM deps AS worker-builder
+WORKDIR /app
+COPY . .
+RUN npx prisma generate
+RUN npm run build:worker
+
+FROM node:22-alpine AS worker-prod-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN \
+  --mount=type=cache,target=/root/.npm \
+  npm ci --omit=dev
+
+FROM node:22-alpine AS worker
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S worker -u 1001
+
+ENV NODE_ENV=production
+
+COPY --from=worker-prod-deps --chown=worker:nodejs /app/node_modules ./node_modules
+# npm ci only installs @prisma/client's own package - the generated query
+# engine + glue code (.prisma/client) only exists after `prisma generate`,
+# which ran in worker-builder. Overlay it here.
+COPY --from=worker-builder --chown=worker:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=worker-builder --chown=worker:nodejs /app/dist/worker.js ./worker.js
+COPY --from=worker-builder --chown=worker:nodejs /app/prisma ./prisma
+COPY --from=worker-builder --chown=worker:nodejs /app/prisma.config.ts ./prisma.config.ts
+
+USER worker
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8090/health || exit 1
+
+CMD ["node", "worker.js"]

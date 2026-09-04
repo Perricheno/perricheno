@@ -20,6 +20,7 @@ services:
       - PYTHON_COMPILER_URL=http://python-compiler:8000
       - RESEARCH_API_URL=http://research-api:8080
       - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
+      - REDIS_URL=redis://redis:6379
     volumes:
       - db-data:/app/db
       - analytics-data:/tmp/analytics-data
@@ -34,6 +35,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       r-compiler:
         condition: service_started
       python-compiler:
@@ -42,6 +45,68 @@ services:
         condition: service_started
       pdf-extractor:
         condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    image: perricheno-worker:latest
+    container_name: perricheno-worker
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-perricheno}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres-db:5432/${POSTGRES_DB:-perricheno_db}?schema=public
+      - NODE_ENV=production
+      - R_COMPILER_URL=http://r-compiler:8000
+      - PYTHON_COMPILER_URL=http://python-compiler:8000
+      - RESEARCH_API_URL=http://research-api:8080
+      - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    # NO ports exposed - doesn't serve user HTTP traffic, only consumes the
+    # queue. Healthcheck hits its own internal-only liveness endpoint.
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8090/health" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cloudflare
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      r-compiler:
+        condition: service_started
+      python-compiler:
+        condition: service_started
+      research-api:
+        condition: service_started
+      pdf-extractor:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    # --appendonly yes so queued-but-unprocessed jobs survive a Redis restart,
+    # not just a web/worker container restart - matches the whole point of
+    # Phase 6a (see docs/REVIEW.md).
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    # NO ports exposed - internal only via Docker network, same as
+    # r-compiler/python-compiler/research-api.
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cloudflare
   r-compiler:
     build:
       context: ./r-compiler
@@ -214,6 +279,7 @@ volumes:
   db-data:
   postgres-data:
   minio-data:
+  redis-data:
   analytics-data:
     driver: local
     driver_opts:

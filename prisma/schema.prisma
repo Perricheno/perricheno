@@ -208,6 +208,7 @@ model AgentSession {
   user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@index([status, updated_at])
 }
 
 model ChatSession {

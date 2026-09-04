@@ -55,4 +55,7 @@ report2.zip
 /telegram-bot/node_modules/
 /telegram-bot/dist/
 
+# worker (Phase 6a) - esbuild output, see package.json build:worker
+/dist/
+
 /src/generated/prisma

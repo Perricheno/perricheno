@@ -16,6 +16,7 @@ Next.js App Router поощряет писать логику прямо в ро
 
 - **[`agent/`](agent/README.md)** — конвейер генерации научного LaTeX-отчёта (6 стадий) + база знаний для промптов LLM. Подробный README внутри.
 - **[`analytics/`](analytics/README.md)** — конвейер генерации визуализаций/графиков (R/Python) из загруженных данных. Подробный README внутри.
+- **[`jobs/`](jobs/README.md)** — **[Фаза 6a]** обработчики фоновых задач очереди BullMQ (вынесены из `route.ts`, исполняются в отдельном процессе `src/worker/`). Подробный README внутри.
 
 ## Ключевые файлы верхнего уровня
 
@@ -34,6 +35,8 @@ Next.js App Router поощряет писать логику прямо в ро
 | `server-init.ts` | Однократная серверная инициализация (`initializeServer()`) — на момент чтения запускает только `startCleanupTask()` из `analytics/fileManager.ts` (очистка временных файлов аналитики). Флаг `initialized` в модульной переменной защищает от повторного запуска в рамках одного процесса. |
 | `utils.ts` | Единственная функция `cn()` — обёртка `clsx` + `tailwind-merge` для условных Tailwind-классов. Стандартный shadcn/ui-паттерн. |
 | `db-supabase-temp.ts` | Мёртвый файл-заглушка: 3 строки комментариев ("This is a placeholder so I can build it up correctly"), не импортируется нигде в проекте. Кандидат на удаление. |
+| `r-generation.ts` | **[Фаза 6a]** Промпты/хелперы генерации R-графиков (`buildGeneratePrompt`, `callOpenAI`, `cleanCode` и т.д.), общие для `src/app/api/r/generate/route.ts` (suggest/single-chart режимы) и `jobs/rMultiGenerate.ts` (очередь multi-режима) — вынесены сюда при переезде multi-режима в очередь, чтобы оба места не расходились. |
+| `queue.ts` | **[Фаза 6a]** Единая точка BullMQ: `getQueue()`/`getRedisConnection()`, ленивая инициализация (не требует `REDIS_URL` на модулях, которые очередь не трогают). Импортируется и роутами (продюсер — `.add(...)`), и `src/worker/index.ts` (консьюмер). |
 
 ## Известные ограничения / технический долг
 

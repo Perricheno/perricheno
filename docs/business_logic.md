@@ -288,7 +288,7 @@ expectedSign = MD5(hashString)
 
 ## 5. Конвейер генерации отчёта (Agent pipeline)
 
-Оркестратор: `src/lib/agent/pipeline/index.ts::runPipeline`. Вызывается из `src/app/api/agent/generate/route.ts` в режиме fire-and-forget (ответ клиенту уходит сразу с `sessionId`, фактическая генерация идёт в фоне процесса Node, прогресс пишется в `AgentSession.stage_json`, клиент опрашивает).
+Оркестратор: `src/lib/agent/pipeline/index.ts::runPipeline`. Вызывается из `src/lib/jobs/reportGenerate.ts::runReportGenerate` (ответ клиенту уходит сразу с `sessionId`, `src/app/api/agent/generate/route.ts` только валидирует и ставит задачу в очередь — `getQueue().add('report-generate', ...)`; фактическая генерация идёт в отдельном процессе `worker`, прогресс пишется в `AgentSession.stage_json`, клиент опрашивает). **[Фаза 6a, 2026-09-04]**: раньше это был fire-and-forget промис прямо в процессе `perricheno-site` — рестарт веб-контейнера убивал незавершённую генерацию; теперь это задача BullMQ, которую слушает отдельный воркер, переживающий рестарт веб-контейнера (см. `src/worker/README.md`).
 
 LLM: единая обёртка `src/lib/agent/pipeline/llm.ts`, модель **`gpt-5-mini-2025-08-07`** (жёстко задана константой `MODEL`, llm.ts:7), эндпоинт `https://api.openai.com/v1/chat/completions`. Таймаут по умолчанию 90 сек (переопределяется по стадиям). Картинки в промпте тарифицируются вручную плоской ставкой **800 токенов/изображение** (`IMAGE_TOKEN_COST`), добавляется к `usage.prompt_tokens`, возвращаемому OpenAI — то есть биллинг за vision-контент не равен фактическому биллингу OpenAI, а завышен эвристикой продукта. Есть `chatCompletionLong()` — автопродолжение при `finish_reason === 'length'`, максимум 3 итерации (1 начальная + 2 продолжения), даёт модели "хвост" в 1500 символов предыдущего вывода для бесшовной склейки.
 
@@ -350,19 +350,19 @@ LLM: единая обёртка `src/lib/agent/pipeline/llm.ts`, модель *
         ▼
 [status = 'done' (если скомпилировалось) | 'needs_attention' (если нет)]
         │
-        ▼ (в route.ts после runPipeline)
+        ▼ (в runReportGenerate после runPipeline)
   billing: totalTokens*3 списывается как 'chars' одним вызовом checkAndDeductUsage
   Telegram: редактируется исходное сообщение "Начало генерации" на финальный статус
 ```
 
-Ошибка на любой стадии внутри `runBackground()` (`generate/route.ts:79-92`) ловится общим `catch`:
+Ошибка на любой стадии внутри `runReportGenerate()` (`src/lib/jobs/reportGenerate.ts`, до Фазы 6a — `runBackground()` в `generate/route.ts`) ловится общим `catch`:
 ```
 AgentSession.status = 'error'
 AgentSession.error_msg = err.message (обрезано до 500 символов)
 ```
 и, если было отправлено Telegram-сообщение о старте, оно редактируется на "❌ Ошибка генерации".
 
-Отдельный "лёгкий" путь — `handleLegacyEdit()` (generate/route.ts:190-247): используется, когда пользователь просит точечно поправить уже собранный документ (`body.currentTex`) или исправить ошибку компиляции (`body.errorLog`) — вместо полного 5-стадийного пайплайна делается один LLM-вызов "исправь/примени изменения и верни файлы целиком", статус переключается `generating → done | error` напрямую.
+Отдельный "лёгкий" путь — `runReportEdit()` (`src/lib/jobs/reportGenerate.ts`, до Фазы 6a — `handleLegacyEdit()` в `generate/route.ts`): используется, когда пользователь просит точечно поправить уже собранный документ (`body.currentTex`) или исправить ошибку компиляции (`body.errorLog`) — вместо полного 5-стадийного пайплайна делается один LLM-вызов "исправь/примени изменения и верни файлы целиком", статус переключается `generating → done | error` напрямую. Роут ставит задачу в очередь (`job.name: 'report-edit'`) вместо прямого вызова.
 
 ### 5.2 Что теряется/сохраняется между стадиями (`RunPipelineOutput`)
 

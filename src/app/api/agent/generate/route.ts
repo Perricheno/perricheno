@@ -1,98 +1,21 @@
 import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
 import {
-    createAgentSession, updateAgentSession, getAgentSession,
+    createAgentSession, updateAgentSession,
     checkAndDeductUsage, getActiveAgentSessionsCount,
-    sendTelegramNotification, updateTelegramNotification,
-    getUserById, getAgentUploadsByIds,
+    sendTelegramNotification,
 } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { runPipeline } from '@/lib/agent/pipeline';
+import { getQueue } from '@/lib/queue';
 import type { PipelineSettings, DocType } from '@/lib/agent/pipeline/types';
 
-export const maxDuration = 600; // orchestrator may run for several minutes
 export const dynamic = 'force-dynamic';
 
-// ── Background orchestration ──
-// Persists progress to agent_sessions.stage_json so the UI can poll it.
-
-async function runBackground(
-    sessionId: string,
-    userId: number,
-    settings: PipelineSettings,
-) {
-    try {
-        const allUploadIds = [
-            ...(settings.uploadIds ?? []),
-            ...(settings.dataUploadIds ?? []),
-        ];
-        const uploads = allUploadIds.length > 0
-            ? await getAgentUploadsByIds(allUploadIds, userId)
-            : [];
-
-        // Normalize images_json to arrays (Supabase may hand back jsonb as object or string).
-        for (const u of uploads) {
-            if (typeof u.images_json === 'string') {
-                try { (u as any).images_json = JSON.parse(u.images_json); } catch { (u as any).images_json = []; }
-            } else if (!u.images_json) {
-                (u as any).images_json = [];
-            }
-        }
-
-        const writeProgress = async (progress: any) => {
-            await updateAgentSession(sessionId, { stage_json: progress });
-        };
-
-        const result = await runPipeline({ settings, uploads, writeProgress });
-
-        // Final persist.
-        await updateAgentSession(sessionId, {
-            status: result.status,
-            main_tex: result.mainTex,
-            references_bib: result.referencesBib,
-            stream_text: null,
-            error_msg: result.compiled ? null : (result.errorLog?.slice(0, 500) ?? 'Compilation unresolved after retries'),
-        });
-
-        // Token-accurate billing across all stages.
-        if (result.totalTokens > 0) {
-            // Convert model-reported tokens to characters for the existing quota
-            // system. 1 token ≈ 4 chars of English, ≈ 2.2 for Russian. We use 3.
-            const charEquivalent = result.totalTokens * 3;
-            await checkAndDeductUsage(userId, 'chars', charEquivalent);
-        }
-
-        // Telegram notification.
-        const session = await getAgentSession(sessionId);
-        if (session?.tg_message_id) {
-            const user = await getUserById(userId);
-            const remaining = user ? (user.purchased_chars + 15000 - user.daily_chars_used) : 0;
-            const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://perricheno.ru'}/agent/shared/${session.share_id}`;
-            const label = result.compiled ? '✅ *Генерация завершена*' : '⚠️ *Готово, требует внимания*';
-            const detail = result.compiled
-                ? `• Разделов: ${result.sections.length}\n• Слов: ~${result.sections.reduce((a, s) => a + s.wordCount, 0)}\n• Токенов: ${result.totalTokens.toLocaleString()}`
-                : `Документ собран, но LaTeX не скомпилировался с первых попыток. Вы можете открыть его и исправить вручную.`;
-            await updateTelegramNotification(userId, session.tg_message_id,
-                `${label}: ${session.title}\n\n📊 *Статистика*:\n${detail}\n• Остаток: ${remaining} символов\n\n🔗 [Открыть](${pdfUrl})`
-            );
-        }
-    } catch (err: any) {
-        console.error('[generate] background error:', err);
-        await updateAgentSession(sessionId, {
-            status: 'error',
-            error_msg: String(err?.message || err).slice(0, 500),
-            stream_text: null,
-        });
-        const session = await getAgentSession(sessionId);
-        if (session?.tg_message_id) {
-            await updateTelegramNotification(userId, session.tg_message_id,
-                `❌ *Ошибка генерации*: ${session.title}\n\n${String(err?.message || err).slice(0, 200)}`
-            );
-        }
-    }
-}
-
 // ── Request handler ──
+// Generation itself runs in the standalone worker process (src/worker/index.ts,
+// src/lib/jobs/reportGenerate.ts) so it survives a web-container restart, not
+// just a client disconnect. This route only validates, persists the initial
+// AgentSession row, and enqueues the job.
 
 export async function POST(req: Request) {
     const userId = await verifySession();
@@ -179,8 +102,8 @@ export async function POST(req: Request) {
         settings_json: JSON.stringify(settings),
     });
 
-    // Fire and forget. The client will poll /api/agent/sessions/[id] for stage_json.
-    runBackground(sessionId, userId, settings).catch(e => console.error('[generate] bg crash:', e));
+    // Enqueue the job. The client will poll /api/agent/sessions/[id] for stage_json.
+    await getQueue().add('report-generate', { sessionId, userId, settings });
 
     return NextResponse.json({ sessionId });
 }
@@ -188,18 +111,7 @@ export async function POST(req: Request) {
 // ── Legacy thin path: edits and error-fix on an existing session. ──
 
 async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
-    const { chatCompletion, parseJsonLoose } = await import('@/lib/agent/pipeline/llm');
-
-    const lang = body.language === 'ru' ? 'Russian' : 'English';
-    const sys = `You are a LaTeX editor. Return ONLY JSON: {"main_tex": "...", "references_bib": "..."}. No fences, no commentary. Language: ${lang}.`;
-
-    let userMsg: string;
-    if (body.errorLog && body.currentTex) {
-        const extraGuidance = body.prompt?.trim() ? `\n\nADDITIONAL GUIDANCE FROM USER:\n${body.prompt}` : '';
-        userMsg = `Fix ALL compilation errors and return full corrected files. Preserve prose and structure - minimal surgical edits only.${extraGuidance}\n\nERROR LOG:\n${body.errorLog}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
-    } else if (body.currentTex) {
-        userMsg = `Apply these changes to the document and return full updated files.\n\nCHANGE REQUEST:\n${body.prompt || '(none)'}\n\nCURRENT main.tex:\n${body.currentTex}\n\n${body.currentBib ? `CURRENT references.bib:\n${body.currentBib}` : ''}`;
-    } else {
+    if (!body.currentTex) {
         return NextResponse.json({ error: 'Legacy path requires currentTex.' }, { status: 400 });
     }
 
@@ -209,39 +121,15 @@ async function handleLegacyEdit(userId: number, body: any): Promise<Response> {
     // Clear stage_json so the client doesn't show stale generation stages during the edit
     await updateAgentSession(sessionId, { status: 'generating', error_msg: null, stream_text: null, stage_json: null });
 
-    (async () => {
-        try {
-            const r = await chatCompletion(
-                [
-                    { role: 'system', content: sys },
-                    { role: 'user', content: userMsg },
-                ],
-                { jsonMode: true, timeoutMs: 180_000 },
-            );
-
-            const parsed: any = parseJsonLoose(r.text);
-            const { normalizeLatexText, ensureRussianPreamble } = await import('@/lib/agent/stages');
-            const mainTex = ensureRussianPreamble(normalizeLatexText(parsed.main_tex || ''), body.language === 'ru' ? 'ru' : 'en');
-            const refs = typeof parsed.references_bib === 'string' && parsed.references_bib.trim()
-                ? normalizeLatexText(parsed.references_bib)
-                : null;
-
-            await updateAgentSession(sessionId, {
-                status: 'done',
-                main_tex: mainTex,
-                references_bib: refs,
-                stream_text: null,
-                error_msg: null,
-            });
-
-            if (r.totalTokens > 0) await checkAndDeductUsage(userId, 'chars', r.totalTokens * 3);
-        } catch (e: any) {
-            await updateAgentSession(sessionId, {
-                status: 'error',
-                error_msg: String(e?.message || e).slice(0, 500),
-            });
-        }
-    })().catch(e => console.error('[generate-legacy] bg:', e));
+    await getQueue().add('report-edit', {
+        sessionId,
+        userId,
+        language: body.language,
+        prompt: body.prompt,
+        currentTex: body.currentTex,
+        currentBib: body.currentBib,
+        errorLog: body.errorLog,
+    });
 
     return NextResponse.json({ sessionId });
 }
