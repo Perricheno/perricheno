@@ -41,7 +41,15 @@ yarn-error.log*
 next-env.d.ts
 
 # logs
-build_error.log
+*.log
+
+# SQLite dumps / debug artifacts that have accidentally ended up committed
+# before (see docs/REVIEW.md - tracked binary/temp files finding)
+*.db
+ts_errors.txt
+r.pdf
+report.zip
+report2.zip
 
 # Telegram Bot
 /telegram-bot/node_modules/
