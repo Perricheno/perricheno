@@ -23,7 +23,6 @@ model User {
   daily_reports_used  Int       @default(0)
   purchased_reports   Int       @default(0)
   last_reset_date     String?
-  account_tier        String?   @default("free")
   weekly_chars_used   Int       @default(0)
   last_week_reset     String?
   is_banned           Boolean   @default(false)

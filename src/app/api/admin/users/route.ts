@@ -137,7 +137,12 @@ export async function PUT(req: Request) {
             }
 
         } else if (action === 'set_tier') {
-            await prisma.user.update({ where: { id: targetUserId }, data: { account_tier: tier } });
+            // Was `account_tier` - fixed in Phase 4 (docs/REVIEW.md #20): that
+            // field was never read by checkAndDeductUsage's PLAN_LIMITS
+            // lookup, so this action changed what the UI displayed without
+            // ever changing the user's real quota. plan_tier is the field
+            // that actually gates usage.
+            await prisma.user.update({ where: { id: targetUserId }, data: { plan_tier: tier } });
         } else if (action === 'toggle_ban') {
             const newBanStatus = targetUser.is_banned ? false : true;
             await prisma.user.update({ where: { id: targetUserId }, data: { is_banned: newBanStatus } });

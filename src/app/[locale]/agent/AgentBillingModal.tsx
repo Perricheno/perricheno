@@ -23,7 +23,7 @@ interface UserInfo {
     purchased_visuals: number;
     daily_reports_used: number;
     purchased_reports: number;
-    account_tier: string;
+    plan_tier: string;
 }
 
 interface Props {
@@ -132,7 +132,7 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                             </div>
                             <div className="overflow-hidden">
                                 <h3 className="font-black text-black truncate">{user?.first_name || 'User'}</h3>
-                                <p className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-widest truncate">{user?.account_tier || 'Free'} Tier</p>
+                                <p className="text-[10px] text-[#A1A1AA] font-bold uppercase tracking-widest truncate">{user?.plan_tier || 'Free'} Tier</p>
                             </div>
                         </div>
 

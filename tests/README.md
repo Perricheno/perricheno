@@ -27,6 +27,7 @@ request-lifecycle — это стандартный способ юнит-тес
 | `quota-limits.test.ts` | `addPurchasedTokens`/`checkAndDeductUsage` напрямую: `amount=0`, обычное списание/начисление, списание сначала из бесплatной квоты потом из купленной, отказ без частичного списания при нехватке обоих. Плюс два теста **[KNOWN GAP]** — см. ниже. |
 | `telegram-auth.test.ts` | `verifyTelegramAuth()`: валидная/испорченная/чужим токеном подписанная/просроченная (>24ч)/пустая. |
 | `session.test.ts` | `createSession`/`verifySession`/`deleteSession`: нет куки, подпись чужим секретом, отозванная в БД сессия, просроченный JWT, полный цикл создание→проверка→удаление. |
+| `tier-consistency.test.ts` | Регрессия на `docs/REVIEW.md` #20 (удаление `account_tier`): админский `set_tier` (`admin/users/route.ts`) реально меняет `plan_tier`, и `internal/bot/billing` (`action=status`) отображает тариф по тому же `plan_tier` — обе точки согласованы с полем, которое реально читает `checkAndDeductUsage`. |
 
 ## [KNOWN GAP] — новые находки, обнаруженные при написании тестов
 

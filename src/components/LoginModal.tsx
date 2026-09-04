@@ -122,7 +122,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                                 <h2 className="text-xl font-black text-[#1a1a1a] tracking-tight">{user.first_name}</h2>
                                 <p className="text-sm text-gray-400 font-medium mt-0.5">@{user.username || "user"}</p>
                                 <span className="mt-3 px-4 py-1.5 bg-[#1a1a1a] text-white text-[10px] font-black uppercase tracking-widest rounded-full">
-                                    {user.account_tier || "Free Tier"}
+                                    {user.plan_tier || "Free Tier"}
                                 </span>
                             </div>
 

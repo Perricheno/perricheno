@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         if (action === "status" || !action) {
             if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-            const tier = user.account_tier || "free";
+            const tier = user.plan_tier || "free";
             const limits = PLAN_LIMITS[tier as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
             
             const billing = {

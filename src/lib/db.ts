@@ -249,7 +249,7 @@ export async function upgradeSubscriptionPlan(userId: number, planId: string, tx
         if (tx) {
             await db.user.update({
                 where: { id: userId },
-                data: { plan_tier: tier, account_tier: tier, monthly_chars_used: 0 }
+                data: { plan_tier: tier, monthly_chars_used: 0 }
             });
             await db.transaction.create({
                 data: { user_id: userId, topic: "Subscription Upgrade", amount_text: `Tier: ${tier.toUpperCase()}`, is_positive: true }
@@ -258,7 +258,7 @@ export async function upgradeSubscriptionPlan(userId: number, planId: string, tx
             await prisma.$transaction([
                 prisma.user.update({
                     where: { id: userId },
-                    data: { plan_tier: tier, account_tier: tier, monthly_chars_used: 0 }
+                    data: { plan_tier: tier, monthly_chars_used: 0 }
                 }),
                 prisma.transaction.create({
                     data: { user_id: userId, topic: "Subscription Upgrade", amount_text: `Tier: ${tier.toUpperCase()}`, is_positive: true }

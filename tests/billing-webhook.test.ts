@@ -101,7 +101,6 @@ describe("POST /api/billing/webhook (CryptoCloud)", () => {
 
         const updated = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
         expect(updated.plan_tier).toBe("pro");
-        expect(updated.account_tier).toBe("pro");
         expect(updated.monthly_chars_used).toBe(0);
     });
 });

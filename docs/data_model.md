@@ -24,7 +24,7 @@
 | `daily_reports_used`, `purchased_reports` | Int | Аналогично для отчётов |
 | `last_reset_date`, `last_week_reset` | String? | Даты последнего сброса daily/weekly счётчиков (хранятся как строки, не Date) |
 | `weekly_chars_used`, `monthly_chars_used` | Int | Недельный/месячный расход |
-| `account_tier`, `plan_tier` | String?, default `"free"` | Тариф пользователя — два похожих поля одновременно (см. находку в `docs/REVIEW.md` про возможное дублирование) |
+| `plan_tier` | String?, default `"free"` | Тариф пользователя (`free`/`plus`/`pro`/`ultra`), единственное поле — читается `checkAndDeductUsage`/`PDF_STAGING_CAPS`. Ранее сосуществовало с `account_tier`, удалённым в Фазе 4 как неиспользуемый дубль, вызывавший расхождение между отображаемым и реально применяемым тарифом (см. `docs/REVIEW.md`, пункт 10, и `docs/business_logic.md`, §2.10) |
 | `is_banned`, `is_deleted` | Boolean | Модерация/soft-delete |
 | `is_admin` | Boolean | Доступ к `/api/admin/*` |
 | `referred_by` | Int? | ID пригласившего пользователя — **не объявлено как `@relation` к User**, то есть на уровне БД это не настоящий внешний ключ, просто числовое поле (см. `docs/REVIEW.md`) |

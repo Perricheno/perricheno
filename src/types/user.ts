@@ -6,7 +6,6 @@ export interface User {
     photo_url: string | null;
     created_at: string;
     plan_tier?: string;
-    account_tier?: string;
     daily_chars_used?: number;
     weekly_chars_used?: number;
     monthly_chars_used?: number;
