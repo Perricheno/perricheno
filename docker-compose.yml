@@ -31,7 +31,21 @@ services:
       retries: 5
       start_period: 45s
     networks:
-      - cloudflare
+      - coolify
+    # Public routing via Coolify's Traefik (same pattern as every other
+    # Coolify-managed app on this server - verified against a preserved
+    # working config at /data/coolify/applications/*/docker-compose.yaml).
+    # Cloudflare terminates the public TLS in front of this server and
+    # forwards plain HTTP, so only an `http` entrypoint router is needed -
+    # no cert resolver/https router here.
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.gzip.compress=true
+      - traefik.http.routers.http-0-perricheno-site.entryPoints=http
+      - traefik.http.routers.http-0-perricheno-site.middlewares=gzip
+      - traefik.http.routers.http-0-perricheno-site.rule=Host(`perricheno.com`) && PathPrefix(`/`)
+      - traefik.http.routers.http-0-perricheno-site.service=http-0-perricheno-site
+      - traefik.http.services.http-0-perricheno-site.loadbalancer.server.port=3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,7 +87,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - cloudflare
+      - coolify
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,7 +120,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cloudflare
+      - coolify
   r-compiler:
     build:
       context: ./r-compiler
@@ -123,7 +137,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - cloudflare
+      - coolify
 
   python-compiler:
     build:
@@ -141,7 +155,7 @@ services:
       retries: 3
       start_period: 20s
     networks:
-      - cloudflare
+      - coolify
 
   research-api:
     build:
@@ -156,7 +170,7 @@ services:
       retries: 3
       start_period: 20s
     networks:
-      - cloudflare
+      - coolify
 
   pdf-extractor:
     build:
@@ -173,7 +187,7 @@ services:
       retries: 3
       start_period: 20s
     networks:
-      - cloudflare
+      - coolify
 
   ws-server:
     build:
@@ -194,7 +208,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - cloudflare
+      - coolify
 
   telegram-bot:
     build:
@@ -216,7 +230,7 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - cloudflare
+      - coolify
 
   postgres:
     image: postgres:16-alpine
@@ -234,7 +248,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cloudflare
+      - coolify
 
   minio:
     image: minio/minio:latest
@@ -257,7 +271,7 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - cloudflare
+      - coolify
 
   minio-init:
     image: minio/mc:latest
@@ -266,7 +280,7 @@ services:
       minio:
         condition: service_healthy
     networks:
-      - cloudflare
+      - coolify
     entrypoint: >
       /bin/sh -c "
       /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER:-perricheno_admin} ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required};
@@ -287,6 +301,12 @@ volumes:
       device: tmpfs
 
 networks:
-  cloudflare:
+  # Coolify's own Traefik-facing network - NOT literally named "cloudflare"
+  # despite Cloudflare proxying DNS in front of it. Confirmed against this
+  # server's actual `docker network ls` and coolify-proxy's own attached
+  # network (both "coolify"); the previous "cloudflare" name never existed
+  # here and `docker compose up` would fail with "network cloudflare
+  # declared as external, but could not be found" on a real deploy.
+  coolify:
     external: true
 
