@@ -156,14 +156,13 @@
 
 ## 7. `pdf-extractor` (Go + Gin, `pdf-extractor/main.go`)
 
-**Переменных окружения также не найдено** (`os.Getenv`/`os.environ` не встречается). Порт сервера захардкожен (`:8080`, `main.go:72`). Более того, все параметры доступа к внешнему OCR-сервису PaddleOCR тоже захардкожены константами прямо в исходнике, а не вынесены в окружение:
+Порт сервера захардкожен (`:8080`, `main.go:82`) — как и в `research-api`, не секрет, не требует переменной. URL-константы внешнего OCR-сервиса PaddleOCR тоже захардкожены (не секреты, публичные API-эндпоинты):
 
 - `pdf-extractor/main.go:44` — `asyncJobURL = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs"`
 - `pdf-extractor/main.go:45` — `asyncModel = "PaddleOCR-VL"`
 - `pdf-extractor/main.go:48` — `syncAPIURL = "https://a8gec0nct6gb48gc.aistudio-app.com/layout-parsing"`
-- `pdf-extractor/main.go:50` — **`apiToken` — API-токен доступа к PaddleOCR, захардкожен строковым литералом прямо в исходном коде.** Значение не воспроизводится в этом документе; факт — токен закоммичен в открытый код сервиса, а не читается из окружения.
 
-Это резко отличается от остальных трёх Go-сервисов: `r-compiler`/`python-compiler` хотя бы читают `PORT` из окружения, а `pdf-extractor` не параметризован окружением вообще, несмотря на то что хранит там третьесторонний API-ключ.
+~~`apiToken` захардкожен строковым литералом~~ — **[ИСПРАВЛЕНО, Фаза 1, 2026-09-03]**: этот раздел был не обновлён после фикса (расхождение с `docs/REVIEW.md`, находка #3, которая корректно фиксирует исправление). По факту (`main.go:56`) — `var apiToken = mustEnv("PADDLEOCR_API_TOKEN")`: токен читается из окружения, процесс падает при старте (`log.Fatalf`), если переменная не задана — REQUIRED, без фолбэка. Единственное отличие от остальных Go-сервисов теперь чисто позитивное: `pdf-extractor` — единственный из четырёх, который явно требует переменную и не запускается без неё, а не тихо продолжает с пустым/захардкоженным значением.
 
 ---
 
@@ -171,16 +170,18 @@
 
 Ниже — места, где значение, которое логически должно быть секретом или параметром окружения, вместо этого записано литералом прямо в файле. Согласно заданию, сами значения секретов здесь не воспроизводятся — указаны только файл, строка и факт.
 
+**[Проверено заново по факту, 2026-09-04]**: эта таблица была снимком на момент исходного аудита (Этап 2) и не обновлялась после фиксов Фазы 1 — из 8 строк 6 оказались устаревшими (уже исправлены, просто не отмечены здесь). Перепроверено чтением текущего кода каждой строки, не по памяти.
+
 | Файл:строка | Что захардкожено | Комментарий |
 |---|---|---|
-| `get_bot_name.js:3` | Токен Telegram Bot API вида `<numeric_id>:<35-символьный токен>`, встроен прямо в URL `https://api.telegram.org/bot<TOKEN>/getMe` | Одноразовый скрипт-утилита в корне репозитория (не часть какого-либо `docker-compose`-сервиса, не запускается в проде) — вероятно, dev-инструмент для получения юзернейма бота по токену. Токен в нём захардкожен, а не взят из `process.env.TELEGRAM_BOT_TOKEN`, хотя такая переменная существует и используется везде в проекте. |
-| `docker-compose.yml:14` | Полная строка подключения `DATABASE_URL` для сервиса `perricheno-site`, включающая логин и пароль | Значение не читается из `.env`, а прописано прямо в `environment:` этого файла; логин/пароль внутри неё совпадают с `POSTGRES_USER`/`POSTGRES_PASSWORD` того же файла (строки 157-158). |
-| `docker-compose.yml:157-158` | `POSTGRES_USER` и `POSTGRES_PASSWORD` для контейнера `postgres` | Захардкожены буквально (не `${VAR}`-подстановка из `.env`), хотя у сервиса `postgres` в этом файле не подключён `env_file: .env` — то есть иначе их и нельзя было бы передать. |
-| `docker-compose.yml:175-176` | `MINIO_ROOT_USER` и `MINIO_ROOT_PASSWORD` для контейнера `minio` | Захардкожены буквально; те же значения по факту повторно захардкожены в `minio-init` entrypoint-скрипте (строка 201, команда `mc config host add`) и как fallback-литералы в `src/lib/storage.ts:11-12`, а также ещё раз в `.github/workflows/deploy.yml:86-87` (см. ниже). |
-| `.github/workflows/deploy.yml:86-87` | `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`, записываемые в серверный `.env` командой `update_env` | Значения — литералы прямо в workflow-файле (с комментарием "MinIO runs in Docker - values are fixed for this deployment"), а не `${{ secrets.* }}`. Тот же логин/пароль, что и в `docker-compose.yml` и `storage.ts` (см. выше) — итого один и тот же несекретный по факту креденшл продублирован в 4 местах. |
-| `src/app/api/internal/bot/history/files/route.ts:7` | Fallback-значение переменной `PDF_API_KEY`, похожее по формату на реальный UUID-ключ стороннего PDF-сервиса (`PDF_SERVICE_URL`) | В коде это `process.env.PDF_API_KEY \|\| "<литерал>"` — то есть если переменная окружения не задана, в проде тихо используется захардкоженный литерал вместо явной ошибки конфигурации. |
-| `src/lib/receiptGenerator.ts:75` | Fallback-строка для `WEBHOOK_SECRET` при подписи HMAC | Это очевидный dev-плейсхолдер (не выглядит как реальный секрет), но по факту при отсутствии `WEBHOOK_SECRET` расчёт подписи в этом месте тихо продолжает работать на предсказуемом ключе, а не падает с ошибкой. |
-| `pdf-extractor/main.go:50` | API-токен PaddleOCR | См. раздел 7 — единственный из Go-сервисов, где сторонний API-ключ вообще не выведен в переменную окружения. |
+| ~~`get_bot_name.js:3`~~ | ~~Токен Telegram Bot API~~ | **[ИСПРАВЛЕНО, Фаза 1]**: скрипт теперь читает `process.env.TELEGRAM_BOT_TOKEN`, падает с понятным сообщением и `exit(1)`, если не задан. |
+| ~~`docker-compose.yml:14`~~ | ~~`DATABASE_URL` литералом с логином/паролем~~ | **[ИСПРАВЛЕНО, Фаза 1]**: собирается из `${POSTGRES_USER:-perricheno}`/`${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}`/`${POSTGRES_DB:-perricheno_db}`. |
+| ~~`docker-compose.yml:157-158`~~ | ~~`POSTGRES_USER`/`POSTGRES_PASSWORD` литералом~~ | **[ИСПРАВЛЕНО, Фаза 1]**: `${POSTGRES_USER:-perricheno}`/`${POSTGRES_PASSWORD:?required}` из `.env`. |
+| ~~`docker-compose.yml:175-176`~~ | ~~`MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` литералом~~ | **[ИСПРАВЛЕНО, Фаза 1]**: `${MINIO_ROOT_USER:-perricheno_admin}`/`${MINIO_ROOT_PASSWORD:?required}` из `.env`; `storage.ts:11-12` тоже без фолбэков — `process.env.MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` напрямую. |
+| ~~`.github/workflows/deploy.yml:86-87`~~ | ~~`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` литералом в workflow~~ | **[ИСПРАВЛЕНО, Фаза 1]**: `deploy.yml:130-131` теперь пишет `update_env "MINIO_ACCESS_KEY" "$MINIO_ROOT_USER"` / `update_env "MINIO_SECRET_KEY" "$MINIO_ROOT_PASSWORD"` — производные от секретов GitHub Actions (§9), не литералы. |
+| ~~`src/app/api/internal/bot/history/files/route.ts:7`~~ | ~~Fallback-литерал для `PDF_API_KEY`~~ | **[ИСПРАВЛЕНО, Фаза 1]**: переменная переименована в `STIRLING_PDF_API_KEY`, читается из централизованного `src/lib/config.ts`; при отсутствии — `console.error` и явный отказ использовать markdown→pdf fallback (fail-closed), без литерала-заглушки. |
+| `src/lib/receiptGenerator.ts:71,75` | Литеральная строка `"SECRET"` внутри самой подписываемой строки (`:71`) + fallback `\|\| 'dev_secret'` для `WEBHOOK_SECRET` (`:75`) | **Всё ещё актуально, не исправлено** — при отсутствии `WEBHOOK_SECRET` подпись HMAC чека тихо считается на предсказуемом ключе вместо отказа. Уже задокументировано как известная, осознанно не тронутая находка — см. `docs/REVIEW.md`, раздел «можно отложить», и `docs/business_logic.md`, п.11 «НЕ защищён». |
+| ~~`pdf-extractor/main.go:50`~~ | ~~API-токен PaddleOCR~~ | **[ИСПРАВЛЕНО, Фаза 1]** — см. §7 выше, `var apiToken = mustEnv("PADDLEOCR_API_TOKEN")`. |
 
 ---
 
