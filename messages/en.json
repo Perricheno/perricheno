@@ -9,6 +9,7 @@
       "home": "Home",
       "rStudio": "R Studio",
       "tikzStudio": "TikZ Studio",
+      "docToTex": "Doc to TeX",
       "citations": "Citations",
       "space": "Space",
       "pdfTools": "PDF Tools",
@@ -574,6 +575,39 @@
       "terms": "Terms",
       "privacy": "Privacy",
       "support": "Support"
+    }
+  },
+  "docToTex": {
+    "title": "Doc to TeX",
+    "subtitle": "Upload a document - get clean, compilable LaTeX.",
+    "upload": {
+      "cta": "Click or drop a file",
+      "hint": "PDF, DOCX, PPTX, PNG, JPEG, TXT",
+      "uploading": "Processing...",
+      "remove": "Remove"
+    },
+    "settings": {
+      "mode": "Conversion mode",
+      "modeFaithful": "Faithful",
+      "modeFaithfulHint": "Preserve the exact wording",
+      "modeRewrite": "Rewrite",
+      "modeRewriteHint": "Improve style, keep the meaning",
+      "template": "Template",
+      "language": "Language",
+      "author": "Author (optional)",
+      "date": "Date (optional)"
+    },
+    "actions": {
+      "convert": "Convert to LaTeX",
+      "converting": "Converting...",
+      "downloadTex": "Download .tex",
+      "downloadPdf": "Download PDF",
+      "another": "Convert another document"
+    },
+    "status": {
+      "done": "Compiled successfully",
+      "needsAttention": "Needs attention - LaTeX has unresolved errors",
+      "error": "Conversion failed"
     }
   }
 }

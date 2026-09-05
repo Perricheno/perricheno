@@ -9,6 +9,7 @@
       "home": "Басты бет",
       "rStudio": "R Студиясы",
       "tikzStudio": "TikZ Студиясы",
+      "docToTex": "Doc to TeX",
       "citations": "Дәйексөздер",
       "space": "Кеңістік",
       "pdfTools": "PDF Құралдары",
@@ -574,6 +575,39 @@
       "terms": "Шарттар",
       "privacy": "Құпиялылық",
       "support": "Қолдау"
+    }
+  },
+  "docToTex": {
+    "title": "Doc to TeX",
+    "subtitle": "Құжатты жүктеңіз - таза, компиляцияланатын LaTeX алыңыз.",
+    "upload": {
+      "cta": "Файлды басыңыз немесе тастаңыз",
+      "hint": "PDF, DOCX, PPTX, PNG, JPEG, TXT",
+      "uploading": "Өңделуде...",
+      "remove": "Алып тастау"
+    },
+    "settings": {
+      "mode": "Түрлендіру режимі",
+      "modeFaithful": "Дәл сақтау",
+      "modeFaithfulHint": "Мәтінді өзгертпей сақтау",
+      "modeRewrite": "Жақсарту",
+      "modeRewriteHint": "Мағынасын сақтап, стилін жақсарту",
+      "template": "Шаблон",
+      "language": "Тіл",
+      "author": "Автор (міндетті емес)",
+      "date": "Күні (міндетті емес)"
+    },
+    "actions": {
+      "convert": "LaTeX-ке түрлендіру",
+      "converting": "Түрлендірілуде...",
+      "downloadTex": ".tex жүктеу",
+      "downloadPdf": "PDF жүктеу",
+      "another": "Басқа құжатты түрлендіру"
+    },
+    "status": {
+      "done": "Сәтті компиляцияланды",
+      "needsAttention": "Назар аудару қажет - LaTeX-те қателер бар",
+      "error": "Түрлендіру қатесі"
     }
   }
 }

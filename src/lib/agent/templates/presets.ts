@@ -174,7 +174,30 @@ const MINIMAL: TemplatePreset = {
     ].join("\n"),
 };
 
-export const TEMPLATE_PRESETS: TemplatePreset[] = [PLAIN, ACADEMIC, IEEE, ELEGANT, MINIMAL];
+const THESIS: TemplatePreset = {
+    id: "thesis",
+    name: "Thesis",
+    description: "Report class: title page, table of contents, numbered chapters.",
+    useFancyTitle: false,
+    preamble: (s) => [
+        "\\documentclass[a4paper,12pt]{report}",
+        ...langPackages(s),
+        "\\usepackage{amsmath,amssymb,amsthm}",
+        "\\usepackage{graphicx}",
+        "\\graphicspath{{images/}{figures/}}",
+        "\\usepackage{hyperref}",
+        "\\usepackage{geometry}",
+        "\\usepackage{booktabs}",
+        "\\usepackage{enumitem}",
+        "\\usepackage{setspace}",
+        "\\geometry{a4paper,margin=2.5cm}",
+        "\\setstretch{1.5}",
+        ...biblatexLines(s),
+        "\\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black}",
+    ].join("\n"),
+};
+
+export const TEMPLATE_PRESETS: TemplatePreset[] = [PLAIN, ACADEMIC, IEEE, ELEGANT, MINIMAL, THESIS];
 
 export function getPreset(id: string): TemplatePreset | undefined {
     return TEMPLATE_PRESETS.find(p => p.id === id);

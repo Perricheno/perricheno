@@ -14,6 +14,7 @@ import { runReportGenerate, runReportEdit } from '@/lib/jobs/reportGenerate';
 import { runAnalyticsGenerate } from '@/lib/jobs/analyticsGenerate';
 import { runRMultiGenerate } from '@/lib/jobs/rMultiGenerate';
 import { runBotVisualGenerate } from '@/lib/jobs/botVisualGenerate';
+import { runDocToTexConvert } from '@/lib/jobs/docToTexConvert';
 
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY) || 3;
 const HEALTH_PORT = Number(process.env.WORKER_HEALTH_PORT) || 8090;
@@ -30,6 +31,8 @@ async function dispatch(job: Job): Promise<void> {
             return runRMultiGenerate(job.data);
         case 'bot-visual-generate':
             return runBotVisualGenerate(job.data);
+        case 'doc-to-tex-convert':
+            return runDocToTexConvert(job.data);
         default:
             throw new Error(`Unknown job name: ${job.name}`);
     }

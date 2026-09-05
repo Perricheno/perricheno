@@ -46,11 +46,14 @@ function stripOrphanedFigures(tex: string, availableFiles: Set<string>): string 
     );
 }
 
-async function compile(
+// Exported for reuse by docToTex/validate.ts, which needs the same
+// compile-a-zip-and-report-the-log primitive but drives its own repair loop
+// (windowed by compiler error line, not full-document) on top of it.
+export async function compile(
     mainTex: string,
     referencesBib: string | null,
     dataFigures: GeneratedDataFigure[] = [],
-): Promise<{ ok: true } | { ok: false; log: string }> {
+): Promise<{ ok: true; pdfBuffer: Buffer } | { ok: false; log: string }> {
     if (!COMPILER_URL || !COMPILER_KEY) {
         throw new Error("LATEX_COMPILER_URL / LATEX_COMPILER_KEY not configured");
     }
@@ -89,9 +92,9 @@ async function compile(
 
     const ct = res.headers.get("content-type") || "";
     if (res.ok && !ct.includes("json") && !ct.includes("text")) {
-        // PDF returned - success. Drain the body so sockets close cleanly.
-        await res.arrayBuffer();
-        return { ok: true };
+        // PDF returned - success.
+        const pdfBuffer = Buffer.from(await res.arrayBuffer());
+        return { ok: true, pdfBuffer };
     }
 
     const text = await res.text();

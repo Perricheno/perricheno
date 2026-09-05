@@ -10,7 +10,7 @@ import {
     IconLayoutSidebarLeftCollapse,
     IconLayoutSidebarLeftExpand,
     IconCreditCard, IconBraces, IconBook2,
-    IconX, IconLanguage, IconVector,
+    IconX, IconLanguage, IconVector, IconFileText,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
@@ -43,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
         links: [
             { href: "/r", icon: IconChartBar, labelKey: "rStudio" },
             { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
+            { href: "/doc-to-tex", icon: IconFileText, labelKey: "docToTex" },
             { href: "/citations", icon: IconBook2, labelKey: "citations" },
             { href: "/space", icon: IconBraces, labelKey: "space" },
             { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdfTools" },
@@ -69,6 +70,7 @@ const RADIAL_ALL_KEYS = [
     { href: "/", icon: IconHome, labelKey: "home" },
     { href: "/r", icon: IconChartBar, labelKey: "r" },
     { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
+    { href: "/doc-to-tex", icon: IconFileText, labelKey: "docToTex" },
     { href: "/citations", icon: IconBook2, labelKey: "citations" },
     { href: "/space", icon: IconBraces, labelKey: "space" },
     { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },

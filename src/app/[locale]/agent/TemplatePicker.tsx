@@ -90,6 +90,27 @@ function PreviewMinimal() {
     );
 }
 
+function PreviewThesis() {
+    return (
+        <svg width="72" height="96" viewBox="0 0 72 96" fill="none">
+            <rect width="72" height="96" rx="3" fill="white" />
+            {/* title-page style: centered block, generous whitespace */}
+            <rect x="18" y="18" width="36" height="3" rx="1" fill="#1a1a1a" opacity=".8" />
+            <rect x="24" y="24" width="24" height="2" rx=".5" fill="#1a1a1a" opacity=".8" />
+            <rect x="28" y="40" width="16" height="2" rx=".5" fill="#999" />
+            <rect x="26" y="44" width="20" height="1.5" rx=".5" fill="#bbb" />
+            <rect x="30" y="80" width="12" height="1.5" rx=".5" fill="#ccc" />
+            {/* small TOC-dots hint */}
+            <rect x="10" y="58" width="14" height="1.3" rx=".4" fill="#d4d4d4" />
+            <rect x="26" y="58" width="24" height="1.3" rx=".4" fill="#e5e5e5" />
+            <rect x="10" y="63" width="18" height="1.3" rx=".4" fill="#d4d4d4" />
+            <rect x="30" y="63" width="20" height="1.3" rx=".4" fill="#e5e5e5" />
+            <rect x="10" y="68" width="12" height="1.3" rx=".4" fill="#d4d4d4" />
+            <rect x="24" y="68" width="26" height="1.3" rx=".4" fill="#e5e5e5" />
+        </svg>
+    );
+}
+
 function PreviewCustom() {
     return (
         <svg width="72" height="96" viewBox="0 0 72 96" fill="none">
@@ -109,6 +130,7 @@ const PRESETS = [
     { id: "ieee",     name: "IEEE",     description: "Two-column conference style", Preview: PreviewIEEE },
     { id: "elegant",  name: "Elegant",  description: "Palatino, generous margins", Preview: PreviewElegant },
     { id: "minimal",  name: "Minimal",  description: "Bare essentials only", Preview: PreviewMinimal },
+    { id: "thesis",   name: "Thesis",   description: "Title page, TOC, chapters", Preview: PreviewThesis },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────

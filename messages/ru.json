@@ -9,6 +9,7 @@
       "home": "Главная",
       "rStudio": "R Студия",
       "tikzStudio": "TikZ Студия",
+      "docToTex": "Doc to TeX",
       "citations": "Цитаты",
       "space": "Пространство",
       "pdfTools": "PDF Инструменты",
@@ -574,6 +575,39 @@
       "terms": "Условия",
       "privacy": "Конфиденциальность",
       "support": "Поддержка"
+    }
+  },
+  "docToTex": {
+    "title": "Doc to TeX",
+    "subtitle": "Загрузите документ - получите аккуратный, компилируемый LaTeX.",
+    "upload": {
+      "cta": "Нажмите или перетащите файл",
+      "hint": "PDF, DOCX, PPTX, PNG, JPEG, TXT",
+      "uploading": "Обработка...",
+      "remove": "Убрать"
+    },
+    "settings": {
+      "mode": "Режим конвертации",
+      "modeFaithful": "Дословно",
+      "modeFaithfulHint": "Сохранить формулировки как есть",
+      "modeRewrite": "Улучшить",
+      "modeRewriteHint": "Улучшить стиль, сохранив смысл",
+      "template": "Шаблон",
+      "language": "Язык",
+      "author": "Автор (необязательно)",
+      "date": "Дата (необязательно)"
+    },
+    "actions": {
+      "convert": "Конвертировать в LaTeX",
+      "converting": "Конвертация...",
+      "downloadTex": "Скачать .tex",
+      "downloadPdf": "Скачать PDF",
+      "another": "Конвертировать другой документ"
+    },
+    "status": {
+      "done": "Успешно скомпилировано",
+      "needsAttention": "Требует внимания - в LaTeX остались ошибки",
+      "error": "Ошибка конвертации"
     }
   }
 }

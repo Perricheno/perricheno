@@ -13,7 +13,8 @@ export type JobName =
     | 'report-edit'
     | 'analytics-generate'
     | 'r-multi-generate'
-    | 'bot-visual-generate';
+    | 'bot-visual-generate'
+    | 'doc-to-tex-convert';
 
 const globalForQueue = global as unknown as { redisConnection?: Redis; queue?: Queue };
 
