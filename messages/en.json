@@ -7,16 +7,13 @@
     },
     "links": {
       "home": "Home",
-      "canvas": "Canvas",
       "rStudio": "R Studio",
       "tikzStudio": "TikZ Studio",
-      "aiAgent": "AI Agent",
       "citations": "Citations",
       "space": "Space",
       "pdfTools": "PDF Tools",
       "settings": "Settings",
       "billings": "Billings & Usage",
-      "agent": "Agent",
       "r": "R Studio",
       "pdf": "PDF"
     },
@@ -232,25 +229,6 @@
     "ru": "Русский",
     "en": "English",
     "kz": "Қазақша"
-  },
-  "canvas": {
-    "whatToBuild": "What do you want to build?",
-    "prototypeLabel": "Prototype a canvas with AI",
-    "placeholder": "An app that creates recipes from photos...",
-    "improvePlaceholder": "Tell me how to improve this...",
-    "builderTitle": "Canvas Builder",
-    "downloadCanvas": "Download Canvas",
-    "synthesizing": "Synthesizing JSON design...",
-    "assistantReply": "Here is your updated Canvas design. You can download it to use in Obsidian or ask me to make modifications.",
-    "errorPrefix": "Sorry, I encountered an error: ",
-    "suggestions": {
-      "projectArchitecture": "Project Architecture",
-      "databaseSchema": "Database Schema",
-      "userJourney": "User Journey",
-      "systemDesign": "System Design",
-      "mindMap": "Mind Map",
-      "ecommerceFlow": "E-commerce Flow"
-    }
   },
   "chat": {
     "chats": "CHATS",

@@ -292,17 +292,9 @@ return NextResponse.json({ error: "какая-то строка" }, { status: N 
 
 ---
 
-## 5. Canvas — `/api/canvas/*`
+## 5. ~~Canvas — `/api/canvas/*`~~ — [УДАЛЕНО, 2026-09-04]
 
-### `canvas/generate` — `src/app/api/canvas/generate/route.ts`
-| Статус | Сообщение | Строка | Значение |
-|---|---|---|---|
-| 401 | `"Unauthorized"` | 8 | Нет сессии. |
-| 500 | `"OpenAI API Key is not configured."` | 11 | Ключ не задан. |
-| 400 | `"Prompt is required."` | 18 | Пустой `prompt`. |
-| 500 | `"Failed to generate canvas. External API error."` | 81 | OpenAI вернул не-OK. |
-| 500 | `"AI generated invalid JSON Canvas format."` | 100 | Ответ модели не парсится как JSON Canvas. |
-| 500 | `{error:"An unexpected parsing error occurred.", details: err.message}` | 107 | Catch-all. |
+Фича и весь её код удалены целиком по запросу владельца — см. `docs/api_reference.md`.
 
 ---
 

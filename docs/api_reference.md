@@ -37,7 +37,7 @@ middleware вообще (ни для локали, ни для чего-либо
   Возвращает `number | null` (id пользователя) — без выброса исключений наружу.
 - Срок жизни сессии — 10 лет ("immortal"), `httpOnly`, `secure` в проде, `sameSite: lax`.
 - Большинство пользовательских эндпоинтов (`agent/*`, `space/*`, `citations/*`, `billing/checkout`, `billing/stats`,
-  `r/*`, `tikz/*`, `canvas/*`, `chat/history`, `auth/me`, `auth/delete`, `telegram/send`, `webhook-proxy`,
+  `r/*`, `tikz/*`, `chat/history`, `auth/me`, `auth/delete`, `telegram/send`, `webhook-proxy`,
   `pdf-proxy` частично) вызывают `verifySession()` и возвращают `401` при отсутствии/невалидности сессии.
 
 ### 0.3 Telegram Login Widget — `verifyTelegramAuth()` (`src/lib/telegram-auth.ts`)
@@ -584,20 +584,9 @@ BullMQ `r-multi-generate` в отдельном процессе `worker`, `src/
 
 ---
 
-## 5. Canvas — `/api/canvas/*`
+## 5. ~~Canvas — `/api/canvas/*`~~ — [УДАЛЕНО, 2026-09-04]
 
-### `POST /api/canvas/generate`
-Файл: `src/app/api/canvas/generate/route.ts`
-
-Генерирует mind-map/pipeline в формате JSON Canvas 1.0 (строго 4 группы × 9 текстовых узлов по фиксированному
-скелету).
-
-- **Auth**: требуется (`401 { error: "Unauthorized" }`). ⚠️ Квота не списывается.
-- **Request**: `{ prompt (обязателен) }`.
-- **Response**: `500 { error: "OpenAI API Key is not configured." }`; `400 { error: "Prompt is required." }`;
-  `500 { error: "Failed to generate canvas. External API error." }`; `500 { error: "AI generated invalid JSON
-  Canvas format." }`; `500 { error: "An unexpected parsing error occurred.", details }` (например, JSON.parse
-  упал); успех — `200 { canvas: { nodes, edges } }`.
+Фича удалена целиком по прямому запросу владельца (`src/app/[locale]/canvas/page.tsx`, `src/app/api/canvas/generate/route.ts`, `src/lib/json-canvas.ts` — все удалены; пункт меню и i18n-строки тоже убраны). До удаления не имела зависимостей от БД/Prisma — удаление не потребовало миграции схемы.
 
 ---
 
@@ -1315,7 +1304,6 @@ OpenAI (`gpt-4.1-nano-2025-04-14`), сразу сохраняет как `Task`.
 | `/api/billing/receipt/[id]/verify` | GET | Нет | HTML-страница верификации чека |
 | `/api/billing/stats` | GET | Session | Транзакции и чеки пользователя |
 | `/api/billing/webhook` | POST | MD5-подпись CryptoCloud | Вебхук подтверждения оплаты CryptoCloud |
-| `/api/canvas/generate` | POST | Session (без списания квоты) | Генерация mind-map в формате JSON Canvas |
 | `/api/chat/history` | GET | Session | Список чат-сессий / сообщения сессии |
 | `/api/chat/history` | POST | Session | Создать сессию / сохранить сообщение |
 | `/api/chat/history` | DELETE | Session | Удалить чат-сессию |

@@ -7,16 +7,13 @@
     },
     "links": {
       "home": "Главная",
-      "canvas": "Холст",
       "rStudio": "R Студия",
       "tikzStudio": "TikZ Студия",
-      "aiAgent": "ИИ Агент",
       "citations": "Цитаты",
       "space": "Пространство",
       "pdfTools": "PDF Инструменты",
       "settings": "Настройки",
       "billings": "Подписка",
-      "agent": "Агент",
       "r": "R Студия",
       "pdf": "PDF"
     },
@@ -232,25 +229,6 @@
     "ru": "Русский",
     "en": "English",
     "kz": "Қазақша"
-  },
-  "canvas": {
-    "whatToBuild": "Что вы хотите построить?",
-    "prototypeLabel": "Прототип холста с ИИ",
-    "placeholder": "Приложение, создающее рецепты из фотографий...",
-    "improvePlaceholder": "Скажите, как улучшить это...",
-    "builderTitle": "Canvas Builder",
-    "downloadCanvas": "Скачать Canvas",
-    "synthesizing": "Синтез JSON-дизайна...",
-    "assistantReply": "Вот ваш обновлённый дизайн Canvas. Вы можете скачать его для использования в Obsidian или попросить меня внести изменения.",
-    "errorPrefix": "Извините, произошла ошибка: ",
-    "suggestions": {
-      "projectArchitecture": "Архитектура проекта",
-      "databaseSchema": "Схема базы данных",
-      "userJourney": "Пользовательский путь",
-      "systemDesign": "Системный дизайн",
-      "mindMap": "Интеллект-карта",
-      "ecommerceFlow": "Поток e-commerce"
-    }
   },
   "chat": {
     "chats": "Чаты",

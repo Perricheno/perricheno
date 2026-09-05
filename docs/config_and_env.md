@@ -32,7 +32,7 @@
 
 | Переменная | Где используется | Назначение | Обязательность |
 |---|---|---|---|
-| `OPENAI_API_KEY` | Повсеместно: `agent/generate`, `agent/chat`, `agent/visualize*`, `agent/analytics/generate`, `agent/data-analytics`, `canvas/generate`, `tikz/generate`, `r/generate`, `space/[id]/ai-edit`, `space/[id]/ai-fix`, `tasks/parse`, `internal/bot/visual/generate`, `src/lib/agent/pipeline/llm.ts:56`, `src/app/[locale]/dashboard/actions.ts:95` | Ключ доступа к OpenAI API — используется для всей генерации текста/кода/визуализаций через модели GPT. | Не проверяется централизованно: **каждый роут отдельно** делает `if (!OPENAI_API_KEY) return 500 "... not configured"` (либо `503 "AI not configured"` в `space/[id]/ai-edit`/`ai-fix`) — единой точки проверки нет, поэтому сообщения об ошибке в разных роутах отличаются текстом (см. `docs/error_codes.md`). |
+| `OPENAI_API_KEY` | Повсеместно: `agent/generate`, `agent/chat`, `agent/visualize*`, `agent/analytics/generate`, `agent/data-analytics`, `tikz/generate`, `r/generate`, `space/[id]/ai-edit`, `space/[id]/ai-fix`, `tasks/parse`, `internal/bot/visual/generate`, `src/lib/agent/pipeline/llm.ts:56`, `src/app/[locale]/dashboard/actions.ts:95` | Ключ доступа к OpenAI API — используется для всей генерации текста/кода/визуализаций через модели GPT. | Не проверяется централизованно: **каждый роут отдельно** делает `if (!OPENAI_API_KEY) return 500 "... not configured"` (либо `503 "AI not configured"` в `space/[id]/ai-edit`/`ai-fix`) — единой точки проверки нет, поэтому сообщения об ошибке в разных роутах отличаются текстом (см. `docs/error_codes.md`). `canvas/generate` **[УДАЛЕНО, 2026-09-04]** — фича Canvas удалена целиком. |
 
 ### 1.4 Внутренние Go-сервисы (компиляция, извлечение, поиск)
 

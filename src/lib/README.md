@@ -30,7 +30,6 @@ Next.js App Router поощряет писать логику прямо в ро
 | `citations-db.ts` (192 строки) | CRUD для менеджера цитирования: `Citation` и `CitationCollection` через Prisma. Помечен `import 'server-only'`. |
 | `space-db.ts` (594 строки) | CRUD для совместного LaTeX-редактора (Space): проекты, файлы, версии, коллабораторы, приглашения, роли (`owner`/`editor`/`viewer`). Помечен `import 'server-only'`. Подробности матрицы прав — [`../../docs/business_logic.md`](../../docs/business_logic.md), раздел 7. |
 | `r-db.ts` | CRUD для сессий R Studio (`RSession`): хранит план/результаты генерации графиков в `results_json`. |
-| `json-canvas.ts` | Чистые TypeScript-типы по спецификации [JSON Canvas 1.0](https://jsoncanvas.org/) (узлы text/file/link, рёбра) — используется страницей `/canvas`. Логики в файле нет, только интерфейсы. |
 | `receiptGenerator.ts` (143 строки) | Генерация и сохранение PDF-чека об оплате (`generateAndStoreReceipt`) через `JSZip`; апсертит запись в модель `Receipt`. |
 | `server-init.ts` | Однократная серверная инициализация (`initializeServer()`) — на момент чтения запускает только `startCleanupTask()` из `analytics/fileManager.ts` (очистка временных файлов аналитики). Флаг `initialized` в модульной переменной защищает от повторного запуска в рамках одного процесса. |
 | `utils.ts` | Единственная функция `cn()` — обёртка `clsx` + `tailwind-merge` для условных Tailwind-классов. Стандартный shadcn/ui-паттерн. |

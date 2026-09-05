@@ -7,16 +7,13 @@
     },
     "links": {
       "home": "Басты бет",
-      "canvas": "Кенеп",
       "rStudio": "R Студиясы",
       "tikzStudio": "TikZ Студиясы",
-      "aiAgent": "ЖИ Агент",
       "citations": "Дәйексөздер",
       "space": "Кеңістік",
       "pdfTools": "PDF Құралдары",
       "settings": "Параметрлер",
       "billings": "Жазылым",
-      "agent": "Агент",
       "r": "R Студиясы",
       "pdf": "PDF"
     },
@@ -232,25 +229,6 @@
     "ru": "Русский",
     "en": "English",
     "kz": "Қазақша"
-  },
-  "canvas": {
-    "whatToBuild": "Не жасағыңыз келеді?",
-    "prototypeLabel": "ЖИ арқылы кенеп прототипін жасаңыз",
-    "placeholder": "Фотолардан рецепт жасайтын қолданба...",
-    "improvePlaceholder": "Қалай жақсарту керектігін айтыңыз...",
-    "builderTitle": "Canvas Builder",
-    "downloadCanvas": "Canvas жүктеу",
-    "synthesizing": "JSON дизайнын синтездеу...",
-    "assistantReply": "Міне, жаңартылған Canvas дизайныңыз. Оны Obsidian-да пайдалану үшін жүктей аласыз немесе өзгерту енгізуімді сұрай аласыз.",
-    "errorPrefix": "Кешіріңіз, қате орын алды: ",
-    "suggestions": {
-      "projectArchitecture": "Жоба архитектурасы",
-      "databaseSchema": "Деректер қоры схемасы",
-      "userJourney": "Пайдаланушы жолы",
-      "systemDesign": "Жүйе дизайны",
-      "mindMap": "Ой картасы",
-      "ecommerceFlow": "E-commerce ағыны"
-    }
   },
   "chat": {
     "chats": "ЧАТТАР",
