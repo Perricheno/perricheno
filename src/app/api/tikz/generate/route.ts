@@ -10,7 +10,7 @@ import { checkAndDeductUsage } from "@/lib/db";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const LATEX_COMPILER_URL = process.env.LATEX_COMPILER_URL!;
 const LATEX_COMPILER_KEY = process.env.LATEX_COMPILER_KEY!;
-const MODEL = "gpt-5-mini-2025-08-07";
+const MODEL = "gpt-5.6-terra";
 
 // ── Type blueprints ────────────────────────────────────────────────────────────
 

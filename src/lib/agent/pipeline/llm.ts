@@ -4,7 +4,7 @@
 // "continue from where you stopped" fallback when max_tokens is hit.
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = "gpt-5-mini-2025-08-07";
+const MODEL = "gpt-5.6-terra";
 const IMAGE_TOKEN_COST = 800;
 const DEFAULT_TIMEOUT_MS = 90_000;
 

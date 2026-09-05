@@ -169,7 +169,7 @@ library <- function(package, ...) {
                     "Authorization": `Bearer ${OPENAI_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: "gpt-5-mini-2025-08-07",
+                    model: "gpt-5.6-terra",
                     stream: false,
                     messages: [
                         { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable ${runtime} code. No markdown fences. No commentary. Ensure proper syntax.` },

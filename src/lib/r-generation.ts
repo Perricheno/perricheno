@@ -4,7 +4,7 @@
 // Extracted from r/generate/route.ts so both call sites stay in sync instead
 // of duplicating prompt/compile logic.
 
-export const MODEL = "gpt-5-mini-2025-08-07";
+export const MODEL = "gpt-5.6-terra";
 export const R_COMPILER_URL = process.env.R_COMPILER_URL || "http://r-compiler:8000";
 
 export function wrapRCode(raw: string): string {

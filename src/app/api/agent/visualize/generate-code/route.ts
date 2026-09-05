@@ -74,7 +74,7 @@ export async function POST(req: Request) {
                 "Authorization": `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
+                model: "gpt-5.6-terra",
                 messages: [
                     { role: "system", content: "You are an expert R programmer. Output ONLY raw executable R code. No markdown fences, no formatting." },
                     { role: "user", content: prompt }

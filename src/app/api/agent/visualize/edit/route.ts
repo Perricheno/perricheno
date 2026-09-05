@@ -46,7 +46,7 @@ Do NOT wrap in \`\`\`R or markdown. Return ONLY the raw executable R code.`;
                 "Authorization": `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
+                model: "gpt-5.6-terra",
                 stream: false,
                 messages: [
                     { role: "system", content: `You are an expert ${language} programmer modifying code. Output ONLY raw executable ${language} code. No formatting or explanations.` },

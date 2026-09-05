@@ -135,7 +135,7 @@ No markdown fences, no extra text.`;
             "Authorization": `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-            model: "gpt-5-mini-2025-08-07",
+            model: "gpt-5.6-terra",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: `User request: "${prompt}"\n\n${combinedContext ? `Uploaded data:\n${combinedContext}` : 'No data uploaded.'}` }
@@ -229,7 +229,7 @@ async function handleGenerate(userId: number, body: any) {
                                 "Authorization": `Bearer ${OPENAI_API_KEY}`
                             },
                             body: JSON.stringify({
-                                model: "gpt-5-mini-2025-08-07",
+                                model: "gpt-5.6-terra",
                                 stream: true,
                                 messages: [
                                     { role: "system", content: `You are an expert ${runtime} programmer. Output ONLY raw executable code. No markdown fences.` },

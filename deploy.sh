@@ -104,8 +104,14 @@ if echo "$SERVICES" | grep -qE "(perricheno-site|postgres)"; then
     done
 
     echo "🔄  Syncing database schema..."
+    # Runner image is Next.js standalone output and does not bundle the prisma
+    # CLI (only @prisma/client runtime code gets traced in), so a bare `npx
+    # prisma` here has nothing local to run and downloads the latest prisma
+    # package from the registry instead - which is a different major version
+    # than this project's pinned schema/client and fails. Pin the exact CLI
+    # version so npx fetches a compatible one.
     # No --accept-data-loss: fail loudly if a migration would destroy data.
-    docker exec perricheno-site npx prisma db push 2>&1 || {
+    docker exec perricheno-site npx --yes prisma@7.8.0 db push 2>&1 || {
         echo "⚠️   prisma db push failed - check schema for destructive changes."
         echo "     If this is a first-time deploy, this may be expected."
     }

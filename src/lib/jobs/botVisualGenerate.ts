@@ -284,7 +284,7 @@ export async function runBotVisualGenerate(data: BotVisualGenerateJobData): Prom
                 "Authorization": `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
+                model: "gpt-5.6-terra",
                 stream: true,
                 messages: [
                     { role: "system", content: systemRole },
@@ -437,7 +437,7 @@ export async function runBotVisualGenerate(data: BotVisualGenerateJobData): Prom
                         "Authorization": `Bearer ${OPENAI_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: "gpt-5-mini-2025-08-07",
+                        model: "gpt-5.6-terra",
                         stream: false,
                         messages: [
                             { role: "system", content: `You are an expert ${runtime} debugger. Fix the code below so it runs without errors. Output ONLY the fixed ${runtime} code. No markdown fences. No commentary.` },

@@ -17,7 +17,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
     
     // Config states
     const [maintenance, setMaintenance] = useState(initialConfig.maintenance_mode === 'true');
-    const [activeModel, setActiveModel] = useState(initialConfig.active_model || 'gpt-5-mini-2025-08-07');
+    const [activeModel, setActiveModel] = useState(initialConfig.active_model || 'gpt-5.6-terra');
     
     // Promos
     const [promoCode, setPromoCode] = useState('');
@@ -387,7 +387,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                                     <p className="text-[10px] text-[#666] mt-0.5">Hot-swap AI language models without container restart.</p>
                                 </div>
                                 <div className="flex flex-col md:flex-row gap-2 text-[10px] font-mono">
-                                    {['gpt-5-mini-2025-08-07', 'gpt-5-nano-fallback'].map(m => (
+                                    {['gpt-5.6-terra', 'gpt-5.6-luna'].map(m => (
                                         <button 
                                             key={m} 
                                             onClick={async () => { setActiveModel(m); await setSystemConfig('active_model', m); }}

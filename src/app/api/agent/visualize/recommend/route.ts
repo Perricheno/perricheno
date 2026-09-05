@@ -28,7 +28,7 @@ Respond ONLY with a valid JSON array of strings containing the 3 chart IDs. No m
                 "Authorization": `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: "gpt-5-mini-2025-08-07",
+                model: "gpt-5.6-terra",
                 messages: [
                     { role: "system", content: "You are a data visualization recommendation engine. Output ONLY a valid JSON array of 3 string IDs." },
                     { role: "user", content: prompt }

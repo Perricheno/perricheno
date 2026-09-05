@@ -103,7 +103,7 @@ export async function runRMultiGenerate(params: RMultiGenerateJobData): Promise<
                 rLog(sessionId, chartId, `Calling AI (attempt ${attempt + 1})`);
                 const aiStart = Date.now();
 
-                const aiResult = await callOpenAI(apiKey, { model: "gpt-5-mini-2025-08-07", messages });
+                const aiResult = await callOpenAI(apiKey, { model: "gpt-5.6-terra", messages });
 
                 if (!aiResult.ok) {
                     lastError = aiResult.error;
