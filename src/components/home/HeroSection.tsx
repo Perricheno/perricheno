@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { IconArrowUpRight, IconBrandTelegram } from "@tabler/icons-react";
+import { IconBrandTelegram } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { MagneticButton } from "./primitives";
 
@@ -30,12 +30,6 @@ export function HeroSection() {
                 </p>
 
                 <div className="flex flex-wrap gap-3 items-center">
-                    <MagneticButton
-                        href="/agent"
-                        className="inline-flex items-center gap-3 bg-[var(--foreground)] text-[var(--background)] px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:opacity-80 transition-all active:scale-95 shadow-sm"
-                    >
-                        {t("hero.launchAgent")} <IconArrowUpRight className="w-4 h-4" />
-                    </MagneticButton>
                     <MagneticButton
                         href="#pricing"
                         className="inline-flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-6 py-3.5 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:border-current transition-all"

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, useRef } from "react";
-import { IconArrowUpRight } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 
 import { MagneticButton, NavLink } from "./home/primitives";
@@ -48,12 +47,6 @@ export default function HomePage() {
                         <NavLink href="#pricing">{t("nav.pricing")}</NavLink>
                         <NavLink href="#faq">{t("nav.faq")}</NavLink>
                     </div>
-                    <MagneticButton
-                        href="/agent"
-                        className="inline-flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:opacity-80 transition-opacity"
-                    >
-                        {t("nav.launchAgent")} <IconArrowUpRight className="w-3.5 h-3.5" />
-                    </MagneticButton>
                 </div>
             </nav>
 

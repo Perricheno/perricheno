@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { IconArrowUpRight } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import { MagneticButton } from "./primitives";
 import { FloatingOrbs } from "./FloatingOrbs";
@@ -42,12 +41,6 @@ export function FinalCtaSection() {
                                 {t("cta.desc")}
                             </p>
                             <div className="flex flex-wrap gap-3 justify-center">
-                                <MagneticButton
-                                    href="/agent"
-                                    className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-all active:scale-95"
-                                >
-                                    {t("cta.launchAgent")} <IconArrowUpRight className="w-4 h-4" />
-                                </MagneticButton>
                                 <MagneticButton
                                     href="#pricing"
                                     className="inline-flex items-center gap-3 border border-white/20 text-white px-8 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest hover:border-white/50 transition-all"

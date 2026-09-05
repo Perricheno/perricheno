@@ -434,8 +434,7 @@
       "product": "Product",
       "how": "How it works",
       "pricing": "Pricing",
-      "faq": "FAQ",
-      "launchAgent": "Launch Agent"
+      "faq": "FAQ"
     },
     "poweredBy": "Powered by",
     "hero": {
@@ -443,7 +442,6 @@
       "headline2": "analyze, cite, visualize -",
       "headline3": "all in one place.",
       "desc": "Perricheno turns a topic into a compiled LaTeX paper, with real citations, publication-ready figures, and shareable PDFs. Built for students and researchers who want depth, not boilerplate.",
-      "launchAgent": "Launch Agent",
       "seePricing": "See pricing",
       "viaTelegram": "Via Telegram",
       "stats": {
@@ -569,7 +567,6 @@
       "h1": "Stop wrestling with LaTeX.",
       "h2": "Start writing.",
       "desc": "Free to try. No credit card. One Telegram tap and you're in the agent.",
-      "launchAgent": "Launch Agent",
       "viewPricing": "View pricing"
     },
     "footer": {
