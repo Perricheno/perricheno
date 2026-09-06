@@ -334,6 +334,7 @@
   },
   "r": {
     "studioLabel": "R Studio",
+    "composeLabel": "Describe what to visualize",
     "title": "Statistical Visualization",
     "chartTypes": "Chart Types",
     "available": "available",

@@ -498,7 +498,11 @@ export default function RPage() {
             </div>
 
             {/* ── Scrollable content ── */}
-            <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Desktop: this comes after the compose panel (order-2) - describe/configure
+                first, then pick a chart type, then see results, reading as a tool workflow
+                rather than a chat thread. Mobile keeps its original order (compose pinned
+                at the bottom, chart picking is the separate RChartSheet above) - untouched. */}
+            <div className="flex-1 overflow-y-auto min-h-0 order-1 md:order-2">
                 <main className="max-w-3xl mx-auto w-full px-5 pt-6 space-y-6 pb-6">
 
                 {/* ── Chart gallery — desktop only; mobile uses RChartSheet ── */}
@@ -775,9 +779,16 @@ export default function RPage() {
                 </main>
             </div>
 
-            {/* ── Bottom input (sticky) ── */}
-            <div className="shrink-0 bg-[#F9F9F9]/95 backdrop-blur-sm pt-3 pb-[76px] md:pb-4">
+            {/* ── Compose panel ── */}
+            {/* Mobile: unchanged - sticky bar pinned above the bottom nav, chat-input
+                styling (already confirmed good). Desktop: a normal in-flow panel with
+                its own label, placed first (order-1) - "step 1: describe" before the
+                chart gallery "step 2: pick a type" below it, not a floating chat bubble. */}
+            <div className="order-2 md:order-1 shrink-0 bg-[#F9F9F9]/95 backdrop-blur-sm pt-3 pb-[76px] md:bg-transparent md:backdrop-blur-none md:pt-10 md:pb-0">
                 <div className="max-w-3xl mx-auto w-full px-5">
+                    <p className="hidden md:block text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-2">
+                        {t("composeLabel")}
+                    </p>
                     <div
                         className="bg-white rounded-2xl overflow-hidden"
                         style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.07), 0 4px 20px rgba(0,0,0,0.08)" }}
