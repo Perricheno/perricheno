@@ -30,7 +30,7 @@ services:
       - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
       - LATEX_COMPILER_URL=http://latex-compiler:8080
       - LATEX_COMPILER_KEY=${LATEX_COMPILER_KEY:?LATEX_COMPILER_KEY is required}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@app-redis:6379
     volumes:
       - db-data:/app/db
       - analytics-data:/tmp/analytics-data
@@ -59,7 +59,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      app-redis:
         condition: service_healthy
       r-compiler:
         condition: service_started
@@ -89,7 +89,7 @@ services:
       - PDF_EXTRACTOR_URL=http://pdf-extractor:8080
       - LATEX_COMPILER_URL=http://latex-compiler:8080
       - LATEX_COMPILER_KEY=${LATEX_COMPILER_KEY:?LATEX_COMPILER_KEY is required}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@app-redis:6379
     env_file:
       - .env
     # NO ports exposed - doesn't serve user HTTP traffic, only consumes the
@@ -105,7 +105,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      app-redis:
         condition: service_healthy
       r-compiler:
         condition: service_started
@@ -118,9 +118,22 @@ services:
       latex-compiler:
         condition: service_started
 
-  redis:
+  app-redis:
     image: redis:7-alpine
-    container_name: redis
+    # NOT named "redis" - Coolify's own internal redis (`coolify-redis`) also
+    # registers a "redis" DNS alias on this same shared external `coolify`
+    # network. With both containers answering to "redis", Docker's embedded
+    # DNS resolved the hostname to coolify-redis's IPv6 address for at least
+    # some lookups (confirmed live: `perricheno-worker`'s ioredis connected
+    # to fd88:...::8, which `docker network inspect coolify` showed belongs
+    # to coolify-redis, not this service's own fd88:...::2) - so the app was
+    # silently authenticating against a completely different Redis instance
+    # with a different password, producing WRONGPASS no matter how many
+    # times this container or its password were recreated. A unique service
+    # name/hostname is the actual fix; renaming out of the collision instead
+    # of trying to win it is far more robust than hoping alias precedence
+    # keeps favoring this container after every Coolify-side restart.
+    container_name: app-redis
     restart: always
     # --appendonly yes so queued-but-unprocessed jobs survive a Redis restart,
     # not just a web/worker container restart - matches the whole point of
@@ -128,7 +141,7 @@ services:
     # --requirepass is required, not just defense-in-depth: Redis 7's default
     # protected-mode rejects every non-loopback connection when no password
     # is set (confirmed live - `perricheno-worker`'s ioredis connection over
-    # the docker network got NOAUTH errors even though `docker exec redis
+    # the docker network got NOAUTH errors even though `docker exec app-redis
     # redis-cli ping` succeeded fine from inside the container over loopback).
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:

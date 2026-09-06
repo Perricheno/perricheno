@@ -41,7 +41,7 @@ if [ "$FULL_REBUILD" = "no" ] && [ -n "$CHANGED_FILES" ]; then
 fi
 
 # ── 2. Map changed paths → compose services ───────────────────────────────────
-ALL_SERVICES="perricheno-site worker research-api r-compiler python-compiler telegram-bot pdf-extractor latex-compiler minio minio-init redis"
+ALL_SERVICES="perricheno-site worker research-api r-compiler python-compiler telegram-bot pdf-extractor latex-compiler minio minio-init app-redis"
 
 if [ "$FULL_REBUILD" = "yes" ] || echo "$CHANGED_FILES" | grep -qE '^(docker-compose\.yml|\.env|deploy\.sh)$'; then
     SERVICES="$ALL_SERVICES"
