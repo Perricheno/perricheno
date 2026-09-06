@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Upload, FileText, X, Loader2, AlertTriangle, Download, FileType, Info,
+    ChevronDown, ChevronUp, Image as ImageIcon, History, Clock,
 } from "lucide-react";
 import { Upload as UploadData, Check, Copy, TriangleAlert } from "lucide";
 import { MorphIcon } from "morphicons/react";
@@ -26,12 +27,21 @@ interface UploadInfo {
     charCount: number;
     imageCount: number;
     pageCount: number;
+    textPreview: string;
+    previewImages: string[];
 }
 
 interface StageJson {
     label?: string;
     progress?: { done: number; total: number };
     pdf_storage_path?: string;
+}
+
+interface HistoryItem {
+    id: string;
+    title: string;
+    status: string;
+    created_at: string;
 }
 
 const ACCEPT = ".pdf,.docx,.doc,.pptx,.ppt,.png,.jpg,.jpeg,.txt,.md";
@@ -71,6 +81,9 @@ export default function DocToTexPage() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [showSource, setShowSource] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+    const [history, setHistory] = useState<HistoryItem[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const showTitleFields = templateId !== "custom" && TITLE_PAGE_TEMPLATES.has(templateId);
@@ -79,6 +92,36 @@ export default function DocToTexPage() {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     }, []);
     useEffect(() => () => stopPolling(), [stopPolling]);
+
+    const loadHistory = useCallback(async () => {
+        if (!user) return;
+        try {
+            const res = await fetch("/api/agent/sessions");
+            if (!res.ok) return;
+            const data = await readJsonSafe(res);
+            const items = (data.sessions || []).filter((s: any) => s.doc_type === "doc_to_tex");
+            setHistory(items);
+        } catch {}
+    }, [user]);
+    useEffect(() => { loadHistory(); }, [loadHistory]);
+
+    const loadHistorySession = useCallback(async (id: string) => {
+        try {
+            const res = await fetch(`/api/agent/sessions/${id}`);
+            const data = await readJsonSafe(res);
+            const s = data.session;
+            if (!s) return;
+            let stageJson: StageJson = {};
+            try { stageJson = s.stage_json ? (typeof s.stage_json === "string" ? JSON.parse(s.stage_json) : s.stage_json) : {}; } catch {}
+            setSessionId(s.id);
+            setStage(stageJson);
+            setMainTex(s.main_tex || "");
+            setCompiled(s.status === "done");
+            setErrorMsg(s.status === "error" ? (s.error_msg || "Conversion failed.") : null);
+            setPhase(s.status === "error" ? "error" : "done");
+            setShowHistory(false);
+        } catch {}
+    }, []);
 
     const handleFile = useCallback(async (file: File) => {
         setPhase("uploading");
@@ -93,6 +136,7 @@ export default function DocToTexPage() {
             setUpload({
                 uploadId: data.uploadId, filename: data.filename,
                 charCount: data.charCount, imageCount: data.imageCount, pageCount: data.pageCount,
+                textPreview: data.textPreview || "", previewImages: data.previewImages || [],
             });
             // Brief morph-to-check confirmation beat before settling into the ready state.
             setPhase("uploaded");
@@ -168,16 +212,17 @@ export default function DocToTexPage() {
             if (!res.ok) throw new Error(data.details || data.error || `HTTP ${res.status}`);
             setSessionId(data.sessionId);
             pollSession(data.sessionId);
+            loadHistory();
         } catch (e: any) {
             setErrorMsg(e.message || "Failed to start conversion.");
             setPhase("error");
         }
-    }, [user, setShowLogin, upload, mode, templateId, customTemplatePreamble, showTitleFields, authorName, dateStr, pollSession]);
+    }, [user, setShowLogin, upload, mode, templateId, customTemplatePreamble, showTitleFields, authorName, dateStr, pollSession, loadHistory]);
 
     const reset = useCallback(() => {
         stopPolling();
         setPhase("idle"); setUpload(null); setSessionId(null); setStage(null);
-        setMainTex(null); setCompiled(false); setErrorMsg(null); setShowSource(false);
+        setMainTex(null); setCompiled(false); setErrorMsg(null); setShowSource(false); setShowPreview(false);
     }, [stopPolling]);
 
     const downloadTex = useCallback(() => {
@@ -215,6 +260,43 @@ export default function DocToTexPage() {
                     <li>{t("guide.language")}</li>
                 </ul>
             </div>
+
+            {/* ── Conversion history ── */}
+            {history.length > 0 && (
+                <div className="mb-8 rounded-2xl border border-[var(--border)] overflow-hidden">
+                    <button
+                        onClick={() => setShowHistory(v => !v)}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-[var(--foreground)]/5 transition-colors"
+                    >
+                        <History className="w-4 h-4 opacity-50" />
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-60 flex-1">
+                            {t("history.title")} ({history.length})
+                        </span>
+                        {showHistory ? <ChevronUp className="w-4 h-4 opacity-40" /> : <ChevronDown className="w-4 h-4 opacity-40" />}
+                    </button>
+                    <AnimatePresence>
+                        {showHistory && (
+                            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                                <div className="border-t border-[var(--border)] max-h-72 overflow-y-auto">
+                                    {history.map(h => (
+                                        <button
+                                            key={h.id}
+                                            onClick={() => loadHistorySession(h.id)}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-left border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--foreground)]/5 transition-colors"
+                                        >
+                                            <Clock className="w-3.5 h-3.5 opacity-30 shrink-0" />
+                                            <span className="text-sm truncate flex-1">{h.title}</span>
+                                            <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                                                h.status === "done" ? "text-emerald-500" : h.status === "error" ? "text-red-500" : "opacity-40"
+                                            }`}>{h.status}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            )}
 
             {(phase === "idle" || phase === "uploading" || phase === "uploaded") && !upload && (
                 <div
@@ -272,6 +354,48 @@ export default function DocToTexPage() {
                             <X className="w-4 h-4" />
                         </button>
                     )}
+                </div>
+            )}
+
+            {/* ── Extracted content preview ── */}
+            {phase === "ready" && upload && (upload.textPreview || upload.previewImages.length > 0) && (
+                <div className="mb-8 rounded-2xl border border-[var(--border)] overflow-hidden">
+                    <button
+                        onClick={() => setShowPreview(v => !v)}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-[var(--foreground)]/5 transition-colors"
+                    >
+                        <FileText className="w-4 h-4 opacity-50" />
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-60 flex-1">{t("preview.title")}</span>
+                        {showPreview ? <ChevronUp className="w-4 h-4 opacity-40" /> : <ChevronDown className="w-4 h-4 opacity-40" />}
+                    </button>
+                    <AnimatePresence>
+                        {showPreview && (
+                            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                                <div className="border-t border-[var(--border)] p-4 space-y-4">
+                                    {upload.previewImages.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-40 mb-2 flex items-center gap-1.5">
+                                                <ImageIcon className="w-3 h-3" /> {t("preview.images")}
+                                            </p>
+                                            <div className="flex gap-2 overflow-x-auto pb-1">
+                                                {upload.previewImages.map((src, i) => (
+                                                    <img key={i} src={src} alt="" className="w-20 h-20 object-cover rounded-lg border border-[var(--border)] shrink-0" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {upload.textPreview && (
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-40 mb-2">{t("preview.text")}</p>
+                                            <p className="text-xs leading-relaxed opacity-60 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                                                {upload.textPreview}…
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             )}
 

@@ -90,6 +90,12 @@ export async function POST(req: Request) {
         imageCount: row.image_count,
         pageCount: row.page_count,
         ocrUsed: row.ocr_used,
+        // For the upload-preview panel - a peek at what was actually
+        // extracted, not the full document. Images capped to keep the
+        // response small; the full set still exists server-side in
+        // AgentUpload and is what the conversion itself will use.
+        textPreview: normalized.text.slice(0, 800),
+        previewImages: images.slice(0, 6).map(img => img.dataUrl),
     });
 }
 

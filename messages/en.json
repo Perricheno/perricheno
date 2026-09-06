@@ -621,6 +621,14 @@
       "viewSource": "View source",
       "copy": "Copy",
       "copied": "Copied"
+    },
+    "history": {
+      "title": "Conversion history"
+    },
+    "preview": {
+      "title": "Extracted content",
+      "images": "Images",
+      "text": "Text"
     }
   }
 }

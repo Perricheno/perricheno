@@ -160,8 +160,8 @@ function RingItem({
                         }}
                         className="flex flex-col items-center gap-1.5 select-none"
                     >
-                        <div className="w-[52px] h-[52px] bg-[#1a1a1a] rounded-[18px] flex items-center justify-center shadow-xl shadow-black/20 active:scale-90 transition-transform duration-100" style={{ willChange: "transform" }}>
-                            <item.icon className="w-[22px] h-[22px] text-white" strokeWidth={1.5} />
+                        <div className="w-[52px] h-[52px] flex items-center justify-center active:scale-90 transition-transform duration-100" style={{ willChange: "transform" }}>
+                            <item.icon className="w-[26px] h-[26px] text-[#1a1a1a]" strokeWidth={1.75} />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#1a1a1a] whitespace-nowrap">
                             {label}
