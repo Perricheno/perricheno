@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { IconLoader2, IconUpload, IconCheck, IconX, IconFileZip } from "@tabler/icons-react";
+import { Loader2, Upload, Check, X, FileArchive } from "lucide-react";
 
 // ── Preview SVGs ──────────────────────────────────────────────────────────────
 // Each is a 72×96 miniature page illustration.
@@ -200,7 +200,7 @@ export function TemplatePicker({ templateId, customTemplatePreamble, onTemplateC
                                 </div>
                                 {active && (
                                     <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--foreground)] flex items-center justify-center">
-                                        <IconCheck className="w-2.5 h-2.5 text-white" />
+                                        <Check className="w-2.5 h-2.5 text-white" />
                                     </div>
                                 )}
                             </div>
@@ -225,14 +225,14 @@ export function TemplatePicker({ templateId, customTemplatePreamble, onTemplateC
                         <div className="rounded-lg overflow-hidden shadow-sm border border-[var(--border)]">
                             {uploading
                                 ? <div className="w-[72px] h-[96px] flex items-center justify-center bg-[var(--background)]">
-                                    <IconLoader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                                   </div>
                                 : <PreviewCustom />
                             }
                         </div>
                         {templateId === "custom" && customTemplatePreamble && (
                             <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--foreground)] flex items-center justify-center">
-                                <IconCheck className="w-2.5 h-2.5 text-white" />
+                                <Check className="w-2.5 h-2.5 text-white" />
                             </div>
                         )}
                     </div>
@@ -248,12 +248,12 @@ export function TemplatePicker({ templateId, customTemplatePreamble, onTemplateC
             {/* Active custom template info */}
             {templateId === "custom" && customTemplatePreamble && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl">
-                    <IconFileZip className="w-4 h-4 text-gray-400 shrink-0" />
+                    <FileArchive className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="text-xs text-[var(--foreground)] flex-1 truncate">
                         Custom preamble loaded ({customTemplatePreamble.length} chars)
                     </span>
                     <button onClick={clearCustom} className="text-gray-400 hover:text-[var(--foreground)] transition-colors">
-                        <IconX className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5" />
                     </button>
                 </div>
             )}
@@ -264,7 +264,7 @@ export function TemplatePicker({ templateId, customTemplatePreamble, onTemplateC
                     onClick={() => fileRef.current?.click()}
                     className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-[var(--border)] text-[11px] text-gray-400 hover:text-[var(--foreground)] hover:border-gray-300 transition-all"
                 >
-                    <IconUpload className="w-3.5 h-3.5" />
+                    <Upload className="w-3.5 h-3.5" />
                     Upload Overleaf template (.zip)
                 </button>
             ) : null}

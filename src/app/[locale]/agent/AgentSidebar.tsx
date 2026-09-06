@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls, useMotionValue, animate } from "framer-motion";
-import {
-    IconX, IconTrash, IconShare, IconLoader2,
-    IconMenu2, IconSparkles, IconAlertCircle,
-} from "@tabler/icons-react";
+import { X, Trash2, Share, Loader2, Menu, Sparkles, AlertCircle } from "lucide-react";
 import { AgentSession } from "./types";
 
 interface Props {
@@ -69,7 +66,7 @@ function SessionList({
                                text-[#555] hover:text-[#1a1a1a] hover:border-[#ccc] hover:bg-[#fafafa]
                                transition-all uppercase tracking-wide"
                 >
-                    <IconSparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     New Document
                 </button>
             </div>
@@ -144,7 +141,7 @@ function SessionList({
                                                         }`}
                                                     title="Share"
                                                 >
-                                                    <IconShare className="w-3 h-3" />
+                                                    <Share className="w-3 h-3" />
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id, e); }}
@@ -155,7 +152,7 @@ function SessionList({
                                                         }`}
                                                     title="Delete"
                                                 >
-                                                    <IconTrash className="w-3 h-3" />
+                                                    <Trash2 className="w-3 h-3" />
                                                 </button>
                                             </div>
                                         </div>
@@ -225,7 +222,7 @@ export function AgentSidebar({
                                    text-[#888] hover:text-[#1a1a1a] hover:border-[#ccc]
                                    shadow-sm transition-all"
                     >
-                        <IconMenu2 className="w-4 h-4" stroke={1.8} />
+                        <Menu className="w-4 h-4" strokeWidth={1.8} />
                     </motion.button>
                 )}
             </AnimatePresence>
@@ -252,14 +249,14 @@ export function AgentSidebar({
                         >
                             <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <IconSparkles className="w-4 h-4 text-[#1a1a1a]" stroke={2} />
+                                    <Sparkles className="w-4 h-4 text-[#1a1a1a]" strokeWidth={2} />
                                     <span className="text-[12px] font-black text-[#1a1a1a] uppercase tracking-[0.12em]">Sessions</span>
                                 </div>
                                 <button
                                     onClick={() => setIsOpen(false)}
                                     className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#1a1a1a] hover:bg-[#f5f5f5] transition-all"
                                 >
-                                    <IconX className="w-3.5 h-3.5" />
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                             <SessionList {...sharedProps} onClose={() => setIsOpen(false)} />
@@ -323,7 +320,7 @@ export function AgentSidebar({
                             className="w-7 h-7 flex items-center justify-center rounded-full bg-[#f0f0f0] text-gray-400 hover:text-[#1a1a1a] transition-colors"
                             onPointerDown={(e) => e.stopPropagation()}
                         >
-                            <IconX size={14} />
+                            <X size={14} />
                         </button>
                     </div>
 

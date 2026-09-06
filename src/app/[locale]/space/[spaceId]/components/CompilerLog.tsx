@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    IconAlertTriangle, IconAlertCircle, IconInfoCircle,
-    IconX, IconSparkles, IconLoader2,
-} from "@tabler/icons-react";
+import { AlertTriangle, AlertCircle, Info, X, Sparkles, Loader2 } from "lucide-react";
 
 interface LogEntry {
     type: 'error' | 'warning' | 'info';
@@ -71,9 +68,9 @@ export default function CompilerLog({ log, spaceId, activeFile, activeCode, onJu
     const shown = filter === 'all' ? entries : entries.filter(e => e.type === filter);
 
     const icons = {
-        error:   <IconAlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />,
-        warning: <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
-        info:    <IconInfoCircle className="w-3.5 h-3.5 text-gray-500 shrink-0" />,
+        error:   <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />,
+        warning: <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
+        info:    <Info className="w-3.5 h-3.5 text-gray-500 shrink-0" />,
     };
 
     const askAi = async () => {
@@ -121,14 +118,14 @@ export default function CompilerLog({ log, spaceId, activeFile, activeCode, onJu
                         disabled={aiLoading}
                         className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 text-[10px] font-bold uppercase tracking-wide transition-all disabled:opacity-60"
                     >
-                        {aiLoading ? <IconLoader2 className="w-3 h-3 animate-spin" /> : <IconSparkles className="w-3 h-3" />}
+                        {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                         AI Fix
                     </button>
                 )}
                 {errors.length === 0 && <div className="ml-auto" />}
 
                 <button onClick={onClose} className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors">
-                    <IconX className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                 </button>
             </div>
 
@@ -145,15 +142,15 @@ export default function CompilerLog({ log, spaceId, activeFile, activeCode, onJu
                         <div className="bg-violet-950/30 border-b border-violet-800/30 px-3 py-2.5">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="flex items-center gap-1.5 text-[10px] font-bold text-violet-400 uppercase tracking-widest">
-                                    <IconSparkles className="w-3 h-3" /> AI Suggestion
+                                    <Sparkles className="w-3 h-3" /> AI Suggestion
                                 </span>
                                 <button onClick={() => setAiOpen(false)} className="text-gray-600 hover:text-gray-400">
-                                    <IconX className="w-3.5 h-3.5" />
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                             {aiLoading ? (
                                 <div className="flex items-center gap-2 py-1">
-                                    <IconLoader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
                                     <span className="text-[11px] text-gray-500">Analyzing error…</span>
                                 </div>
                             ) : aiResult && (

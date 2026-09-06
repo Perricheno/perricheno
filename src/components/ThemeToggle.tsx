@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
-import { IconSun, IconMoon } from "@tabler/icons-react";
+import { MorphIcon } from "morphicons/react";
+import { Sun, Moon } from "lucide";
 
 export function ThemeToggle() {
     const { setTheme, resolvedTheme } = useTheme();
@@ -11,15 +12,19 @@ export function ThemeToggle() {
     React.useEffect(() => setMounted(true), []);
     if (!mounted) return null;
 
+    const isDark = resolvedTheme === "dark";
+
     return (
         <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             className="p-3 rounded-xl bg-white/10 border border-black/10 hover:bg-emerald-500/20 hover:border-emerald-500 transition-all backdrop-blur-md"
         >
-            {resolvedTheme === "dark" ? (
-                <IconSun className="w-5 h-5 text-yellow-400" />
-            ) : (
-                <IconMoon className="w-5 h-5 text-blue-500" />
-            )}
+            <MorphIcon
+                icon={isDark ? Sun : Moon}
+                size={20}
+                className={isDark ? "text-yellow-400" : "text-blue-500"}
+            />
         </button>
     );
 }

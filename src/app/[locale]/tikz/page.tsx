@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { IconArrowUp, IconLoader2, IconX, IconLayoutGrid, IconChevronDown } from "@tabler/icons-react";
+import { ArrowUp, Loader2, X, LayoutGrid, ChevronDown } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 import CategorySection from "./CategorySection";
 import TypeSheet from "./TypeSheet";
@@ -141,11 +141,11 @@ export default function TikzPage() {
                         onClick={() => setSheetOpen(true)}
                         className="md:hidden flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#ebebeb] bg-[#fafafa] active:scale-[0.97] transition-all"
                     >
-                        <IconLayoutGrid size={13} className="text-gray-500 flex-shrink-0" />
+                        <LayoutGrid size={13} className="text-gray-500 flex-shrink-0" />
                         <span className="text-[12px] font-semibold text-[#1a1a1a] truncate max-w-[130px]">
                             {selectedEntry?.name ?? "Select type"}
                         </span>
-                        <IconChevronDown size={11} className="text-gray-400 flex-shrink-0" />
+                        <ChevronDown size={11} className="text-gray-400 flex-shrink-0" />
                     </button>
 
                     {/* Desktop type + description */}
@@ -177,7 +177,7 @@ export default function TikzPage() {
                                 className="mx-4 md:mx-6 mt-4 mb-0 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[12px] text-red-700 flex items-start gap-2 flex-shrink-0"
                             >
                                 <span className="flex-1">{error}</span>
-                                <button onClick={() => setError(null)}><IconX size={13} className="text-red-400 flex-shrink-0" /></button>
+                                <button onClick={() => setError(null)}><X size={13} className="text-red-400 flex-shrink-0" /></button>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -230,7 +230,7 @@ export default function TikzPage() {
                     {loading && !hasResult && (
                         <div className="flex-1 flex items-center justify-center py-16">
                             <div className="text-center">
-                                <IconLoader2 size={28} className="animate-spin text-gray-300 mx-auto mb-3" />
+                                <Loader2 size={28} className="animate-spin text-gray-300 mx-auto mb-3" />
                                 <p className="text-[12px] text-gray-400">
                                     Generating {selectedEntry?.name}… {elapsed.toFixed(0)}s
                                 </p>
@@ -281,8 +281,8 @@ export default function TikzPage() {
                                 }`}
                         >
                             {loading
-                                ? <IconLoader2 size={16} className="animate-spin" />
-                                : <IconArrowUp size={16} />
+                                ? <Loader2 size={16} className="animate-spin" />
+                                : <ArrowUp size={16} />
                             }
                         </button>
                     </div>

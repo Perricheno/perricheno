@@ -2,11 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useDragControls, useMotionValue, animate } from "framer-motion";
-import {
-    IconX, IconTrash, IconLoader2, IconChevronRight,
-    IconMenu2, IconCheck, IconAlertCircle, IconSparkles,
-    IconChartBar, IconClockHour4,
-} from "@tabler/icons-react";
+import { X, Trash2, Loader2, ChevronRight, Menu, Check, AlertCircle, Sparkles, ChartBar, Clock4 } from "lucide-react";
 
 export interface RSessionSummary {
     id: string;
@@ -100,7 +96,7 @@ function SessionList({
                                text-[#555] hover:text-[#1a1a1a] hover:border-[#ccc] hover:bg-[#fafafa]
                                transition-all uppercase tracking-wide"
                 >
-                    <IconSparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" />
                     New visualization
                 </button>
             </div>
@@ -111,7 +107,7 @@ function SessionList({
             <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 thin-scrollbar">
                 {loading && sessions.length === 0 && (
                     <div className="flex items-center justify-center py-10">
-                        <IconLoader2 className="w-4 h-4 animate-spin text-gray-300" />
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-300" />
                     </div>
                 )}
                 {!loading && sessions.length === 0 && (
@@ -164,12 +160,12 @@ function SessionList({
                                                     </span>
                                                 ) : s.status === "error" ? (
                                                     <span className={`flex items-center gap-0.5 text-[10px] font-medium ${isActive ? "text-red-300" : "text-red-400"}`}>
-                                                        <IconAlertCircle className="w-3 h-3" />
+                                                        <AlertCircle className="w-3 h-3" />
                                                         Error
                                                     </span>
                                                 ) : (
                                                     <span className={`flex items-center gap-0.5 text-[10px] font-medium ${isActive ? "text-white/50" : "text-gray-400"}`}>
-                                                        <IconCheck className="w-3 h-3" stroke={2.5} />
+                                                        <Check className="w-3 h-3" strokeWidth={2.5} />
                                                         {s.chart_count} {s.chart_count === 1 ? "chart" : "charts"}
                                                     </span>
                                                 )}
@@ -191,8 +187,8 @@ function SessionList({
                                                         ${isDeleting ? "opacity-50" : ""}`}
                                         >
                                             {isDeleting
-                                                ? <IconLoader2 className="w-3 h-3 animate-spin" />
-                                                : <IconTrash className="w-3 h-3" />
+                                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                                : <Trash2 className="w-3 h-3" />
                                             }
                                         </button>
                                     </div>
@@ -219,7 +215,7 @@ function SessionList({
                                 <div className="flex items-center justify-between mb-2 px-1">
                                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Delete sessions</span>
                                     <button onClick={() => setShowCleanup(false)} className="text-gray-300 hover:text-[#1a1a1a]">
-                                        <IconX className="w-3.5 h-3.5" />
+                                        <X className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                                 {DELETE_OPTIONS.map(opt => (
@@ -242,7 +238,7 @@ function SessionList({
                                 onClick={() => setShowCleanup(true)}
                                 className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-gray-300 hover:text-red-400 hover:bg-red-50 transition-all uppercase tracking-wide"
                             >
-                                <IconClockHour4 className="w-3.5 h-3.5" />
+                                <Clock4 className="w-3.5 h-3.5" />
                                 Clean up history
                             </motion.button>
                         )}
@@ -369,7 +365,7 @@ export default function RSidebar({
                                    text-[#888] hover:text-[#1a1a1a] hover:border-[#ccc]
                                    shadow-sm transition-all"
                     >
-                        <IconMenu2 className="w-4 h-4" stroke={1.8} />
+                        <Menu className="w-4 h-4" strokeWidth={1.8} />
                     </motion.button>
                 )}
             </AnimatePresence>
@@ -398,14 +394,14 @@ export default function RSidebar({
                         >
                             <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <IconChartBar className="w-4 h-4 text-[#1a1a1a]" stroke={2} />
+                                    <ChartBar className="w-4 h-4 text-[#1a1a1a]" strokeWidth={2} />
                                     <span className="text-[12px] font-black text-[#1a1a1a] uppercase tracking-[0.12em]">Sessions</span>
                                 </div>
                                 <button
                                     onClick={onToggle}
                                     className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#1a1a1a] hover:bg-[#f5f5f5] transition-all"
                                 >
-                                    <IconX className="w-3.5 h-3.5" />
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                             <SessionList {...sharedProps} onClose={onToggle} />
@@ -470,7 +466,7 @@ export default function RSidebar({
                             className="w-7 h-7 flex items-center justify-center rounded-full bg-[#f0f0f0] text-gray-400 hover:text-[#1a1a1a] transition-colors"
                             onPointerDown={(e) => e.stopPropagation()}
                         >
-                            <IconX size={14} />
+                            <X size={14} />
                         </button>
                     </div>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { IconPhotoPlus, IconLoader2, IconCode, IconDownload, IconFileImport, IconReload, IconAlertCircle, IconWand, IconTrash, IconX, IconLock } from "@tabler/icons-react";
-import { CodeImage, Language } from "./types";
 import { IconBrandPython, IconLetterR } from "@tabler/icons-react";
+import { ImagePlus, Loader2, Code, Download, FileInput, RefreshCcw, AlertCircle, Wand2, Trash2, X, Lock } from "lucide-react";
+import { CodeImage, Language } from "./types";
+
 import { useAdmin } from "@/components/AdminContext";
 
 interface Props {
@@ -154,12 +155,12 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
                 {chartType.replace("_", " ")}
             </span>
             <button onClick={onCancel} className="absolute top-3 right-3 text-gray-300 hover:text-black z-10 transition-colors">
-                <IconX className="w-4 h-4" />
+                <X className="w-4 h-4" />
             </button>
             
             {status === "pending" && (
                 <div className="flex flex-col items-center gap-4 text-gray-300">
-                    <IconLoader2 className="w-6 h-6 animate-spin opacity-20" />
+                    <Loader2 className="w-6 h-6 animate-spin opacity-20" />
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">Queued</span>
                 </div>
             )}
@@ -185,7 +186,7 @@ function GeneratingCard({ chartType, topic, palette, language, dataContext, onCo
 
             {status === "error" && (
                 <div className="flex flex-col items-center gap-4 w-full p-4 text-center">
-                    <IconAlertCircle className="w-6 h-6 text-black opacity-20" />
+                    <AlertCircle className="w-6 h-6 text-black opacity-20" />
                     <p className="text-[10px] text-gray-400 font-medium leading-relaxed max-h-20 overflow-y-auto w-full px-2">
                         {errorMsg}
                     </p>
@@ -304,7 +305,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
         <div className="w-full mt-12 p-8 bg-white border border-gray-100 rounded-[32px] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)]">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <h3 className="text-sm font-black flex items-center gap-3 uppercase tracking-[0.2em] text-gray-400">
-                    <IconPhotoPlus className="w-5 h-5 text-black" stroke={2} />
+                    <ImagePlus className="w-5 h-5 text-black" strokeWidth={2} />
                     Visual Component
                 </h3>
                 {visuals.length > 0 && generatingQueue.length === 0 && (
@@ -312,7 +313,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                         onClick={() => onAddVisualsToReport(visuals)}
                         className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#222] transition-all shadow-xl hover:scale-[1.02]"
                     >
-                        <IconFileImport className="w-4 h-4" /> Add All to Report
+                        <FileInput className="w-4 h-4" /> Add All to Report
                     </button>
                 )}
             </div>
@@ -342,7 +343,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                                         disabled={isLocked}
                                         className={`px-4 py-2 flex items-center gap-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${isLocked ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed opacity-50' : active ? 'bg-black text-white border-black shadow-lg z-20' : 'bg-white text-gray-300 border-gray-100 hover:border-gray-300 z-10'}`}
                                     >
-                                        {isLocked && <IconLock className="w-3" />}
+                                        {isLocked && <Lock className="w-3" />}
                                         {c.label}
                                     </button>
                                     
@@ -387,7 +388,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                                             : runtime === 'R' ? 'bg-white text-black shadow-sm' : 'text-gray-300 hover:text-gray-400'
                                     }`}
                                 >
-                                    {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <IconLock className="w-3.5 h-3.5" />}
+                                    {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <Lock className="w-3.5 h-3.5" />}
                                     {!['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <IconLetterR className="w-3.5 h-3.5" stroke={3} />}
                                     R
                                 </button>
@@ -405,13 +406,13 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                             <label className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] block ml-1">Model</label>
                             <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
                                 <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-white text-black shadow-sm">
-                                    <IconWand className="w-3.5 h-3.5" />
+                                    <Wand2 className="w-3.5 h-3.5" />
                                     GPT-5 Mini
                                 </button>
                                 <button 
                                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-gray-50 text-gray-300 cursor-not-allowed opacity-50"
                                 >
-                                    <IconLock className="w-3.5 h-3.5" />
+                                    <Lock className="w-3.5 h-3.5" />
                                     Grok 4.1 Flash
                                 </button>
                             </div>
@@ -435,7 +436,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                             disabled={isSuggesting || !topic}
                             className="flex items-center gap-2 px-6 py-2.5 bg-white text-black border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-black transition-all disabled:opacity-30"
                         >
-                            {isSuggesting ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconWand className="w-4 h-4" />}
+                            {isSuggesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                             Suggest
                         </button>
                         
@@ -444,7 +445,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                             disabled={selectedCharts.length === 0}
                             className="flex items-center gap-2 px-8 py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#1A1A1A] transition-all disabled:opacity-5 shadow-2xl hover:scale-[1.02] active:scale-95"
                         >
-                            <IconPhotoPlus className="w-4 h-4" /> Generate Options
+                            <ImagePlus className="w-4 h-4" /> Generate Options
                         </button>
                     </div>
                 </div>
@@ -472,14 +473,14 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                                             : 'bg-black text-white hover:bg-[#222] shadow-xl hover:scale-105 active:scale-95'
                                     }`}
                                 >
-                                    {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') ? <IconLock className="w-4 h-4" /> : <IconCode className="w-4 h-4" />}
+                                    {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') ? <Lock className="w-4 h-4" /> : <Code className="w-4 h-4" />}
                                      AI Edit Code
                                 </button>
                                 <button
                                     onClick={() => downloadImage(img.image, `fig_${i + 1}_${img.chart_type}`)}
                                     className="w-full py-3 bg-white text-black border border-black rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-gray-50 transition-all hover:scale-105 active:scale-95"
                                 >
-                                    <IconDownload className="w-4 h-4" /> Save PNG
+                                    <Download className="w-4 h-4" /> Save PNG
                                 </button>
                             </div>
 
@@ -493,7 +494,7 @@ export function AgentVisualizations({ topic, language, visuals, setVisuals, sess
                                 onClick={() => handleDeleteImage(i)}
                                 className="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-black transition-colors opacity-0 group-hover:opacity-100"
                             >
-                                <IconTrash className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                             </button>
                         </div>
                     ))}

@@ -2,11 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import {
-    IconSend, IconPaperclip, IconMicrophone, IconPlayerStop,
-    IconPhoto, IconFile, IconX, IconSettings, IconPlus, IconMessage,
-    IconTrash, IconMenu2, IconRobot, IconLogin
-} from "@tabler/icons-react";
+import { Send, Paperclip, Mic, Square, Image, File, X, Settings, Plus, MessageSquare, Trash2, Menu, Bot, LogIn } from "lucide-react";
 import ChatSettingsModal from "@/components/ChatSettingsModal";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
@@ -428,14 +424,14 @@ export default function ChatPage() {
         setIsRecording(false);
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
-    const fileIcon = (t: string) => t.startsWith('image/') ? <IconPhoto className="w-3.5 h-3.5" /> : <IconFile className="w-3.5 h-3.5" />;
+    const fileIcon = (t: string) => t.startsWith('image/') ? <Image className="w-3.5 h-3.5" /> : <File className="w-3.5 h-3.5" />;
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-[var(--background)] border-r border-[var(--border)]">
             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
                 <h2 className="font-bold text-sm tracking-wide">{t("chats")}</h2>
                 <button onClick={createThread} className="text-[var(--foreground)] opacity-50 hover:opacity-100 transition-opacity">
-                    <IconPlus className="w-5 h-5" />
+                    <Plus className="w-5 h-5" />
                 </button>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -443,11 +439,11 @@ export default function ChatPage() {
                     <div key={t.id}
                         className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm ${t.id === activeThreadId ? "bg-[var(--foreground)] text-[var(--background)]" : "text-[var(--foreground)] hover:bg-[var(--muted)]"}`}
                         onClick={() => { setActiveThreadId(t.id); setMobileMenuOpen(false); }}>
-                        <IconMessage className="w-4 h-4 shrink-0 opacity-50" />
+                        <MessageSquare className="w-4 h-4 shrink-0 opacity-50" />
                         <span className="flex-1 truncate">{t.title}</span>
                         {threads.length > 1 && (
                             <button onClick={(e) => { e.stopPropagation(); deleteThread(t.id); }} className="opacity-40 hover:opacity-100 hover:text-red-500 transition-opacity">
-                                <IconTrash className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
@@ -486,7 +482,7 @@ export default function ChatPage() {
                 <header className="h-16 border-b border-[var(--border)] flex items-center justify-between px-4 bg-[var(--background)] z-10">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-1 opacity-60">
-                            <IconMenu2 className="w-5 h-5" />
+                            <Menu className="w-5 h-5" />
                         </button>
                         <div className="flex flex-col">
                             <span className="font-bold text-sm md:text-base truncate max-w-[150px] md:max-w-md">{activeThread.title}</span>
@@ -499,14 +495,14 @@ export default function ChatPage() {
                                 {settings.useTestWebhook ? "TEST" : "PROD"}
                             </span>
                         )}
-                        <button onClick={() => setSettingsOpen(true)} className="p-2 hover:bg-[var(--muted)] rounded opacity-60 hover:opacity-100 transition-opacity"><IconSettings className="w-5 h-5" /></button>
+                        <button onClick={() => setSettingsOpen(true)} className="p-2 hover:bg-[var(--muted)] rounded opacity-60 hover:opacity-100 transition-opacity"><Settings className="w-5 h-5" /></button>
                     </div>
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
                     {messages.length === 0 && (
                         <div className="h-full flex flex-col items-center justify-center opacity-20 select-none">
-                            <IconRobot className="w-24 h-24 mb-6 stroke-1" />
+                            <Bot className="w-24 h-24 mb-6 stroke-1" />
                             <p className="text-xl font-light">{t("howCanIHelp")}</p>
                         </div>
                     )}
@@ -529,7 +525,7 @@ export default function ChatPage() {
                                     <div className="mt-3 space-y-2 pt-2 border-t border-white/10">
                                         {msg.files.map((f, i) => (
                                             <div key={i} className="flex items-center gap-2 text-xs opacity-80 bg-black/10 p-2 rounded">
-                                                <IconFile className="w-4 h-4" /> 
+                                                <File className="w-4 h-4" /> 
                                                 <span className="truncate">{f.name}</span>
                                             </div>
                                         ))}
@@ -568,7 +564,7 @@ export default function ChatPage() {
                                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--muted)] text-xs whitespace-nowrap">
                                         {fileIcon(file.type)}
                                         <span className="max-w-[100px] truncate">{file.name}</span>
-                                        <button onClick={() => removeFile(i)} className="hover:text-red-500 ml-1"><IconX className="w-3 h-3" /></button>
+                                        <button onClick={() => removeFile(i)} className="hover:text-red-500 ml-1"><X className="w-3 h-3" /></button>
                                     </div>
                                 ))}
                             </div>
@@ -576,7 +572,7 @@ export default function ChatPage() {
 
                         <div className="flex items-end gap-2 p-2">
                              <button onClick={() => user ? fileInputRef.current?.click() : setShowLogin(true)} className="p-3 text-[var(--foreground)] opacity-40 hover:opacity-100 hover:bg-[var(--muted)] rounded-xl transition-all">
-                                <IconPaperclip className="w-5 h-5" />
+                                <Paperclip className="w-5 h-5" />
                                 <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
                             </button>
                             
@@ -600,12 +596,12 @@ export default function ChatPage() {
                                 {input.length === 0 && (
                                     <button onClick={isRecording ? stopRecording : startRecording} 
                                         className={`p-3 rounded-xl transition-all ${isRecording ? "bg-red-500 text-white animate-pulse" : "opacity-40 hover:opacity-100 hover:bg-[var(--muted)]"}`}>
-                                        {isRecording ? <IconPlayerStop className="w-5 h-5" /> : <IconMicrophone className="w-5 h-5" />}
+                                        {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                                     </button>
                                 )}
                                 <button onClick={() => sendMessage()} disabled={isLoading || (!input.trim() && files.length === 0)} 
                                     className="p-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 disabled:opacity-30 transition-all">
-                                    <IconSend className="w-5 h-5" />
+                                    <Send className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>

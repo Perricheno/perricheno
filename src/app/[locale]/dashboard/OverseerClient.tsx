@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { 
-    IconActivity, IconUsers, IconGift, 
-    IconDatabase, IconSettings, IconBug, 
-    IconServer, IconChartLine, IconCrown,
-    IconMessageForward, IconSnowflake, IconCoin, IconCurrencyDollar
-} from '@tabler/icons-react';
+import { Activity, Users, Gift, Database, Settings, Bug, Server, ChartLine, Crown, Forward, Snowflake, Coins, DollarSign } from "lucide-react";
 import { 
     createPromoCode, setSystemConfig, manageUserTokens, 
     generateSecurePromoCode, sendDirectMessage, checkServiceHealth 
@@ -32,12 +27,12 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
 
     // Sidebar TABS
     const TABS = [
-        { name: 'Overview', icon: IconActivity },
-        { name: 'Users & Economy', icon: IconUsers },
-        { name: 'Promo & Referrals', icon: IconGift },
-        { name: 'Telemetry (Logs)', icon: IconBug },
-        { name: 'System Config', icon: IconSettings },
-        { name: 'Service Health', icon: IconServer },
+        { name: 'Overview', icon: Activity },
+        { name: 'Users & Economy', icon: Users },
+        { name: 'Promo & Referrals', icon: Gift },
+        { name: 'Telemetry (Logs)', icon: Bug },
+        { name: 'System Config', icon: Settings },
+        { name: 'Service Health', icon: Server },
     ];
 
     const [healthLogs, setHealthLogs] = useState('Welcome to System Matrix. Select a service to begin diagnostic.');
@@ -179,7 +174,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                         {/* Telemetry Graph */}
                         <div className="border border-[#e5e5e5] bg-white rounded-lg p-4 shadow-sm w-full">
                             <h3 className="text-[10px] uppercase tracking-widest font-bold text-[#666] mb-4 flex items-center gap-2">
-                                <IconChartLine className="w-3.5 h-3.5" /> Live Inference Latency (ms) - 24h
+                                <ChartLine className="w-3.5 h-3.5" /> Live Inference Latency (ms) - 24h
                             </h3>
                             <div className="flex items-end gap-1 h-32 w-full pt-4 border-b border-l border-[#e5e5e5] pl-1 relative">
                                 {inferenceLatencies.map((val: number, i: number) => (
@@ -209,7 +204,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                                             <td className="px-3 py-2 w-8 text-[#999]">#{idx + 1}</td>
                                             <td className="px-3 py-2 font-sans font-medium text-black border-l border-[#e5e5e5]">
                                                 {u.username || u.first_name || 'Anon'}
-                                                {u.telegram_id === '1153844209' && <IconCrown className="w-3 h-3 inline ml-1 text-yellow-500"/>}
+                                                {u.telegram_id === '1153844209' && <Crown className="w-3 h-3 inline ml-1 text-yellow-500"/>}
                                             </td>
                                             <td className="px-3 py-2 border-l border-[#e5e5e5] text-right">
                                                 {(u.daily_chars_used + u.weekly_chars_used).toLocaleString()} chars
@@ -246,7 +241,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                                             <td className="px-3 py-2 border-l border-[#e5e5e5] text-blue-600">{u.telegram_id}</td>
                                             <td className="px-3 py-2 border-l border-[#e5e5e5] font-sans font-medium text-black">
                                                 {u.username || u.first_name || 'Anon'} 
-                                                {u.telegram_id === '1153844209' && <IconCrown className="w-3 h-3 inline ml-1 text-yellow-500"/>}
+                                                {u.telegram_id === '1153844209' && <Crown className="w-3 h-3 inline ml-1 text-yellow-500"/>}
                                             </td>
                                             <td className="px-3 py-2 border-l border-[#e5e5e5] text-green-700 font-bold">{u.purchased_chars.toLocaleString()}</td>
                                             <td className="px-3 py-2 border-l border-[#e5e5e5]">{u.daily_chars_used.toLocaleString()}</td>
@@ -258,13 +253,13 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                                             </td>
                                             <td className="px-3 py-2 border-l border-[#e5e5e5]">
                                                 <div className="flex items-center justify-center gap-1">
-                                                    <button onClick={() => manageUserTokens(u.id, 'grant_chars', 100000)} className="flex items-center gap-1 px-2 py-1 bg-[#f0f0f0] hover:bg-[#e0e0e0] text-[#333] text-[9px] rounded font-bold transition-colors"><IconCurrencyDollar className="w-3 h-3" /> +100k</button>
+                                                    <button onClick={() => manageUserTokens(u.id, 'grant_chars', 100000)} className="flex items-center gap-1 px-2 py-1 bg-[#f0f0f0] hover:bg-[#e0e0e0] text-[#333] text-[9px] rounded font-bold transition-colors"><DollarSign className="w-3 h-3" /> +100k</button>
                                                     <button onClick={() => manageUserTokens(u.id, 'grant_reports', 5)} className="px-2 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-[9px] rounded font-bold transition-colors">+5R</button>
                                                     <button onClick={() => manageUserTokens(u.id, 'toggle_freeze', 0)} className={`px-2 py-1 flex items-center gap-1 text-[9px] rounded font-bold transition-colors ${u.is_banned ? 'bg-orange-50 text-orange-500 hover:bg-orange-100' : 'bg-red-50 text-red-500 hover:bg-red-100'}`}>
-                                                        <IconSnowflake className="w-3 h-3" /> {u.is_banned ? 'UNFREEZE' : 'FREEZE'}
+                                                        <Snowflake className="w-3 h-3" /> {u.is_banned ? 'UNFREEZE' : 'FREEZE'}
                                                     </button>
                                                     <button onClick={() => setDmTarget(u.id)} className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[9px] rounded font-bold transition-colors flex items-center gap-1">
-                                                        <IconMessageForward className="w-3 h-3" /> DM
+                                                        <Forward className="w-3 h-3" /> DM
                                                     </button>
                                                 </div>
                                             </td>
@@ -369,7 +364,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow gap-4">
                                 <div>
                                     <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1a1a1a] flex items-center gap-1.5">
-                                        <IconServer className="w-3.5 h-3.5"/> Maintenance Operation Mode
+                                        <Server className="w-3.5 h-3.5"/> Maintenance Operation Mode
                                     </h4>
                                     <p className="text-[10px] text-[#666] mt-1 pr-4">Suspend generation queues for all users via a global maintenance overlay. Platform DB remains active.</p>
                                 </div>
@@ -382,7 +377,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                             <div className="p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm space-y-3">
                                 <div>
                                     <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1a1a1a] flex items-center gap-1.5">
-                                        <IconDatabase className="w-3.5 h-3.5"/> Neural Architecture Target Network
+                                        <Database className="w-3.5 h-3.5"/> Neural Architecture Target Network
                                     </h4>
                                     <p className="text-[10px] text-[#666] mt-0.5">Hot-swap AI language models without container restart.</p>
                                 </div>
@@ -402,7 +397,7 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                             {/* System Health Check */}
                             <div className="p-4 border border-[#e5e5e5] bg-white rounded-lg shadow-sm space-y-3">
                                 <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1a1a1a] flex items-center gap-1.5">
-                                    <IconActivity className="w-3.5 h-3.5"/> Advanced System Health & Interconnects
+                                    <Activity className="w-3.5 h-3.5"/> Advanced System Health & Interconnects
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[10px]">
                                     <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded border border-green-100">
@@ -426,13 +421,13 @@ export default function OverseerClient({ initialStats, initialUsers, initialProm
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
                             {[
-                                { id: 'openai', name: 'OpenAI LLM', icon: IconActivity },
-                                { id: 'latex', name: 'LaTeX Node', icon: IconServer },
-                                { id: 'python', name: 'Python Matrix', icon: IconBug },
-                                { id: 'r', name: 'R-Compiler', icon: IconChartLine },
-                                { id: 'fx', name: 'Exchange Rates', icon: IconCurrencyDollar },
-                                { id: 'stirling', name: 'Stirling PDF', icon: IconDatabase },
-                                { id: 'db', name: 'SQLite V-Base', icon: IconDatabase }
+                                { id: 'openai', name: 'OpenAI LLM', icon: Activity },
+                                { id: 'latex', name: 'LaTeX Node', icon: Server },
+                                { id: 'python', name: 'Python Matrix', icon: Bug },
+                                { id: 'r', name: 'R-Compiler', icon: ChartLine },
+                                { id: 'fx', name: 'Exchange Rates', icon: DollarSign },
+                                { id: 'stirling', name: 'Stirling PDF', icon: Database },
+                                { id: 'db', name: 'SQLite V-Base', icon: Database }
                             ].map(s => (
                                 <div key={s.id} className="p-3 border border-[#e5e5e5] bg-white rounded-lg shadow-sm flex flex-col gap-2">
                                     <div className="flex items-center justify-between">

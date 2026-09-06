@@ -1,12 +1,5 @@
 import type { ComponentType } from "react";
-import {
-    IconFileText,
-    IconBook2,
-    IconChartBar,
-    IconMessageCircle,
-    IconFileTypePdf,
-    IconCode,
-} from "@tabler/icons-react";
+import { FileText, BookOpen, ChartBar, MessageCircle, Code } from "lucide-react";
 
 // ── Plans ──────────────────────────────────────────────────────────────────────
 export const PLANS = [
@@ -115,13 +108,13 @@ export const PLANS = [
 ] as const;
 
 // ── Features ───────────────────────────────────────────────────────────────────
-export const FEATURES: { icon: ComponentType<{ className?: string; stroke?: number }>; title: string; desc: string }[] = [
-    { icon: IconFileText,     title: "Research Writer",   desc: "Full LaTeX documents - research papers, theses, reports - compiled straight to PDF with real citations." },
-    { icon: IconBook2,        title: "Scholar Search",    desc: "Query arXiv and OpenAlex in any language. Relevance-ranked results with abstracts, authors, DOIs." },
-    { icon: IconChartBar,     title: "Data Analytics",    desc: "Turn a question into R or Python visualizations. Upload a dataset, pick a chart, get publication-ready figures." },
-    { icon: IconMessageCircle,title: "Multimodal Chat",   desc: "Fast Q&A with text, images, and file context. Perfect for quick explanations, rewrites, and outlines." },
-    { icon: IconCode,         title: "LaTeX Compiler",    desc: "Built-in pipeline compiles .tex to PDF with bib, figures, and multi-column layouts. Errors auto-repaired." },
-    { icon: IconFileTypePdf,  title: "PDF Toolkit",       desc: "OCR scanned papers, convert PDF ↔ DOCX, extract text for referencing. All in one workspace." },
+export const FEATURES: { icon: ComponentType<{ className?: string; strokeWidth?: number }>; title: string; desc: string }[] = [
+    { icon: FileText,     title: "Research Writer",   desc: "Full LaTeX documents - research papers, theses, reports - compiled straight to PDF with real citations." },
+    { icon: BookOpen,        title: "Scholar Search",    desc: "Query arXiv and OpenAlex in any language. Relevance-ranked results with abstracts, authors, DOIs." },
+    { icon: ChartBar,     title: "Data Analytics",    desc: "Turn a question into R or Python visualizations. Upload a dataset, pick a chart, get publication-ready figures." },
+    { icon: MessageCircle,title: "Multimodal Chat",   desc: "Fast Q&A with text, images, and file context. Perfect for quick explanations, rewrites, and outlines." },
+    { icon: Code,         title: "LaTeX Compiler",    desc: "Built-in pipeline compiles .tex to PDF with bib, figures, and multi-column layouts. Errors auto-repaired." },
+    { icon: FileText,  title: "PDF Toolkit",       desc: "OCR scanned papers, convert PDF ↔ DOCX, extract text for referencing. All in one workspace." },
 ];
 
 // ── Steps ──────────────────────────────────────────────────────────────────────

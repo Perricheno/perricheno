@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
-import {
-    IconArrowRight, IconLoader2, IconPaperclip,
-    IconX, IconMenu2, IconFileText, IconTrash,
-    IconClock, IconLock, IconRobot, IconCopy,
-    IconCheck, IconPlus, IconPlayerStopFilled, IconPhoto,
-    IconRefresh, IconPencil
-} from "@tabler/icons-react";
+import { ArrowRight, Loader2, Paperclip, X, Menu, FileText, Trash2, Clock, Lock, Bot, Copy, Check, Plus, Square, Image, RefreshCw, Pencil } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -452,14 +446,14 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
                             <h2 className="font-semibold text-[15px]">Chat History</h2>
                             <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-[var(--foreground)]">
-                                <IconX className="w-5 h-5" />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         <div className="p-4">
                             <button onClick={handleNewChat}
                                 className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm font-semibold hover:border-[var(--foreground)] transition-colors">
-                                <IconPlus className="w-4 h-4" /> New Chat
+                                <Plus className="w-4 h-4" /> New Chat
                             </button>
                         </div>
 
@@ -472,19 +466,19 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                     <div key={s.id} onClick={() => handleSelectSession(s)}
                                         className={`group p-3 rounded-xl cursor-pointer transition-colors border ${isActive ? 'bg-[var(--foreground)] text-[var(--card)] border-transparent' : 'bg-transparent border-transparent hover:bg-black/5'}`}>
                                         <div className="flex items-start gap-2">
-                                            <IconRobot className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'opacity-80' : 'text-gray-400'}`} />
+                                            <Bot className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'opacity-80' : 'text-gray-400'}`} />
                                             <div className="flex-1 min-w-0">
                                                 <p className={`text-sm font-medium truncate ${isActive ? 'text-[var(--card)]' : 'text-[var(--foreground)]'}`}>
                                                     {s.title}
                                                 </p>
                                                 <div className={`flex items-center gap-2 text-[11px] mt-1 ${isActive ? 'text-[var(--card)] opacity-70' : 'text-gray-400'}`}>
-                                                    <IconClock className="w-3 h-3" />
+                                                    <Clock className="w-3 h-3" />
                                                     {new Date(s.updated_at).toLocaleDateString()}
                                                 </div>
                                             </div>
                                             <button onClick={(e) => handleDeleteSession(s.id, e)}
                                                 className={`p-1.5 rounded-md ${isActive ? 'text-[var(--card)] hover:bg-white/10' : 'text-gray-500 opacity-40 hover:opacity-100 hover:text-red-500 hover:bg-red-500/10'}`}>
-                                                <IconTrash className="w-3.5 h-3.5" />
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
                                     </div>
@@ -510,7 +504,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                         <button
                             onClick={() => setSidebarOpen(true)}
                             className="md:hidden p-2 -ml-2 text-gray-500 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">
-                            <IconMenu2 className="w-5 h-5" />
+                            <Menu className="w-5 h-5" />
                         </button>
                         <img src="/Vector.svg" alt="P" className="w-5 h-5 opacity-40 ml-1 md:ml-0" />
                         <div>
@@ -521,7 +515,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                     <div className="flex items-center gap-1 bg-gray-50/50 p-1 rounded-xl border border-[var(--border)]">
                         <span className="px-3 py-1 rounded-lg text-[11px] font-bold bg-white text-black shadow-sm ring-1 ring-gray-200/50">GPT-5 Mini</span>
                         <span className="px-3 py-1 rounded-lg text-[11px] font-bold text-gray-400 flex items-center gap-1.5 cursor-not-allowed hidden sm:flex">
-                            <IconLock className="w-3.5 h-3.5" /> Grok 4.1
+                            <Lock className="w-3.5 h-3.5" /> Grok 4.1
                         </span>
                     </div>
                 </div>
@@ -549,7 +543,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                     <div className="flex flex-wrap gap-1.5 mb-2 justify-end">
                                         {msg.files_meta.map((f, fi) => (
                                             <div key={fi} className="px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded-[14px] flex items-center gap-2 shadow-sm max-w-[220px]" title={`${f.kind === 'pdf' ? `${f.charCount.toLocaleString()} chars · ${f.imageCount} images` : 'Image'}`}>
-                                                {f.kind === 'image' ? <IconPhoto className="w-4 h-4 text-gray-300 shrink-0" /> : <IconFileText className="w-4 h-4 text-gray-300 shrink-0" />}
+                                                {f.kind === 'image' ? <Image className="w-4 h-4 text-gray-300 shrink-0" /> : <FileText className="w-4 h-4 text-gray-300 shrink-0" />}
                                                 <span className="text-[11px] font-bold text-gray-200 truncate">{f.filename}</span>
                                             </div>
                                         ))}
@@ -602,13 +596,13 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                                 <button onClick={() => copyMessage(textContent, idx)}
                                                     title="Copy"
                                                     className="p-1.5 bg-white border border-gray-100 rounded-md text-gray-400 hover:text-black shadow-sm transition-colors">
-                                                    {copiedIdx === idx ? <IconCheck className="w-3 h-3 text-emerald-500" /> : <IconCopy className="w-3 h-3" />}
+                                                    {copiedIdx === idx ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                                                 </button>
                                                 {isLastAssistant && !isStreaming && (
                                                     <button onClick={retryLast}
                                                         title="Regenerate"
                                                         className="p-1.5 bg-white border border-gray-100 rounded-md text-gray-400 hover:text-black shadow-sm transition-colors">
-                                                        <IconRefresh className="w-3 h-3" />
+                                                        <RefreshCw className="w-3 h-3" />
                                                     </button>
                                                 )}
                                             </div>
@@ -619,7 +613,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                             <button onClick={() => startEdit(idx)}
                                                 title="Edit and regenerate"
                                                 className="absolute -bottom-7 right-0 p-1.5 bg-white border border-gray-100 rounded-md text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-all shadow-sm">
-                                                <IconPencil className="w-3 h-3" />
+                                                <Pencil className="w-3 h-3" />
                                             </button>
                                         )}
                                     </div>
@@ -666,9 +660,9 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                             {a.previewDataUrl ? (
                                                 <img src={a.previewDataUrl} alt={a.filename} className="w-full h-full object-cover" />
                                             ) : a.kind === 'image' ? (
-                                                <IconPhoto className="w-5 h-5 text-gray-400" />
+                                                <Image className="w-5 h-5 text-gray-400" />
                                             ) : (
-                                                <IconFileText className="w-5 h-5 text-gray-400" />
+                                                <FileText className="w-5 h-5 text-gray-400" />
                                             )}
                                         </div>
                                         <div className="flex flex-col min-w-0 flex-1">
@@ -679,10 +673,10 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                                     : 'image'}
                                             </span>
                                         </div>
-                                        {a.uploading && <IconLoader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />}
+                                        {a.uploading && <Loader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />}
                                         <button onClick={() => removeAttachment(a.uploadId)}
                                             className="absolute -top-1.5 -right-1.5 bg-white text-gray-400 hover:text-red-500 rounded-full border border-gray-200 p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <IconX className="w-3.5 h-3.5" />
+                                            <X className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 ))}
@@ -706,7 +700,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                         <div className="flex items-center justify-between px-3 pb-3">
                             <div className="flex items-center gap-1">
                                 <label className="cursor-pointer p-2 text-gray-400 hover:text-[#1a1a1a] rounded-xl hover:bg-gray-50 transition-colors">
-                                    <IconPaperclip className="w-[22px] h-[22px]" />
+                                    <Paperclip className="w-[22px] h-[22px]" />
                                     <input type="file" className="hidden" multiple
                                         accept=".pdf,.png,.jpg,.jpeg,.webp"
                                         onChange={handleFileUpload} />
@@ -716,13 +710,13 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                 <button onClick={handleStop}
                                     title="Stop generating"
                                     className="w-10 h-10 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 mr-1 hover:bg-red-600">
-                                    <IconPlayerStopFilled className="w-4 h-4" />
+                                    <Square className="w-4 h-4" fill="currentColor" />
                                 </button>
                             ) : (
                                 <button onClick={handleSend}
                                     disabled={(!input.trim() && attachments.length === 0) || attachments.some(a => a.uploading)}
                                     className="w-10 h-10 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center disabled:opacity-20 transition-all shadow-md active:scale-95 disabled:active:scale-100 mr-1">
-                                    <IconArrowRight className="w-5 h-5 stroke-[2.5]" />
+                                    <ArrowRight className="w-5 h-5 stroke-[2.5]" />
                                 </button>
                             )}
                         </div>
@@ -776,7 +770,7 @@ export default function ChatClient({ initialSession, sessions: initialSessions, 
                                         onClick={() => setUploadError(null)}
                                         className="shrink-0 w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors mt-0.5"
                                     >
-                                        <IconX className="w-3.5 h-3.5" />
+                                        <X className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </div>

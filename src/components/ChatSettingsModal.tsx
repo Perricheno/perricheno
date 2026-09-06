@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconX, IconLoader2, IconCheck, IconPlus, IconTrash } from "@tabler/icons-react";
+import { X, Loader2, Check, Plus, Trash2 } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 import { getSettings, saveSettings, type ChatSettings } from "@/app/actions";
 
@@ -68,11 +68,11 @@ export default function ChatSettingsModal({ isOpen, onClose, onSettingsChanged }
                         {/* Header */}
                         <div className="flex justify-between items-center p-5 pb-0">
                             <h2 className="text-lg font-bold text-white">Settings</h2>
-                            <button onClick={onClose} className="text-white/40 hover:text-white"><IconX className="w-5 h-5" /></button>
+                            <button onClick={onClose} className="text-white/40 hover:text-white"><X className="w-5 h-5" /></button>
                         </div>
 
                         {loading ? (
-                            <div className="flex justify-center py-16"><IconLoader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>
+                            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>
                         ) : settings ? (
                             <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
@@ -113,7 +113,7 @@ export default function ChatSettingsModal({ isOpen, onClose, onSettingsChanged }
                                                     <div key={m} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-1.5 group">
                                                         <span className="text-xs text-white/70 font-mono">{m}</span>
                                                         <button onClick={() => removeModel(m)} className="opacity-0 group-hover:opacity-100 text-red-400/60 hover:text-red-400 transition-all">
-                                                            <IconTrash className="w-3.5 h-3.5" />
+                                                            <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
                                                 ))}
@@ -124,7 +124,7 @@ export default function ChatSettingsModal({ isOpen, onClose, onSettingsChanged }
                                                     className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500 font-mono"
                                                     placeholder="model-name..." />
                                                 <button onClick={addModel} className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
-                                                    <IconPlus className="w-3.5 h-3.5" />
+                                                    <Plus className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         </div>
@@ -150,7 +150,7 @@ export default function ChatSettingsModal({ isOpen, onClose, onSettingsChanged }
                                 {/* Save */}
                                 <button onClick={handleSave} disabled={saving}
                                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-70">
-                                    {saving ? <IconLoader2 className="w-4 h-4 animate-spin" /> : saved ? <IconCheck className="w-4 h-4" /> : null}
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
                                     {saving ? "Saving..." : saved ? "Saved!" : "Save"}
                                 </button>
                             </div>

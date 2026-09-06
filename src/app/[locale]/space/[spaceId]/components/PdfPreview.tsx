@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconLoader2, IconAlertTriangle, IconZoomIn, IconZoomOut, IconChevronLeft, IconChevronRight, IconDownload } from "@tabler/icons-react";
+import { Loader2, AlertTriangle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Download } from "lucide-react";
 
 type Status = 'empty' | 'loading' | 'ready' | 'error';
 
@@ -34,17 +34,17 @@ export default function PdfPreview({ pdfUrl, status, errorLog, onGoToLine }: Pro
                 <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Preview</span>
                 <div className="flex items-center gap-1">
                     <button onClick={zoomOut} className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors">
-                        <IconZoomOut className="w-3.5 h-3.5" />
+                        <ZoomOut className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-[11px] text-gray-500 w-10 text-center">{zoom}%</span>
                     <button onClick={zoomIn} className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors">
-                        <IconZoomIn className="w-3.5 h-3.5" />
+                        <ZoomIn className="w-3.5 h-3.5" />
                     </button>
                     {pdfUrl && (
                         <>
                             <div className="w-px h-3 bg-white/10 mx-1" />
                             <button onClick={downloadPdf} className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors">
-                                <IconDownload className="w-3.5 h-3.5" />
+                                <Download className="w-3.5 h-3.5" />
                             </button>
                         </>
                     )}
@@ -57,7 +57,7 @@ export default function PdfPreview({ pdfUrl, status, errorLog, onGoToLine }: Pro
                     {status === 'loading' && (
                         <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center h-full gap-3 text-gray-600 py-20">
-                            <IconLoader2 className="w-8 h-8 animate-spin" />
+                            <Loader2 className="w-8 h-8 animate-spin" />
                             <span className="text-[12px]">Compiling…</span>
                         </motion.div>
                     )}
@@ -86,7 +86,7 @@ export default function PdfPreview({ pdfUrl, status, errorLog, onGoToLine }: Pro
                         <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="w-full px-4 py-4 max-w-xl">
                             <div className="flex items-center gap-2 mb-3">
-                                <IconAlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
                                 <span className="text-[12px] font-bold text-red-400">Compilation failed</span>
                             </div>
                             <pre className="text-[11px] text-red-300 bg-red-950/30 rounded-lg p-3 overflow-auto max-h-96 leading-relaxed whitespace-pre-wrap">

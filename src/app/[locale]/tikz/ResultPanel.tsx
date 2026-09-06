@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { IconCode, IconCopy, IconCheck, IconDownload, IconRefresh } from "@tabler/icons-react";
+import { Code, Copy, Check, Download, RefreshCw } from "lucide-react";
 
 interface Props {
     tikzCode: string;
@@ -41,32 +41,32 @@ export default function ResultPanel({
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-colors
                         ${showCode ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "bg-white text-[#555] border-[#ddd] hover:border-[#aaa]"}`}
                 >
-                    <IconCode size={12} />
+                    <Code size={12} />
                     TikZ Code
                 </button>
 
                 {tikzCode && (
                     <button onClick={handleCopy}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[#ddd] bg-white text-[#555] hover:border-[#aaa] transition-colors">
-                        {copied ? <IconCheck size={12} className="text-green-500" /> : <IconCopy size={12} />}
+                        {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
                         {copied ? "Copied" : "Copy"}
                     </button>
                 )}
                 {tikzCode && (
                     <button onClick={onDownloadTex}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[#ddd] bg-white text-[#555] hover:border-[#aaa] transition-colors">
-                        <IconDownload size={12} /> .tex
+                        <Download size={12} /> .tex
                     </button>
                 )}
                 {pdfUrl && (
                     <button onClick={onDownloadPdf}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[#ddd] bg-white text-[#555] hover:border-[#aaa] transition-colors">
-                        <IconDownload size={12} /> PDF
+                        <Download size={12} /> PDF
                     </button>
                 )}
                 <button onClick={onRegenerate} disabled={loading}
                     className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border border-[#ddd] bg-white text-[#555] hover:border-[#aaa] transition-colors disabled:opacity-40">
-                    <IconRefresh size={12} className={loading ? "animate-spin" : ""} />
+                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
                     Regenerate
                 </button>
             </div>
@@ -96,7 +96,7 @@ export default function ResultPanel({
                         <div className="flex items-center justify-between px-4 py-2 border-b border-[#ffffff15] flex-shrink-0">
                             <span className="text-[11px] font-medium text-[#aaa]">TikZ source</span>
                             <button onClick={handleCopy} className="flex items-center gap-1 text-[10px] text-[#aaa] hover:text-white transition-colors">
-                                {copied ? <IconCheck size={11} /> : <IconCopy size={11} />}
+                                {copied ? <Check size={11} /> : <Copy size={11} />}
                                 {copied ? "Copied" : "Copy"}
                             </button>
                         </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { IconPlus, IconTrash, IconArrowUpRight, IconArrowLeft } from "@tabler/icons-react";
+import { Plus, Trash2, ArrowUpRight, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useAdmin } from "@/components/AdminContext";
 
@@ -41,7 +41,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-between mb-12">
                     <div>
                         <Link href="/" className="inline-flex items-center gap-2 text-sm opacity-50 hover:opacity-100 mb-6 transition-opacity">
-                            <IconArrowLeft className="w-4 h-4" /> Back to Home
+                            <ArrowLeft className="w-4 h-4" /> Back to Home
                         </Link>
                         <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4">
                             Projects.
@@ -52,7 +52,7 @@ export default function ProjectsPage() {
                     {isEditing && (
                         <button onClick={addProject}
                             className="flex items-center gap-2 px-4 py-2 border border-[var(--border)] text-sm font-bold hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors">
-                            <IconPlus className="w-4 h-4" /> Add Project
+                            <Plus className="w-4 h-4" /> Add Project
                         </button>
                     )}
                 </div>
@@ -63,7 +63,7 @@ export default function ProjectsPage() {
                             {isEditing && (
                                 <button onClick={(e) => { e.stopPropagation(); removeProject(project.id); }}
                                     className="absolute top-2 right-2 z-30 p-2 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <IconTrash className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             )}
                             
@@ -87,7 +87,7 @@ export default function ProjectsPage() {
                                             <h3 className="font-bold text-lg leading-tight">{project.title}</h3>
                                             {project.link && (
                                                 <a href={project.link} target="_blank" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <IconArrowUpRight className="w-5 h-5 stroke-1" />
+                                                    <ArrowUpRight className="w-5 h-5 stroke-1" />
                                                 </a>
                                             )}
                                         </div>

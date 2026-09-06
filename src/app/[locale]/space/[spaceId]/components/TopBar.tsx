@@ -3,12 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    IconChevronLeft, IconLoader2, IconPlayerPlay,
-    IconCheck, IconAlertTriangle, IconSettings,
-    IconHistory, IconShare, IconBookmark, IconDownload, IconUserPlus,
-    IconChevronDown,
-} from "@tabler/icons-react";
+import { ChevronLeft, Loader2, Play, Check, AlertTriangle, Settings, History, Share, Bookmark, Download, UserPlus, ChevronDown } from "lucide-react";
 import type { Space, Compiler } from "@/lib/space-db";
 
 type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
@@ -49,9 +44,9 @@ export default function TopBar({
 
     const statusIcon = {
         idle:      null,
-        compiling: <IconLoader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />,
-        success:   <IconCheck className="w-3.5 h-3.5 text-emerald-500" />,
-        error:     <IconAlertTriangle className="w-3.5 h-3.5 text-red-500" />,
+        compiling: <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />,
+        success:   <Check className="w-3.5 h-3.5 text-emerald-500" />,
+        error:     <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
     }[compileStatus];
 
     return (
@@ -61,7 +56,7 @@ export default function TopBar({
                 href="/space"
                 className="flex items-center gap-1.5 text-[12px] text-gray-500 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
             >
-                <IconChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-3.5 h-3.5" />
                 <img src="/Vector.svg" alt="" className="w-3.5 h-3.5 opacity-40" />
             </Link>
 
@@ -88,7 +83,7 @@ export default function TopBar({
                                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all uppercase tracking-wide"
                             >
                                 {COMPILER_LABELS[space.compiler as Compiler] || space.compiler}
-                                <IconChevronDown className="w-3 h-3" />
+                                <ChevronDown className="w-3 h-3" />
                             </button>
                             <AnimatePresence>
                                 {compilerMenuOpen && (
@@ -110,7 +105,7 @@ export default function TopBar({
                                                 }`}
                                             >
                                                 <span className="font-bold">{label}</span>
-                                                {space.compiler === id && <IconCheck className="w-3.5 h-3.5 text-emerald-400" />}
+                                                {space.compiler === id && <Check className="w-3.5 h-3.5 text-emerald-400" />}
                                             </button>
                                         ))}
                                     </motion.div>
@@ -139,8 +134,8 @@ export default function TopBar({
                             title="Save checkpoint"
                         >
                             {savingSnapshot
-                                ? <IconLoader2 className="w-4 h-4 animate-spin" />
-                                : <IconBookmark className="w-4 h-4" />
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Bookmark className="w-4 h-4" />
                             }
                         </button>
 
@@ -150,7 +145,7 @@ export default function TopBar({
                             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
                             title="Version history"
                         >
-                            <IconHistory className="w-4 h-4" />
+                            <History className="w-4 h-4" />
                         </button>
 
                         {/* Invite collaborator */}
@@ -159,7 +154,7 @@ export default function TopBar({
                             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
                             title="Invite collaborator"
                         >
-                            <IconUserPlus className="w-4 h-4" />
+                            <UserPlus className="w-4 h-4" />
                         </button>
 
                         {/* Share */}
@@ -168,7 +163,7 @@ export default function TopBar({
                             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
                             title="Share public link"
                         >
-                            <IconShare className="w-4 h-4" />
+                            <Share className="w-4 h-4" />
                         </button>
 
                         {/* Settings */}
@@ -177,7 +172,7 @@ export default function TopBar({
                             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
                             title="Project settings"
                         >
-                            <IconSettings className="w-4 h-4" />
+                            <Settings className="w-4 h-4" />
                         </button>
 
                         <div className="w-px h-4 bg-white/10" />
@@ -190,7 +185,7 @@ export default function TopBar({
                     className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all"
                     title="Download as ZIP"
                 >
-                    <IconDownload className="w-4 h-4" />
+                    <Download className="w-4 h-4" />
                 </button>
 
 
@@ -201,8 +196,8 @@ export default function TopBar({
                     className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black rounded-lg text-[11px] font-black uppercase tracking-widest transition-all active:scale-95"
                 >
                     {compileStatus === 'compiling'
-                        ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <IconPlayerPlay className="w-3.5 h-3.5" />
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Play className="w-3.5 h-3.5" />
                     }
                     {compileStatus === 'compiling' ? 'Compiling…' : 'Compile'}
                 </button>

@@ -3,10 +3,7 @@
 import { useState, useEffect, KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useAdmin } from "@/components/AdminContext";
-import { 
-    IconSend, IconClock, IconCheck, IconTrash, IconLoader2, 
-    IconSparkles, IconPlus, IconEdit, IconX, IconCalendar
-} from "@tabler/icons-react";
+import { Send, Clock, Check, Trash2, Loader2, Sparkles, Plus, Pencil, X, Calendar } from "lucide-react";
 import { useToast } from "@/components/ToastContext";
 
 interface Task {
@@ -217,7 +214,7 @@ export default function TasksPage() {
                 {!user ? (
                     <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-8 text-center">
                         <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
-                            <IconClock className="w-8 h-8 text-gray-400" />
+                            <Clock className="w-8 h-8 text-gray-400" />
                         </div>
                         <h2 className="text-xl font-bold mb-2">{t("signInTitle")}</h2>
                         <p className="text-gray-500 mb-6 max-w-sm mx-auto">
@@ -238,7 +235,7 @@ export default function TasksPage() {
                                         ? 'bg-[var(--card)] shadow-sm text-[var(--foreground)]' 
                                         : 'text-gray-500 hover:text-[var(--foreground)]'
                                 }`}>
-                                <IconSparkles className="w-4 h-4" /> {t("aiAssistant")}
+                                <Sparkles className="w-4 h-4" /> {t("aiAssistant")}
                             </button>
                             <button onClick={() => { setActiveTab('manual'); if (!manualDate) setManualDate(getDefaultDate()); if (!manualTime) setManualTime(getDefaultTime()); }}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -246,7 +243,7 @@ export default function TasksPage() {
                                         ? 'bg-[var(--card)] shadow-sm text-[var(--foreground)]' 
                                         : 'text-gray-500 hover:text-[var(--foreground)]'
                                 }`}>
-                                <IconPlus className="w-4 h-4" /> {t("manual")}
+                                <Plus className="w-4 h-4" /> {t("manual")}
                             </button>
                         </div>
 
@@ -254,7 +251,7 @@ export default function TasksPage() {
                         {activeTab === 'ai' && (
                             <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <IconSparkles className="w-4 h-4 text-yellow-500" />
+                                    <Sparkles className="w-4 h-4 text-yellow-500" />
                                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("askAiLabel")}</span>
                                 </div>
                                 <div className="relative">
@@ -269,7 +266,7 @@ export default function TasksPage() {
                                     />
                                     <button onClick={handleAiSend} disabled={isParsing || !aiInput.trim()}
                                         className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-md bg-[var(--foreground)] text-[var(--background)] disabled:opacity-30 hover:opacity-90 transition-opacity">
-                                        {isParsing ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconSend className="w-4 h-4" />}
+                                        {isParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>
@@ -279,7 +276,7 @@ export default function TasksPage() {
                         {activeTab === 'manual' && (
                             <div className="bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius)] p-5 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <IconCalendar className="w-4 h-4 text-blue-500" />
+                                    <Calendar className="w-4 h-4 text-blue-500" />
                                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("manualLabel")}</span>
                                 </div>
                                 <div className="space-y-3">
@@ -312,7 +309,7 @@ export default function TasksPage() {
                                     </div>
                                     <button onClick={handleManualCreate} disabled={isCreating || !manualText.trim() || !manualDate || !manualTime}
                                         className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-lg font-semibold text-sm disabled:opacity-40 hover:opacity-90 transition-opacity">
-                                        {isCreating ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconPlus className="w-4 h-4" />}
+                                        {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                         {t("addTask")}
                                     </button>
                                 </div>
@@ -322,7 +319,7 @@ export default function TasksPage() {
                         {/* ━━━━ Task Lists ━━━━ */}
                         {loading ? (
                             <div className="flex justify-center py-10">
-                                <IconLoader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                             </div>
                         ) : (
                             <div className="space-y-6">
@@ -363,12 +360,12 @@ export default function TasksPage() {
                                                             <div className="flex items-center gap-4 flex-1 min-w-0">
                                                                 <button onClick={() => handleToggleStatus(task)}
                                                                     className="w-5 h-5 rounded-md border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-green-500 hover:text-green-500 transition-colors shrink-0">
-                                                                    <IconCheck className="w-3.5 h-3.5" />
+                                                                    <Check className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
                                                                     <span className="text-sm font-medium truncate">{task.task_text}</span>
                                                                     <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                                                                        <IconClock className="w-3 h-3" />
+                                                                        <Clock className="w-3 h-3" />
                                                                         {formatTime(task.remind_at)}
                                                                     </div>
                                                                 </div>
@@ -376,11 +373,11 @@ export default function TasksPage() {
                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all ml-2 shrink-0">
                                                                 <button onClick={() => startEditing(task)}
                                                                     className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors">
-                                                                    <IconEdit className="w-4 h-4" />
+                                                                    <Pencil className="w-4 h-4" />
                                                                 </button>
                                                                 <button onClick={() => handleDelete(task.id)}
                                                                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
-                                                                    <IconTrash className="w-4 h-4" />
+                                                                    <Trash2 className="w-4 h-4" />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -403,7 +400,7 @@ export default function TasksPage() {
                                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                                         <button onClick={() => handleToggleStatus(task)}
                                                             className="w-5 h-5 rounded-md bg-green-500 text-white flex items-center justify-center shrink-0">
-                                                            <IconCheck className="w-3.5 h-3.5" />
+                                                            <Check className="w-3.5 h-3.5" />
                                                         </button>
                                                         <span className="flex-1 min-w-0 line-through text-sm text-gray-500">
                                                             {task.task_text}
@@ -411,7 +408,7 @@ export default function TasksPage() {
                                                     </div>
                                                     <button onClick={() => handleDelete(task.id)}
                                                         className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 rounded-md transition-all ml-2 shrink-0">
-                                                        <IconTrash className="w-4 h-4" />
+                                                        <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             ))}
@@ -422,7 +419,7 @@ export default function TasksPage() {
                                 {tasks.length === 0 && (
                                     <div className="text-center py-16">
                                         <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                                            <IconCalendar className="w-7 h-7 text-gray-400" />
+                                            <Calendar className="w-7 h-7 text-gray-400" />
                                         </div>
                                         <p className="text-gray-500 text-sm mb-1">{t("noTasksTitle")}</p>
                                         <p className="text-gray-400 text-xs">{t("noTasksDesc")}</p>

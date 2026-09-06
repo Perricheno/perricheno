@@ -3,11 +3,7 @@
 import { useState, useRef } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { 
-    IconPlayerPlay, IconPlayerStop, IconTerminal2, 
-    IconCode, IconSparkles, IconFolder, IconSettings,
-    IconHome, IconShare3, IconChevronRight, IconTerminal
-} from "@tabler/icons-react";
+import { Play, Square, SquareTerminal, Code, Sparkles, Folder, Settings, Home, Share2, ChevronRight, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAdmin } from "./AdminContext";
@@ -61,25 +57,25 @@ export default function CodeLab() {
             {/* ACTIVITY BAR */}
             <div className="w-12 border-r border-[#2A2A2A] bg-[#141414] flex flex-col items-center py-4 space-y-4 shrink-0">
                 <Link href="/" className="w-8 h-8 rounded-lg mb-4 hover:bg-[#2A2A2A] transition-colors flex items-center justify-center text-[#999] hover:text-white">
-                    <IconHome size={18} stroke={1.5} />
+                    <Home size={18} strokeWidth={1.5} />
                 </Link>
                 <button className="w-8 h-8 rounded-lg bg-[#2A2A2A] text-white flex items-center justify-center relative">
-                    <IconFolder size={18} stroke={1.5} />
+                    <Folder size={18} strokeWidth={1.5} />
                     <span className="absolute left-0 top-1/4 bottom-1/4 w-[2px] bg-white rounded-r-md" />
                 </button>
                 <button className="w-8 h-8 rounded-lg hover:bg-[#2A2A2A] transition-colors flex items-center justify-center text-[#999] hover:text-white">
-                    <IconCode size={18} stroke={1.5} />
+                    <Code size={18} strokeWidth={1.5} />
                 </button>
                 <button 
                     onClick={() => setAiChatOpen(!aiChatOpen)}
                     className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${aiChatOpen ? "bg-[#2A2A2A] text-white" : "hover:bg-[#2A2A2A] text-[#999] hover:text-white"}`}
                 >
-                    <IconSparkles size={18} stroke={1.5} />
+                    <Sparkles size={18} strokeWidth={1.5} />
                 </button>
                 
                 <div className="mt-auto flex flex-col space-y-4">
                     <button className="w-8 h-8 rounded-lg hover:bg-[#2A2A2A] transition-colors flex items-center justify-center text-[#999] hover:text-white">
-                        <IconSettings size={18} stroke={1.5} />
+                        <Settings size={18} strokeWidth={1.5} />
                     </button>
                     {user?.photo_url && (
                         <div className="w-8 h-8 rounded-full overflow-hidden border border-[#2A2A2A] opacity-80 hover:opacity-100 cursor-pointer">
@@ -96,16 +92,16 @@ export default function CodeLab() {
                 </div>
                 <div className="p-2">
                     <div className="py-1 px-2 flex items-center gap-2 hover:bg-[#2A2A2A] rounded cursor-pointer group">
-                        <IconChevronRight size={14} className="text-[#666] group-hover:text-white transition-colors" />
+                        <ChevronRight size={14} className="text-[#666] group-hover:text-white transition-colors" />
                         <span className="text-[11px] font-bold">WORKSPACE</span>
                     </div>
                     <div className="pl-6 pt-1 flex flex-col gap-0.5">
                         <div className="py-1 px-2 flex items-center gap-2 bg-[#2A2A2A] text-white rounded cursor-pointer">
-                            <IconCode size={14} className="text-blue-400" />
+                            <Code size={14} className="text-blue-400" />
                             <span className="text-[11px]">script.py</span>
                         </div>
                         <div className="py-1 px-2 flex items-center gap-2 hover:bg-[#2A2A2A] text-[#999] rounded cursor-pointer">
-                            <IconCode size={14} className="text-purple-400" />
+                            <Code size={14} className="text-purple-400" />
                             <span className="text-[11px]">analysis.R</span>
                         </div>
                     </div>
@@ -119,7 +115,7 @@ export default function CodeLab() {
                 <div className="h-10 flex items-center justify-between border-b border-[#2A2A2A] bg-[#181818] pr-4">
                     <div className="flex h-full">
                         <div className="flex items-center gap-2 px-4 border-r border-[#2A2A2A] border-t-2 border-t-blue-500 bg-[#1E1E1E] cursor-pointer">
-                            <IconCode size={14} className="text-blue-400" />
+                            <Code size={14} className="text-blue-400" />
                             <span className="text-[11px] font-mono">script.py</span>
                         </div>
                     </div>
@@ -141,12 +137,12 @@ export default function CodeLab() {
                                 ${isRunning ? 'bg-transparent text-[#666] cursor-not-allowed' : 'bg-transparent text-green-400 hover:bg-green-400/10'}
                             `}
                         >
-                            {isRunning ? <IconPlayerStop size={12} className="animate-pulse" /> : <IconPlayerPlay size={12} fill="currentColor" />}
+                            {isRunning ? <Square size={12} className="animate-pulse" /> : <Play size={12} fill="currentColor" />}
                             {isRunning ? 'Running' : 'Run'}
                         </button>
                         
                         <button className="text-[#666] hover:text-white transition-colors">
-                            <IconShare3 size={14} />
+                            <Share2 size={14} />
                         </button>
                     </div>
                 </div>
@@ -178,7 +174,7 @@ export default function CodeLab() {
                             className="ml-auto text-[#666] hover:text-white transition-colors mr-2"
                             onClick={() => setOutput([])}
                         >
-                            <IconTerminal size={14} />
+                            <Terminal size={14} />
                         </button>
                     </div>
                     
@@ -210,12 +206,12 @@ export default function CodeLab() {
                     >
                         <div className="h-10 flex items-center justify-between px-4 border-b border-[#2A2A2A] shrink-0 w-[320px]">
                             <div className="flex items-center gap-2">
-                                <IconSparkles size={14} className="text-purple-400" />
+                                <Sparkles size={14} className="text-purple-400" />
                                 <span className="text-[10px] uppercase font-bold tracking-widest text-[#999]">AI Pair Programmer</span>
                             </div>
                         </div>
                         <div className="flex-1 w-[320px] p-4 flex flex-col items-center justify-center text-center">
-                            <IconSparkles size={40} className="text-[#333] mb-4" />
+                            <Sparkles size={40} className="text-[#333] mb-4" />
                             <h4 className="text-sm font-bold text-white mb-2">Editor Assistant</h4>
                             <p className="text-[11px] text-[#666] px-4">Highlight code in the editor or type a prompt to ask for explanations, refactoring, or bug fixes.</p>
                             <div className="mt-6 border border-[#2A2A2A] rounded-lg p-3 bg-[#1A1A1A] w-full text-left">

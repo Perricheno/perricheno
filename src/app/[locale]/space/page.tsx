@@ -4,11 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    IconPlus, IconSearch, IconFileText, IconLoader2,
-    IconDots, IconTrash, IconCopy, IconShare, IconEdit,
-    IconClock, IconUsers, IconBraces,
-} from "@tabler/icons-react";
+import { Plus, Search, FileText, Loader2, Ellipsis, Trash2, Copy, Share, Pencil, Clock, Users, Braces } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 import type { Space } from "@/lib/space-db";
 import NewSpaceModal from "./NewSpaceModal";
@@ -62,7 +58,7 @@ export default function SpaceDashboard() {
             <div className="min-h-screen bg-[#FBFBFC] flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center mx-auto mb-5">
-                        <IconBraces className="w-8 h-8 text-black" />
+                        <Braces className="w-8 h-8 text-black" />
                     </div>
                     <h1 className="text-2xl font-black text-black mb-2">{t("title")}</h1>
                     <p className="text-sm text-gray-400 mb-6">{t("subtitle")}</p>
@@ -85,7 +81,7 @@ export default function SpaceDashboard() {
                     </div>
                     <div className="flex items-center gap-3 flex-1 max-w-sm">
                         <div className="relative flex-1">
-                            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                             <input
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
@@ -98,7 +94,7 @@ export default function SpaceDashboard() {
                         onClick={() => setNewModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-[#1a1a1a] transition-all active:scale-95 shadow-sm"
                     >
-                        <IconPlus className="w-3.5 h-3.5" />
+                        <Plus className="w-3.5 h-3.5" />
                         {t("newProject")}
                     </button>
                 </div>
@@ -107,7 +103,7 @@ export default function SpaceDashboard() {
             <div className="max-w-6xl mx-auto px-6 py-10">
                 {loading ? (
                     <div className="flex items-center justify-center py-24">
-                        <IconLoader2 className="w-6 h-6 animate-spin text-gray-300" />
+                        <Loader2 className="w-6 h-6 animate-spin text-gray-300" />
                     </div>
                 ) : filtered.length === 0 ? (
                     <EmptyState onNew={() => setNewModalOpen(true)} hasSearch={!!search} />
@@ -167,7 +163,7 @@ function EmptyState({ onNew, hasSearch }: { onNew: () => void; hasSearch: boolea
             className="flex flex-col items-center justify-center py-24 text-center"
         >
             <div className="w-20 h-20 rounded-2xl bg-white border border-gray-100 shadow-lg flex items-center justify-center mb-6">
-                <IconBraces className="w-10 h-10 text-gray-300" />
+                <Braces className="w-10 h-10 text-gray-300" />
             </div>
             {hasSearch ? (
                 <>
@@ -182,7 +178,7 @@ function EmptyState({ onNew, hasSearch }: { onNew: () => void; hasSearch: boolea
                         onClick={onNew}
                         className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl font-bold text-sm hover:bg-[#1a1a1a] transition-all active:scale-95"
                     >
-                        <IconPlus className="w-4 h-4" /> {t("newProject")}
+                        <Plus className="w-4 h-4" /> {t("newProject")}
                     </button>
                 </>
             )}

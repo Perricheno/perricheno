@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import {
-    IconArrowRight, IconLoader2, IconPaperclip,
-    IconFileText, IconBook, IconPackage, IconDownload,
-    IconX, IconPencil, IconCheck, IconEye, IconBug,
-    IconClock, IconLetterCase, IconSettings,
-    IconSchool, IconSearch, IconCertificate, IconChartPie,
-    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
-    IconPlus, IconLock
-} from "@tabler/icons-react";
+import { ArrowRight, Loader2, Paperclip, FileText, Book, Package, Download, X, Pencil, Check, Eye, Bug, Clock, CaseSensitive, Settings, GraduationCap, Search, Award, ChartPie, Link, FilePlus, User, ChevronLeft, Database, MessageCircle, SquareTerminal, Plus, Lock } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JSZip from "jszip";
 import ReactMarkdown from "react-markdown";
@@ -491,7 +483,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                     {/* Edit mode: simple spinner instead of full stage stepper */}
                     {isEditMode ? (
                         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm flex flex-col items-center gap-4 text-center">
-                            <IconLoader2 className="w-6 h-6 animate-spin text-black" />
+                            <Loader2 className="w-6 h-6 animate-spin text-black" />
                             <p className="text-[13px] font-bold text-black">
                                 {topic.includes("fix") ? "Fixing errors…" : "Applying changes…"}
                             </p>
@@ -513,7 +505,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                                 : isActive ? 'bg-white border-2 border-black text-black'
                                                 : 'bg-white border border-gray-200 text-gray-300'
                                         }`}>
-                                            {isDone ? <IconCheck className="w-3 h-3" stroke={3} /> : stageNum}
+                                            {isDone ? <Check className="w-3 h-3" strokeWidth={3} /> : stageNum}
                                         </div>
                                         <div className={`mt-2 text-[9px] font-bold uppercase tracking-widest ${
                                             isActive ? 'text-black' : isDone ? 'text-gray-500' : 'text-gray-300'
@@ -528,7 +520,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                         {/* Current label + progress bar */}
                         <div className="border-t border-gray-100 pt-6">
                             <div className="flex items-center gap-3 mb-3">
-                                <IconLoader2 className="w-4 h-4 animate-spin text-black" />
+                                <Loader2 className="w-4 h-4 animate-spin text-black" />
                                 <div className="flex-1 overflow-hidden h-5 relative">
                                     <AnimatePresence mode="wait">
                                         <motion.div
@@ -554,7 +546,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                     className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all text-gray-400 hover:text-black shrink-0 active:scale-90"
                                     title="View Details"
                                 >
-                                    <IconChevronLeft className={`w-3.5 h-3.5 transition-transform duration-400 ${showDebug ? '-rotate-90' : ''}`} stroke={3} />
+                                    <ChevronLeft className={`w-3.5 h-3.5 transition-transform duration-400 ${showDebug ? '-rotate-90' : ''}`} strokeWidth={3} />
                                 </button>
                             </div>
                             {sp?.progress && (
@@ -682,11 +674,11 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                         {error ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wide border border-red-100">
-                                <IconX className="w-3 h-3" stroke={2.5} /> Error
+                                <X className="w-3 h-3" strokeWidth={2.5} /> Error
                             </span>
                         ) : (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f0fdf4] text-[#16a34a] text-[10px] font-bold uppercase tracking-wide border border-[#bbf7d0]">
-                                <IconCheck className="w-3 h-3" stroke={2.5} /> Complete
+                                <Check className="w-3 h-3" strokeWidth={2.5} /> Complete
                             </span>
                         )}
                         <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider capitalize">
@@ -731,7 +723,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                 onClick={handleNewSession}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-[12px] font-bold hover:bg-[#333] transition-all active:scale-95"
                             >
-                                <IconPlus className="w-4 h-4" /> New Analysis
+                                <Plus className="w-4 h-4" /> New Analysis
                             </button>
                         </div>
                     ) : (
@@ -741,20 +733,20 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                 disabled={isCompiling}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-[12px] font-bold hover:bg-[#333] transition-all shadow-sm active:scale-95 disabled:opacity-30"
                             >
-                                {isCompiling ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconFileText className="w-3.5 h-3.5" />}
+                                {isCompiling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                                 {isCompiling ? "Compiling…" : "Generate PDF"}
                             </button>
                             <button
                                 onClick={downloadZip}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-white text-[#1a1a1a] border border-[#ddd] rounded-xl text-[12px] font-bold hover:border-[#aaa] transition-all active:scale-95"
                             >
-                                <IconPackage className="w-3.5 h-3.5" /> Download ZIP
+                                <Package className="w-3.5 h-3.5" /> Download ZIP
                             </button>
                             <button
                                 onClick={() => setViewerOpen(true)}
                                 className="flex items-center gap-2 px-3.5 py-2.5 text-gray-500 hover:text-[#1a1a1a] text-[12px] font-bold transition-colors rounded-xl hover:bg-[#f5f5f5]"
                             >
-                                <IconEye className="w-3.5 h-3.5" /> View LaTeX
+                                <Eye className="w-3.5 h-3.5" /> View LaTeX
                             </button>
 
                             <div className="w-px h-5 bg-[#ebebeb] mx-0.5" />
@@ -765,7 +757,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                     isEditing ? "bg-[#1a1a1a] text-white" : "text-gray-500 hover:text-[#1a1a1a] hover:bg-[#f0f0f0]"
                                 }`}
                             >
-                                <IconPencil className="w-3.5 h-3.5" stroke={2} /> Modify
+                                <Pencil className="w-3.5 h-3.5" strokeWidth={2} /> Modify
                             </button>
                             <button
                                 onClick={() => { setIsFixingErrors(!isFixingErrors); setIsEditing(false); }}
@@ -773,7 +765,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                     isFixingErrors ? "bg-red-500 text-white" : "text-gray-500 hover:text-[#1a1a1a] hover:bg-[#f0f0f0]"
                                 }`}
                             >
-                                <IconBug className="w-3.5 h-3.5" stroke={2} /> Fix Errors
+                                <Bug className="w-3.5 h-3.5" strokeWidth={2} /> Fix Errors
                             </button>
                         </div>
                     )}
@@ -810,7 +802,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                     disabled={!editPrompt.trim()}
                                     className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-white text-[11px] font-bold disabled:opacity-20 transition-all active:scale-90"
                                 >
-                                    <IconArrowRight className="w-3.5 h-3.5" /> Apply
+                                    <ArrowRight className="w-3.5 h-3.5" /> Apply
                                 </button>
                             </div>
                         </div>
@@ -849,7 +841,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                 disabled={!errorLogInput.trim()}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-xl text-[12px] font-bold hover:bg-red-600 transition-all active:scale-95 disabled:opacity-30"
                             >
-                                <IconBug className="w-3.5 h-3.5" /> Identify & Fix
+                                <Bug className="w-3.5 h-3.5" /> Identify & Fix
                             </button>
                         </div>
                     </motion.div>
@@ -860,10 +852,10 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
             {error && (
                 <div className="max-w-3xl mx-auto w-full px-5 md:px-10 pt-4 shrink-0">
                     <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
-                        <IconX className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" stroke={2.5} />
+                        <X className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" strokeWidth={2.5} />
                         <p className="text-[12px] text-red-600 leading-relaxed flex-1">{error}</p>
                         <button onClick={() => setError(null)} className="text-red-300 hover:text-red-500 shrink-0">
-                            <IconX className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5" />
                         </button>
                     </div>
                 </div>
@@ -880,11 +872,11 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             <div className="h-20 bg-white border-b border-gray-50 flex items-center justify-between px-8 shrink-0">
                                 <div className="flex items-center gap-4">
                                     <button onClick={() => setActiveTab("tex")} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "tex" ? "bg-black text-white shadow-xl" : "text-gray-300 hover:text-black border border-transparent hover:border-gray-50"}`}>
-                                        <IconFileText className="w-4 h-4" /> Main Body
+                                        <FileText className="w-4 h-4" /> Main Body
                                     </button>
                                     {referencesBib && (
                                         <button onClick={() => setActiveTab("bib")} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "bib" ? "bg-black text-white shadow-xl" : "text-gray-300 hover:text-black border border-transparent hover:border-gray-50"}`}>
-                                            <IconBook className="w-4 h-4" /> Bibliography
+                                            <Book className="w-4 h-4" /> Bibliography
                                         </button>
                                     )}
                                 </div>
@@ -895,9 +887,9 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                         a.href = url; a.download = activeTab === "tex" ? "main.tex" : "references.bib";
                                         a.click(); URL.revokeObjectURL(url);
                                     }} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#D4D4D8] hover:text-black transition-all border border-transparent hover:border-gray-50 rounded-xl">
-                                        <IconDownload className="w-4 h-4 inline mr-2" /> Download
+                                        <Download className="w-4 h-4 inline mr-2" /> Download
                                     </button>
-                                    <button onClick={() => setViewerOpen(false)} className="p-3 text-gray-300 hover:text-black transition-colors"><IconX className="w-6 h-6" /></button>
+                                    <button onClick={() => setViewerOpen(false)} className="p-3 text-gray-300 hover:text-black transition-colors"><X className="w-6 h-6" /></button>
                                 </div>
                             </div>
                             <div className="flex-1 overflow-auto bg-[#FBFBFC]">

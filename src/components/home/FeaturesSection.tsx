@@ -42,7 +42,7 @@ export function FeaturesSection() {
                             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                             className="w-6 h-6 mb-6 opacity-60"
                         >
-                            <Icon className="w-6 h-6" stroke={1.5} />
+                            <Icon className="w-6 h-6" strokeWidth={1.5} />
                         </motion.div>
 
                         <h3 className="text-lg font-bold tracking-tight mb-3">

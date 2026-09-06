@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { IconPlus, IconArrowLeft } from "@tabler/icons-react";
+import { Plus, ArrowLeft } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 
 interface Dashboard {
@@ -48,7 +48,7 @@ export default function DashboardPage() {
 
             <div className="max-w-[1600px] mx-auto px-6 py-20 md:py-28">
                 <Link href="/" className="inline-flex items-center gap-2 text-sm opacity-50 hover:opacity-100 mb-6 transition-opacity">
-                    <IconArrowLeft className="w-4 h-4" /> Back to Home
+                    <ArrowLeft className="w-4 h-4" /> Back to Home
                 </Link>
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-8">
                     Analytics.
@@ -74,7 +74,7 @@ export default function DashboardPage() {
                         {isEditing && (
                             <button onClick={addDashboardTab}
                                 className="px-3 py-3 bg-[var(--background)] text-[var(--foreground)] opacity-30 hover:opacity-100 transition-opacity">
-                                <IconPlus className="w-4 h-4" />
+                                <Plus className="w-4 h-4" />
                             </button>
                         )}
                     </div>

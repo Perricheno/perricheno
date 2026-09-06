@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IconX, IconUser, IconCreditCard, IconHistory, IconChartPie, IconDatabase, IconLayoutDashboard } from '@tabler/icons-react';
+import { X, User, CreditCard, History, ChartPie, Database, LayoutDashboard } from "lucide-react";
 
 interface BillingLimits {
     free: { daily_chars: number; weekly_chars: number; reports: number; daily_visuals?: number; };
@@ -102,7 +102,7 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                 </div>
                 {purchased > 0 && (
                     <div className="flex items-center gap-2 pt-2 text-xs font-bold text-green-600">
-                        <IconDatabase className="w-4 h-4" />
+                        <Database className="w-4 h-4" />
                         +{purchased.toLocaleString()} purchased roll-over tokens available
                     </div>
                 )}
@@ -128,7 +128,7 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                     <div className="w-full md:w-64 bg-[#FBFBFC] border-b md:border-b-0 md:border-r border-gray-100 shrink-0 flex flex-col p-6">
                         <div className="flex items-center gap-4 mb-10">
                             <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white shrink-0 overflow-hidden">
-                                {user?.photo_url ? <img src={user.photo_url} alt="Profile" className="w-full h-full object-cover"/> : <IconUser className="w-6 h-6" />}
+                                {user?.photo_url ? <img src={user.photo_url} alt="Profile" className="w-full h-full object-cover"/> : <User className="w-6 h-6" />}
                             </div>
                             <div className="overflow-hidden">
                                 <h3 className="font-black text-black truncate">{user?.first_name || 'User'}</h3>
@@ -138,10 +138,10 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
 
                         <div className="space-y-2 flex-1">
                             <button onClick={() => setActiveTab('billing')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'billing' ? 'bg-black text-white shadow-md' : 'text-gray-400 hover:bg-gray-100 hover:text-black'}`}>
-                                <IconCreditCard className="w-4 h-4" /> Quota & Plans
+                                <CreditCard className="w-4 h-4" /> Quota & Plans
                             </button>
                             <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'profile' ? 'bg-black text-white shadow-md' : 'text-gray-400 hover:bg-gray-100 hover:text-black'}`}>
-                                <IconLayoutDashboard className="w-4 h-4" /> Analytics
+                                <LayoutDashboard className="w-4 h-4" /> Analytics
                             </button>
                         </div>
                     </div>
@@ -149,7 +149,7 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                     {/* Content */}
                     <div className="flex-1 bg-white flex flex-col relative">
                         <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-black bg-gray-50 hover:bg-gray-100 rounded-full transition-all z-10">
-                            <IconX className="w-5 h-5" />
+                            <X className="w-5 h-5" />
                         </button>
 
                         <div className="flex-1 overflow-auto p-8 md:p-10">
@@ -194,12 +194,12 @@ export function AgentBillingModal({ isOpen, onClose, totalSessions }: Props) {
                                         
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="bg-[#FAFAFA] border border-gray-100 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-                                                <IconHistory className="w-8 h-8 text-black mb-3" stroke={1.5} />
+                                                <History className="w-8 h-8 text-black mb-3" strokeWidth={1.5} />
                                                 <div className="text-3xl font-black text-black mb-1">{totalSessions}</div>
                                                 <div className="text-[10px] font-bold text-[#A1A1AA] uppercase tracking-widest">Total Projects</div>
                                             </div>
                                             <div className="bg-[#FAFAFA] border border-gray-100 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-                                                <IconChartPie className="w-8 h-8 text-black mb-3" stroke={1.5} />
+                                                <ChartPie className="w-8 h-8 text-black mb-3" strokeWidth={1.5} />
                                                 <div className="text-3xl font-black text-black mb-1">{user.daily_visuals_used + user.purchased_visuals /* estimate total since we only track daily cleanly right now */}</div>
                                                 <div className="text-[10px] font-bold text-[#A1A1AA] uppercase tracking-widest">Visuals Generated</div>
                                             </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconSparkles } from "@tabler/icons-react";
+import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ChartCard from "./ChartCard";
 import { CHARTS } from "./charts";
@@ -71,7 +71,7 @@ export default function ChartGallery({
                                     exit={{ opacity: 0 }}
                                     className="flex items-start gap-2 px-3 py-2 mb-3 bg-[#f5f5f5] rounded-xl border border-[#e8e8e8]"
                                 >
-                                    <IconSparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                                    <Sparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
                                     <p className="text-[11px] text-gray-500 leading-snug">{suggestReasoning}</p>
                                 </motion.div>
                             )}

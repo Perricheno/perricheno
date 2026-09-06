@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { IconX, IconCheck, IconInfoCircle, IconAlertTriangle } from "@tabler/icons-react";
+import { X, Check, Info, AlertTriangle } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
 
@@ -34,9 +34,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
 
     const icons = {
-        success: <IconCheck className="w-5 h-5 text-green-500" />,
-        error: <IconAlertTriangle className="w-5 h-5 text-red-500" />,
-        info: <IconInfoCircle className="w-5 h-5 text-blue-500" />,
+        success: <Check className="w-5 h-5 text-green-500" />,
+        error: <AlertTriangle className="w-5 h-5 text-red-500" />,
+        info: <Info className="w-5 h-5 text-blue-500" />,
     };
 
     return (
@@ -55,7 +55,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                             <div className="mt-0.5 shrink-0">{icons[toast.type]}</div>
                             <div className="flex-1 text-sm font-medium leading-relaxed">{toast.message}</div>
                             <button onClick={() => removeToast(toast.id)} className="opacity-40 hover:opacity-100 transition-opacity">
-                                <IconX className="w-4 h-4" />
+                                <X className="w-4 h-4" />
                             </button>
                         </motion.div>
                     ))}

@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import {
-    IconArrowRight, IconLoader2, IconPaperclip,
-    IconFileText, IconBook, IconPackage, IconDownload,
-    IconX, IconPencil, IconCheck, IconEye, IconBug,
-    IconClock, IconLetterCase, IconSettings,
-    IconSchool, IconSearch, IconCertificate, IconChartPie,
-    IconLink, IconFilePlus, IconUser, IconChevronLeft, IconDatabase, IconMessageCircle, IconTerminal2,
-    IconPlus, IconLock, IconRobot, IconBook2
-} from "@tabler/icons-react";
+import { ArrowRight, Loader2, Paperclip, FileText, Book, Package, Download, X, Pencil, Check, Eye, Bug, Clock, CaseSensitive, Settings, GraduationCap, Search, Award, ChartPie, Link, FilePlus, User, ChevronLeft, Database, MessageCircle, SquareTerminal, Plus, Lock, Bot, BookOpen } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useAdmin } from "@/components/AdminContext";
@@ -118,15 +110,15 @@ export default function AgentPage() {
     ];
 
     const MODES: { id: DocType; label: string; icon: any }[] = [
-        { id: "research", label: t("modes.research"), icon: IconSearch },
-        { id: "assignment", label: t("modes.assignment"), icon: IconSchool },
-        { id: "diploma", label: t("modes.diploma"), icon: IconCertificate },
-        { id: "report", label: t("modes.report"), icon: IconChartPie },
+        { id: "research", label: t("modes.research"), icon: Search },
+        { id: "assignment", label: t("modes.assignment"), icon: GraduationCap },
+        { id: "diploma", label: t("modes.diploma"), icon: Award },
+        { id: "report", label: t("modes.report"), icon: ChartPie },
     ];
 
     const AGENT_MODES: { id: "data_analytics" | "chat"; label: string; icon: any }[] = [
-        { id: "data_analytics", label: t("modes.dataAnalytics"), icon: IconDatabase },
-        { id: "chat", label: t("modes.chat"), icon: IconRobot },
+        { id: "data_analytics", label: t("modes.dataAnalytics"), icon: Database },
+        { id: "chat", label: t("modes.chat"), icon: Bot },
     ];
 
     // ─── Generate (Agent/Report mode) → create session → redirect ───
@@ -594,7 +586,7 @@ export default function AgentPage() {
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-2xl flex flex-col items-center px-4 py-10 md:py-16">
                     
                     <div className="w-16 h-16 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center mx-auto mb-5">
-                        <IconChartPie className="w-8 h-8 text-black" stroke={2} />
+                        <ChartPie className="w-8 h-8 text-black" strokeWidth={2} />
                     </div>
                     
                     <h2 className="text-2xl font-black text-black tracking-tight mb-1 text-center">{t("configureViz")}</h2>
@@ -612,7 +604,7 @@ export default function AgentPage() {
                                         ? 'bg-black text-white shadow-sm' 
                                         : 'text-gray-400 hover:text-black'
                             }`}>
-                            {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <IconLock className="w-3 h-3" />}
+                            {['free', 'plus'].includes(user?.plan_tier?.toLowerCase() || 'free') && <Lock className="w-3 h-3" />}
                             R
                         </button>
                         <button 
@@ -649,7 +641,7 @@ export default function AgentPage() {
                                                     : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300 hover:text-gray-600'
                                         }`}
                                     >
-                                        {isLocked && <IconLock className="w-3 h-3" stroke={2.5} />}
+                                        {isLocked && <Lock className="w-3 h-3" strokeWidth={2.5} />}
                                         {chart.replace(/_/g, " ")}
                                     </button>
                                 );
@@ -670,7 +662,7 @@ export default function AgentPage() {
                             disabled={suggestedCharts.length === 0}
                             className="px-8 py-3.5 bg-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-[#1A1A1A] transition-all shadow-2xl active:scale-95 disabled:opacity-20 flex items-center gap-2"
                         >
-                            <IconArrowRight className="w-4 h-4" /> {t("generate")} {suggestedCharts.length} {t("charts")}
+                            <ArrowRight className="w-4 h-4" /> {t("generate")} {suggestedCharts.length} {t("charts")}
                         </button>
                     </div>
                 </motion.div>
@@ -697,7 +689,7 @@ export default function AgentPage() {
                         className="absolute inset-0 z-30 bg-[#FBFBFC]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
                     >
                         <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center">
-                            <IconLoader2 className="w-6 h-6 text-black animate-spin" />
+                            <Loader2 className="w-6 h-6 text-black animate-spin" />
                         </div>
                         <p className="text-sm font-bold text-black tracking-tight">{t("analyzing")}</p>
                         <p className="text-xs text-gray-400">{t("analyzingDesc")}</p>
@@ -711,7 +703,7 @@ export default function AgentPage() {
                         className="absolute inset-0 z-30 bg-[#FBFBFC]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
                     >
                         <div className="w-14 h-14 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center">
-                            <IconLoader2 className="w-6 h-6 text-black animate-spin" />
+                            <Loader2 className="w-6 h-6 text-black animate-spin" />
                         </div>
                         <p className="text-sm font-bold text-black tracking-tight">{t("initializing")}</p>
                         <p className="text-xs text-gray-400">{t("initializingDesc")}</p>
@@ -740,7 +732,7 @@ export default function AgentPage() {
                     {isDragging && (
                         <div className="absolute inset-0 z-50 bg-[#1a1a1a]/5 backdrop-blur-sm rounded-2xl border-2 border-dashed border-[#1a1a1a] flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2">
-                                <IconPlus className="w-12 h-12 text-[#1a1a1a]" stroke={2.5} />
+                                <Plus className="w-12 h-12 text-[#1a1a1a]" strokeWidth={2.5} />
                                 <p className="text-sm font-bold text-[#1a1a1a]">{t("dropFiles")}</p>
                             </div>
                         </div>
@@ -767,7 +759,7 @@ export default function AgentPage() {
                                     onClick={() => setModeOpen(!modeOpen)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#666] hover:bg-[#f5f5f5] transition-colors max-w-[140px] sm:max-w-none"
                                 >
-                                    <activeMode.icon className="w-4 h-4 shrink-0" stroke={2} />
+                                    <activeMode.icon className="w-4 h-4 shrink-0" strokeWidth={2} />
                                     <span className="truncate">{activeMode.label}</span>
                                     <svg className={`w-3 h-3 ml-0.5 shrink-0 transition-transform ${modeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
@@ -795,10 +787,10 @@ export default function AgentPage() {
                                                             onClick={() => { if(!isAgentMode) { setAgentSubMode(m.id); } else { setDocType(m.id); } setModeOpen(false); }}
                                                             className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors text-left ${(!isAgentMode ? m.id === agentSubMode : m.id === docType) ? 'bg-[#f5f5f5] text-[#1a1a1a]' : 'text-[#666] hover:bg-[#fafafa]'}`}
                                                         >
-                                                            <m.icon className="w-4 h-4 shrink-0" stroke={2} />
+                                                            <m.icon className="w-4 h-4 shrink-0" strokeWidth={2} />
                                                             <span>{m.label}</span>
                                                             {(!isAgentMode ? m.id === agentSubMode : m.id === docType) && (
-                                                                <IconCheck className="w-4 h-4 ml-auto text-[#1a1a1a]" stroke={2.5} />
+                                                                <Check className="w-4 h-4 ml-auto text-[#1a1a1a]" strokeWidth={2.5} />
                                                             )}
                                                         </button>
                                                     ))}
@@ -822,23 +814,23 @@ export default function AgentPage() {
                             <div className="w-px h-4 bg-[#e5e5e5] mx-0.5" />
 
                             <label className="cursor-pointer p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
-                                <IconPaperclip className="w-4 h-4" stroke={2} />
+                                <Paperclip className="w-4 h-4" strokeWidth={2} />
                                 <input type="file" className="hidden" multiple accept=".pdf,.txt,.csv,.xlsx,.xls,.docx,.doc,.json,.tsv,.md,.xml,.pptx,.ppt,.png,.jpg,.jpeg,.webp" onChange={handleFileUpload} />
                             </label>
                             {isAgentMode && agentSubMode !== "chat" && agentSubMode !== "data_analytics" && agentSubMode !== "literature_search" && (
                                 <label className="cursor-pointer p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors" title="Upload data file (CSV/XLSX) for statistical figures">
-                                    <IconDatabase className="w-4 h-4" stroke={2} />
+                                    <Database className="w-4 h-4" strokeWidth={2} />
                                     <input type="file" className="hidden" multiple accept=".csv,.xlsx,.xls,.tsv,.json" onChange={handleDataFileUpload} />
                                 </label>
                             )}
                             {(!isAgentMode && agentSubMode === "chat") ? null : (
                                 <>
                                     <button onClick={handleLinkAdd} className="p-1 text-[#999] hover:text-[#1a1a1a] rounded-lg hover:bg-[#f5f5f5] transition-colors">
-                                        <IconLink className="w-4 h-4" stroke={2} />
+                                        <Link className="w-4 h-4" strokeWidth={2} />
                                     </button>
                                     <div className="relative">
                                         <button onClick={() => setSettingsOpen(!settingsOpen)} className={`p-1 rounded-lg transition-colors ${settingsOpen ? 'text-[#1a1a1a] bg-[#f5f5f5]' : 'text-[#999] hover:text-[#1a1a1a] hover:bg-[#f5f5f5]'}`} title="Document Settings">
-                                            <IconSettings className="w-4 h-4" stroke={2} />
+                                            <Settings className="w-4 h-4" strokeWidth={2} />
                                         </button>
                                     </div>
                                 </>
@@ -851,7 +843,7 @@ export default function AgentPage() {
                             disabled={!prompt.trim() || isSuggesting || isGenerating} 
                             className="w-8 h-8 bg-[#1a1a1a] text-white rounded-lg flex items-center justify-center disabled:opacity-10 disabled:bg-[#e5e5e5] transition-all hover:bg-black active:scale-95"
                         >
-                            {(isSuggesting || isGenerating) ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
+                            {(isSuggesting || isGenerating) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                         </button>
                     </div>
                 </div>
@@ -861,7 +853,7 @@ export default function AgentPage() {
                     <div className="w-full mt-3 flex flex-wrap gap-2">
                         {uploadingFiles.map((filename, idx) => (
                             <div key={idx} className="flex items-center gap-2 pr-3 pl-3 py-1.5 bg-[#f5f5f5] rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]">
-                                <IconLoader2 className="w-3.5 h-3.5 text-[#666] animate-spin shrink-0" />
+                                <Loader2 className="w-3.5 h-3.5 text-[#666] animate-spin shrink-0" />
                                 <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{filename}</span>
                                 <span className="text-[10px] text-[#999] shrink-0">{t("uploading")}</span>
                             </div>
@@ -874,11 +866,11 @@ export default function AgentPage() {
                     <div className="w-full mt-3 flex flex-wrap gap-2">
                         {settings.uploadMeta.map((u, idx) => (
                             <div key={u.id || idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-white rounded-[12px] shadow-sm border border-[#e5e5e5] max-w-[260px]" title={`${u.charCount.toLocaleString()} chars · ${u.imageCount} images · ${u.pageCount} pages${u.ocrUsed ? " · OCR" : ""}`}>
-                                <IconFileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
+                                <FileText className="w-3.5 h-3.5 text-[#999] shrink-0" />
                                 <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
                                 <span className="text-[10px] font-mono text-[#999] shrink-0">{Math.round(u.charCount / 1000)}k{u.imageCount > 0 ? ` · ${u.imageCount}🖼` : ""}{u.ocrUsed ? " · OCR" : ""}</span>
                                 <button onClick={() => removeFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
-                                    <IconX className="w-3.5 h-3.5" />
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         ))}
@@ -890,7 +882,7 @@ export default function AgentPage() {
                     <div className="w-full mt-3 flex flex-wrap gap-2">
                         {uploadingDataFiles.map((filename, idx) => (
                             <div key={idx} className="flex items-center gap-2 pr-3 pl-3 py-1.5 bg-[#f0f8ff] rounded-[12px] shadow-sm border border-[#bde0ff] max-w-[260px]">
-                                <IconLoader2 className="w-3.5 h-3.5 text-[#3b82f6] animate-spin shrink-0" />
+                                <Loader2 className="w-3.5 h-3.5 text-[#3b82f6] animate-spin shrink-0" />
                                 <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{filename}</span>
                                 <span className="text-[10px] text-[#3b82f6] shrink-0">uploading</span>
                             </div>
@@ -903,11 +895,11 @@ export default function AgentPage() {
                     <div className="w-full mt-3 flex flex-wrap gap-2">
                         {settings.dataUploadMeta.map((u, idx) => (
                             <div key={u.id || idx} className="flex items-center gap-2 pr-1.5 pl-3 py-1.5 bg-[#f0f8ff] rounded-[12px] shadow-sm border border-[#bde0ff] max-w-[260px]" title={`Data file: ${u.filename}`}>
-                                <IconDatabase className="w-3.5 h-3.5 text-[#3b82f6] shrink-0" />
+                                <Database className="w-3.5 h-3.5 text-[#3b82f6] shrink-0" />
                                 <span className="text-[12px] font-medium text-[#1a1a1a] truncate">{u.filename}</span>
                                 <span className="text-[10px] font-mono text-[#3b82f6] shrink-0">data</span>
                                 <button onClick={() => removeDataFile(idx)} className="p-0.5 text-gray-400 hover:text-[#1a1a1a] transition-colors shrink-0">
-                                    <IconX className="w-3.5 h-3.5" />
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         ))}
@@ -919,9 +911,9 @@ export default function AgentPage() {
                     <div className="w-full mt-3 space-y-2">
                         {settings.referenceLinks.map((link, idx) => (
                             <div key={idx} className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border border-[#e5e5e5]">
-                                <IconLink className="w-3.5 h-3.5 text-[#999] shrink-0" />
+                                <Link className="w-3.5 h-3.5 text-[#999] shrink-0" />
                                 <input value={link} onChange={e => updateLink(idx, e.target.value)} placeholder="https://..." className="flex-1 bg-transparent outline-none text-[13px] text-[#666]" />
-                                <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-1 text-[#ccc] hover:text-[#1a1a1a] transition-colors"><IconX className="w-3 h-3" /></button>
+                                <button onClick={() => setSettings(s => ({ ...s, referenceLinks: s.referenceLinks.filter((_, i) => i !== idx) }))} className="p-1 text-[#ccc] hover:text-[#1a1a1a] transition-colors"><X className="w-3 h-3" /></button>
                             </div>
                         ))}
                     </div>
@@ -956,7 +948,7 @@ export default function AgentPage() {
                 {error && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium shadow-lg">
                         {error}
-                        <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600"><IconX className="w-4 h-4 inline" /></button>
+                        <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600"><X className="w-4 h-4 inline" /></button>
                     </motion.div>
                 )}
             </AnimatePresence>

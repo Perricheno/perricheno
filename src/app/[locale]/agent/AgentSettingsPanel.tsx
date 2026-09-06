@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { IconChevronDown } from "@tabler/icons-react";
+import { ChevronDown } from "lucide-react";
 import { AgentSettings } from "./types";
 import { TemplatePicker } from "./TemplatePicker";
 
@@ -200,7 +200,7 @@ export function AgentSettingsPanel({ settings, updateSetting, detailsOpen, setDe
 
             <div>
                 <button onClick={() => setDetailsOpen(!detailsOpen)} className="flex items-center gap-1.5 text-xs font-semibold text-[var(--foreground)] hover:opacity-70 transition-all uppercase tracking-widest">
-                    <IconChevronDown className={`w-3.5 h-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
                     Personalize Metadata
                 </button>
                 <AnimatePresence>

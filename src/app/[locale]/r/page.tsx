@@ -3,11 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    IconArrowUp, IconLoader2, IconCode, IconX,
-    IconCopy, IconCheck, IconRefresh, IconDownload,
-    IconPaperclip, IconFile, IconSparkles, IconLayoutGrid,
-} from "@tabler/icons-react";
+import { ArrowUp, Loader2, Code, X, Copy, Check, RefreshCw, Download, Paperclip, File, Sparkles, LayoutGrid } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 import { useRouter } from "@/i18n/navigation";
 import RSidebar from "./RSidebar";
@@ -544,7 +540,7 @@ export default function RPage() {
                                     </button>
                                 )}
                                 <button onClick={() => setError(null)} className="text-red-300 hover:text-red-500 transition-colors">
-                                    <IconX className="w-4 h-4" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         </motion.div>
@@ -563,7 +559,7 @@ export default function RPage() {
                         >
                             <span className="flex-1 leading-snug">{multiError}</span>
                             <button onClick={() => setMultiError(null)} className="text-red-300 hover:text-red-500 transition-colors">
-                                <IconX className="w-4 h-4" />
+                                <X className="w-4 h-4" />
                             </button>
                         </motion.div>
                     )}
@@ -586,7 +582,7 @@ export default function RPage() {
                                     <div className="flex flex-col items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-white border border-[#e8e8e8] shadow-sm
                                                         flex items-center justify-center">
-                                            <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a]" />
+                                            <Loader2 className="w-4 h-4 animate-spin text-[#1a1a1a]" />
                                         </div>
                                         <p className="text-[12px] text-gray-400 font-medium">
                                             {suggesting ? t("analysing") : t("runningR")}
@@ -613,7 +609,7 @@ export default function RPage() {
                                                             ? "bg-[#1a1a1a] text-white border-[#1a1a1a]"
                                                             : "text-gray-400 border-[#ebebeb] hover:border-[#aaa] hover:text-[#1a1a1a]"}`}
                                         >
-                                            <IconCode className="w-3.5 h-3.5" />
+                                            <Code className="w-3.5 h-3.5" />
                                             Code
                                         </button>
                                         <button
@@ -622,7 +618,7 @@ export default function RPage() {
                                                        uppercase tracking-wide border border-[#ebebeb] text-gray-400
                                                        hover:border-[#aaa] hover:text-[#1a1a1a] transition-all"
                                         >
-                                            <IconDownload className="w-3.5 h-3.5" />
+                                            <Download className="w-3.5 h-3.5" />
                                             PNG
                                         </button>
                                     </div>
@@ -634,7 +630,7 @@ export default function RPage() {
                                                        uppercase tracking-wide border border-[#ebebeb] text-gray-400
                                                        hover:border-[#aaa] hover:text-[#1a1a1a] transition-all disabled:opacity-30"
                                         >
-                                            <IconRefresh className="w-3.5 h-3.5" />
+                                            <RefreshCw className="w-3.5 h-3.5" />
                                             Retry
                                         </button>
                                         <button
@@ -667,8 +663,8 @@ export default function RPage() {
                                                            hover:text-[#1a1a1a] transition-colors uppercase tracking-wide"
                                             >
                                                 {copied
-                                                    ? <><IconCheck className="w-3.5 h-3.5 text-green-500" /> Copied</>
-                                                    : <><IconCopy className="w-3.5 h-3.5" /> Copy</>
+                                                    ? <><Check className="w-3.5 h-3.5 text-green-500" /> Copied</>
+                                                    : <><Copy className="w-3.5 h-3.5" /> Copy</>
                                                 }
                                             </button>
                                         </div>
@@ -702,7 +698,7 @@ export default function RPage() {
                                 return (
                                     <div className="bg-white border border-[#e8e8e8] rounded-2xl p-6 shadow-sm">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
+                                            <Loader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
                                             <p className="text-[13px] font-bold text-[#1a1a1a] flex-1">
                                                 {done === 0 ? t("generating") : t("chartsReady").replace("{done}", String(done)).replace("{total}", String(total))}
                                             </p>
@@ -730,9 +726,9 @@ export default function RPage() {
                                                     return (
                                                         <div key={i} className="flex items-center gap-2.5 px-1">
                                                             <div className="shrink-0 w-4 flex justify-center">
-                                                                {status === "generating" && <IconLoader2 className="w-3 h-3 animate-spin text-gray-400" />}
-                                                                {status === "done" && <IconCheck className="w-3 h-3 text-[#1a1a1a]" stroke={2.5} />}
-                                                                {status === "error" && <IconX className="w-3 h-3 text-red-400" />}
+                                                                {status === "generating" && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                                                                {status === "done" && <Check className="w-3 h-3 text-[#1a1a1a]" strokeWidth={2.5} />}
+                                                                {status === "error" && <X className="w-3 h-3 text-red-400" />}
                                                                 {status === "pending" && <div className="w-2 h-2 rounded-full bg-[#e0e0e0]" />}
                                                             </div>
                                                             <p className={`text-[11px] font-medium flex-1 ${status === "done" ? "text-[#1a1a1a]" : "text-gray-400"}`}>
@@ -815,19 +811,19 @@ export default function RPage() {
                                         className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg
                                                    text-[11px] font-medium text-[#444] border border-[#e8e8e8]"
                                     >
-                                        <IconFile className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <File className="w-3 h-3 text-gray-400 shrink-0" />
                                         <span className="truncate max-w-[120px]">{f.name}</span>
                                         <button
                                             onClick={() => removeFile(i)}
                                             className="text-gray-300 hover:text-gray-600 transition-colors"
                                         >
-                                            <IconX className="w-3 h-3" />
+                                            <X className="w-3 h-3" />
                                         </button>
                                     </span>
                                 ))}
                                 {uploading && (
                                     <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f3f3] rounded-lg text-[11px] text-gray-400">
-                                        <IconLoader2 className="w-3 h-3 animate-spin" />
+                                        <Loader2 className="w-3 h-3 animate-spin" />
                                         {t("reading")}
                                     </span>
                                 )}
@@ -840,7 +836,7 @@ export default function RPage() {
                                 {/* Attach file */}
                                 <label className="cursor-pointer p-1.5 text-gray-400 hover:text-[#1a1a1a] rounded-lg
                                                   hover:bg-[#f5f5f5] transition-colors" title="Attach CSV / Excel">
-                                    <IconPaperclip className="w-4 h-4" stroke={1.8} />
+                                    <Paperclip className="w-4 h-4" strokeWidth={1.8} />
                                     <input
                                         ref={fileInputRef}
                                         type="file"
@@ -858,7 +854,7 @@ export default function RPage() {
                                     title="Chart type"
                                     style={{ touchAction: "manipulation" }}
                                 >
-                                    <IconLayoutGrid className="w-4 h-4" stroke={1.8} />
+                                    <LayoutGrid className="w-4 h-4" strokeWidth={1.8} />
                                 </button>
 
                                 {/* Selected chart chips */}
@@ -869,7 +865,7 @@ export default function RPage() {
                                                              rounded-lg text-[11px] font-semibold">
                                                 {CHARTS.find(c => c.id === id)?.name ?? id}
                                                 <button onClick={() => setSelectedCharts(prev => prev.filter(c => c !== id))} className="hover:opacity-60 transition-opacity ml-0.5">
-                                                    <IconX className="w-3 h-3" />
+                                                    <X className="w-3 h-3" />
                                                 </button>
                                             </span>
                                         ))}
@@ -877,7 +873,7 @@ export default function RPage() {
                                 ) : willRunMulti ? (
                                     <span className="flex items-center gap-1 px-2 py-1 bg-[#f5f5f5] text-[#555] border border-[#e8e8e8]
                                                      rounded-lg text-[11px] font-semibold">
-                                        <IconSparkles className="w-3 h-3" />
+                                        <Sparkles className="w-3 h-3" />
                                         {t("multiChart")}
                                     </span>
                                 ) : (
@@ -896,8 +892,8 @@ export default function RPage() {
                                 style={{ touchAction: "manipulation" }}
                             >
                                 {(loading || suggesting || multiLoading)
-                                    ? <IconLoader2 className="w-4 h-4 animate-spin" />
-                                    : <IconArrowUp className="w-4 h-4" />
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <ArrowUp className="w-4 h-4" />
                                 }
                             </button>
                         </div>

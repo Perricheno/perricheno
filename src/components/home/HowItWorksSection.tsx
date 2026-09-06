@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { IconArrowUpRight } from "@tabler/icons-react";
+import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SectionLabel } from "./primitives";
 import { STEPS } from "./constants";
@@ -52,7 +52,7 @@ export function HowItWorksSection() {
                         {/* Step connector arrow (not on last) */}
                         {i < 2 && (
                             <div className="hidden md:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-[var(--background)] border border-[var(--border)] rounded-full items-center justify-center">
-                                <IconArrowUpRight className="w-3 h-3 opacity-40 rotate-45" />
+                                <ArrowUpRight className="w-3 h-3 opacity-40 rotate-45" />
                             </div>
                         )}
                     </motion.div>

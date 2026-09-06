@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import {
-    IconArrowRight, IconLoader2, IconPaperclip,
-    IconFileText, IconBook, IconPackage, IconDownload,
-    IconX, IconPencil, IconCheck, IconEye, IconBug,
-    IconClock, IconSettings, IconChartPie,
-    IconDatabase, IconPlus, IconLock, IconRefresh,
-    IconTrash, IconUpload, IconFile, IconAlertTriangle,
-    IconPlayerPlay, IconCloudUpload
-} from "@tabler/icons-react";
+import { ArrowRight, Loader2, Paperclip, FileText, Book, Package, Download, X, Pencil, Check, Eye, Bug, Clock, Settings, ChartPie, Database, Plus, Lock, RefreshCw, Trash2, Upload, File, AlertTriangle, Play, CloudUpload } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
 import { useRouter } from "@/i18n/navigation";
@@ -73,7 +65,7 @@ function FileCard({ file, onDelete }: { file: UploadMeta; onDelete: () => void }
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                 isData ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
             }`}>
-                {isData ? <IconDatabase className="w-4 h-4" /> : <IconFileText className="w-4 h-4" />}
+                {isData ? <Database className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-black truncate">{file.filename}</p>
@@ -92,12 +84,12 @@ function FileCard({ file, onDelete }: { file: UploadMeta; onDelete: () => void }
             {/* TTL Timer */}
             {remaining && (
                 <div className={`flex items-center gap-1 shrink-0 ${expired ? 'text-red-500' : 'text-gray-400'}`}>
-                    <IconClock className="w-3.5 h-3.5" />
+                    <Clock className="w-3.5 h-3.5" />
                     <span className="text-[10px] font-mono tabular-nums">{remaining}</span>
                 </div>
             )}
             <button onClick={onDelete} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 transition-colors shrink-0 opacity-0 group-hover:opacity-100" title="Remove file">
-                <IconTrash className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" />
             </button>
         </div>
     );
@@ -463,7 +455,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                                 : isActive ? 'bg-white border-2 border-black text-black'
                                                 : 'bg-white border border-gray-200 text-gray-300'
                                         }`}>
-                                            {isDone ? <IconCheck className="w-3 h-3" stroke={3} /> : stageNum}
+                                            {isDone ? <Check className="w-3 h-3" strokeWidth={3} /> : stageNum}
                                         </div>
                                         <div className={`mt-2 text-[9px] font-bold uppercase tracking-widest ${
                                             isActive ? 'text-black' : isDone ? 'text-gray-500' : 'text-gray-300'
@@ -478,7 +470,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                         {/* Current label + progress */}
                         <div className="border-t border-gray-100 pt-6">
                             <div className="flex items-center gap-3 mb-3">
-                                <IconLoader2 className="w-4 h-4 animate-spin text-black" />
+                                <Loader2 className="w-4 h-4 animate-spin text-black" />
                                 <div className="text-[13px] font-medium text-black flex-1 truncate">
                                     {sp?.label || "Starting analytics pipeline…"}
                                 </div>
@@ -570,7 +562,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
             {isDragging && (
                 <div className="fixed inset-0 z-50 bg-black/5 backdrop-blur-sm flex items-center justify-center pointer-events-none">
                     <div className="flex flex-col items-center gap-3 pointer-events-none">
-                        <IconCloudUpload className="w-16 h-16 text-black" stroke={1.5} />
+                        <CloudUpload className="w-16 h-16 text-black" strokeWidth={1.5} />
                         <p className="text-sm font-bold text-black">Drop data files here</p>
                     </div>
                 </div>
@@ -587,9 +579,9 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-black break-words mb-1">{topic}</h1>
                             {error && (
                                 <div className="flex items-center gap-2 mt-2">
-                                    <IconAlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                                     <p className="text-sm text-amber-600">{error}</p>
-                                    <button onClick={() => setError(null)} className="text-amber-400 hover:text-amber-600"><IconX className="w-3.5 h-3.5" /></button>
+                                    <button onClick={() => setError(null)} className="text-amber-400 hover:text-amber-600"><X className="w-3.5 h-3.5" /></button>
                                 </div>
                             )}
                         </div>
@@ -598,12 +590,12 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border ${
                                     editMode ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
                                 }`}>
-                                <IconPencil className="w-3.5 h-3.5" /> Modify
+                                <Pencil className="w-3.5 h-3.5" /> Modify
                             </button>
                             <button onClick={() => handleRerun()} disabled={isRerunning || activeFiles.length === 0}
                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-black text-white hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-30"
                                 title={activeFiles.length === 0 ? "Upload data files first" : "Re-run pipeline"}>
-                                {isRerunning ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconRefresh className="w-3.5 h-3.5" />}
+                                {isRerunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                                 Re-run
                             </button>
                         </div>
@@ -621,7 +613,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                                             className="flex-1 text-[14px] text-black bg-transparent outline-none placeholder:text-gray-300 py-3 px-3 resize-none min-h-[48px] max-h-[120px]" rows={1} autoFocus />
                                         <button onClick={handleEditSubmit} disabled={!editPrompt.trim() || isRerunning}
                                             className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center disabled:opacity-10 transition-all hover:bg-gray-800 active:scale-95 shrink-0">
-                                            {isRerunning ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconArrowRight className="w-4 h-4" />}
+                                            {isRerunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                                         </button>
                                     </div>
                                 </div>
@@ -638,14 +630,14 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             <span className="ml-2 text-black">{uploadMeta.length}</span>
                         </h2>
                         <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white border border-gray-200 hover:border-gray-400 transition-colors cursor-pointer">
-                            <IconUpload className="w-3.5 h-3.5" /> Add File
+                            <Upload className="w-3.5 h-3.5" /> Add File
                             <input type="file" className="hidden" multiple accept=".csv,.xlsx,.xls,.json,.tsv,.txt,.pdf,.docx,.doc,.png,.jpg,.jpeg,.webp" onChange={handleFileUpload} />
                         </label>
                     </div>
 
                     {uploadMeta.length === 0 && uploadingFiles.length === 0 ? (
                         <div className="bg-white border border-dashed border-gray-200 rounded-xl p-8 text-center">
-                            <IconDatabase className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                            <Database className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                             <p className="text-sm font-medium text-gray-300 mb-1">No data files attached</p>
                             <p className="text-xs text-gray-300">Upload CSV, Excel, JSON, or other data files to analyze</p>
                         </div>
@@ -656,7 +648,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                             ))}
                             {uploadingFiles.map((filename, idx) => (
                                 <div key={`uploading-${idx}`} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-100">
-                                    <IconLoader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />
+                                    <Loader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />
                                     <span className="text-[13px] font-medium text-gray-500 truncate">{filename}</span>
                                     <span className="text-[10px] text-gray-400 ml-auto shrink-0">Uploading...</span>
                                 </div>
@@ -666,7 +658,7 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
 
                     {hasExpiredFiles && (
                         <div className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
-                            <IconAlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                             <p className="text-[12px] text-amber-700">Some files have expired. Upload new files before re-running the pipeline.</p>
                         </div>
                     )}
@@ -693,14 +685,14 @@ export default function AgentSessionClient({ initialSession, sessions: initialSe
                 {!hasVisuals && !error && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
                         className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm">
-                        <IconChartPie className="w-14 h-14 text-gray-200 mx-auto mb-4" stroke={1.5} />
+                        <ChartPie className="w-14 h-14 text-gray-200 mx-auto mb-4" strokeWidth={1.5} />
                         <h3 className="text-lg font-bold text-gray-300 mb-2">No visualizations yet</h3>
                         <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
                             Upload data files and run the analytics pipeline to generate charts and insights.
                         </p>
                         <button onClick={() => handleRerun()} disabled={activeFiles.length === 0 || isRerunning}
                             className="px-6 py-3 bg-black text-white rounded-xl text-[12px] font-bold hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-20 flex items-center gap-2 mx-auto">
-                            {isRerunning ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconPlayerPlay className="w-4 h-4" />}
+                            {isRerunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                             Run Analytics Pipeline
                         </button>
                     </motion.div>

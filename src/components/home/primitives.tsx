@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { IconChevronDown } from "@tabler/icons-react";
+import { ChevronDown } from "lucide-react";
 import { useState, useRef, type ReactNode } from "react";
 import { useMotionValue, useSpring } from "framer-motion";
 
@@ -62,7 +62,7 @@ export function FaqItem({ q, a }: { q: string; a: string }) {
             >
                 <span className="text-base md:text-lg font-medium tracking-tight">{q}</span>
                 <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.3, ease: [0.16,1,0.3,1] }}>
-                    <IconChevronDown className="w-5 h-5 opacity-40 shrink-0" />
+                    <ChevronDown className="w-5 h-5 opacity-40 shrink-0" />
                 </motion.div>
             </button>
             <motion.div

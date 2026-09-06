@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconX, IconLoader2, IconUserPlus, IconSparkles, IconCheck, IconCopy } from "@tabler/icons-react";
+import { X, Loader2, UserPlus, Sparkles, Check, Copy } from "lucide-react";
 import type { Space, SpaceFile, Compiler } from "@/lib/space-db";
 
 import TopBar from "./components/TopBar";
@@ -508,7 +508,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                                         onClick={e => { e.stopPropagation(); handleCloseTab(tab.path); }}
                                         className="text-gray-700 hover:text-white opacity-0 group-hover/tab:opacity-100 transition-all rounded p-0.5 hover:bg-white/10 ml-1"
                                     >
-                                        <IconX className="w-3 h-3" />
+                                        <X className="w-3 h-3" />
                                     </span>
                                 </button>
                             );
@@ -632,7 +632,7 @@ export default function SpaceEditor({ initialSpace, initialFiles, userId, readOn
                         exit={{ opacity: 0, y: 8 }}
                         className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2a2a2a] border border-[#3a3a3a] rounded-xl px-4 py-2.5 flex items-center gap-2.5 shadow-2xl"
                     >
-                        <IconLoader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
                         <span className="text-[12px] text-white">{uploading}</span>
                     </motion.div>
                 )}
@@ -874,11 +874,11 @@ function AiEditMenu({ selection, spaceId, onApply, onClose }: {
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
                 <div className="flex items-center gap-1.5">
-                    <IconSparkles className="w-3.5 h-3.5 text-violet-500" />
+                    <Sparkles className="w-3.5 h-3.5 text-violet-500" />
                     <span className="text-[11px] font-bold text-gray-700">AI Edit</span>
                 </div>
                 <button onClick={onClose} className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    <IconX className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                 </button>
             </div>
 
@@ -898,7 +898,7 @@ function AiEditMenu({ selection, spaceId, onApply, onClose }: {
                                 } disabled:opacity-50`}
                             >
                                 {loading === a.id
-                                    ? <IconLoader2 className="w-3 h-3 animate-spin" />
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
                                     : a.label
                                 }
                             </button>
@@ -942,13 +942,13 @@ function AiEditMenu({ selection, spaceId, onApply, onClose }: {
                             onClick={() => onApply(result)}
                             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-black hover:bg-gray-800 text-white text-[11px] font-bold transition-colors"
                         >
-                            <IconCheck className="w-3 h-3" /> Apply
+                            <Check className="w-3 h-3" /> Apply
                         </button>
                         <button
                             onClick={copy}
                             className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 text-[11px] transition-colors"
                         >
-                            {copied ? <IconCheck className="w-3 h-3 text-emerald-500" /> : <IconCopy className="w-3 h-3" />}
+                            {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                         </button>
                         <button
                             onClick={() => { setResult(null); setActive(null); }}
@@ -1022,7 +1022,7 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <h2 className="text-[13px] font-black text-gray-900 uppercase tracking-widest">Project Settings</h2>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                        <IconX className="w-4 h-4" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
@@ -1069,7 +1069,7 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                                 disabled={saving}
                                 onClick={async () => { setSaving(true); await onSave({ title, main_file: mainFile }); setSaving(false); }}
                                 className="px-4 py-2 rounded-xl bg-black text-white text-[12px] font-bold hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50">
-                                {saving && <IconLoader2 className="w-3.5 h-3.5 animate-spin" />} Save
+                                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Save
                             </button>
                         </div>
                     </>
@@ -1080,7 +1080,7 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                     <div className="flex flex-col" style={{ minHeight: 220 }}>
                         {!collabsLoaded ? (
                             <div className="flex items-center justify-center flex-1 py-10">
-                                <IconLoader2 className="w-4 h-4 animate-spin text-gray-300" />
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-300" />
                             </div>
                         ) : (
                             <>
@@ -1127,7 +1127,7 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                                                                 className="opacity-0 group-hover:opacity-100 ml-1 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 hover:bg-red-50 transition-all disabled:opacity-40"
                                                             >
                                                                 {removing === c.user_id
-                                                                    ? <IconLoader2 className="w-3 h-3 animate-spin" />
+                                                                    ? <Loader2 className="w-3 h-3 animate-spin" />
                                                                     : removeLabel
                                                                 }
                                                             </button>
@@ -1146,7 +1146,7 @@ function ProjectSettingsModal({ space, userId, onClose, onSave, onOpenInvite }: 
                                             onClick={() => { onClose(); onOpenInvite(); }}
                                             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-gray-200 text-[12px] text-gray-400 hover:text-gray-900 hover:border-gray-400 transition-all"
                                         >
-                                            <IconUserPlus className="w-3.5 h-3.5" />
+                                            <UserPlus className="w-3.5 h-3.5" />
                                             Invite collaborator
                                         </button>
                                     </div>
@@ -1189,7 +1189,7 @@ function ShareModal({ space, onClose, onTogglePublic }: {
                 className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <h2 className="text-[13px] font-black text-gray-900 uppercase tracking-widest">Share Project</h2>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><IconX className="w-4 h-4" /></button>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="px-5 py-5 space-y-4">
                     <div className="flex items-center justify-between">
@@ -1267,7 +1267,7 @@ function InviteModal({ spaceId, onClose }: { spaceId: string; onClose: () => voi
                 className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <h2 className="text-[13px] font-black text-gray-900 uppercase tracking-widest">Invite Collaborator</h2>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><IconX className="w-4 h-4" /></button>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><X className="w-4 h-4" /></button>
                 </div>
 
                 <div className="px-5 py-4 space-y-4">
@@ -1296,7 +1296,7 @@ function InviteModal({ spaceId, onClose }: { spaceId: string; onClose: () => voi
                                     disabled={loading}
                                     className="flex-1 py-2 rounded-xl bg-black text-white text-[12px] font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
-                                    {loading && <IconLoader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                                     Generate link
                                 </button>
                             </div>

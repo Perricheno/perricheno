@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { motion } from "framer-motion";
-import { IconBraces, IconLoader2, IconCheck, IconAlertTriangle, IconLogin } from "@tabler/icons-react";
+import { Braces, Loader2, Check, AlertTriangle, LogIn } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 
 interface InviteInfo {
@@ -59,19 +59,19 @@ export default function InvitePage() {
                 {/* Logo */}
                 <div className="flex items-center justify-center mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-md flex items-center justify-center">
-                        <IconBraces className="w-6 h-6 text-black" />
+                        <Braces className="w-6 h-6 text-black" />
                     </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border border-[#e5e5e5] shadow-sm overflow-hidden">
                     {loading ? (
                         <div className="flex items-center justify-center py-14">
-                            <IconLoader2 className="w-5 h-5 animate-spin text-gray-300" />
+                            <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
                         </div>
                     ) : expired ? (
                         <div className="p-8 text-center">
                             <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-                                <IconAlertTriangle className="w-5 h-5 text-red-500" />
+                                <AlertTriangle className="w-5 h-5 text-red-500" />
                             </div>
                             <h2 className="text-[15px] font-black text-black mb-1">Link expired</h2>
                             <p className="text-[13px] text-gray-400 mb-5">This invite link is no longer valid. Ask the project owner for a new one.</p>
@@ -87,7 +87,7 @@ export default function InvitePage() {
                                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                                 className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4"
                             >
-                                <IconCheck className="w-5 h-5 text-emerald-500" />
+                                <Check className="w-5 h-5 text-emerald-500" />
                             </motion.div>
                             <h2 className="text-[15px] font-black text-black mb-1">Joined!</h2>
                             <p className="text-[13px] text-gray-400">Redirecting to the project…</p>
@@ -107,7 +107,7 @@ export default function InvitePage() {
                                         onClick={() => setShowLogin(true)}
                                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-black text-white text-[13px] font-bold hover:bg-[#1a1a1a] transition-all active:scale-95"
                                     >
-                                        <IconLogin className="w-4 h-4" />
+                                        <LogIn className="w-4 h-4" />
                                         Sign in
                                     </button>
                                 </div>
@@ -119,8 +119,8 @@ export default function InvitePage() {
                                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-black text-white text-[13px] font-bold hover:bg-[#1a1a1a] transition-all active:scale-95 disabled:opacity-60"
                                     >
                                         {accepting
-                                            ? <IconLoader2 className="w-4 h-4 animate-spin" />
-                                            : <IconCheck className="w-4 h-4" />
+                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                            : <Check className="w-4 h-4" />
                                         }
                                         {accepting ? 'Joining…' : 'Accept invite'}
                                     </button>

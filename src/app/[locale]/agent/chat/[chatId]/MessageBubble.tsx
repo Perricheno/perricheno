@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { IconCopy, IconCheck, IconUser, IconRobot } from "@tabler/icons-react";
+import { Copy, Check, User, Bot } from "lucide-react";
 
 interface MessageBubbleProps {
     role: "user" | "assistant";
@@ -26,7 +26,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
         return (
             <div className="flex items-start gap-3 px-4 py-4">
                 <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0">
-                    <IconUser className="w-4 h-4 text-white" stroke={2} />
+                    <User className="w-4 h-4 text-white" strokeWidth={2} />
                 </div>
                 <div className="flex-1 pt-1">
                     <div className="text-[15px] text-[#1a1a1a] leading-relaxed whitespace-pre-wrap">
@@ -40,7 +40,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
     return (
         <div className="flex items-start gap-3 px-4 py-4 bg-[#FAFAFA]">
             <div className="w-8 h-8 rounded-full bg-[#666] flex items-center justify-center shrink-0">
-                <IconRobot className="w-4 h-4 text-white" stroke={2} />
+                <Bot className="w-4 h-4 text-white" strokeWidth={2} />
             </div>
             <div className="flex-1 pt-1">
                 <ReactMarkdown
@@ -102,12 +102,12 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
                                             >
                                                 {copiedCode === codeString ? (
                                                     <>
-                                                        <IconCheck className="w-3 h-3" />
+                                                        <Check className="w-3 h-3" />
                                                         Copied
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <IconCopy className="w-3 h-3" />
+                                                        <Copy className="w-3 h-3" />
                                                         Copy
                                                     </>
                                                 )}

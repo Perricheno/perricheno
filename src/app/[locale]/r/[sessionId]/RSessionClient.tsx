@@ -2,11 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    IconLoader2, IconCode, IconX,
-    IconCopy, IconCheck, IconRefresh, IconDownload,
-    IconMaximize, IconMessageCircle, IconPackage,
-} from "@tabler/icons-react";
+import { Loader2, Code, X, Copy, Check, RefreshCw, Download, Maximize2, MessageCircle, Package } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import RSidebar from "../RSidebar";
 import type { RSessionRow, RSessionSummary, RResultItem } from "@/lib/r-db";
@@ -122,7 +118,7 @@ function MultiChartCard({
                 {chart.status === "generating" && (
                     <div className="flex flex-col items-center gap-2 py-8">
                         <div className="w-8 h-8 rounded-full bg-white border border-[#e8e8e8] shadow-sm flex items-center justify-center">
-                            <IconLoader2 className="w-3.5 h-3.5 animate-spin text-[#1a1a1a]" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1a1a1a]" />
                         </div>
                         <p className="text-[11px] text-gray-400 font-medium">Running R…</p>
                     </div>
@@ -134,7 +130,7 @@ function MultiChartCard({
                             onClick={() => onRetry(index, chart.chartType)}
                             className="mt-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-gray-400 hover:text-[#1a1a1a] transition-colors"
                         >
-                            <IconRefresh className="w-3 h-3" /> Retry
+                            <RefreshCw className="w-3 h-3" /> Retry
                         </button>
                     </div>
                 )}
@@ -151,7 +147,7 @@ function MultiChartCard({
                             className="absolute top-2 right-2 p-1 bg-white/80 hover:bg-white rounded-lg border border-[#e8e8e8] text-gray-400 hover:text-[#1a1a1a] transition-all opacity-0 group-hover:opacity-100"
                             title="Expand"
                         >
-                            <IconMaximize className="w-3 h-3" />
+                            <Maximize2 className="w-3 h-3" />
                         </button>
                     </>
                 )}
@@ -168,21 +164,21 @@ function MultiChartCard({
                             className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border transition-all
                                 ${showCode ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "border-[#ebebeb] text-gray-400 hover:border-[#aaa] hover:text-[#1a1a1a]"}`}
                         >
-                            <IconCode className="w-3 h-3" />
+                            <Code className="w-3 h-3" />
                             Code
                         </button>
                         <button
                             onClick={handleDownload}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border border-[#ebebeb] text-gray-400 hover:border-[#aaa] hover:text-[#1a1a1a] transition-all"
                         >
-                            <IconDownload className="w-3 h-3" />
+                            <Download className="w-3 h-3" />
                             PNG
                         </button>
                         <button
                             onClick={() => onRetry(index, chart.chartType)}
                             className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border border-[#ebebeb] text-gray-400 hover:border-[#aaa] hover:text-[#1a1a1a] transition-all"
                         >
-                            <IconRefresh className="w-3 h-3" />
+                            <RefreshCw className="w-3 h-3" />
                             Retry
                         </button>
                     </div>
@@ -207,8 +203,8 @@ function MultiChartCard({
                                 className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-[#1a1a1a] transition-colors uppercase tracking-wide"
                             >
                                 {copied
-                                    ? <><IconCheck className="w-3 h-3 text-green-500" /> Copied</>
-                                    : <><IconCopy className="w-3 h-3" /> Copy</>
+                                    ? <><Check className="w-3 h-3 text-green-500" /> Copied</>
+                                    : <><Copy className="w-3 h-3" /> Copy</>
                                 }
                             </button>
                         </div>
@@ -239,7 +235,7 @@ function MultiChartCard({
                             <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#f0f0f0]">
                                 <span className="text-[11px] font-bold text-[#1a1a1a]">{chart.name}</span>
                                 <button onClick={() => setExpanded(false)} className="text-gray-400 hover:text-[#1a1a1a] transition-colors">
-                                    <IconX className="w-4 h-4" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                             <img
@@ -433,7 +429,7 @@ export default function RSessionClient({ initialSession }: Props) {
                     {/* ── Original prompt card ── */}
                     {initialSession.prompt && (
                         <div className="bg-white border border-[#e8e8e8] rounded-2xl px-4 py-3 flex items-start gap-3 shadow-sm">
-                            <IconMessageCircle className="w-4 h-4 text-gray-300 mt-0.5 shrink-0" stroke={1.5} />
+                            <MessageCircle className="w-4 h-4 text-gray-300 mt-0.5 shrink-0" strokeWidth={1.5} />
                             <p className="text-[12px] text-[#555] leading-relaxed flex-1 min-w-0">
                                 {initialSession.prompt}
                             </p>
@@ -443,7 +439,7 @@ export default function RSessionClient({ initialSession }: Props) {
                                     className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#f5f5f5] hover:bg-[#ebebeb] text-[10px] font-bold text-gray-500 hover:text-[#1a1a1a] transition-all uppercase tracking-wide"
                                     title="Download all charts"
                                 >
-                                    <IconPackage className="w-3.5 h-3.5" />
+                                    <Package className="w-3.5 h-3.5" />
                                     All
                                 </button>
                             )}
@@ -469,7 +465,7 @@ export default function RSessionClient({ initialSession }: Props) {
                                     return (
                                         <div className="bg-white border border-[#e8e8e8] rounded-2xl p-6 shadow-sm">
                                             <div className="flex items-center gap-3 mb-4">
-                                                <IconLoader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
+                                                <Loader2 className="w-4 h-4 animate-spin text-[#1a1a1a] shrink-0" />
                                                 <p className="text-[13px] font-bold text-[#1a1a1a] flex-1">
                                                     {done === 0 ? "Generating visualizations…" : `${done} of ${total} charts ready`}
                                                 </p>
@@ -497,9 +493,9 @@ export default function RSessionClient({ initialSession }: Props) {
                                                         return (
                                                             <div key={i} className="flex items-center gap-2.5 px-1">
                                                                 <div className="shrink-0 w-4 flex justify-center">
-                                                                    {status === "generating" && <IconLoader2 className="w-3 h-3 animate-spin text-gray-400" />}
-                                                                    {status === "done" && <IconCheck className="w-3 h-3 text-[#1a1a1a]" stroke={2.5} />}
-                                                                    {status === "error" && <IconX className="w-3 h-3 text-red-400" />}
+                                                                    {status === "generating" && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
+                                                                    {status === "done" && <Check className="w-3 h-3 text-[#1a1a1a]" strokeWidth={2.5} />}
+                                                                    {status === "error" && <X className="w-3 h-3 text-red-400" />}
                                                                     {status === "pending" && <div className="w-2 h-2 rounded-full bg-[#e0e0e0]" />}
                                                                 </div>
                                                                 <p className={`text-[11px] font-medium flex-1 ${status === "done" ? "text-[#1a1a1a]" : "text-gray-400"}`}>

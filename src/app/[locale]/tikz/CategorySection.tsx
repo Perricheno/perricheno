@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import VisualCard from "./VisualCard";
 import type { VisualEntry } from "./types";
 
@@ -24,7 +24,7 @@ export default function CategorySection({ category, entries, selected, onSelect,
                 className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
             >
                 <span>{category}</span>
-                {open ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
+                {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </button>
             <AnimatePresence initial={false}>
                 {open && (

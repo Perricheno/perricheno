@@ -5,13 +5,8 @@ import { useTranslations } from "next-intl";
 import { useAdmin } from "@/components/AdminContext";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
-import {
-    IconCloudUpload, IconFileTypePdf, IconLoader2, IconDownload, IconArrowLeft,
-    IconFileDescription, IconPhoto, IconFileText, IconPresentation, IconCode, IconX,
-    IconFileCheck, IconBrandTelegram, IconLock, IconLockOpen, IconScissors, IconArrowsShuffle,
-    IconRotate, IconLayersIntersect, IconEraser, IconWand, IconMaximize, IconMinimize, IconTxt,
-    IconBrowser, IconFileZip, IconShield, IconSettings, IconChevronDown, IconChevronUp, IconSearch,
-} from "@tabler/icons-react";
+import { IconBrandTelegram } from "@tabler/icons-react";
+import { CloudUpload, FileText, Loader2, Download, ArrowLeft, Image, Presentation, Code, X, FileCheck, Lock, LockOpen, Scissors, Shuffle, RotateCw, Layers, Eraser, Wand2, Maximize2, Minimize2, File, Globe, FileArchive, Shield, Settings, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { useToast } from "@/components/ToastContext";
 
 type ToolType = 
@@ -44,122 +39,122 @@ interface ToolDef {
 
 const TOOLS: ToolDef[] = [
     // Convert
-    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: IconFileDescription, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf", category: "Convert" },
-    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: IconPhoto, accept: "image/*", outputExt: ".pdf", category: "Convert" },
-    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: IconFileText, accept: ".pdf", outputExt: ".docx", category: "Convert" },
-    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: IconPresentation, accept: ".pdf", outputExt: ".pptx", category: "Convert" },
-    { id: "pdf-to-img", title: "PDF to Images", desc: "Save pages as Images", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Convert" },
-    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: IconTxt, accept: ".pdf", outputExt: ".txt", category: "Convert" },
-    { id: "pdf-to-html", title: "PDF to HTML", desc: "Convert to Web Page", icon: IconBrowser, accept: ".pdf", outputExt: ".html", category: "Convert" },
-    { id: "pdf-to-xml", title: "PDF to XML", desc: "Convert PDF to XML", icon: IconCode, accept: ".pdf", outputExt: ".xml", category: "Convert" },
-    { id: "pdf-to-pdfa", title: "PDF to PDF/A", desc: "Convert to Archival Format", icon: IconFileCheck, accept: ".pdf", outputExt: ".pdf", category: "Convert" },
-    { id: "html-to-pdf", title: "HTML to PDF", desc: "Convert HTML to PDF", icon: IconBrowser, accept: ".html,.zip", outputExt: ".pdf", category: "Convert" },
-    { id: "markdown-to-pdf", title: "Markdown to PDF", desc: "Convert MD to PDF", icon: IconTxt, accept: ".md", outputExt: ".pdf", category: "Convert" },
-    { id: "url-to-pdf", title: "URL to PDF", desc: "Convert Website URL to PDF", icon: IconBrowser, accept: "text/plain", outputExt: ".pdf", category: "Convert" },
-    { id: "vector-to-pdf", title: "Vector to PDF", desc: "Convert PostScript to PDF", icon: IconPhoto, accept: "*/*", outputExt: ".pdf", category: "Convert" },
-    { id: "text-editor-to-pdf", title: "Text Editor to PDF", desc: "Convert Text Format to PDF", icon: IconTxt, accept: "*/*", outputExt: ".pdf", category: "Convert" },
-    { id: "svg-to-pdf", title: "SVG to PDF", desc: "Convert SVG to PDF", icon: IconPhoto, accept: ".svg", outputExt: ".pdf", category: "Convert" },
-    { id: "pdf-to-xlsx", title: "PDF to XLSX", desc: "Convert PDF to Excel", icon: IconFileDescription, accept: ".pdf", outputExt: ".xlsx", category: "Convert" },
-    { id: "pdf-to-video", title: "PDF to Video", desc: "Convert PDF to Slideshow", icon: IconPresentation, accept: ".pdf", outputExt: ".zip", category: "Convert" },
-    { id: "pdf-to-vector", title: "PDF to Vector", desc: "Convert PDF to Vector format", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Convert" },
-    { id: "pdf-to-text-editor", title: "PDF to Text Editor", desc: "Convert to Editor Format", icon: IconTxt, accept: ".pdf", outputExt: ".json", category: "Convert" },
-    { id: "pdf-to-epub", title: "PDF to EPUB", desc: "Convert PDF to eBook", icon: IconFileDescription, accept: ".pdf", outputExt: ".epub", category: "Convert" },
-    { id: "pdf-to-csv", title: "PDF to CSV", desc: "Extract CSV from PDF", icon: IconFileText, accept: ".pdf", outputExt: ".csv", category: "Convert" },
-    { id: "pdf-to-cbz", title: "PDF to CBZ", desc: "Convert PDF to Comic Book", icon: IconFileZip, accept: ".pdf", outputExt: ".cbz", category: "Convert" },
-    { id: "pdf-to-cbr", title: "PDF to CBR", desc: "Convert PDF to Comic Book", icon: IconFileZip, accept: ".pdf", outputExt: ".cbr", category: "Convert" },
-    { id: "eml-to-pdf", title: "EML to PDF", desc: "Convert Email to PDF", icon: IconFileText, accept: ".eml,.msg", outputExt: ".pdf", category: "Convert" },
-    { id: "ebook-to-pdf", title: "eBook to PDF", desc: "Convert eBook to PDF", icon: IconFileDescription, accept: ".epub,.mobi,.azw3", outputExt: ".pdf", category: "Convert" },
-    { id: "cbz-to-pdf", title: "CBZ to PDF", desc: "Convert CBZ to PDF", icon: IconFileZip, accept: ".cbz", outputExt: ".pdf", category: "Convert" },
-    { id: "cbr-to-pdf", title: "CBR to PDF", desc: "Convert CBR to PDF", icon: IconFileZip, accept: ".cbr", outputExt: ".pdf", category: "Convert" },
+    { id: "file-to-pdf", title: "File to PDF", desc: "Word, Excel, PPT to PDF", icon: FileText, accept: ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.html", outputExt: ".pdf", category: "Convert" },
+    { id: "img-to-pdf", title: "Image to PDF", desc: "JPG, PNG to PDF", icon: Image, accept: "image/*", outputExt: ".pdf", category: "Convert" },
+    { id: "pdf-to-word", title: "PDF to Word", desc: "PDF to Editable Word", icon: FileText, accept: ".pdf", outputExt: ".docx", category: "Convert" },
+    { id: "pdf-to-ppt", title: "PDF to PPT", desc: "PDF to PowerPoint", icon: Presentation, accept: ".pdf", outputExt: ".pptx", category: "Convert" },
+    { id: "pdf-to-img", title: "PDF to Images", desc: "Save pages as Images", icon: Image, accept: ".pdf", outputExt: ".zip", category: "Convert" },
+    { id: "pdf-to-text", title: "PDF to Text", desc: "Extract plain text", icon: File, accept: ".pdf", outputExt: ".txt", category: "Convert" },
+    { id: "pdf-to-html", title: "PDF to HTML", desc: "Convert to Web Page", icon: Globe, accept: ".pdf", outputExt: ".html", category: "Convert" },
+    { id: "pdf-to-xml", title: "PDF to XML", desc: "Convert PDF to XML", icon: Code, accept: ".pdf", outputExt: ".xml", category: "Convert" },
+    { id: "pdf-to-pdfa", title: "PDF to PDF/A", desc: "Convert to Archival Format", icon: FileCheck, accept: ".pdf", outputExt: ".pdf", category: "Convert" },
+    { id: "html-to-pdf", title: "HTML to PDF", desc: "Convert HTML to PDF", icon: Globe, accept: ".html,.zip", outputExt: ".pdf", category: "Convert" },
+    { id: "markdown-to-pdf", title: "Markdown to PDF", desc: "Convert MD to PDF", icon: File, accept: ".md", outputExt: ".pdf", category: "Convert" },
+    { id: "url-to-pdf", title: "URL to PDF", desc: "Convert Website URL to PDF", icon: Globe, accept: "text/plain", outputExt: ".pdf", category: "Convert" },
+    { id: "vector-to-pdf", title: "Vector to PDF", desc: "Convert PostScript to PDF", icon: Image, accept: "*/*", outputExt: ".pdf", category: "Convert" },
+    { id: "text-editor-to-pdf", title: "Text Editor to PDF", desc: "Convert Text Format to PDF", icon: File, accept: "*/*", outputExt: ".pdf", category: "Convert" },
+    { id: "svg-to-pdf", title: "SVG to PDF", desc: "Convert SVG to PDF", icon: Image, accept: ".svg", outputExt: ".pdf", category: "Convert" },
+    { id: "pdf-to-xlsx", title: "PDF to XLSX", desc: "Convert PDF to Excel", icon: FileText, accept: ".pdf", outputExt: ".xlsx", category: "Convert" },
+    { id: "pdf-to-video", title: "PDF to Video", desc: "Convert PDF to Slideshow", icon: Presentation, accept: ".pdf", outputExt: ".zip", category: "Convert" },
+    { id: "pdf-to-vector", title: "PDF to Vector", desc: "Convert PDF to Vector format", icon: Image, accept: ".pdf", outputExt: ".zip", category: "Convert" },
+    { id: "pdf-to-text-editor", title: "PDF to Text Editor", desc: "Convert to Editor Format", icon: File, accept: ".pdf", outputExt: ".json", category: "Convert" },
+    { id: "pdf-to-epub", title: "PDF to EPUB", desc: "Convert PDF to eBook", icon: FileText, accept: ".pdf", outputExt: ".epub", category: "Convert" },
+    { id: "pdf-to-csv", title: "PDF to CSV", desc: "Extract CSV from PDF", icon: FileText, accept: ".pdf", outputExt: ".csv", category: "Convert" },
+    { id: "pdf-to-cbz", title: "PDF to CBZ", desc: "Convert PDF to Comic Book", icon: FileArchive, accept: ".pdf", outputExt: ".cbz", category: "Convert" },
+    { id: "pdf-to-cbr", title: "PDF to CBR", desc: "Convert PDF to Comic Book", icon: FileArchive, accept: ".pdf", outputExt: ".cbr", category: "Convert" },
+    { id: "eml-to-pdf", title: "EML to PDF", desc: "Convert Email to PDF", icon: FileText, accept: ".eml,.msg", outputExt: ".pdf", category: "Convert" },
+    { id: "ebook-to-pdf", title: "eBook to PDF", desc: "Convert eBook to PDF", icon: FileText, accept: ".epub,.mobi,.azw3", outputExt: ".pdf", category: "Convert" },
+    { id: "cbz-to-pdf", title: "CBZ to PDF", desc: "Convert CBZ to PDF", icon: FileArchive, accept: ".cbz", outputExt: ".pdf", category: "Convert" },
+    { id: "cbr-to-pdf", title: "CBR to PDF", desc: "Convert CBR to PDF", icon: FileArchive, accept: ".cbr", outputExt: ".pdf", category: "Convert" },
 
     // Edit
-    { id: "merge-pdfs", title: "Merge PDFs", desc: "Combine multiple files", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "split-pages", title: "Split PDF", desc: "Separate pages", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
-    { id: "remove-pages", title: "Remove Pages", desc: "Delete unwanted pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "rotate-pdf", title: "Rotate", desc: "Rotate pages 90°/180°", icon: IconRotate, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "organize-pdf", title: "Organize", desc: "Rearrange page order", icon: IconArrowsShuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "scale-pages", title: "Scale Pages", desc: "Change the size of a PDF", icon: IconArrowsShuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "crop-pdf", title: "Crop PDF", desc: "Crops a document", icon: IconScissors, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "split-pdf-by-sections", title: "Split by Sections", desc: "Split pages into smaller sections", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
-    { id: "split-pdf-by-chapters", title: "Split by Chapters", desc: "Split PDEs by Chapters", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
-    { id: "split-for-poster-print", title: "Split for Poster", desc: "Split large pages to printable chunks", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
-    { id: "split-by-size-or-count", title: "Auto Split", desc: "Auto split documents by size or count", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
-    { id: "remove-image-pdf", title: "Remove Images", desc: "Remove images from file", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "pdf-to-single-page", title: "To Single Page", desc: "Convert to a single long page", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "overlay-pdfs", title: "Overlay PDFs", desc: "Overlay PDF files in various modes", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "multi-page-layout", title: "Multi-page Layout", desc: "Merge multiple pages into a single page", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "extract-bookmarks", title: "Extract Bookmarks", desc: "Extract PDF Bookmarks", icon: IconFileText, accept: ".pdf", outputExt: ".zip", category: "Edit" },
-    { id: "edit-table-of-contents", title: "Edit TOC", desc: "Edit Table of Contents", icon: IconFileText, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
-    { id: "booklet-imposition", title: "Booklet Imposition", desc: "Create a booklet", icon: IconLayersIntersect, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "merge-pdfs", title: "Merge PDFs", desc: "Combine multiple files", icon: Layers, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "split-pages", title: "Split PDF", desc: "Separate pages", icon: Scissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "remove-pages", title: "Remove Pages", desc: "Delete unwanted pages", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "rotate-pdf", title: "Rotate", desc: "Rotate pages 90°/180°", icon: RotateCw, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "organize-pdf", title: "Organize", desc: "Rearrange page order", icon: Shuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "scale-pages", title: "Scale Pages", desc: "Change the size of a PDF", icon: Shuffle, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "crop-pdf", title: "Crop PDF", desc: "Crops a document", icon: Scissors, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "split-pdf-by-sections", title: "Split by Sections", desc: "Split pages into smaller sections", icon: Scissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "split-pdf-by-chapters", title: "Split by Chapters", desc: "Split PDEs by Chapters", icon: Scissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "split-for-poster-print", title: "Split for Poster", desc: "Split large pages to printable chunks", icon: Scissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "split-by-size-or-count", title: "Auto Split", desc: "Auto split documents by size or count", icon: Scissors, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "remove-image-pdf", title: "Remove Images", desc: "Remove images from file", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "pdf-to-single-page", title: "To Single Page", desc: "Convert to a single long page", icon: Layers, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "overlay-pdfs", title: "Overlay PDFs", desc: "Overlay PDF files in various modes", icon: Layers, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "multi-page-layout", title: "Multi-page Layout", desc: "Merge multiple pages into a single page", icon: Layers, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "extract-bookmarks", title: "Extract Bookmarks", desc: "Extract PDF Bookmarks", icon: FileText, accept: ".pdf", outputExt: ".zip", category: "Edit" },
+    { id: "edit-table-of-contents", title: "Edit TOC", desc: "Edit Table of Contents", icon: FileText, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
+    { id: "booklet-imposition", title: "Booklet Imposition", desc: "Create a booklet", icon: Layers, accept: ".pdf", outputExt: ".pdf", category: "Edit" },
 
     // Security
-    { id: "add-password", title: "Protect", desc: "Add Password", icon: IconLock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "remove-password", title: "Unlock", desc: "Remove Password", icon: IconLockOpen, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "sanitize-pdf", title: "Sanitize", desc: "Remove metadata/scripts", icon: IconShield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "add-watermark", title: "Watermark", desc: "Add watermark to a file", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "verify-pdf", title: "Verify PDF", desc: "Verify Standards Compliance", icon: IconShield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "validate-signature", title: "Validate Signature", desc: "Validate Digital Signature", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Security" },
-    { id: "remove-cert-sign", title: "Remove Cert Sign", desc: "Remove digital signature", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "redact-pdf", title: "Redact", desc: "Redacts areas and pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "get-info-on-pdf", title: "Get Info", desc: "Get comprehensive info", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Security" },
-    { id: "cert-sign", title: "Cert Sign", desc: "Sign with Digital Certificate", icon: IconLock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
-    { id: "auto-redact", title: "Auto Redact", desc: "Redact PDF automatically", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "add-password", title: "Protect", desc: "Add Password", icon: Lock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "remove-password", title: "Unlock", desc: "Remove Password", icon: LockOpen, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "sanitize-pdf", title: "Sanitize", desc: "Remove metadata/scripts", icon: Shield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "add-watermark", title: "Watermark", desc: "Add watermark to a file", icon: Image, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "verify-pdf", title: "Verify PDF", desc: "Verify Standards Compliance", icon: Shield, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "validate-signature", title: "Validate Signature", desc: "Validate Digital Signature", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Security" },
+    { id: "remove-cert-sign", title: "Remove Cert Sign", desc: "Remove digital signature", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "redact-pdf", title: "Redact", desc: "Redacts areas and pages", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "get-info-on-pdf", title: "Get Info", desc: "Get comprehensive info", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Security" },
+    { id: "cert-sign", title: "Cert Sign", desc: "Sign with Digital Certificate", icon: Lock, accept: ".pdf", outputExt: ".pdf", category: "Security" },
+    { id: "auto-redact", title: "Auto Redact", desc: "Redact PDF automatically", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Security" },
 
     // Misc
-    { id: "compress-pdf", title: "Compress", desc: "Reduce file size", icon: IconMinimize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "ocr-pdf", title: "OCR", desc: "Make text searchable", icon: IconCode, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "repair-pdf", title: "Repair", desc: "Fix broken PDFs", icon: IconWand, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "flatten-pdf", title: "Flatten", desc: "Flatten forms/layers", icon: IconMaximize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "extract-images", title: "Extract Images", desc: "Get all images", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Misc" },
-    { id: "remove-blanks", title: "Remove Blanks", desc: "Remove blank pages", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "update-metadata", title: "Update Metadata", desc: "Update file metadata", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "unlock-pdf-forms", title: "Unlock Forms", desc: "Remove read-only from fields", icon: IconLockOpen, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "show-javascript", title: "Show JavaScript", desc: "Grabs all JS from PDF", icon: IconCode, accept: ".pdf", outputExt: ".js", category: "Misc" },
-    { id: "scanner-effect", title: "Scanner Effect", desc: "Apply scanner effect", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "replace-invert-pdf", title: "Invert Color", desc: "Replace-Invert Color PDF", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "rename-attachment", title: "Rename Attachment", desc: "Rename attachment in PDF", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "list-attachments", title: "List Attachments", desc: "List attachments in PDF", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Misc" },
-    { id: "extract-image-scans", title: "Extract Scans", desc: "Extract image scans", icon: IconPhoto, accept: ".pdf", outputExt: ".zip", category: "Misc" },
-    { id: "extract-attachments", title: "Extract Attachments", desc: "Extract attachments from PDF", icon: IconFileZip, accept: ".pdf", outputExt: ".zip", category: "Misc" },
-    { id: "delete-attachment", title: "Delete Attachment", desc: "Delete attachment from PDF", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "decompress-pdf", title: "Decompress", desc: "Decompress PDF streams", icon: IconMaximize, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "auto-split-pdf", title: "Auto Split", desc: "Auto split pages", icon: IconScissors, accept: ".pdf", outputExt: ".zip", category: "Misc" },
-    { id: "auto-rename", title: "Auto Rename", desc: "Extract header from PDF", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "add-stamp", title: "Add Stamp", desc: "Add stamp to a PDF", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "add-page-numbers", title: "Add Page Numbers", desc: "Add page numbers to document", icon: IconTxt, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "add-image", title: "Add Image", desc: "Overlay image onto a file", icon: IconPhoto, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
-    { id: "add-attachments", title: "Add Attachments", desc: "Add attachments to PDF", icon: IconFileZip, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "compress-pdf", title: "Compress", desc: "Reduce file size", icon: Minimize2, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "ocr-pdf", title: "OCR", desc: "Make text searchable", icon: Code, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "repair-pdf", title: "Repair", desc: "Fix broken PDFs", icon: Wand2, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "flatten-pdf", title: "Flatten", desc: "Flatten forms/layers", icon: Maximize2, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "extract-images", title: "Extract Images", desc: "Get all images", icon: Image, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "remove-blanks", title: "Remove Blanks", desc: "Remove blank pages", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "update-metadata", title: "Update Metadata", desc: "Update file metadata", icon: Settings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "unlock-pdf-forms", title: "Unlock Forms", desc: "Remove read-only from fields", icon: LockOpen, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "show-javascript", title: "Show JavaScript", desc: "Grabs all JS from PDF", icon: Code, accept: ".pdf", outputExt: ".js", category: "Misc" },
+    { id: "scanner-effect", title: "Scanner Effect", desc: "Apply scanner effect", icon: Image, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "replace-invert-pdf", title: "Invert Color", desc: "Replace-Invert Color PDF", icon: Image, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "rename-attachment", title: "Rename Attachment", desc: "Rename attachment in PDF", icon: Settings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "list-attachments", title: "List Attachments", desc: "List attachments in PDF", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Misc" },
+    { id: "extract-image-scans", title: "Extract Scans", desc: "Extract image scans", icon: Image, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "extract-attachments", title: "Extract Attachments", desc: "Extract attachments from PDF", icon: FileArchive, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "delete-attachment", title: "Delete Attachment", desc: "Delete attachment from PDF", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "decompress-pdf", title: "Decompress", desc: "Decompress PDF streams", icon: Maximize2, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "auto-split-pdf", title: "Auto Split", desc: "Auto split pages", icon: Scissors, accept: ".pdf", outputExt: ".zip", category: "Misc" },
+    { id: "auto-rename", title: "Auto Rename", desc: "Extract header from PDF", icon: Settings, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-stamp", title: "Add Stamp", desc: "Add stamp to a PDF", icon: Image, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-page-numbers", title: "Add Page Numbers", desc: "Add page numbers to document", icon: File, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-image", title: "Add Image", desc: "Overlay image onto a file", icon: Image, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
+    { id: "add-attachments", title: "Add Attachments", desc: "Add attachments to PDF", icon: FileArchive, accept: ".pdf", outputExt: ".pdf", category: "Misc" },
 
     // Filter
-    { id: "filter-page-size", title: "Filter Page Size", desc: "Check PDF page size", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
-    { id: "filter-page-rotation", title: "Filter Rotation", desc: "Check PDF rotation", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
-    { id: "filter-page-count", title: "Filter Page Count", desc: "Check PDF page count", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
-    { id: "filter-file-size", title: "Filter File Size", desc: "Check PDF file size", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
-    { id: "filter-contains-text", title: "Contains Text", desc: "Check if contains text", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
-    { id: "filter-contains-image", title: "Contains Image", desc: "Check if contains image", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-page-size", title: "Filter Page Size", desc: "Check PDF page size", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-page-rotation", title: "Filter Rotation", desc: "Check PDF rotation", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-page-count", title: "Filter Page Count", desc: "Check PDF page count", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-file-size", title: "Filter File Size", desc: "Check PDF file size", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-contains-text", title: "Contains Text", desc: "Check if contains text", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
+    { id: "filter-contains-image", title: "Contains Image", desc: "Check if contains image", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Filter" },
 
     // Analysis
-    { id: "security-info", title: "Security Info", desc: "Get security information", icon: IconShield, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "page-dimensions", title: "Page Dimensions", desc: "Get page dimensions", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "page-count", title: "Page Count", desc: "Get PDF page count", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "form-fields", title: "Form Fields", desc: "Get form field information", icon: IconFileDescription, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "font-info", title: "Font Info", desc: "Get font information", icon: IconTxt, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "document-properties", title: "Document Props", desc: "Get PDF properties", icon: IconSettings, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "basic-info", title: "Basic Info", desc: "Get basic information", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
-    { id: "annotation-info", title: "Annotation Info", desc: "Get annotation info", icon: IconFileText, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "security-info", title: "Security Info", desc: "Get security information", icon: Shield, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "page-dimensions", title: "Page Dimensions", desc: "Get page dimensions", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "page-count", title: "Page Count", desc: "Get PDF page count", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "form-fields", title: "Form Fields", desc: "Get form field information", icon: FileText, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "font-info", title: "Font Info", desc: "Get font information", icon: File, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "document-properties", title: "Document Props", desc: "Get PDF properties", icon: Settings, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "basic-info", title: "Basic Info", desc: "Get basic information", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Analysis" },
+    { id: "annotation-info", title: "Annotation Info", desc: "Get annotation info", icon: FileText, accept: ".pdf", outputExt: ".json", category: "Analysis" },
 
     // Form
-    { id: "modify-fields", title: "Modify Fields", desc: "Modify existing form fields", icon: IconSettings, accept: ".pdf", outputExt: ".pdf", category: "Form" },
-    { id: "fill-form", title: "Fill Form", desc: "Fill PDF form fields", icon: IconFileText, accept: ".pdf", outputExt: ".pdf", category: "Form" },
-    { id: "inspect-fields", title: "Inspect Fields", desc: "Inspect PDF form fields", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Form" },
-    { id: "fields-with-coordinates", title: "Fields w/ Coords", desc: "Inspect fields with coordinates", icon: IconFileCheck, accept: ".pdf", outputExt: ".json", category: "Form" },
-    { id: "extract-xlsx-form", title: "Extract as XLSX", desc: "Extract form fields as XLSX", icon: IconFileDescription, accept: ".pdf", outputExt: ".xlsx", category: "Form" },
-    { id: "extract-csv-form", title: "Extract as CSV", desc: "Extract form fields as CSV", icon: IconFileText, accept: ".pdf", outputExt: ".csv", category: "Form" },
-    { id: "delete-fields", title: "Delete Fields", desc: "Delete form fields", icon: IconEraser, accept: ".pdf", outputExt: ".pdf", category: "Form" },
+    { id: "modify-fields", title: "Modify Fields", desc: "Modify existing form fields", icon: Settings, accept: ".pdf", outputExt: ".pdf", category: "Form" },
+    { id: "fill-form", title: "Fill Form", desc: "Fill PDF form fields", icon: FileText, accept: ".pdf", outputExt: ".pdf", category: "Form" },
+    { id: "inspect-fields", title: "Inspect Fields", desc: "Inspect PDF form fields", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Form" },
+    { id: "fields-with-coordinates", title: "Fields w/ Coords", desc: "Inspect fields with coordinates", icon: FileCheck, accept: ".pdf", outputExt: ".json", category: "Form" },
+    { id: "extract-xlsx-form", title: "Extract as XLSX", desc: "Extract form fields as XLSX", icon: FileText, accept: ".pdf", outputExt: ".xlsx", category: "Form" },
+    { id: "extract-csv-form", title: "Extract as CSV", desc: "Extract form fields as CSV", icon: FileText, accept: ".pdf", outputExt: ".csv", category: "Form" },
+    { id: "delete-fields", title: "Delete Fields", desc: "Delete form fields", icon: Eraser, accept: ".pdf", outputExt: ".pdf", category: "Form" },
 
     // Pipeline
-    { id: "import-database", title: "Import Database", desc: "Import backup file", icon: IconSettings, accept: ".zip,.db", outputExt: ".json", category: "Pipeline" },
-    { id: "handle-pipeline", title: "Handle Pipeline", desc: "Execute automated pipeline", icon: IconSettings, accept: ".pdf", outputExt: ".json", category: "Pipeline" },
+    { id: "import-database", title: "Import Database", desc: "Import backup file", icon: Settings, accept: ".zip,.db", outputExt: ".json", category: "Pipeline" },
+    { id: "handle-pipeline", title: "Handle Pipeline", desc: "Execute automated pipeline", icon: Settings, accept: ".pdf", outputExt: ".json", category: "Pipeline" },
 ];
 
 const CATEGORIES = ["All", "Convert", "Edit", "Security", "Misc", "Form", "Analysis", "Filter", "Pipeline"];
@@ -504,7 +499,7 @@ export default function PDFPage() {
                 fields.forEach(field => {
                     const val = toolSettings[field.key];
                     if (val instanceof File) {
-                        formData.append(field.key, val);
+                        formData.append(field.key, val as unknown as Blob);
                     } else if (val !== undefined && val !== "" && val !== null) {
                         formData.append(field.key, String(val));
                     }
@@ -543,7 +538,7 @@ export default function PDFPage() {
                     fields.forEach(field => {
                         const val = toolSettings[field.key];
                         if (val instanceof File) {
-                            formData.append(field.key, val);
+                            formData.append(field.key, val as unknown as Blob);
                         } else if (val !== undefined && val !== "" && val !== null) {
                             formData.append(field.key, String(val));
                         }
@@ -730,7 +725,7 @@ export default function PDFPage() {
                             <div className="flex flex-col sm:flex-row gap-3 mb-5">
                                 {/* Search */}
                                 <div className="relative flex-1">
-                                    <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />
                                     <input
                                         type="text"
                                         value={toolSearch}
@@ -741,7 +736,7 @@ export default function PDFPage() {
                                     />
                                     {toolSearch && (
                                         <button onClick={() => setToolSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
-                                            <IconX className="w-3.5 h-3.5" />
+                                            <X className="w-3.5 h-3.5" />
                                         </button>
                                     )}
                                 </div>
@@ -815,7 +810,7 @@ export default function PDFPage() {
                             <div className="w-full flex items-center justify-between mb-5">
                                 <button onClick={() => { setActiveTool(null); reset(); setToolSearch(""); }}
                                     className="flex items-center gap-2 text-[13px] font-semibold text-gray-500 hover:text-[var(--foreground)] transition-colors px-3 py-2 rounded-xl hover:bg-black/5 -ml-3">
-                                    <IconArrowLeft className="w-4 h-4" /> {t("backToTools")}
+                                    <ArrowLeft className="w-4 h-4" /> {t("backToTools")}
                                 </button>
                                 <div className="flex items-center gap-2">
                                     {tool?.icon && <tool.icon className="w-4 h-4 text-gray-400 stroke-[1.5]" />}
@@ -832,7 +827,7 @@ export default function PDFPage() {
                                             <div>
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className="flex items-center gap-2">
-                                                        <IconCloudUpload className="w-4 h-4 text-blue-500" stroke={1.5} />
+                                                        <CloudUpload className="w-4 h-4 text-blue-500" strokeWidth={1.5} />
                                                         <span className="text-xs font-semibold text-gray-700">{t("uploadLabel")}</span>
                                                     </div>
                                                     <span className="text-xs font-bold tabular-nums text-blue-600">{uploadedCount}/{totalFiles}</span>
@@ -846,7 +841,7 @@ export default function PDFPage() {
                                             <div>
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className="flex items-center gap-2">
-                                                        <IconLoader2 className={`w-4 h-4 text-green-500 ${convertedCount < totalFiles ? 'animate-spin' : ''}`} stroke={1.5} />
+                                                        <Loader2 className={`w-4 h-4 text-green-500 ${convertedCount < totalFiles ? 'animate-spin' : ''}`} strokeWidth={1.5} />
                                                         <span className="text-xs font-semibold text-gray-700">{t("convertLabel")}</span>
                                                     </div>
                                                     <span className="text-xs font-bold tabular-nums text-green-600">{convertedCount}/{totalFiles}</span>
@@ -885,7 +880,7 @@ export default function PDFPage() {
                                     >
                                         <input ref={fileInputRef} type="file" multiple className="hidden" accept={tool?.accept} onChange={(e) => handleFiles(e.target.files)} />
                                         <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <IconCloudUpload className="w-8 h-8 text-gray-400 group-hover:text-[var(--foreground)] transition-colors" stroke={1.5} />
+                                            <CloudUpload className="w-8 h-8 text-gray-400 group-hover:text-[var(--foreground)] transition-colors" strokeWidth={1.5} />
                                         </div>
                                         <div className="text-center">
                                             <p className="text-lg font-semibold mb-1">{t("uploadOrDrop")}</p>
@@ -898,7 +893,7 @@ export default function PDFPage() {
                                             <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center">
-                                                        <IconFileDescription className="w-5 h-5" stroke={1.5} />
+                                                        <FileText className="w-5 h-5" strokeWidth={1.5} />
                                                     </div>
                                                     <div>
                                                         <h3 className="font-semibold text-sm leading-tight">{t("selectedFiles")}</h3>
@@ -923,7 +918,7 @@ export default function PDFPage() {
                                                         </div>
                                                     </div>
                                                     <button onClick={() => removeFile(i)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                                        <IconX className="w-4 h-4" />
+                                                        <X className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             ))}
@@ -935,10 +930,10 @@ export default function PDFPage() {
                                                 <button onClick={() => setShowSettings(!showSettings)}
                                                     className="w-full flex items-center justify-between px-4 py-3 bg-black/[0.02] hover:bg-black/5 transition-colors">
                                                     <div className="flex items-center gap-2">
-                                                        <IconSettings className="w-4 h-4 text-gray-500" stroke={1.5} />
+                                                        <Settings className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
                                                         <span className="text-sm font-semibold text-gray-700">{t("conversionSettings")}</span>
                                                     </div>
-                                                    {showSettings ? <IconChevronUp className="w-4 h-4 text-gray-400" /> : <IconChevronDown className="w-4 h-4 text-gray-400" />}
+                                                    {showSettings ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                                                 </button>
                                                 {showSettings && (
                                                     <div className="px-4 py-4 space-y-4 border-t border-[var(--border)] bg-[var(--card)]">
@@ -951,7 +946,7 @@ export default function PDFPage() {
                                         {status === "done" ? (
                                             <div className="flex flex-col items-center justify-center py-6 animate-in fade-in slide-in-from-bottom-4">
                                                 <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4">
-                                                    <IconFileCheck className="w-8 h-8" stroke={1.5} />
+                                                    <FileCheck className="w-8 h-8" strokeWidth={1.5} />
                                                 </div>
                                                 <p className="font-bold text-xl mb-1 text-[var(--foreground)]">{t("success")}</p>
                                                 <p className="text-sm text-gray-500 text-center max-w-xs mb-6">
@@ -960,7 +955,7 @@ export default function PDFPage() {
                                                 
                                                 <a href={downloadUrl} download={downloadName}
                                                     className="w-full py-3.5 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-semibold hover:opacity-90 hover:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md">
-                                                    <IconDownload className="w-5 h-5" /> {t("downloadResult")}
+                                                    <Download className="w-5 h-5" /> {t("downloadResult")}
                                                 </a>
                                                 <button onClick={reset} className="mt-4 text-sm font-medium text-gray-500 hover:text-[var(--foreground)] transition-colors">{t("processAnother")}</button>
                                             </div>
@@ -974,7 +969,7 @@ export default function PDFPage() {
 
                                         {status === "error" && (
                                             <div className="p-4 rounded-xl border border-red-200 bg-red-50 mt-2 flex gap-3 text-red-600">
-                                                <IconX className="w-5 h-5 shrink-0 mt-0.5" />
+                                                <X className="w-5 h-5 shrink-0 mt-0.5" />
                                                 <div>
                                                     <p className="font-semibold text-sm mb-0.5">{t("operationFailed")}</p>
                                                     <p className="text-xs opacity-80 break-all">{errorMsg}</p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { IconLayoutNavbarCollapse } from "@tabler/icons-react";
+import { PanelTopClose } from "lucide-react";
 import {
     AnimatePresence,
     MotionValue,
@@ -79,7 +79,7 @@ const FloatingDockMobile = ({
                 onClick={() => setOpen(!open)}
                 className="h-10 w-10 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-200 text-neutral-500"
             >
-                <IconLayoutNavbarCollapse className="h-5 w-5 text-neutral-500" />
+                <PanelTopClose className="h-5 w-5 text-neutral-500" />
             </button>
         </div>
     );

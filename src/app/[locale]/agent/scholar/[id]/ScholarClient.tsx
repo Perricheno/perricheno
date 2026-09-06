@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { IconBook2, IconLoader2, IconExternalLink, IconUser, IconArrowLeft, IconMenu2, IconFileText, IconCode, IconSearch, IconX } from "@tabler/icons-react";
+import { BookOpen, Loader2, ExternalLink, User, ArrowLeft, Menu, FileText, Code, Search, X } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { AgentSession, ScholarArticle } from "../../types";
 import { AgentSidebar } from "../../AgentSidebar";
@@ -150,12 +150,12 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                 <div className="h-14 border-b border-[var(--border)] bg-[var(--card)] flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm shrink-0">
                     <div className="flex items-center gap-3 ml-10 md:ml-0">
                         <button onClick={() => router.push('/agent')} className="hover:bg-black/5 p-1.5 rounded-lg transition-colors hidden md:block">
-                            <IconArrowLeft className="w-4 h-4 text-gray-600" />
+                            <ArrowLeft className="w-4 h-4 text-gray-600" />
                         </button>
                         <div className="font-semibold text-[var(--foreground)] truncate max-w-[200px] md:max-w-md text-sm">{sessionTitle}</div>
                     </div>
                     <div className="text-[10px] font-bold px-2.5 py-1 bg-[var(--foreground)] text-[var(--background)] rounded uppercase tracking-wider flex items-center gap-1.5">
-                        <IconBook2 className="w-3.5 h-3.5" />
+                        <BookOpen className="w-3.5 h-3.5" />
                         Scholar
                     </div>
                 </div>
@@ -164,8 +164,8 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                     {isSearching ? (
                         <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
                             <div className="bg-[var(--card)] border border-[var(--border)] p-8 rounded-2xl shadow-sm text-center max-w-sm w-full mx-4">
-                                <IconBook2 className="w-12 h-12 text-[var(--foreground)] mx-auto mb-4" stroke={1.5} />
-                                <IconLoader2 className="w-6 h-6 animate-spin text-[var(--foreground)] mx-auto mb-4" />
+                                <BookOpen className="w-12 h-12 text-[var(--foreground)] mx-auto mb-4" strokeWidth={1.5} />
+                                <Loader2 className="w-6 h-6 animate-spin text-[var(--foreground)] mx-auto mb-4" />
                                 <h3 className="font-semibold text-[var(--foreground)] mb-2">Formulating Academic Query...</h3>
                                 <p className="text-sm text-gray-500">Searching arXiv database for fresh papers related to your topic.</p>
                             </div>
@@ -191,7 +191,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-6">
                                     {/* Text filter */}
                                     <div className="flex-1 relative">
-                                        <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         <input
                                             type="text"
                                             value={filterText}
@@ -205,7 +205,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-black/5 transition-colors"
                                                 aria-label="Clear filter"
                                             >
-                                                <IconX className="w-3.5 h-3.5 text-gray-400" />
+                                                <X className="w-3.5 h-3.5 text-gray-400" />
                                             </button>
                                         )}
                                     </div>
@@ -242,7 +242,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
 
                             {filteredArticles.length === 0 ? (
                                 <div className="text-center py-20 bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-sm">
-                                    <IconBook2 className="w-12 h-12 text-gray-300 mx-auto mb-4" stroke={1.5} />
+                                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" strokeWidth={1.5} />
                                     <h3 className="text-lg font-bold text-[var(--foreground)] mb-1">
                                         {articles.length === 0 ? "No articles found" : "Nothing matches your filters"}
                                     </h3>
@@ -269,7 +269,7 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                             </div>
                                             
                                             <div className="flex items-center gap-2 mt-2 text-[12px] text-gray-500 font-semibold flex-wrap">
-                                                <IconUser className="w-3.5 h-3.5 text-gray-400" />
+                                                <User className="w-3.5 h-3.5 text-gray-400" />
                                                 {article.authors.length > 0 ? article.authors.slice(0, 5).join(", ") + (article.authors.length > 5 ? " et al." : "") : "Unknown Authors"}
                                             </div>
                                             
@@ -279,21 +279,21 @@ export default function ScholarClient({ initialSession, sessions: initialSession
                                             
                                             <div className="mt-4 flex gap-3 flex-wrap">
                                                 <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
-                                                    <IconExternalLink className="w-3.5 h-3.5" /> View on arXiv
+                                                    <ExternalLink className="w-3.5 h-3.5" /> View on arXiv
                                                 </a>
                                                 {article.url && (
                                                     <>
                                                         <a href={article.url.replace('/abs/', '/pdf/')} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
-                                                            <IconFileText className="w-3.5 h-3.5" /> PDF
+                                                            <FileText className="w-3.5 h-3.5" /> PDF
                                                         </a>
                                                         <a href={article.url.replace('/abs/', '/e-print/')} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
-                                                            <IconCode className="w-3.5 h-3.5" /> LaTeX Source
+                                                            <Code className="w-3.5 h-3.5" /> LaTeX Source
                                                         </a>
                                                     </>
                                                 )}
                                                 {article.doi && (
                                                     <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer" className="text-[11px] font-black uppercase tracking-widest text-[var(--foreground)] bg-[var(--background)] hover:bg-[var(--foreground)] hover:text-white px-4 py-2 rounded-lg transition-colors border border-[var(--border)] flex items-center gap-2 shadow-sm">
-                                                        <IconBook2 className="w-3.5 h-3.5" /> DOI
+                                                        <BookOpen className="w-3.5 h-3.5" /> DOI
                                                     </a>
                                                 )}
                                             </div>

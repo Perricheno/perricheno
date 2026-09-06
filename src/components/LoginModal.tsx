@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { IconX, IconUser, IconTrash, IconLogout, IconBrandTelegram, IconLoader2, IconQrcode } from "@tabler/icons-react";
+import { IconBrandTelegram } from "@tabler/icons-react";
+import { X, User, Trash2, LogOut, Loader2, QrCode } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
 
@@ -105,7 +106,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                         onClick={onClose}
                         className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors z-10"
                     >
-                        <IconX className="w-4 h-4 text-gray-500" />
+                        <X className="w-4 h-4 text-gray-500" />
                     </button>
 
                     {user ? (
@@ -116,7 +117,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                                 <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden mb-4 shadow-lg">
                                     {user.photo_url
                                         ? <img src={user.photo_url} alt={user.first_name || ""} className="w-full h-full object-cover" />
-                                        : <IconUser className="w-8 h-8 text-gray-400" />
+                                        : <User className="w-8 h-8 text-gray-400" />
                                     }
                                 </div>
                                 <h2 className="text-xl font-black text-[#1a1a1a] tracking-tight">{user.first_name}</h2>
@@ -147,7 +148,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                                     onClick={() => { logout(); onClose(); }}
                                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-100 text-[#1a1a1a] rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors"
                                 >
-                                    <IconLogout className="w-4 h-4" /> Sign Out
+                                    <LogOut className="w-4 h-4" /> Sign Out
                                 </button>
 
                                 {!confirmDelete ? (
@@ -155,7 +156,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                                         onClick={() => setConfirmDelete(true)}
                                         className="w-full flex items-center justify-center gap-2 py-3.5 border border-red-200 text-red-500 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
                                     >
-                                        <IconTrash className="w-4 h-4" /> Delete Account
+                                        <Trash2 className="w-4 h-4" /> Delete Account
                                     </button>
                                 ) : (
                                     <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
@@ -253,7 +254,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                                             onClick={() => setQrVisible(!qrVisible)}
                                             className="mt-4 flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-gray-600 font-bold uppercase tracking-widest transition-colors"
                                         >
-                                            <IconQrcode className="w-3.5 h-3.5" />
+                                            <QrCode className="w-3.5 h-3.5" />
                                             {qrVisible ? "Hide QR Code" : "Show QR Code"}
                                         </button>
 
@@ -278,7 +279,7 @@ export const LoginModal = ({ onSuccess, onGuestSuccess, onClose, anchorRect }: {
                                 ) : (
                                     /* Loading initial link */
                                     <div className="flex flex-col items-center gap-3 py-6">
-                                        <IconLoader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                                        <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
                                         <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Generating secure link...</p>
                                     </div>
                                 )}

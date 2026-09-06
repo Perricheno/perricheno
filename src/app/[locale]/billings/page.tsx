@@ -4,12 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAdmin } from "@/components/AdminContext";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import {
-    IconCreditCard, IconDatabase, IconReceipt,
-    IconSparkles, IconLogin, IconClock, IconTrendingUp,
-    IconFileText, IconPackage, IconFlame,
-    IconBolt, IconChevronRight, IconMail, IconCheck, IconLock
-} from "@tabler/icons-react";
+import { CreditCard, Database, Receipt, Sparkles, LogIn, Clock, TrendingUp, FileText, Package, Flame, Zap, ChevronRight, Mail, Check, Lock } from "lucide-react";
 
 const PLAN_STATIC = [
     {
@@ -235,7 +230,7 @@ export default function BillingsPage() {
                                 <div className="mb-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <IconClock className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
+                                            <Clock className="w-3.5 h-3.5 text-[#1a1a1a]" strokeWidth={2} />
                                             <p className="text-xs font-bold text-[#1a1a1a]">{t("weeklyTokens")}</p>
                                         </div>
                                         <p className="text-xs font-black tabular-nums text-[#1a1a1a]">
@@ -252,7 +247,7 @@ export default function BillingsPage() {
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <IconPackage className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
+                                            <Package className="w-3.5 h-3.5 text-[#1a1a1a]" strokeWidth={2} />
                                             <p className="text-xs font-bold text-[#1a1a1a]">{t("monthlyBalance")}</p>
                                         </div>
                                         <p className="text-xs font-black tabular-nums text-[#1a1a1a]">
@@ -269,7 +264,7 @@ export default function BillingsPage() {
                                 <div className="border-t border-gray-50 pt-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <IconFileText className="w-3.5 h-3.5 text-[#1a1a1a]" stroke={2} />
+                                            <FileText className="w-3.5 h-3.5 text-[#1a1a1a]" strokeWidth={2} />
                                             <p className="text-xs font-bold text-[#1a1a1a]">{t("pdfStaging")}</p>
                                         </div>
                                         <p className="text-xs font-black tabular-nums text-[#1a1a1a]">
@@ -294,7 +289,7 @@ export default function BillingsPage() {
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
-                                            <IconDatabase className="w-3.5 h-3.5 text-white" stroke={2} />
+                                            <Database className="w-3.5 h-3.5 text-white" strokeWidth={2} />
                                         </div>
                                         <p className="text-xs font-bold text-[#F1F1F3]">{t("legacyCredits")}</p>
                                     </div>
@@ -308,7 +303,7 @@ export default function BillingsPage() {
                     ) : !user ? (
                         <div className="bg-white rounded-2xl border border-gray-100 p-10 md:p-14 text-center mb-12 max-w-2xl mx-auto">
                             <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-                                <IconLogin className="w-7 h-7 text-gray-300" />
+                                <LogIn className="w-7 h-7 text-gray-300" />
                             </div>
                             <h3 className="text-lg font-bold mb-1.5 text-[#1a1a1a]">{t("signInTitle")}</h3>
                             <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">{t("signInDesc")}</p>
@@ -471,9 +466,9 @@ export default function BillingsPage() {
                                             {plan.features.map((feature, fIdx) => (
                                                 <li key={fIdx} className="flex items-start gap-3">
                                                     {feature.included ? (
-                                                        <IconCheck className="w-4 h-4 text-[#F1F1F3] shrink-0 mt-0.5" stroke={3} />
+                                                        <Check className="w-4 h-4 text-[#F1F1F3] shrink-0 mt-0.5" strokeWidth={3} />
                                                     ) : (
-                                                        <IconLock className="w-4 h-4 text-gray-600 shrink-0 mt-0.5" stroke={2} />
+                                                        <Lock className="w-4 h-4 text-gray-600 shrink-0 mt-0.5" strokeWidth={2} />
                                                     )}
                                                     <span className={`text-xs ${feature.included ? 'text-[#F1F1F3]' : 'text-gray-600'}`}>
                                                         {feature.text}
@@ -503,7 +498,7 @@ export default function BillingsPage() {
                                             <div key={`r-${item.id}`} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
                                                 <div className="flex items-center gap-4 min-w-0">
                                                     <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                                                        <IconPackage className="w-4 h-4 text-emerald-600" stroke={2} />
+                                                        <Package className="w-4 h-4 text-emerald-600" strokeWidth={2} />
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-bold truncate text-[#1a1a1a]">{item.pack_name || t("subscriptionUpgrade")}</p>
@@ -522,7 +517,7 @@ export default function BillingsPage() {
                                             <div key={`t-${item.id}-${idx}`} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
                                                 <div className="flex items-center gap-4 min-w-0">
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.is_positive ? 'bg-emerald-50' : 'bg-gray-50'}`}>
-                                                        {item.is_positive ? <IconTrendingUp className="w-4 h-4 text-emerald-500" /> : <IconClock className="w-4 h-4 text-gray-400" />}
+                                                        {item.is_positive ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-sm font-bold truncate text-[#1a1a1a]">{item.type}</p>
@@ -536,7 +531,7 @@ export default function BillingsPage() {
                                         )
                                     )) : (
                                         <div className="p-16 text-center">
-                                            <IconReceipt className="w-10 h-10 mx-auto text-gray-200 mb-3" />
+                                            <Receipt className="w-10 h-10 mx-auto text-gray-200 mb-3" />
                                             <p className="text-sm text-gray-400 font-medium">{t("noTransactions")}</p>
                                         </div>
                                     )}
@@ -548,7 +543,7 @@ export default function BillingsPage() {
                     {/* ━━ Footer ━━ */}
                     <div className="pt-8 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-gray-400">
                         <a href="mailto:support@perricheno.ru" className="flex items-center gap-1.5 hover:text-[#1a1a1a] transition-colors">
-                            <IconMail className="w-3.5 h-3.5" /> {t("support")}
+                            <Mail className="w-3.5 h-3.5" /> {t("support")}
                         </a>
                         <span className="text-gray-200">·</span>
                         <span className="hover:text-[#1a1a1a] cursor-pointer transition-colors">{t("termsOfService")}</span>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls, useMotionValue, animate } from "framer-motion";
-import { IconX } from "@tabler/icons-react";
+import { X } from "lucide-react";
 import VisualCard from "./VisualCard";
 import { VISUALS, CATEGORIES } from "./types";
 
@@ -140,7 +140,7 @@ export default function TypeSheet({ open, onClose, selected, onSelect }: Props) 
                         className="w-7 h-7 flex items-center justify-center rounded-full bg-[#f0f0f0] text-gray-400 hover:text-[#1a1a1a] transition-colors"
                         onPointerDown={(e) => e.stopPropagation()}
                     >
-                        <IconX size={14} />
+                        <X size={14} />
                     </button>
                 </div>
 

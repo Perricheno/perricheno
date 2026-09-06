@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { IconPlus, IconTrash, IconUser, IconX, IconBrandGithub, IconBrandLinkedin, IconBrandTwitter } from "@tabler/icons-react";
+import { IconBrandGithub, IconBrandLinkedin, IconBrandTwitter } from "@tabler/icons-react";
+import { Plus, Trash2, User, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
@@ -145,7 +146,7 @@ const LoginModal = ({ onSuccess, onClose }: { onSuccess: () => void; onClose: ()
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-white font-bold text-sm">Admin Login</h3>
                     <motion.button onClick={onClose} whileHover={{ rotate: 90 }} whileTap={{ scale: 0.8 }} className="text-white/40 hover:text-white">
-                        <IconX className="w-4 h-4" />
+                        <X className="w-4 h-4" />
                     </motion.button>
                 </div>
                 <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="Username"
@@ -248,7 +249,7 @@ export function ProjectSection() {
                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                 className={`fixed top-4 right-4 z-50 p-2 rounded-full border backdrop-blur-md transition-all ${isEditing ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10"
                     }`}>
-                <IconUser className="w-4 h-4" />
+                <User className="w-4 h-4" />
             </motion.button>
 
             <div className="fixed top-4 right-14 z-50"><ThemeToggle /></div>
@@ -282,7 +283,7 @@ export function ProjectSection() {
                         <motion.button onClick={addProject} initial={{ scale: 0 }} animate={{ scale: 1 }}
                             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
-                            <IconPlus className="w-3.5 h-3.5" /> Add
+                            <Plus className="w-3.5 h-3.5" /> Add
                         </motion.button>
                     )}
                 </div>
@@ -302,7 +303,7 @@ export function ProjectSection() {
                                         <motion.button onClick={(e) => { e.stopPropagation(); removeProject(project.id); }}
                                             whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.8 }}
                                             className="absolute top-2 right-2 z-30 p-1 rounded-md bg-red-500/20 border border-red-500/30 text-red-400">
-                                            <IconTrash className="w-3 h-3" />
+                                            <Trash2 className="w-3 h-3" />
                                         </motion.button>
                                     )}
 
@@ -384,7 +385,7 @@ export function ProjectSection() {
                             {isEditing && (
                                 <motion.button onClick={addDashboardTab} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                                     className="p-1.5 rounded-lg bg-white/5 text-white/30 hover:text-white hover:bg-white/10 transition-all">
-                                    <IconPlus className="w-3.5 h-3.5" />
+                                    <Plus className="w-3.5 h-3.5" />
                                 </motion.button>
                             )}
                         </div>

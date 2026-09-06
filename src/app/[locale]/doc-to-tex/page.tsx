@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-    IconUpload, IconFileText, IconX, IconLoader2,
-    IconCheck, IconAlertTriangle, IconDownload, IconFileTypePdf,
-} from "@tabler/icons-react";
+import { Upload, FileText, X, Loader2, Check, AlertTriangle, Download } from "lucide-react";
 import { useAdmin } from "@/components/AdminContext";
 import { TemplatePicker } from "../agent/TemplatePicker";
 
@@ -180,9 +177,9 @@ export default function DocToTexPage() {
                     className="border border-dashed border-[var(--border)] rounded-2xl p-16 text-center cursor-pointer hover:border-gray-400 transition-colors"
                 >
                     {phase === "uploading" ? (
-                        <IconLoader2 className="w-8 h-8 mx-auto mb-3 animate-spin opacity-40" />
+                        <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin opacity-40" />
                     ) : (
-                        <IconUpload className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                        <Upload className="w-8 h-8 mx-auto mb-3 opacity-40" />
                     )}
                     <p className="text-sm font-medium">{phase === "uploading" ? t("upload.uploading") : t("upload.cta")}</p>
                     <p className="text-xs opacity-40 mt-1">{t("upload.hint")}</p>
@@ -196,7 +193,7 @@ export default function DocToTexPage() {
 
             {upload && (
                 <div className="flex items-center gap-3 px-4 py-3 border border-[var(--border)] rounded-xl mb-8">
-                    <IconFileText className="w-4 h-4 opacity-50 shrink-0" />
+                    <FileText className="w-4 h-4 opacity-50 shrink-0" />
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{upload.filename}</p>
                         <p className="text-xs opacity-40">
@@ -206,7 +203,7 @@ export default function DocToTexPage() {
                     </div>
                     {phase === "ready" && (
                         <button onClick={removeUpload} className="opacity-40 hover:opacity-100 transition-opacity">
-                            <IconX className="w-4 h-4" />
+                            <X className="w-4 h-4" />
                         </button>
                     )}
                 </div>
@@ -280,7 +277,7 @@ export default function DocToTexPage() {
 
             {phase === "generating" && (
                 <div className="text-center py-16">
-                    <IconLoader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-40" />
+                    <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-40" />
                     <p className="text-sm font-medium">{stage?.label || t("actions.converting")}</p>
                     {stage?.progress && (
                         <p className="text-xs opacity-40 mt-1">{stage.progress.done} / {stage.progress.total}</p>
@@ -291,18 +288,18 @@ export default function DocToTexPage() {
             {phase === "done" && (
                 <div className="text-center py-10">
                     {compiled ? (
-                        <IconCheck className="w-8 h-8 mx-auto mb-3 text-green-600" />
+                        <Check className="w-8 h-8 mx-auto mb-3 text-green-600" />
                     ) : (
-                        <IconAlertTriangle className="w-8 h-8 mx-auto mb-3 text-amber-500" />
+                        <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-amber-500" />
                     )}
                     <p className="text-sm font-medium mb-6">{t(compiled ? "status.done" : "status.needsAttention")}</p>
                     <div className="flex flex-wrap justify-center gap-3">
                         <button onClick={downloadTex} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-[var(--border)] text-[11px] font-bold uppercase tracking-widest hover:border-gray-400 transition-all">
-                            <IconDownload className="w-3.5 h-3.5" /> {t("actions.downloadTex")}
+                            <Download className="w-3.5 h-3.5" /> {t("actions.downloadTex")}
                         </button>
                         {compiled && stage?.pdf_storage_path && sessionId && (
                             <a href={`/api/doctotex/pdf/${sessionId}`} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--foreground)] text-[var(--background)] text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
-                                <IconFileTypePdf className="w-3.5 h-3.5" /> {t("actions.downloadPdf")}
+                                <FileText className="w-3.5 h-3.5" /> {t("actions.downloadPdf")}
                             </a>
                         )}
                     </div>
@@ -314,7 +311,7 @@ export default function DocToTexPage() {
 
             {phase === "error" && (
                 <div className="text-center py-10">
-                    <IconAlertTriangle className="w-8 h-8 mx-auto mb-3 text-red-500" />
+                    <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-red-500" />
                     <p className="text-sm font-medium mb-2">{t("status.error")}</p>
                     {errorMsg && <p className="text-xs opacity-50 max-w-md mx-auto">{errorMsg}</p>}
                     <button onClick={reset} className="block mx-auto mt-8 text-xs opacity-40 hover:opacity-100 transition-opacity underline">

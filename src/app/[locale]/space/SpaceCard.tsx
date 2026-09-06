@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { IconDots, IconTrash, IconCopy, IconExternalLink, IconClock, IconUsers } from "@tabler/icons-react";
+import { Ellipsis, Trash2, Copy, ExternalLink, Clock, Users } from "lucide-react";
 import type { Space } from "@/lib/space-db";
 
 const COMPILER_COLORS: Record<string, string> = {
@@ -70,7 +70,7 @@ export default function SpaceCard({ space, onClick, onDelete, onDuplicate }: Pro
                         onClick={() => setMenuOpen(v => !v)}
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100"
                     >
-                        <IconDots className="w-4 h-4" />
+                        <Ellipsis className="w-4 h-4" />
                     </button>
                     {menuOpen && (
                         <motion.div
@@ -84,14 +84,14 @@ export default function SpaceCard({ space, onClick, onDelete, onDuplicate }: Pro
                                 onClick={() => { onDuplicate(); setMenuOpen(false); }}
                                 className="w-full flex items-center gap-3 px-4 py-2 text-[13px] text-gray-600 hover:bg-[#f5f5f5] transition-colors"
                             >
-                                <IconCopy className="w-4 h-4" /> Duplicate
+                                <Copy className="w-4 h-4" /> Duplicate
                             </button>
                             <div className="my-1 border-t border-[#f0f0f0]" />
                             <button
                                 onClick={() => { onDelete(); setMenuOpen(false); }}
                                 className="w-full flex items-center gap-3 px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
                             >
-                                <IconTrash className="w-4 h-4" /> Delete
+                                <Trash2 className="w-4 h-4" /> Delete
                             </button>
                         </motion.div>
                     )}
@@ -106,12 +106,12 @@ export default function SpaceCard({ space, onClick, onDelete, onDuplicate }: Pro
                     </span>
                     {collabCount > 1 && (
                         <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                            <IconUsers className="w-3 h-3" /> {collabCount}
+                            <Users className="w-3 h-3" /> {collabCount}
                         </span>
                     )}
                 </div>
                 <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                    <IconClock className="w-3 h-3" />
+                    <Clock className="w-3 h-3" />
                     {timeAgo(space.updated_at)}
                 </span>
             </div>

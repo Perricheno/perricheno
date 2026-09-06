@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import {
-    IconSearch, IconPlus, IconX, IconCopy, IconCheck, IconStar, IconStarFilled,
-    IconTrash, IconExternalLink, IconBook2, IconLoader2, IconFileText,
-    IconChevronDown, IconChevronUp, IconTag, IconFolder, IconDownload,
-    IconArrowRight, IconFilter, IconCode, IconUser, IconSettings
-} from "@tabler/icons-react";
+import { Search, Plus, X, Star, Check, Trash2, ExternalLink, BookOpen, Loader2, FileText, ChevronDown, ChevronUp, Tag, Folder, Download, ArrowRight, Filter, Code, User, Settings } from "lucide-react";
+import { MorphIcon } from "morphicons/react";
+import { Copy as CopyData, Check as CheckData } from "lucide";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAdmin } from "@/components/AdminContext";
 
@@ -72,7 +69,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
                     : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-black"
             }`}
         >
-            {copied ? <IconCheck className="w-3.5 h-3.5" /> : <IconCopy className="w-3.5 h-3.5" />}
+            <MorphIcon icon={copied ? CheckData : CopyData} size={14} />
             {copied ? "Copied" : label}
         </button>
     );
@@ -409,7 +406,7 @@ export default function CitationsPage() {
                 <div className="max-w-5xl mx-auto px-6 py-5">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
-                            <IconBook2 className="w-5 h-5 text-white" />
+                            <BookOpen className="w-5 h-5 text-white" />
                         </div>
                         <div>
                             <h1 className="text-xl font-black text-black tracking-tight">{t("title")}</h1>
@@ -420,9 +417,9 @@ export default function CitationsPage() {
                     {/* Tabs */}
                     <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 w-fit">
                         {([
-                            { id: "search" as const, label: t("tabSearch"), icon: IconSearch },
-                            { id: "scholar" as const, label: t("tabScholar"), icon: IconBook2 },
-                            { id: "library" as const, label: t("tabLibrary"), icon: IconFolder },
+                            { id: "search" as const, label: t("tabSearch"), icon: Search },
+                            { id: "scholar" as const, label: t("tabScholar"), icon: BookOpen },
+                            { id: "library" as const, label: t("tabLibrary"), icon: Folder },
                         ]).map(tab => (
                             <button
                                 key={tab.id}
@@ -482,7 +479,7 @@ export default function CitationsPage() {
                                         disabled={!searchQuery.trim() || isSearching}
                                         className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center disabled:opacity-10 transition-all hover:bg-gray-800 active:scale-95 shrink-0"
                                     >
-                                        {isSearching ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconSearch className="w-4 h-4" />}
+                                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>
@@ -491,7 +488,7 @@ export default function CitationsPage() {
                             {searchResults.length === 0 && !isSearching && !searchError && (
                                 <div className="text-center py-16">
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
-                                        <IconSearch className="w-10 h-10 text-gray-200" />
+                                        <Search className="w-10 h-10 text-gray-200" />
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-300 mb-2">{t("quickLookupTitle")}</h3>
                                     <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
@@ -545,12 +542,12 @@ export default function CitationsPage() {
                                                         <CopyButton text={r.bibtex} label="BibTeX" />
                                                         {isAlreadySaved ? (
                                                             <span className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-emerald-500 bg-emerald-50 border border-emerald-200">
-                                                                <IconCheck className="w-3.5 h-3.5 inline mr-1" />{t("saved")}
+                                                                <Check className="w-3.5 h-3.5 inline mr-1" />{t("saved")}
                                                             </span>
                                                         ) : (
                                                             <button onClick={() => saveToLibrary(r)} disabled={savingId === r.cite_key}
                                                                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-black text-white hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50">
-                                                                {savingId === r.cite_key ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconPlus className="w-3.5 h-3.5" />}
+                                                                {savingId === r.cite_key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                                                                 {t("save")}
                                                             </button>
                                                         )}
@@ -558,7 +555,7 @@ export default function CitationsPage() {
                                                 </div>
                                                 <button onClick={() => setExpandedResult(isExpanded ? null : idx)}
                                                     className="mt-2 text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:text-black transition-colors flex items-center gap-1">
-                                                    {isExpanded ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />}
+                                                    {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                                     {isExpanded ? t("less") : t("details")}
                                                 </button>
                                             </div>
@@ -577,8 +574,8 @@ export default function CitationsPage() {
                                                                 <pre className="text-[11px] font-mono text-gray-600 bg-gray-50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">{r.bibtex}</pre>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                {r.doi && <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-500 hover:underline flex items-center gap-1"><IconExternalLink className="w-3 h-3" /> DOI</a>}
-                                                                {r.arxiv_id && <a href={`https://arxiv.org/abs/${r.arxiv_id}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-red-500 hover:underline flex items-center gap-1"><IconExternalLink className="w-3 h-3" /> arXiv</a>}
+                                                                {r.doi && <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-500 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> DOI</a>}
+                                                                {r.arxiv_id && <a href={`https://arxiv.org/abs/${r.arxiv_id}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-red-500 hover:underline flex items-center gap-1"><ExternalLink className="w-3 h-3" /> arXiv</a>}
                                                             </div>
                                                         </div>
                                                     </motion.div>
@@ -611,14 +608,14 @@ export default function CitationsPage() {
                                         className={`p-2 rounded-lg transition-colors ${scholarSettingsOpen ? 'text-black bg-gray-100' : 'text-gray-400 hover:text-black'}`}
                                         title="Search settings"
                                     >
-                                        <IconSettings className="w-4 h-4" />
+                                        <Settings className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={handleScholarSearch}
                                         disabled={!scholarQuery.trim() || isScholarSearching}
                                         className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center disabled:opacity-10 transition-all hover:bg-gray-800 active:scale-95 shrink-0"
                                     >
-                                        {isScholarSearching ? <IconLoader2 className="w-4 h-4 animate-spin" /> : <IconSearch className="w-4 h-4" />}
+                                        {isScholarSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>
@@ -659,8 +656,8 @@ export default function CitationsPage() {
                             {isScholarSearching && (
                                 <div className="flex flex-col items-center justify-center py-20">
                                     <div className="bg-white border border-gray-100 p-8 rounded-2xl shadow-sm text-center max-w-sm w-full">
-                                        <IconBook2 className="w-12 h-12 text-black mx-auto mb-4" stroke={1.5} />
-                                        <IconLoader2 className="w-6 h-6 animate-spin text-black mx-auto mb-4" />
+                                        <BookOpen className="w-12 h-12 text-black mx-auto mb-4" strokeWidth={1.5} />
+                                        <Loader2 className="w-6 h-6 animate-spin text-black mx-auto mb-4" />
                                         <h3 className="font-bold text-black mb-2">{t("searching")}</h3>
                                         <p className="text-sm text-gray-400">{t("querying").replace("{source}", scholarSource === 'openalex' ? 'OpenAlex' : 'arXiv')}</p>
                                     </div>
@@ -671,7 +668,7 @@ export default function CitationsPage() {
                             {!isScholarSearching && scholarResults.length === 0 && !scholarError && (
                                 <div className="text-center py-16">
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
-                                        <IconBook2 className="w-10 h-10 text-gray-200" />
+                                        <BookOpen className="w-10 h-10 text-gray-200" />
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-300 mb-2">{t("deepSearchTitle")}</h3>
                                     <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
@@ -712,7 +709,7 @@ export default function CitationsPage() {
                                     {/* Filter bar */}
                                     <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex flex-col md:flex-row md:items-center gap-3 mb-4">
                                         <div className="flex-1 relative">
-                                            <IconSearch className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
+                                            <Search className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
                                             <input value={scholarFilterText} onChange={e => setScholarFilterText(e.target.value)}
                                                 placeholder={t("filterPlaceholder")} className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm outline-none focus:border-gray-300 transition-colors" />
                                         </div>
@@ -749,7 +746,7 @@ export default function CitationsPage() {
                                                                     <a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{article.title}</a>
                                                                 </h3>
                                                                 <p className="text-[12px] text-gray-400 truncate">
-                                                                    <IconUser className="w-3 h-3 inline mr-1 text-gray-300" />
+                                                                    <User className="w-3 h-3 inline mr-1 text-gray-300" />
                                                                     {article.authors.slice(0, 4).join(", ")}{article.authors.length > 4 && ` +${article.authors.length - 4}`}
                                                                 </p>
                                                             </div>
@@ -758,12 +755,12 @@ export default function CitationsPage() {
                                                                 <CopyButton text={bibtex} label="BibTeX" />
                                                                 {isAlreadySaved ? (
                                                                     <span className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-emerald-500 bg-emerald-50 border border-emerald-200">
-                                                                        <IconCheck className="w-3.5 h-3.5 inline mr-1" />{t("saved")}
+                                                                        <Check className="w-3.5 h-3.5 inline mr-1" />{t("saved")}
                                                                     </span>
                                                                 ) : (
                                                                     <button onClick={() => saveScholarToLibrary(article)} disabled={savingId === citeKey}
                                                                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-black text-white hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50">
-                                                                        {savingId === citeKey ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : <IconPlus className="w-3.5 h-3.5" />}
+                                                                        {savingId === citeKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                                                                         {t("save")}
                                                                     </button>
                                                                 )}
@@ -772,7 +769,7 @@ export default function CitationsPage() {
 
                                                         <button onClick={() => setExpandedScholar(isExpanded ? null : idx)}
                                                             className="mt-2 text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:text-black transition-colors flex items-center gap-1">
-                                                            {isExpanded ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />}
+                                                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                                             {isExpanded ? t("less") : t("abstractLinks")}
                                                         </button>
                                                     </div>
@@ -794,24 +791,24 @@ export default function CitationsPage() {
                                                                     <div className="flex gap-2 flex-wrap">
                                                                         <a href={article.url} target="_blank" rel="noopener noreferrer"
                                                                             className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-black hover:text-white px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5">
-                                                                            <IconExternalLink className="w-3 h-3" /> {t("viewPaper")}
+                                                                            <ExternalLink className="w-3 h-3" /> {t("viewPaper")}
                                                                         </a>
                                                                         {article.url?.includes('arxiv.org') && (
                                                                             <>
                                                                                 <a href={article.url.replace('/abs/', '/pdf/')} target="_blank" rel="noopener noreferrer"
                                                                                     className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-black hover:text-white px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5">
-                                                                                    <IconFileText className="w-3 h-3" /> PDF
+                                                                                    <FileText className="w-3 h-3" /> PDF
                                                                                 </a>
                                                                                 <a href={article.url.replace('/abs/', '/e-print/')} target="_blank" rel="noopener noreferrer"
                                                                                     className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-black hover:text-white px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5">
-                                                                                    <IconCode className="w-3 h-3" /> LaTeX
+                                                                                    <Code className="w-3 h-3" /> LaTeX
                                                                                 </a>
                                                                             </>
                                                                         )}
                                                                         {article.doi && (
                                                                             <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer"
                                                                                 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 hover:bg-black hover:text-white px-3 py-1.5 rounded-lg transition-colors border border-gray-200 flex items-center gap-1.5">
-                                                                                <IconBook2 className="w-3 h-3" /> DOI
+                                                                                <BookOpen className="w-3 h-3" /> DOI
                                                                             </a>
                                                                         )}
                                                                     </div>
@@ -835,31 +832,31 @@ export default function CitationsPage() {
                         <div>
                             <div className="flex items-center gap-3 mb-5">
                                 <div className="flex-1 relative">
-                                    <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
                                     <input value={libraryFilter} onChange={e => setLibraryFilter(e.target.value)}
                                         placeholder={t("libraryFilterPlaceholder")} className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] outline-none focus:border-gray-400 transition-colors" />
                                 </div>
                                 <button onClick={() => setShowStarredOnly(!showStarredOnly)}
                                     className={`p-2.5 rounded-xl border transition-all ${showStarredOnly ? "bg-amber-50 border-amber-200 text-amber-500" : "bg-white border-gray-200 text-gray-300 hover:text-amber-400"}`}
                                     title="Show starred only">
-                                    {showStarredOnly ? <IconStarFilled className="w-4 h-4" /> : <IconStar className="w-4 h-4" />}
+                                    {showStarredOnly ? <Star className="w-4 h-4" fill="currentColor" /> : <Star className="w-4 h-4" />}
                                 </button>
                                 <button onClick={exportAllBibtex} disabled={filteredCitations.length === 0}
                                     className="flex items-center gap-1.5 px-4 py-2.5 bg-black text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-20">
-                                    <IconDownload className="w-3.5 h-3.5" /> {t("exportBib")}
+                                    <Download className="w-3.5 h-3.5" /> {t("exportBib")}
                                 </button>
                             </div>
 
                             {citations.length === 0 && (
                                 <div className="text-center py-16">
                                     <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
-                                        <IconFolder className="w-10 h-10 text-gray-200" />
+                                        <Folder className="w-10 h-10 text-gray-200" />
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-300 mb-2">{t("emptyLibraryTitle")}</h3>
                                     <p className="text-sm text-gray-300 mb-4">{t("emptyLibraryDesc")}</p>
                                     <button onClick={() => setActiveTab("search")}
                                         className="px-5 py-2.5 bg-black text-white rounded-xl text-[12px] font-bold hover:bg-gray-800 transition-all">
-                                        <IconSearch className="w-4 h-4 inline mr-1.5" /> {t("startSearching")}
+                                        <Search className="w-4 h-4 inline mr-1.5" /> {t("startSearching")}
                                     </button>
                                 </div>
                             )}
@@ -870,7 +867,7 @@ export default function CitationsPage() {
                                         <div className="flex items-start gap-3">
                                             <button onClick={() => toggleStar(c.id, c.starred)}
                                                 className={`mt-0.5 shrink-0 transition-colors ${c.starred ? "text-amber-400" : "text-gray-200 hover:text-amber-300"}`}>
-                                                {c.starred ? <IconStarFilled className="w-4 h-4" /> : <IconStar className="w-4 h-4" />}
+                                                {c.starred ? <Star className="w-4 h-4" fill="currentColor" /> : <Star className="w-4 h-4" />}
                                             </button>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="text-[13px] font-bold text-black leading-snug mb-0.5 line-clamp-1">{c.title}</h3>
@@ -888,8 +885,8 @@ export default function CitationsPage() {
                                             <div className="flex items-center gap-1 shrink-0">
                                                 <CopyButton text={`\\cite{${c.cite_key}}`} label="\\cite" />
                                                 <CopyButton text={c.bibtex} label="BibTeX" />
-                                                {c.url && <a href={c.url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 transition-colors"><IconExternalLink className="w-3.5 h-3.5" /></a>}
-                                                <button onClick={() => deleteCitation(c.id)} className="p-1.5 rounded-lg text-gray-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><IconTrash className="w-3.5 h-3.5" /></button>
+                                                {c.url && <a href={c.url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 transition-colors"><ExternalLink className="w-3.5 h-3.5" /></a>}
+                                                <button onClick={() => deleteCitation(c.id)} className="p-1.5 rounded-lg text-gray-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="w-3.5 h-3.5" /></button>
                                             </div>
                                         </div>
                                     </div>

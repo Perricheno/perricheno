@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { IconX, IconLoader2, IconFileText, IconBook, IconPresentation, IconSchool } from "@tabler/icons-react";
+import { X, Loader2, FileText, Book, Presentation, GraduationCap } from "lucide-react";
 import type { Compiler } from "@/lib/space-db";
 
 const TEMPLATES = [
-    { id: "blank",    label: "Blank",           desc: "Empty document",              icon: IconFileText },
-    { id: "research", label: "Research Paper",  desc: "APA citations + sections",    icon: IconBook },
-    { id: "thesis",   label: "Thesis / Diploma", desc: "Report class, TOC, chapters", icon: IconSchool },
-    { id: "beamer",   label: "Presentation",    desc: "Beamer slides",               icon: IconPresentation },
+    { id: "blank",    label: "Blank",           desc: "Empty document",              icon: FileText },
+    { id: "research", label: "Research Paper",  desc: "APA citations + sections",    icon: Book },
+    { id: "thesis",   label: "Thesis / Diploma", desc: "Report class, TOC, chapters", icon: GraduationCap },
+    { id: "beamer",   label: "Presentation",    desc: "Beamer slides",               icon: Presentation },
 ] as const;
 
 const COMPILERS: { id: Compiler; label: string; note: string }[] = [
@@ -55,7 +55,7 @@ export default function NewSpaceModal({ onClose, onCreate }: Props) {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f0]">
                     <h2 className="text-[14px] font-black uppercase tracking-widest">New Project</h2>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-black transition-colors">
-                        <IconX className="w-4 h-4" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
@@ -133,7 +133,7 @@ export default function NewSpaceModal({ onClose, onCreate }: Props) {
                         disabled={!title.trim() || loading}
                         className="px-5 py-2 rounded-xl bg-black text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#1a1a1a] transition-all disabled:opacity-40 flex items-center gap-2 active:scale-95"
                     >
-                        {loading ? <IconLoader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                         Create
                     </button>
                 </div>

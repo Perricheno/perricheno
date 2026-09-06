@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { IconCheck, IconLock } from "@tabler/icons-react";
+import { Check, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RotatingBorderWrapper } from "./RotatingBorderWrapper";
 import type { PLANS } from "./constants";
@@ -95,12 +95,12 @@ export function PricingCard({ plan, isAnnual, currency = 'kzt' }: {
                 {translatedFeatures.map((f, i) => (
                     <li key={i} className="flex items-start gap-3 text-[13px]">
                         {f.included ? (
-                            <IconCheck
+                            <Check
                                 className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? "text-emerald-400" : "opacity-60"}`}
-                                stroke={2.5}
+                                strokeWidth={2.5}
                             />
                         ) : (
-                            <IconLock className="w-4 h-4 mt-0.5 shrink-0 opacity-20" stroke={2} />
+                            <Lock className="w-4 h-4 mt-0.5 shrink-0 opacity-20" strokeWidth={2} />
                         )}
                         <span className={f.included ? (plan.highlighted ? "opacity-90" : "opacity-80") : "opacity-30"}>
                             {f.text}

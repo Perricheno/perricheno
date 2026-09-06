@@ -3,15 +3,7 @@
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import {
-    IconHome, IconChartBar,
-    IconFileTypePdf,
-    IconUser, IconLogin, IconSettings,
-    IconLayoutSidebarLeftCollapse,
-    IconLayoutSidebarLeftExpand,
-    IconCreditCard, IconBraces, IconBook2,
-    IconX, IconLanguage, IconVector, IconFileText,
-} from "@tabler/icons-react";
+import { Home, ChartBar, FileText, User, LogIn, Settings, PanelLeftClose, PanelLeftOpen, CreditCard, Braces, BookOpen, X, Languages, PenTool } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/components/AdminContext";
 import { LoginModal } from "@/components/LoginModal";
@@ -35,48 +27,48 @@ const NAV_GROUPS: NavGroup[] = [
     {
         titleKey: "mainMenu",
         links: [
-            { href: "/", icon: IconHome, labelKey: "home", shortcut: "⌘ H" },
+            { href: "/", icon: Home, labelKey: "home", shortcut: "⌘ H" },
         ]
     },
     {
         titleKey: "activity",
         links: [
-            { href: "/r", icon: IconChartBar, labelKey: "rStudio" },
-            { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
-            { href: "/doc-to-tex", icon: IconFileText, labelKey: "docToTex" },
-            { href: "/citations", icon: IconBook2, labelKey: "citations" },
-            { href: "/space", icon: IconBraces, labelKey: "space" },
-            { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdfTools" },
+            { href: "/r", icon: ChartBar, labelKey: "rStudio" },
+            { href: "/tikz", icon: PenTool, labelKey: "tikzStudio" },
+            { href: "/doc-to-tex", icon: FileText, labelKey: "docToTex" },
+            { href: "/citations", icon: BookOpen, labelKey: "citations" },
+            { href: "/space", icon: Braces, labelKey: "space" },
+            { href: "/pdf", icon: FileText, labelKey: "pdfTools" },
         ]
     },
     {
         titleKey: "setUp",
         links: [
-            { href: "/settings", icon: IconSettings, labelKey: "settings" },
-            { href: "/billings", icon: IconCreditCard, labelKey: "billings" }
+            { href: "/settings", icon: Settings, labelKey: "settings" },
+            { href: "/billings", icon: CreditCard, labelKey: "billings" }
         ]
     }
 ];
 
 const MOBILE_NAV_LEFT: NavLink[] = [
-    { href: "/r", icon: IconChartBar, labelKey: "r" },
-    { href: "/doc-to-tex", icon: IconFileText, labelKey: "docToTex" },
+    { href: "/r", icon: ChartBar, labelKey: "r" },
+    { href: "/doc-to-tex", icon: FileText, labelKey: "docToTex" },
 ];
 const MOBILE_NAV_RIGHT: NavLink[] = [
-    { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },
-    { href: "/settings", icon: IconSettings, labelKey: "settings" },
+    { href: "/pdf", icon: FileText, labelKey: "pdf" },
+    { href: "/settings", icon: Settings, labelKey: "settings" },
 ];
 
 const RADIAL_ALL_KEYS = [
-    { href: "/", icon: IconHome, labelKey: "home" },
-    { href: "/r", icon: IconChartBar, labelKey: "r" },
-    { href: "/tikz", icon: IconVector, labelKey: "tikzStudio" },
-    { href: "/doc-to-tex", icon: IconFileText, labelKey: "docToTex" },
-    { href: "/citations", icon: IconBook2, labelKey: "citations" },
-    { href: "/space", icon: IconBraces, labelKey: "space" },
-    { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },
-    { href: "/billings", icon: IconCreditCard, labelKey: "billings" },
-    { href: "/settings", icon: IconSettings, labelKey: "settings" },
+    { href: "/", icon: Home, labelKey: "home" },
+    { href: "/r", icon: ChartBar, labelKey: "r" },
+    { href: "/tikz", icon: PenTool, labelKey: "tikzStudio" },
+    { href: "/doc-to-tex", icon: FileText, labelKey: "docToTex" },
+    { href: "/citations", icon: BookOpen, labelKey: "citations" },
+    { href: "/space", icon: Braces, labelKey: "space" },
+    { href: "/pdf", icon: FileText, labelKey: "pdf" },
+    { href: "/billings", icon: CreditCard, labelKey: "billings" },
+    { href: "/settings", icon: Settings, labelKey: "settings" },
 ];
 
 const LOCALES = [
@@ -169,7 +161,7 @@ function RingItem({
                         className="flex flex-col items-center gap-1.5 select-none"
                     >
                         <div className="w-[52px] h-[52px] bg-[#1a1a1a] rounded-[18px] flex items-center justify-center shadow-xl shadow-black/20 active:scale-90 transition-transform duration-100" style={{ willChange: "transform" }}>
-                            <item.icon className="w-[22px] h-[22px] text-white" stroke={1.5} />
+                            <item.icon className="w-[22px] h-[22px] text-white" strokeWidth={1.5} />
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#1a1a1a] whitespace-nowrap">
                             {label}
@@ -303,7 +295,7 @@ function LocaleSwitcher({ collapsed }: { collapsed: boolean }) {
                 title="Switch language"
             >
                 <div className="w-8 h-8 rounded-full bg-[var(--card)] shadow-sm flex items-center justify-center shrink-0 border border-[var(--border)]">
-                    <IconLanguage className="w-4 h-4 text-[var(--muted)]" />
+                    <Languages className="w-4 h-4 text-[var(--muted)]" />
                 </div>
                 {!collapsed && (
                     <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -380,7 +372,7 @@ export default function MinimalSidebar() {
                 ) : (
                     <l.icon
                         className={cn("w-6 h-6 z-10 transition-all duration-300 mb-1", active ? "text-[#1a1a1a]" : "text-gray-400")}
-                        stroke={active ? 2.5 : 2}
+                        strokeWidth={active ? 2.5 : 2}
                     />
                 )}
                 <span className={cn("z-10 text-[10px] font-medium tracking-wide transition-all", active ? "text-[#1a1a1a]" : "text-gray-400")}>
@@ -417,8 +409,8 @@ export default function MinimalSidebar() {
                         className="p-2 flex-shrink-0 text-gray-400 hover:text-[var(--foreground)] rounded-[var(--radius)] transition-colors"
                     >
                         {collapsed
-                            ? <IconLayoutSidebarLeftExpand size={18} />
-                            : <IconLayoutSidebarLeftCollapse size={18} />
+                            ? <PanelLeftOpen size={18} />
+                            : <PanelLeftClose size={18} />
                         }
                     </button>
                 </div>
@@ -438,7 +430,7 @@ export default function MinimalSidebar() {
                                             : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-black/5"
                                     )}>
                                     <div className="flex items-center gap-3">
-                                        <l.icon className={cn("w-[18px] h-[18px] shrink-0", isActive(l.href) ? "opacity-100" : "opacity-70 group-hover:opacity-100")} stroke={isActive(l.href) ? 2 : 1.5} />
+                                        <l.icon className={cn("w-[18px] h-[18px] shrink-0", isActive(l.href) ? "opacity-100" : "opacity-70 group-hover:opacity-100")} strokeWidth={isActive(l.href) ? 2 : 1.5} />
                                         <span className={cn(collapsed && "hidden")}>{tLinks(l.labelKey as any)}</span>
                                     </div>
                                     {l.shortcut && !collapsed && (
@@ -468,7 +460,7 @@ export default function MinimalSidebar() {
                             <div className="w-8 h-8 rounded-full bg-[var(--card)] shadow-sm flex items-center justify-center overflow-hidden shrink-0 border border-[var(--border)]">
                                 {user.photo_url
                                     ? <img src={user.photo_url || ""} alt={user.first_name || "User"} />
-                                    : <IconUser className="w-4 h-4 text-[var(--muted)]" />
+                                    : <User className="w-4 h-4 text-[var(--muted)]" />
                                 }
                             </div>
                             <div className={cn("flex-1 min-w-0", collapsed && "hidden")}>
@@ -482,7 +474,7 @@ export default function MinimalSidebar() {
                             onClick={() => { setAnchorRect(accountBtnRef.current?.getBoundingClientRect()); setShowLogin(true); }}
                             className="w-full flex items-center justify-center gap-2 p-2 rounded-[var(--radius)] bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity text-sm font-semibold shadow-sm"
                         >
-                            <IconLogin className="w-[18px] h-[18px]" />
+                            <LogIn className="w-[18px] h-[18px]" />
                             <span className={cn(collapsed && "hidden")}>{t("signIn")}</span>
                         </button>
                     )}
@@ -520,7 +512,7 @@ export default function MinimalSidebar() {
                                 <AnimatePresence mode="wait">
                                     {radialOpen ? (
                                         <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.15 }}>
-                                            <IconX className="w-5 h-5 text-white" stroke={2.5} />
+                                            <X className="w-5 h-5 text-white" strokeWidth={2.5} />
                                         </motion.div>
                                     ) : (
                                         <motion.div key="logo" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.15 }}>

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import Link from "next/link";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { ArrowLeft } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getTranslations } from "next-intl/server";
@@ -17,7 +17,7 @@ export default async function TermsPage() {
 
                 {/* NAVIGATION */}
                 <Link href="/" className="inline-flex items-center gap-2 text-sm opacity-40 hover:opacity-100 transition-opacity mb-16 group">
-                    <IconArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> {t("backToHome")}
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> {t("backToHome")}
                 </Link>
 
                 {/* HERO HEADER */}

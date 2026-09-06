@@ -2,10 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    IconFileText, IconPhoto, IconBook2, IconChevronRight,
-    IconPlus, IconTrash, IconPencil, IconDots,
-} from "@tabler/icons-react";
+import { FileText, Image, BookOpen, ChevronRight, Plus, Trash2, Pencil, Ellipsis } from "lucide-react";
 
 export interface FileEntry {
     path: string;
@@ -64,10 +61,10 @@ function buildTree(files: FileEntry[]): TreeNode[] {
 function fileIcon(node: TreeNode) {
     if (node.isDir) return null;
     const ext = node.name.split('.').pop()?.toLowerCase();
-    if (ext === 'bib') return <IconBook2 className="w-3.5 h-3.5 text-amber-500 shrink-0" />;
+    if (ext === 'bib') return <BookOpen className="w-3.5 h-3.5 text-amber-500 shrink-0" />;
     if (['png', 'jpg', 'jpeg', 'pdf', 'svg'].includes(ext ?? ''))
-        return <IconPhoto className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
-    return <IconFileText className="w-3.5 h-3.5 text-gray-500 shrink-0" />;
+        return <Image className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
+    return <FileText className="w-3.5 h-3.5 text-gray-500 shrink-0" />;
 }
 
 interface NodeProps {
@@ -134,7 +131,7 @@ function TreeNodeRow({ node, depth, activeFile, onOpenFile, onNewFile, onRename,
                 {/* Expand chevron for dirs */}
                 {node.isDir ? (
                     <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={{ duration: 0.15 }}>
-                        <IconChevronRight className="w-3 h-3 shrink-0" />
+                        <ChevronRight className="w-3 h-3 shrink-0" />
                     </motion.div>
                 ) : (
                     fileIcon(node)
@@ -166,7 +163,7 @@ function TreeNodeRow({ node, depth, activeFile, onOpenFile, onNewFile, onRename,
                         onClick={() => setMenuOpen(v => !v)}
                         className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all"
                     >
-                        <IconDots className="w-3.5 h-3.5" />
+                        <Ellipsis className="w-3.5 h-3.5" />
                     </button>
                     <AnimatePresence>
                         {menuOpen && (
@@ -180,17 +177,17 @@ function TreeNodeRow({ node, depth, activeFile, onOpenFile, onNewFile, onRename,
                                 {node.isDir && (
                                     <button onClick={() => { onNewFile(node.path); setMenuOpen(false); }}
                                         className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
-                                        <IconPlus className="w-3.5 h-3.5" /> New File
+                                        <Plus className="w-3.5 h-3.5" /> New File
                                     </button>
                                 )}
                                 <button onClick={startRename}
                                     className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
-                                    <IconPencil className="w-3.5 h-3.5" /> Rename
+                                    <Pencil className="w-3.5 h-3.5" /> Rename
                                 </button>
                                 <div className="my-1 border-t border-white/5" />
                                 <button onClick={() => { onDelete(node.path); setMenuOpen(false); }}
                                     className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-red-400 hover:bg-red-500/10 transition-colors">
-                                    <IconTrash className="w-3.5 h-3.5" /> Delete
+                                    <Trash2 className="w-3.5 h-3.5" /> Delete
                                 </button>
                             </motion.div>
                         )}
@@ -288,11 +285,11 @@ export default function FileTree({ files, activeFile, mainFile, onOpenFile, onNe
                     <div className="flex items-center gap-0.5">
                         <label title="Upload files or ZIP project" className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
                             <input type="file" multiple accept="image/*,.pdf,.zip,.tex,.bib,.cls,.sty" className="hidden" onChange={e => e.target.files && onUploadFiles(e.target.files)} />
-                            <IconPhoto className="w-3.5 h-3.5" />
+                            <Image className="w-3.5 h-3.5" />
                         </label>
                         <button onClick={() => onNewFile()} title="New file"
                             className="p-1 rounded text-gray-600 hover:text-white hover:bg-white/5 transition-colors">
-                            <IconPlus className="w-3.5 h-3.5" />
+                            <Plus className="w-3.5 h-3.5" />
                         </button>
                     </div>
                 )}
