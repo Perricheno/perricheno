@@ -6,6 +6,13 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { CreditCard, Database, Receipt, Sparkles, LogIn, Clock, TrendingUp, FileText, Package, Flame, Zap, ChevronRight, Mail, Check, Lock } from "lucide-react";
 
+// Guarded date formatting - a bad/unparseable input must never surface the
+// literal string "Invalid Date" in the UI (confirmed live in production).
+function formatDisplayDate(d: Date): string {
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 const PLAN_STATIC = [
     {
         id: "free",
@@ -178,17 +185,21 @@ export default function BillingsPage() {
     const timelineItems = useMemo(() => {
         const items: any[] = [];
         receipts.forEach(r => {
+            const d = new Date(r.created_at + 'Z');
             items.push({
                 ...r, is_receipt: true,
-                _time: new Date(r.created_at + 'Z').getTime(),
-                display_date: new Date(r.created_at + 'Z').toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                _time: isNaN(d.getTime()) ? 0 : d.getTime(),
+                display_date: formatDisplayDate(d),
             });
         });
         transactions.forEach(t => {
+            // t.date is a raw ISO timestamp from /api/billing/stats - format
+            // it here, once, rather than re-parsing an already-formatted string.
+            const d = new Date(t.date);
             items.push({
                 ...t, is_receipt: false,
-                _time: new Date(t.date).getTime() || 0,
-                display_date: new Date(t.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                _time: isNaN(d.getTime()) ? 0 : d.getTime(),
+                display_date: formatDisplayDate(d),
             });
         });
         return items.sort((a, b) => b._time - a._time);

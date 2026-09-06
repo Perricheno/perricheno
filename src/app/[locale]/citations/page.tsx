@@ -400,22 +400,22 @@ export default function CitationsPage() {
     // ── Render ─────────────────────────────────────────────────────────────
 
     return (
-        <div className="w-full h-full flex flex-col bg-[#FBFBFC] overflow-hidden">
+        <div className="w-full h-full flex flex-col bg-[var(--background)] overflow-hidden">
             {/* Header */}
-            <div className="shrink-0 border-b border-gray-100 bg-white">
-                <div className="max-w-5xl mx-auto px-6 py-5">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-white" />
+            <div className="shrink-0 border-b border-[var(--border)] bg-[var(--card)]">
+                <div className="max-w-5xl mx-auto px-6 pt-7 pb-5">
+                    <div className="flex items-center gap-3.5 mb-5">
+                        <div className="w-11 h-11 rounded-2xl bg-[var(--foreground)] flex items-center justify-center shrink-0 shadow-sm">
+                            <BookOpen className="w-5 h-5 text-[var(--background)]" strokeWidth={2} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-black tracking-tight">{t("title")}</h1>
-                            <p className="text-xs text-gray-400">{t("subtitle")}</p>
+                            <h1 className="text-2xl font-bold text-[var(--foreground)] tracking-tight leading-tight">{t("title")}</h1>
+                            <p className="text-xs opacity-40 mt-0.5">{t("subtitle")}</p>
                         </div>
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 w-fit">
+                    <div className="flex items-center gap-1 bg-[var(--foreground)]/5 rounded-xl p-1 w-fit">
                         {([
                             { id: "search" as const, label: t("tabSearch"), icon: Search },
                             { id: "scholar" as const, label: t("tabScholar"), icon: BookOpen },
@@ -424,17 +424,17 @@ export default function CitationsPage() {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`px-4 py-2 rounded-lg text-[12px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                                className={`relative px-4 py-2 rounded-lg text-[12px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                                     activeTab === tab.id
-                                        ? "bg-black text-white shadow-sm"
-                                        : "text-gray-400 hover:text-black"
+                                        ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                                        : "opacity-40 hover:opacity-70"
                                 }`}
                             >
                                 <tab.icon className="w-3.5 h-3.5" />
                                 {tab.label}
                                 {tab.id === "library" && citations.length > 0 && (
                                     <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] ${
-                                        activeTab === "library" ? "bg-white/20" : "bg-gray-200/50"
+                                        activeTab === "library" ? "bg-[var(--foreground)]/10" : "bg-[var(--foreground)]/10"
                                     }`}>
                                         {citations.length}
                                     </span>
@@ -454,12 +454,12 @@ export default function CitationsPage() {
                     {/* ═══════════════════════════════════════════════════════ */}
                     {activeTab === "search" && (
                         <div>
-                            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-2 mb-6">
+                            <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-sm p-2 mb-6">
                                 <div className="flex items-center gap-2">
                                     <select
                                         value={searchSource}
                                         onChange={e => setSearchSource(e.target.value as any)}
-                                        className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 outline-none cursor-pointer hover:border-gray-400 shrink-0"
+                                        className="text-[11px] font-bold uppercase tracking-wider opacity-60 bg-[var(--foreground)]/5 border border-[var(--border)] rounded-lg px-2 py-1.5 outline-none cursor-pointer hover:opacity-100 shrink-0"
                                     >
                                         <option value="auto">Auto</option>
                                         <option value="crossref">CrossRef</option>
@@ -471,13 +471,13 @@ export default function CitationsPage() {
                                         onChange={e => setSearchQuery(e.target.value)}
                                         onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
                                         placeholder={t("searchPlaceholder")}
-                                        className="flex-1 text-[14px] text-black bg-transparent outline-none placeholder:text-gray-300 py-2"
+                                        className="flex-1 text-[14px] text-[var(--foreground)] bg-transparent outline-none placeholder:opacity-30 py-2"
                                         autoFocus
                                     />
                                     <button
                                         onClick={handleSearch}
                                         disabled={!searchQuery.trim() || isSearching}
-                                        className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center disabled:opacity-10 transition-all hover:bg-gray-800 active:scale-95 shrink-0"
+                                        className="w-9 h-9 bg-[var(--foreground)] text-[var(--background)] rounded-xl flex items-center justify-center disabled:opacity-10 transition-all hover:opacity-80 active:scale-95 shrink-0"
                                     >
                                         {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                                     </button>
@@ -487,11 +487,11 @@ export default function CitationsPage() {
                             {/* Empty state */}
                             {searchResults.length === 0 && !isSearching && !searchError && (
                                 <div className="text-center py-16">
-                                    <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
-                                        <Search className="w-10 h-10 text-gray-200" />
+                                    <div className="w-20 h-20 rounded-full bg-[var(--foreground)]/5 flex items-center justify-center mx-auto mb-5">
+                                        <Search className="w-10 h-10 opacity-20" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-300 mb-2">{t("quickLookupTitle")}</h3>
-                                    <p className="text-sm text-gray-300 mb-6 max-w-md mx-auto">
+                                    <h3 className="text-lg font-bold opacity-30 mb-2">{t("quickLookupTitle")}</h3>
+                                    <p className="text-sm opacity-30 mb-6 max-w-md mx-auto">
                                         {t("quickLookupDesc")}
                                     </p>
                                     <div className="flex flex-wrap justify-center gap-2">
@@ -503,9 +503,9 @@ export default function CitationsPage() {
                                             <button
                                                 key={ex.label}
                                                 onClick={() => setSearchQuery(ex.label)}
-                                                className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-500 hover:border-gray-400 hover:text-black transition-all"
+                                                className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-xl text-sm opacity-60 hover:opacity-100 hover:border-gray-400 transition-all"
                                             >
-                                                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-300 mr-2">{ex.desc}</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider opacity-50 mr-2">{ex.desc}</span>
                                                 {ex.label}
                                             </button>
                                         ))}
@@ -513,7 +513,7 @@ export default function CitationsPage() {
                                 </div>
                             )}
 
-                            {searchError && <div className="text-center py-8"><p className="text-sm text-gray-400">{searchError}</p></div>}
+                            {searchError && <div className="text-center py-8"><p className="text-sm opacity-40">{searchError}</p></div>}
 
                             {/* Search Results */}
                             <div className="space-y-3">
@@ -523,19 +523,19 @@ export default function CitationsPage() {
 
                                     return (
                                         <motion.div key={`${r.source}-${r.doi || r.arxiv_id || idx}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-                                            className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:border-gray-200 transition-colors">
+                                            className="bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-sm overflow-hidden hover:border-gray-400 transition-colors">
                                             <div className="p-4">
                                                 <div className="flex items-start gap-3">
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1.5">
                                                             <SourceBadge source={r.source} />
-                                                            {r.year && <span className="text-[10px] font-mono text-gray-400">{r.year}</span>}
+                                                            {r.year && <span className="text-[10px] font-mono opacity-40">{r.year}</span>}
                                                         </div>
-                                                        <h3 className="text-[14px] font-bold text-black leading-snug mb-1 line-clamp-2">{r.title}</h3>
-                                                        <p className="text-[12px] text-gray-400 truncate">
+                                                        <h3 className="text-[14px] font-bold text-[var(--foreground)] leading-snug mb-1 line-clamp-2">{r.title}</h3>
+                                                        <p className="text-[12px] opacity-40 truncate">
                                                             {r.authors.slice(0, 4).join(", ")}{r.authors.length > 4 && ` +${r.authors.length - 4}`}
                                                         </p>
-                                                        {r.venue && <p className="text-[11px] text-gray-300 mt-0.5 italic truncate">{r.venue}</p>}
+                                                        {r.venue && <p className="text-[11px] opacity-30 mt-0.5 italic truncate">{r.venue}</p>}
                                                     </div>
                                                     <div className="flex items-center gap-1.5 shrink-0">
                                                         <CopyButton text={`\\cite{${r.cite_key}}`} label="\\cite" />

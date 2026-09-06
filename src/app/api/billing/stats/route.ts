@@ -36,7 +36,12 @@ export async function GET(req: Request) {
                 id: `txn_${tx.id}`,
                 type: tx.topic,
                 amount: cleanAmount,
-                date: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                // Raw ISO timestamp, not a pre-formatted display string - the
+                // frontend re-parsed this field with `new Date(...)` and a
+                // formatted string like "Sep 6, 03:45 PM" isn't reliably
+                // reparseable across engines/locales, producing "Invalid Date"
+                // in the UI. Format once, on the client, from this ISO value.
+                date: d.toISOString(),
                 is_positive: !!tx.is_positive
             };
         }).filter(tx => tx.amount !== '0' && tx.amount !== '0.00');

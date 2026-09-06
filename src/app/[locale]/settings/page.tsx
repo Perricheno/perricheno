@@ -6,6 +6,13 @@ import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt, Package, TrendingUp, Clock, LogIn, Mail, ChevronRight, ShieldCheck, Trash2, Play, Pause, Copy, Check, Users, Search, X, Gift, Crown } from "lucide-react";
 
+// Guarded date formatting - a bad/unparseable input must never surface the
+// literal string "Invalid Date" in the UI (confirmed live in production).
+function formatDisplayDate(d: Date): string {
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 interface PromoCode {
     id: number;
     code: string;
@@ -111,16 +118,24 @@ export default function SettingsPage() {
 
     const timelineItems = useMemo(() => {
         const items: any[] = [];
-        receipts.forEach(r => items.push({
-            ...r, is_receipt: true,
-            _time: new Date(r.created_at + "Z").getTime(),
-            display_date: new Date(r.created_at + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        }));
-        transactions.forEach(tx => items.push({
-            ...tx, is_receipt: false,
-            _time: new Date(tx.date).getTime() || 0,
-            display_date: new Date(tx.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        }));
+        receipts.forEach(r => {
+            const d = new Date(r.created_at + "Z");
+            items.push({
+                ...r, is_receipt: true,
+                _time: isNaN(d.getTime()) ? 0 : d.getTime(),
+                display_date: formatDisplayDate(d),
+            });
+        });
+        transactions.forEach(tx => {
+            // tx.date is a raw ISO timestamp from /api/billing/stats - format
+            // it here, once, rather than re-parsing an already-formatted string.
+            const d = new Date(tx.date);
+            items.push({
+                ...tx, is_receipt: false,
+                _time: isNaN(d.getTime()) ? 0 : d.getTime(),
+                display_date: formatDisplayDate(d),
+            });
+        });
         return items.sort((a, b) => b._time - a._time);
     }, [transactions, receipts]);
 
