@@ -31,6 +31,21 @@ services:
       - LATEX_COMPILER_URL=http://latex-compiler:8080
       - LATEX_COMPILER_KEY=${LATEX_COMPILER_KEY:?LATEX_COMPILER_KEY is required}
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@app-redis:6379
+      # storage.ts's Minio client has no compose-independent source for these -
+      # it silently defaulted to endPoint "localhost" (nothing listens there
+      # in this container) whenever they were unset, producing ECONNREFUSED.
+      # They were meant to be written into .env by the GitHub Actions deploy
+      # workflow's update_env step, but that workflow has never once
+      # successfully reached the server this whole session (fails at
+      # "missing server host" before it even connects) - so .env never
+      # actually got them. Computed directly here instead, from the same
+      # MINIO_ROOT_USER/PASSWORD the minio service itself already needs,
+      # rather than depending on a workflow that doesn't run.
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-perricheno_admin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      - MINIO_BUCKET_NAME=perricheno-bucket
     volumes:
       - db-data:/app/db
       - analytics-data:/tmp/analytics-data
@@ -71,6 +86,8 @@ services:
         condition: service_started
       latex-compiler:
         condition: service_started
+      minio:
+        condition: service_healthy
 
   worker:
     build:
@@ -90,6 +107,14 @@ services:
       - LATEX_COMPILER_URL=http://latex-compiler:8080
       - LATEX_COMPILER_KEY=${LATEX_COMPILER_KEY:?LATEX_COMPILER_KEY is required}
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@app-redis:6379
+      # See the identical block on perricheno-site - same missing-.env issue,
+      # same fix. The worker specifically needs this for Doc-to-TeX's
+      # compiled-PDF upload (docToTexConvert.ts's uploadToStorage call).
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-perricheno_admin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      - MINIO_BUCKET_NAME=perricheno-bucket
     env_file:
       - .env
     # NO ports exposed - doesn't serve user HTTP traffic, only consumes the
@@ -117,6 +142,8 @@ services:
         condition: service_started
       latex-compiler:
         condition: service_started
+      minio:
+        condition: service_healthy
 
   app-redis:
     image: redis:7-alpine
