@@ -104,8 +104,20 @@ function headingCommand(level: ChunkLevel, header: AssemblyHeader): string {
     return "subsubsection";
 }
 
+// Whether to synthesize any title block at all. Faithful preservation means
+// not fabricating academic front matter on top of a source that likely
+// already has its own title/parties/signature block in its own body text
+// (a contract, a letter, a plain report) - confirmed as a real problem live:
+// a synthesized "\author{Author}" placeholder and an untranslated "\today"
+// rendered on top of a Russian legal document that never asked for either.
+// Only synthesize one when the source structure actually calls for it
+// (thesis's forced title page) or the user explicitly supplied an author
+// name (meaning they picked a template like academic and want attribution).
+function wantsTitleBlock(s: DocToTexSettings, header: AssemblyHeader): boolean {
+    return header.needsTitlePage || !!s.authorName;
+}
+
 function buildTitleBlock(s: DocToTexSettings, header: AssemblyHeader): string {
-    const author = s.authorName || "Author";
     const date = s.dateStr || "\\today";
 
     if (header.needsTitlePage) {
@@ -120,7 +132,7 @@ function buildTitleBlock(s: DocToTexSettings, header: AssemblyHeader): string {
             "\\vspace*{2cm}",
             `{\\LARGE\\bfseries ${escapeLatexSpecials(header.title)}\\par}`,
             "\\vspace{1.5cm}",
-            `{\\large ${escapeLatexSpecials(author)}\\par}`,
+            s.authorName ? `{\\large ${escapeLatexSpecials(s.authorName)}\\par}` : "",
             metaParts.length ? `\\vspace{0.5cm}\n{\\normalsize ${metaParts.map(escapeLatexSpecials).join(" \\\\ ")}\\par}` : "",
             "\\vfill",
             `{\\large ${date}\\par}`,
@@ -128,20 +140,25 @@ function buildTitleBlock(s: DocToTexSettings, header: AssemblyHeader): string {
         ].filter(Boolean).join("\n");
     }
 
+    // Reaches here only when wantsTitleBlock() is true without needsTitlePage,
+    // i.e. the user did supply an author name - safe to assume they want it shown.
     return [
         `\\title{${escapeLatexSpecials(header.title)}}`,
-        `\\author{${escapeLatexSpecials(author)}}`,
+        `\\author{${escapeLatexSpecials(s.authorName!)}}`,
         `\\date{${date}}`,
         "\\maketitle",
     ].join("\n");
 }
 
-function buildBody(chunks: TranscribedChunk[], header: AssemblyHeader): string {
-    return chunks
-        .sort((a, b) => a.index - b.index)
-        .map(c => {
+function buildBody(chunks: TranscribedChunk[], header: AssemblyHeader, titleAlreadyShown: boolean): string {
+    const sorted = chunks.sort((a, b) => a.index - b.index);
+    return sorted
+        .map((c, i) => {
+            // When a title block was synthesized from this exact chunk's own
+            // heading, don't repeat it as a section heading immediately below.
+            const suppressHeading = titleAlreadyShown && i === 0 && c.heading === header.title;
             const cmd = headingCommand(c.level, header);
-            const headingLine = c.heading ? `\\${cmd}{${escapeLatexSpecials(c.heading)}}\n\n` : "";
+            const headingLine = c.heading && !suppressHeading ? `\\${cmd}{${escapeLatexSpecials(c.heading)}}\n\n` : "";
             return `% === chunk ${c.index} ===\n${headingLine}${c.latex.trim()}\n`;
         })
         .join("\n");
@@ -165,10 +182,11 @@ export function assembleDocToTex(
         warnings.push(`${failedChunks.length} section(s) failed transcription and were kept as a verbatim fallback.`);
     }
 
+    const showTitle = wantsTitleBlock(settings, header);
     const preamble = resolvePreamble(settings);
-    const titleBlock = buildTitleBlock(settings, header);
+    const titleBlock = showTitle ? buildTitleBlock(settings, header) : "";
     const toc = header.needsToc ? "\\tableofcontents\n\\newpage" : "";
-    const body = buildBody(chunks, header);
+    const body = buildBody(chunks, header, showTitle);
 
     let mainTex = [
         preamble,

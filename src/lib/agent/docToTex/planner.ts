@@ -17,6 +17,18 @@ import type { ChunkHints, ChunkLevel, DocChunk, DocPlan } from "./types";
 const HEADING_RE = /^(#{1,3})\s+(.+)$/;
 const WORDS_PER_FALLBACK_CHUNK = 900; // conservative - keeps each transcriber call well within a safe context budget
 
+// PaddleOCR-VL's layout-to-markdown conversion marks any visually distinct
+// line (bold, centered, prominent) as a heading, not just genuine section
+// titles - confirmed live on a real contract, where a bare "г. Астана"
+// location line got promoted to a level-3 heading of its own. A real
+// section heading is followed by real content; a heading candidate with
+// almost nothing under it before the next one is noise, not structure.
+const MIN_HEADING_BODY_WORDS = 15;
+
+function wordCount(s: string): number {
+    return s.trim().split(/\s+/).filter(Boolean).length;
+}
+
 function detectHints(text: string): ChunkHints {
     return {
         hasTable: /^\s*\|.+\|\s*$/m.test(text) || /^\s*\|?[\s:-]+\|[\s:-]+\|?\s*$/m.test(text),
@@ -41,9 +53,34 @@ function splitByHeadings(text: string): { heading: string; level: ChunkLevel; bo
         }
     }
 
-    return sections
+    const raw = sections
         .map(s => ({ heading: s.heading, level: s.level, body: s.body.join("\n").trim() }))
         .filter(s => s.heading !== "" || s.body !== "");
+
+    return mergeSpuriousHeadings(raw);
+}
+
+// Folds a heading whose own body is too short to be real structure into the
+// section that follows it, as plain leading text rather than a \section -
+// so it renders exactly where it appeared, just not promoted to a heading
+// command. Never merges the very last section (nothing to fold it into) or
+// the anonymous leading preamble (heading === "").
+function mergeSpuriousHeadings(
+    sections: { heading: string; level: ChunkLevel; body: string }[],
+): { heading: string; level: ChunkLevel; body: string }[] {
+    const result: { heading: string; level: ChunkLevel; body: string }[] = [];
+
+    for (let i = 0; i < sections.length; i++) {
+        const s = sections[i];
+        const isSpurious = s.heading !== "" && i < sections.length - 1 && wordCount(s.body) < MIN_HEADING_BODY_WORDS;
+        if (isSpurious) {
+            const folded = [s.heading, s.body].filter(Boolean).join("\n\n");
+            sections[i + 1] = { ...sections[i + 1], body: [folded, sections[i + 1].body].filter(Boolean).join("\n\n") };
+            continue;
+        }
+        result.push(s);
+    }
+    return result;
 }
 
 function splitByWordCount(text: string): { heading: string; level: ChunkLevel; body: string }[] {

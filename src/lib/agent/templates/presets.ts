@@ -24,11 +24,15 @@ function langPackages(s: PipelineSettings): string[] {
         lines.push("\\usepackage{fontspec}", "\\setmainfont{Inter}", "\\usepackage[kazakh]{babel}");
     } else if (CYRILLIC_LANGS.has(s.language)) {
         const bl = BABEL_LANG_MAP[s.language] ?? "russian";
-        lines.push("\\usepackage[T2A]{fontenc}", "\\usepackage[utf8]{inputenc}", `\\usepackage[${bl},english]{babel}`);
+        // babel's LAST listed language is the active/main document language
+        // (controls \today, auto-generated section names, etc.) - bl must
+        // come after english, not before, or \today silently renders in
+        // English on a Russian document (confirmed live on a real test).
+        lines.push("\\usepackage[T2A]{fontenc}", "\\usepackage[utf8]{inputenc}", `\\usepackage[english,${bl}]{babel}`);
     } else if (s.language !== "en") {
         const bl = BABEL_LANG_MAP[s.language];
         lines.push("\\usepackage[T1]{fontenc}", "\\usepackage[utf8]{inputenc}");
-        if (bl) lines.push(`\\usepackage[${bl},english]{babel}`);
+        if (bl) lines.push(`\\usepackage[english,${bl}]{babel}`);
     } else {
         lines.push("\\usepackage[T1]{fontenc}", "\\usepackage[utf8]{inputenc}");
     }

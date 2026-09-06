@@ -37,12 +37,14 @@ function buildPreamble(s: PipelineSettings): string {
         lines.push("\\usepackage[T2A]{fontenc}");
         lines.push("\\usepackage[utf8]{inputenc}");
         const babelLang = BABEL_LANG_MAP[s.language] ?? "russian";
-        lines.push(`\\usepackage[${babelLang},english]{babel}`);
+        // babel's LAST listed language is the active/main one (\today,
+        // auto section names, etc.) - must come after english, not before.
+        lines.push(`\\usepackage[english,${babelLang}]{babel}`);
     } else if (s.language !== "en") {
         lines.push("\\usepackage[T1]{fontenc}");
         lines.push("\\usepackage[utf8]{inputenc}");
         const babelLang = BABEL_LANG_MAP[s.language];
-        if (babelLang) lines.push(`\\usepackage[${babelLang},english]{babel}`);
+        if (babelLang) lines.push(`\\usepackage[english,${babelLang}]{babel}`);
     } else {
         lines.push("\\usepackage[T1]{fontenc}");
         lines.push("\\usepackage[utf8]{inputenc}");
