@@ -60,6 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 const MOBILE_NAV_LEFT: NavLink[] = [
     { href: "/r", icon: IconChartBar, labelKey: "r" },
+    { href: "/doc-to-tex", icon: IconFileText, labelKey: "docToTex" },
 ];
 const MOBILE_NAV_RIGHT: NavLink[] = [
     { href: "/pdf", icon: IconFileTypePdf, labelKey: "pdf" },
