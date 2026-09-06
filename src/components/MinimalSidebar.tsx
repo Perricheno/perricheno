@@ -375,8 +375,8 @@ export default function MinimalSidebar() {
                         strokeWidth={active ? 2.5 : 2}
                     />
                 )}
-                <span className={cn("z-10 text-[10px] font-medium tracking-wide transition-all", active ? "text-[#1a1a1a]" : "text-gray-400")}>
-                    {isR ? "Студия" : tLinks(l.labelKey as any)}
+                <span className={cn("z-10 text-[10px] font-medium tracking-wide transition-all whitespace-nowrap", active ? "text-[#1a1a1a]" : "text-gray-400")}>
+                    {isR ? "Студия" : l.href === "/doc-to-tex" ? "TeX" : tLinks(l.labelKey as any)}
                 </span>
             </Link>
         );

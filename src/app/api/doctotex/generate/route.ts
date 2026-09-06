@@ -52,7 +52,9 @@ export async function POST(req: Request) {
         customTemplatePreamble: typeof body.customTemplatePreamble === 'string' && body.customTemplatePreamble
             ? body.customTemplatePreamble
             : undefined,
-        language: typeof body.language === 'string' && body.language ? body.language.slice(0, 10).toLowerCase() : 'en',
+        // Auto-detected from the source text in runDocToTexPipeline - faithful
+        // mode never translates, so this placeholder is always overridden.
+        language: 'en',
         authorName: body.authorName,
         courseName: body.courseName,
         dateStr: body.dateStr,

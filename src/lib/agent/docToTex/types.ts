@@ -11,7 +11,7 @@ export interface DocToTexSettings {
     mode: DocToTexMode;
     templateId: string;                 // preset id from templates/presets.ts, or "custom"
     customTemplatePreamble?: string;
-    language: string;                   // iso-639-1, e.g. "en" | "ru" | "kk"
+    language: string;                   // iso-639-1, e.g. "en" | "ru" | "kk" - auto-detected from the source in runPipeline.ts, not user-supplied
     authorName?: string;
     courseName?: string;
     dateStr?: string;

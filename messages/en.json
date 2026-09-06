@@ -608,6 +608,19 @@
       "done": "Compiled successfully",
       "needsAttention": "Needs attention - LaTeX has unresolved errors",
       "error": "Conversion failed"
+    },
+    "guide": {
+      "title": "How this works",
+      "mode": "Faithful keeps your exact wording - it only converts formatting to LaTeX. Rewrite lightly improves style while keeping the same meaning.",
+      "template": "Pick a layout, or upload your own Overleaf .zip as Custom. With a custom template, sections stay plain - no title page or table of contents is auto-added, since we can't know your template's own conventions.",
+      "images": "Images are placed near their original position in the document, not pixel-exact - there's no reliable way to link an image to its surrounding text after extraction.",
+      "language": "Detected automatically from your document - no need to set it."
+    },
+    "results": {
+      "sourceTitle": "LaTeX source",
+      "viewSource": "View source",
+      "copy": "Copy",
+      "copied": "Copied"
     }
   }
 }

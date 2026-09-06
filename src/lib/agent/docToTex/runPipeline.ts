@@ -12,6 +12,7 @@ import type { AgentUpload } from "@/lib/db";
 import type { StageProgress } from "../stages";
 import type { DocToTexSettings, EmbeddedImage } from "./types";
 import { planDocument } from "./planner";
+import { detectLanguage } from "./detectLanguage";
 import { runFormatter } from "./formatter";
 import { transcribeChunks } from "./transcriber";
 import { assignImagesToChunks, assembleDocToTex } from "./assemble";
@@ -45,7 +46,7 @@ function normalizeImages(upload: AgentUpload): EmbeddedImage[] {
 }
 
 export async function runDocToTexPipeline(input: RunDocToTexInput): Promise<RunDocToTexOutput> {
-    const { settings, uploads, writeProgress } = input;
+    const { uploads, writeProgress } = input;
     let totalTokens = 0;
 
     let progress: StageProgress = {
@@ -73,6 +74,11 @@ export async function runDocToTexPipeline(input: RunDocToTexInput): Promise<RunD
     const text = (upload.text_content || "").trim();
     if (!text) throw new Error("No text could be extracted from the uploaded document.");
     const images = normalizeImages(upload);
+
+    // Auto-detected from the source, not user-supplied - faithful mode never
+    // translates, so the document's own script is the only thing that
+    // matters for preamble/font selection. Overrides whatever the client sent.
+    const settings: DocToTexSettings = { ...input.settings, language: detectLanguage(text) };
 
     // ── Layer 1: structural plan (deterministic) ──
     const plan = planDocument(text, upload.filename.replace(/\.[^.]+$/, ""));

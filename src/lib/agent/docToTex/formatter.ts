@@ -30,6 +30,21 @@ export async function runFormatter(
         };
     }
 
+    // A custom uploaded template is an arbitrary LaTeX class we know nothing
+    // about - we can't tell whether it even supports \chapter (most don't;
+    // Overleaf templates are overwhelmingly article-based), and synthesizing
+    // our own \begin{titlepage} into someone else's carefully designed
+    // template would look wrong at best and fail to compile at worst. Stay
+    // fully conservative: plain sections, no synthesized title page/TOC. The
+    // custom preamble's own \title/\author/\maketitle conventions (if any)
+    // are respected by the plain title-block path in assemble.ts.
+    if (templateId === "custom") {
+        return {
+            header: { useChapters: false, needsTitlePage: false, needsToc: false, title: plan.title },
+            tokensUsed: 0,
+        };
+    }
+
     // A short document with a flat heading structure has nothing ambiguous
     // either - skip the call.
     if (!plan.hasClearHeadings || (plan.maxLevel <= 1 && totalWords < 3000)) {
