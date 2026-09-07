@@ -172,6 +172,8 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Manage your account and view history.",
+    "viewBilling": "Plans & billing history",
+    "viewBillingHint": "Subscription, usage, and past transactions",
     "signInTitle": "Sign in to continue",
     "signInDesc": "Connect your Telegram account to view usage and manage settings.",
     "signIn": "Sign In",

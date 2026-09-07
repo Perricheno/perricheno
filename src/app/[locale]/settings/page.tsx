@@ -1,17 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAdmin } from "@/components/AdminContext";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { Receipt, Package, TrendingUp, Clock, LogIn, Mail, ChevronRight, ShieldCheck, Trash2, Play, Pause, Copy, Check, Users, Search, X, Gift, Crown } from "lucide-react";
-
-// Guarded date formatting - a bad/unparseable input must never surface the
-// literal string "Invalid Date" in the UI (confirmed live in production).
-function formatDisplayDate(d: Date): string {
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
+import { Receipt, LogIn, Mail, ChevronRight, ShieldCheck, Trash2, Play, Pause, Copy, Check, Users, Search, X, Gift, Crown } from "lucide-react";
 
 interface PromoCode {
     id: number;
@@ -32,8 +25,6 @@ export default function SettingsPage() {
     const t = useTranslations("settings");
 
     const [fullUser, setFullUser]       = useState<any>(null);
-    const [transactions, setTransactions] = useState<any[]>([]);
-    const [receipts, setReceipts]       = useState<any[]>([]);
     const [promos, setPromos]           = useState<PromoCode[]>([]);
     const [promoLoading, setPromoLoading] = useState(false);
     const [copiedCode, setCopiedCode]   = useState<string | null>(null);
@@ -42,15 +33,10 @@ export default function SettingsPage() {
     const [userLoading, setUserLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [showUserModal, setShowUserModal] = useState(false);
-    const [showAllBilling, setShowAllBilling] = useState(false);
 
     useEffect(() => {
         if (!user) return;
         fetch("/api/auth/me").then(r => r.json()).then(d => setFullUser(d.user));
-        fetch("/api/billing/stats").then(r => r.json()).then(d => {
-            if (d.transactions) setTransactions(d.transactions);
-            if (d.receipts) setReceipts(d.receipts);
-        });
     }, [user]);
 
     useEffect(() => {
@@ -116,29 +102,6 @@ export default function SettingsPage() {
         }
     };
 
-    const timelineItems = useMemo(() => {
-        const items: any[] = [];
-        receipts.forEach(r => {
-            const d = new Date(r.created_at + "Z");
-            items.push({
-                ...r, is_receipt: true,
-                _time: isNaN(d.getTime()) ? 0 : d.getTime(),
-                display_date: formatDisplayDate(d),
-            });
-        });
-        transactions.forEach(tx => {
-            // tx.date is a raw ISO timestamp from /api/billing/stats - format
-            // it here, once, rather than re-parsing an already-formatted string.
-            const d = new Date(tx.date);
-            items.push({
-                ...tx, is_receipt: false,
-                _time: isNaN(d.getTime()) ? 0 : d.getTime(),
-                display_date: formatDisplayDate(d),
-            });
-        });
-        return items.sort((a, b) => b._time - a._time);
-    }, [transactions, receipts]);
-
     const currentPlanId = fullUser?.plan_tier || "free";
     const planLabels: Record<string, string> = { free: "Free", plus: "Plus", pro: "Pro", ultra: "Ultra" };
     const planLimits = {
@@ -153,8 +116,6 @@ export default function SettingsPage() {
     const purchasedChars = fullUser?.purchased_chars   || 0;
     const weeklyPct     = Math.min(100, (weeklyUsed  / planLimits.weekly)  * 100);
     const monthlyPct    = Math.min(100, (monthlyUsed / planLimits.monthly) * 100);
-
-    const visibleBilling = showAllBilling ? timelineItems : timelineItems.slice(0, 5);
 
     return (
         <div className="w-full h-full font-sans overflow-auto pb-24 md:pb-8" style={{ background: "#F2F2F7", WebkitFontSmoothing: "antialiased" }}>
@@ -253,71 +214,25 @@ export default function SettingsPage() {
                 )}
 
                 {/* ═══════════════════════════════════════
-                    BILLING HISTORY
+                    BILLING - full history/plans live on /billings now,
+                    this page owns profile/usage/admin only (was showing
+                    a full duplicate transaction list before).
                 ═══════════════════════════════════════ */}
                 {user && (
                     <>
                         <SectionLabel>Billing</SectionLabel>
                         <Card>
-                            {timelineItems.length > 0 ? (
-                                <>
-                                    <div className="divide-y divide-[#f2f2f2]">
-                                        {visibleBilling.map((item, idx) =>
-                                            item.is_receipt ? (
-                                                <div key={`r-${item.id}`} className="flex items-center gap-3 px-4 py-3">
-                                                    <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] flex items-center justify-center shrink-0">
-                                                        <Package className="w-4 h-4 text-[#1a1a1a]" strokeWidth={1.5} />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-[14px] font-medium text-[#1a1a1a] truncate">{item.pack_name}</p>
-                                                        <p className="text-[11px] text-gray-400">{item.display_date}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <span className="text-[13px] font-semibold text-[#1a1a1a] tabular-nums">{item.amount_text}</span>
-                                                        <a href={`/api/billing/receipt/${item.id}`} target="_blank" rel="noopener noreferrer"
-                                                            className="text-[10px] font-bold text-gray-300 uppercase hover:text-[#1a1a1a] transition-colors hidden sm:block">
-                                                            PDF
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div key={`t-${item.id}-${idx}`} className="flex items-center gap-3 px-4 py-3">
-                                                    <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] flex items-center justify-center shrink-0">
-                                                        {item.is_positive
-                                                            ? <TrendingUp className="w-4 h-4 text-[#1a1a1a]" strokeWidth={1.5} />
-                                                            : <Clock className="w-4 h-4 text-[#999]" strokeWidth={1.5} />
-                                                        }
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-[14px] font-medium text-[#1a1a1a] truncate">{item.type}</p>
-                                                        <p className="text-[11px] text-gray-400">{item.display_date}</p>
-                                                    </div>
-                                                    <span className={`text-[13px] font-semibold tabular-nums shrink-0 ${item.is_positive ? "text-[#1a1a1a]" : "text-gray-400"}`}>
-                                                        {item.amount}
-                                                    </span>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-                                    {timelineItems.length > 5 && (
-                                        <>
-                                            <RowDivider />
-                                            <button
-                                                onClick={() => setShowAllBilling(v => !v)}
-                                                className="w-full px-4 py-3 text-[14px] font-medium text-gray-500 hover:text-[#1a1a1a] text-left transition-colors flex items-center justify-between"
-                                            >
-                                                <span>{showAllBilling ? "Show less" : `Show all ${timelineItems.length} transactions`}</span>
-                                                <ChevronRight className={`w-4 h-4 text-gray-300 transition-transform ${showAllBilling ? "rotate-90" : ""}`} />
-                                            </button>
-                                        </>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="px-4 py-10 text-center">
-                                    <Receipt className="w-7 h-7 text-gray-200 mx-auto mb-2" />
-                                    <p className="text-[13px] text-gray-400">{t("noTransactions")}</p>
+                            <a href="/billings"
+                                className="flex items-center gap-3 px-4 py-3.5 hover:bg-black/[0.02] transition-colors">
+                                <div className="w-8 h-8 rounded-xl bg-[#f0f0f0] flex items-center justify-center shrink-0">
+                                    <Receipt className="w-4 h-4 text-[#1a1a1a]" strokeWidth={1.5} />
                                 </div>
-                            )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[15px] font-medium text-[#1a1a1a]">{t("viewBilling")}</p>
+                                    <p className="text-[12px] text-gray-400 mt-0.5">{t("viewBillingHint")}</p>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-gray-300" />
+                            </a>
                         </Card>
                     </>
                 )}
